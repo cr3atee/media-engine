@@ -4,7 +4,9 @@ from abc import ABC, abstractmethod
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, field
 from decimal import Decimal
-from typing import Any
+from typing import Any, Generic, TypeVar
+
+T = TypeVar("T")
 
 
 @dataclass(slots=True, kw_only=True)
@@ -20,7 +22,7 @@ class RawItem:
     metadata: Mapping[str, Any] = field(default_factory=dict)
 
 
-class BaseParser(ABC):
+class BaseParser(ABC, Generic[T]):
     """Defines the abstract contract for asynchronous parsers."""
 
     @abstractmethod
@@ -28,9 +30,9 @@ class BaseParser(ABC):
         """Fetches raw source data required for further parsing."""
 
     @abstractmethod
-    async def parse(self, payload: Any) -> Sequence[RawItem]:
+    async def parse(self, payload: Any) -> Sequence[T]:
         """Transforms fetched raw data into normalized parser items."""
 
     @abstractmethod
-    async def run(self) -> Sequence[RawItem]:
+    async def run(self) -> Sequence[T]:
         """Executes the full parser flow and returns parsed items."""
