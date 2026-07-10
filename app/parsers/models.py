@@ -14,3 +14,5 @@ class ParsedOffer:
     url: str
     price: Decimal
     currency: str
+    seller_id: str | None = None
+    seller_name: str | None = None
