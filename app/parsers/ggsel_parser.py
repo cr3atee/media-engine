@@ -105,14 +105,20 @@ class GGSelParser(BaseParser[ParsedOffer]):
         if not isinstance(payload, dict):
             return
 
-        offer = self._build_offer(payload)
-        if offer is not None:
-            offers.append(offer)
+        if self._looks_like_offer(payload):
+            offers.append(self._build_offer(payload))
 
         for value in payload.values():
             self._collect_offers(value, offers)
 
-    def _build_offer(self, payload: dict[str, Any]) -> ParsedOffer | None:
+    def _looks_like_offer(self, payload: dict[str, Any]) -> bool:
+        return (
+            any(key in payload for key in ("id_goods", "external_id", "id"))
+            or ("name" in payload and "url" in payload)
+            or ("title" in payload and "url" in payload)
+        )
+
+    def _build_offer(self, payload: dict[str, Any]) -> ParsedOffer:
         external_id = self._first_str(payload, ("id_goods", "external_id", "id"))
         title = self._first_str(payload, ("name", "title"))
         raw_url = self._first_str(payload, ("url", "link"))
@@ -126,17 +132,17 @@ class GGSelParser(BaseParser[ParsedOffer]):
                 "price",
             ),
         )
-
-        if external_id is None or title is None or raw_url is None or price is None:
-            return None
+        url = None
+        if raw_url is not None:
+            url = urljoin(f"{self.BASE_URL}/catalog/", raw_url)
 
         return ParsedOffer(
             marketplace="ggsel",
             external_id=external_id,
             title=title,
-            url=urljoin(f"{self.BASE_URL}/catalog/", raw_url),
+            url=url,
             price=price,
-            currency="RUB",
+            currency=self._first_str(payload, ("currency", "currency_code")),
             seller_id=self._first_str(payload, ("id_seller", "seller_id")),
             seller_name=self._first_str(payload, ("name_seller", "seller_name")),
         )

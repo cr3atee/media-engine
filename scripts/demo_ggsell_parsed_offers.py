@@ -35,17 +35,26 @@ async def main() -> None:
         print(f"Raw response length: {len(raw_response)} characters.")
         return
 
-    unique_offers = {offer.external_id: offer for offer in offers}
+    unique_offers = {
+        f"{offer.marketplace}:{offer.external_id or offer.url or index}": offer
+        for index, offer in enumerate(offers)
+    }
     offers = list(unique_offers.values())
 
     print(f"Parsed offers count: {len(offers)}")
     for offer in offers[:10]:
+        price = "unknown"
+        if offer.price is not None:
+            price = str(offer.price)
+            if offer.currency is not None:
+                price = f"{price} {offer.currency}"
+
         print()
         print(f"Marketplace: {offer.marketplace}")
-        print(f"External ID: {offer.external_id}")
-        print(f"Title: {offer.title}")
-        print(f"Price: {offer.price} {offer.currency}")
-        print(f"URL: {offer.url}")
+        print(f"External ID: {offer.external_id or 'unknown'}")
+        print(f"Title: {offer.title or 'unknown'}")
+        print(f"Price: {price}")
+        print(f"URL: {offer.url or 'unknown'}")
         print(f"Seller ID: {offer.seller_id or 'unknown'}")
         print(f"Seller name: {offer.seller_name or 'unknown'}")
 
