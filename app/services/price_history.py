@@ -26,6 +26,17 @@ class PriceHistoryService:
             return None
         return history[-1]
 
+    def get_previous(
+        self,
+        marketplace: str,
+        external_id: str,
+    ) -> PriceSnapshot | None:
+        """Return the snapshot before the latest one for a marketplace offer."""
+        history = self._storage.get((marketplace, external_id))
+        if history is None or len(history) < 2:
+            return None
+        return history[-2]
+
     def get_history(
         self,
         marketplace: str,
