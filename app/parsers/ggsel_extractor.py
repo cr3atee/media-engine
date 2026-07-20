@@ -4,9 +4,11 @@ import json
 from html.parser import HTMLParser
 from typing import Any, TypeGuard
 
+from app.parsers.models import RawMarketplaceOffer
+
 
 class GGSelExtractor:
-    """Extracts raw GGSEL product dictionaries from embedded HTML payloads."""
+    """Extracts typed raw GGSEL products from embedded HTML payloads."""
 
     _REQUIRED_FIELDS = frozenset(
         (
@@ -18,9 +20,9 @@ class GGSelExtractor:
         ),
     )
 
-    def extract(self, html: str) -> list[dict[str, object]]:
-        """Return raw product objects found in GGSEL embedded JSON payloads."""
-        products: list[dict[str, object]] = []
+    def extract(self, html: str) -> list[RawMarketplaceOffer]:
+        """Return raw product models found in GGSEL embedded JSON payloads."""
+        products: list[RawMarketplaceOffer] = []
         seen_ids: set[str] = set()
 
         for script in _ScriptCollector.collect(html):
@@ -87,7 +89,7 @@ class GGSelExtractor:
     def _collect_products(
         self,
         value: Any,
-        products: list[dict[str, object]],
+        products: list[RawMarketplaceOffer],
         seen_ids: set[str],
     ) -> None:
         if isinstance(value, list):
@@ -99,17 +101,93 @@ class GGSelExtractor:
             return
 
         if self._is_product(value):
-            product = dict(value)
-            product_id = str(product["id_goods"])
-            if product_id not in seen_ids:
+            product = self._build_product(value)
+            if product is not None and str(product.id_goods) not in seen_ids:
                 products.append(product)
-                seen_ids.add(product_id)
+                seen_ids.add(str(product.id_goods))
 
         for item in value.values():
             self._collect_products(item, products, seen_ids)
 
     def _is_product(self, value: object) -> TypeGuard[dict[str, object]]:
-        return isinstance(value, dict) and self._REQUIRED_FIELDS.issubset(value)
+        return (
+            isinstance(value, dict)
+            and all(isinstance(key, str) for key in value)
+            and self._REQUIRED_FIELDS.issubset(value)
+        )
+
+    def _build_product(
+        self,
+        value: dict[str, object],
+    ) -> RawMarketplaceOffer | None:
+        id_goods = self._as_int(value.get("id_goods"))
+        id_section = self._as_int(value.get("id_section"))
+        name = self._as_str(value.get("name"))
+        url = self._as_str(value.get("url"))
+        seller_name = self._as_str(value.get("seller_name"))
+        if (
+            id_goods is None
+            or id_section is None
+            or name is None
+            or url is None
+            or seller_name is None
+        ):
+            return None
+
+        known_fields = {
+            "id_goods",
+            "name",
+            "url",
+            "seller_name",
+            "id_section",
+            "image",
+            "price",
+            "currency",
+        }
+        extra = {
+            key: item
+            for key, item in value.items()
+            if key not in known_fields
+        }
+
+        return RawMarketplaceOffer(
+            id_goods=id_goods,
+            name=name,
+            url=url,
+            seller_name=seller_name,
+            id_section=id_section,
+            image=self._as_str(value.get("image")),
+            price=self._as_float(value.get("price")),
+            currency=self._as_str(value.get("currency")),
+            extra=extra,
+        )
+
+    def _as_int(self, value: object) -> int | None:
+        if isinstance(value, bool):
+            return None
+        if isinstance(value, int):
+            return value
+        if isinstance(value, str) and value.isdigit():
+            return int(value)
+        return None
+
+    def _as_float(self, value: object) -> float | None:
+        if isinstance(value, bool) or value is None:
+            return None
+        if isinstance(value, int | float):
+            return float(value)
+        if isinstance(value, str):
+            try:
+                return float(value.replace(",", ".").strip())
+            except ValueError:
+                return None
+        return None
+
+    def _as_str(self, value: object) -> str | None:
+        if value is None:
+            return None
+        text = str(value).strip()
+        return text or None
 
 
 class _ScriptCollector(HTMLParser):

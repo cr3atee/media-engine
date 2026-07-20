@@ -1,7 +1,23 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from decimal import Decimal
+from typing import Any
+
+
+@dataclass(slots=True)
+class RawMarketplaceOffer:
+    """Typed raw marketplace offer before domain normalization."""
+
+    id_goods: int
+    name: str
+    url: str
+    seller_name: str
+    id_section: int
+    image: str | None = None
+    price: float | None = None
+    currency: str | None = None
+    extra: dict[str, Any] = field(default_factory=dict)
 
 
 @dataclass(slots=True, kw_only=True)
