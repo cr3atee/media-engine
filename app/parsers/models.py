@@ -3,6 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from decimal import Decimal
 from typing import Any
+from uuid import UUID
 
 
 @dataclass(slots=True)
@@ -32,3 +33,4 @@ class ParsedOffer:
     currency: str | None
     seller_id: str | None = None
     seller_name: str | None = None
+    canonical_product_id: UUID | None = None
