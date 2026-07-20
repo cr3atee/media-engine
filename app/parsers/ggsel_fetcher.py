@@ -57,6 +57,28 @@ class GGSelFetcher:
 
         return items
 
+    async def fetch_html(self, url: str) -> str:
+        """Return raw HTML from GGSEL without extracting marketplace fields."""
+        self.last_status_code = None
+        self.last_diagnostic = None
+
+        try:
+            response = await self._http_client.get(url)
+        except httpx.RequestError as exc:
+            self.last_diagnostic = f"Connection error: {exc}"
+            raise GGSelFetchError(self.last_diagnostic) from exc
+
+        self.last_status_code = response.status_code
+        if response.status_code >= 400:
+            self.last_diagnostic = f"Invalid response status: {response.status_code}"
+            raise GGSelFetchError(self.last_diagnostic)
+
+        if not response.content:
+            self.last_diagnostic = "Empty response body."
+            raise GGSelFetchError(self.last_diagnostic)
+
+        return response.text
+
     def _extract_raw_items(self, payload: Any) -> list[RawOfferData]:
         if isinstance(payload, list):
             return [item for item in payload if self._is_raw_item(item)]
