@@ -10,6 +10,7 @@ from app.insights.scoring import EventScorer
 from app.parsers.ggsel_extractor import GGSelExtractor
 from app.parsers.ggsel_fetcher import GGSelFetcher
 from app.parsers.normalizers import OfferNormalizer
+from app.repositories.provider import RepositoryProvider
 from app.services.content_generator import ContentGenerator
 from app.services.event_builder import EventBuilder
 from app.services.price_history import PriceHistoryService
@@ -27,6 +28,7 @@ class MarketplacePipeline:
         fetcher: GGSelFetcher,
         extractor: GGSelExtractor,
         normalizer: OfferNormalizer,
+        repository_provider: RepositoryProvider,
         snapshot_builder: SnapshotBuilder,
         price_history: PriceHistoryService,
         price_change_detector: PriceChangeDetector,
@@ -39,6 +41,7 @@ class MarketplacePipeline:
         self._fetcher = fetcher
         self._extractor = extractor
         self._normalizer = normalizer
+        self._repository_provider = repository_provider
         self._snapshot_builder = snapshot_builder
         self._price_history = price_history
         self._price_change_detector = price_change_detector
@@ -63,6 +66,9 @@ class MarketplacePipeline:
         self._report("=== NORMALIZE OFFERS ===")
         parsed_offers = [self._normalizer.normalize(offer) for offer in raw_offers]
         self._report(f"Normalized offers: {len(parsed_offers)}")
+        for offer in parsed_offers:
+            self._repository_provider.offers.save(offer)
+        self._report(f"Persisted offers: {len(parsed_offers)}")
 
         self._report("=== BUILD SNAPSHOTS ===")
         snapshots: list[PriceSnapshot] = []
