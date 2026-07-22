@@ -10,6 +10,12 @@ from app.parsers.models import RawMarketplaceOffer
 class GGSelExtractor:
     """Extracts typed raw GGSEL products from embedded HTML payloads."""
 
+    _PRICE_FIELDS = (
+        ("price_wmr", "RUB"),
+        ("price_wmz", "USD"),
+        ("price_wme", "EUR"),
+        ("price_brl", "BRL"),
+    )
     _REQUIRED_FIELDS = frozenset(
         (
             "id_goods",
@@ -149,6 +155,7 @@ class GGSelExtractor:
             for key, item in value.items()
             if key not in known_fields
         }
+        price, currency = self._extract_price(value)
 
         return RawMarketplaceOffer(
             id_goods=id_goods,
@@ -157,10 +164,26 @@ class GGSelExtractor:
             seller_name=seller_name,
             id_section=id_section,
             image=self._as_str(value.get("image")),
-            price=self._as_float(value.get("price")),
-            currency=self._as_str(value.get("currency")),
+            price=price,
+            currency=currency,
             extra=extra,
         )
+
+    def _extract_price(
+        self,
+        value: dict[str, object],
+    ) -> tuple[float | None, str | None]:
+        price = self._as_float(value.get("price"))
+        currency = self._as_str(value.get("currency"))
+        if price is not None and currency is not None:
+            return price, currency
+
+        for field, field_currency in self._PRICE_FIELDS:
+            field_price = self._as_float(value.get(field))
+            if field_price is not None:
+                return field_price, field_currency
+
+        return price, currency
 
     def _as_int(self, value: object) -> int | None:
         if isinstance(value, bool):
