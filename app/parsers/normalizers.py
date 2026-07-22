@@ -4,18 +4,33 @@ from decimal import Decimal, InvalidOperation
 
 from app.parsers.models import ParsedOffer, RawMarketplaceOffer
 
+_CURRENCY_ALIASES = {
+    "RUR": "RUB",
+    "RUB": "RUB",
+    "USD": "USD",
+    "EUR": "EUR",
+}
+
+
+def normalize_text(value: str | None) -> str | None:
+    """Collapse whitespace in an optional marketplace text value."""
+    if value is None:
+        return None
+    return " ".join(value.split())
+
+
+def normalize_currency(value: str | None) -> str | None:
+    """Normalize an optional marketplace currency code."""
+    if value is None:
+        return None
+    normalized = value.strip().upper()
+    return _CURRENCY_ALIASES.get(normalized, normalized or None)
+
 
 class OfferNormalizer:
     """Normalizes typed raw marketplace offers into ParsedOffer objects."""
 
     _SELLER_ID_KEYS = ("seller_id", "id_seller")
-    _CURRENCY_ALIASES = {
-        "RUR": "RUB",
-        "RUB": "RUB",
-        "USD": "USD",
-        "EUR": "EUR",
-    }
-
     def __init__(self, marketplace: str = "ggsel") -> None:
         """Initialize normalizer with the marketplace assigned to parsed offers."""
         self._marketplace = marketplace
@@ -49,9 +64,7 @@ class OfferNormalizer:
         return None
 
     def _clean_text(self, value: str | None) -> str | None:
-        if value is None:
-            return None
-        return " ".join(value.split())
+        return normalize_text(value)
 
     def _normalize_price(
         self,
@@ -65,7 +78,4 @@ class OfferNormalizer:
             return None, None
 
     def _normalize_currency(self, value: str | None) -> str | None:
-        if value is None:
-            return None
-        normalized = value.strip().upper()
-        return self._CURRENCY_ALIASES.get(normalized, normalized or None)
+        return normalize_currency(value)
