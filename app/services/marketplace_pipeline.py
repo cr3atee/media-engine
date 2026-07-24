@@ -1,7 +1,12 @@
 from __future__ import annotations
 
-from collections.abc import Callable
+from collections.abc import Callable, Sequence
 
+from app.comparator.difference import PriceDifferenceService
+from app.comparator.grouping import OfferGroupingService
+from app.comparator.models import MarketplaceOffer
+from app.comparator.result import ComparisonResult, ComparisonResultBuilder
+from app.comparator.selector import BestOfferSelector
 from app.analytics.models import PriceChange
 from app.analytics.price_change import PriceChangeDetector
 from app.domain.events import PriceDropEvent
@@ -9,6 +14,7 @@ from app.domain.price_snapshot import PriceSnapshot
 from app.insights.scoring import EventScorer
 from app.parsers.ggsel_extractor import GGSelExtractor
 from app.parsers.ggsel_fetcher import GGSelFetcher
+from app.parsers.models import ParsedOffer
 from app.parsers.normalizers import OfferNormalizer
 from app.repositories.provider import RepositoryProvider
 from app.services.content_generator import ContentGenerator
@@ -35,6 +41,10 @@ class MarketplacePipeline:
         event_builder: EventBuilder,
         event_scorer: EventScorer,
         content_generator: ContentGenerator,
+        comparison_grouping: OfferGroupingService | None = None,
+        comparison_selector: BestOfferSelector | None = None,
+        comparison_difference: PriceDifferenceService | None = None,
+        comparison_result_builder: ComparisonResultBuilder | None = None,
         stage_reporter: StageReporter | None = None,
     ) -> None:
         """Initialize the pipeline with existing project components."""
@@ -48,9 +58,17 @@ class MarketplacePipeline:
         self._event_builder = event_builder
         self._event_scorer = event_scorer
         self._content_generator = content_generator
+        self._comparison_grouping = comparison_grouping or OfferGroupingService()
+        self._comparison_selector = comparison_selector or BestOfferSelector()
+        self._comparison_difference = (
+            comparison_difference or PriceDifferenceService()
+        )
+        self._comparison_result_builder = (
+            comparison_result_builder or ComparisonResultBuilder()
+        )
         self._stage_reporter = stage_reporter
 
-    async def run(self, url: str) -> None:
+    async def run(self, url: str) -> list[ComparisonResult]:
         """Execute the full marketplace processing pipeline for one source URL."""
         self._report("=== FETCH HTML ===")
         html = await self._fetcher.fetch_html(url)
@@ -61,7 +79,7 @@ class MarketplacePipeline:
         self._report(f"Extracted raw offers: {len(raw_offers)}")
         if not raw_offers:
             self._report("No raw offers found.")
-            return
+            return []
 
         self._report("=== NORMALIZE OFFERS ===")
         parsed_offers = [self._normalizer.normalize(offer) for offer in raw_offers]
@@ -69,6 +87,10 @@ class MarketplacePipeline:
         for offer in parsed_offers:
             self._repository_provider.offers.save(offer)
         self._report(f"Persisted offers: {len(parsed_offers)}")
+
+        self._report("=== COMPARE OFFERS ===")
+        comparison_results = self.compare_offers(parsed_offers)
+        self._report(f"Comparison results: {len(comparison_results)}")
 
         self._report("=== BUILD SNAPSHOTS ===")
         snapshots: list[PriceSnapshot] = []
@@ -132,6 +154,38 @@ class MarketplacePipeline:
         if posts_count == 0:
             self._report("No generated posts.")
         self._report(f"Generated posts: {posts_count}")
+        return comparison_results
+
+    def compare_offers(
+        self,
+        parsed_offers: Sequence[ParsedOffer],
+    ) -> list[ComparisonResult]:
+        """Build comparison results for normalized marketplace offers."""
+        candidates = tuple(self._repository_provider.canonical_products.list_all())
+        grouped_offers = self._comparison_grouping.group(
+            [MarketplaceOffer(offer=offer) for offer in parsed_offers],
+            candidates,
+        )
+        canonical_index = {product.id: product for product in candidates}
+
+        comparison_results: list[ComparisonResult] = []
+        for group in grouped_offers:
+            canonical_product = (
+                canonical_index.get(group.canonical_product_id)
+                if group.canonical_product_id is not None
+                else None
+            )
+            selection = self._comparison_selector.select(group)
+            difference = self._comparison_difference.compare(selection)
+            comparison_results.append(
+                self._comparison_result_builder.build(
+                    canonical_product,
+                    selection,
+                    difference,
+                ),
+            )
+
+        return comparison_results
 
     def _report(self, message: str) -> None:
         if self._stage_reporter is not None:
