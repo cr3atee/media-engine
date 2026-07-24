@@ -58,3 +58,11 @@ class PlayerokPipeline:
             raise RuntimeError(msg)
 
         return self._comparison_pipeline.compare_offers(parsed_offers)
+
+    def compare_repository_offers(self) -> list[ComparisonResult]:
+        """Return unified comparison results from repository-backed offers."""
+        if self._comparison_pipeline is None:
+            msg = "PlayerokPipeline requires a comparison pipeline."
+            raise RuntimeError(msg)
+
+        return self._comparison_pipeline.compare_repository_offers()

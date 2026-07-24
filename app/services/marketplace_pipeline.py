@@ -89,7 +89,7 @@ class MarketplacePipeline:
         self._report(f"Persisted offers: {len(parsed_offers)}")
 
         self._report("=== COMPARE OFFERS ===")
-        comparison_results = self.compare_offers(parsed_offers)
+        comparison_results = self.compare_repository_offers()
         self._report(f"Comparison results: {len(comparison_results)}")
 
         self._report("=== BUILD SNAPSHOTS ===")
@@ -186,6 +186,10 @@ class MarketplacePipeline:
             )
 
         return comparison_results
+
+    def compare_repository_offers(self) -> list[ComparisonResult]:
+        """Build comparison results from offers stored in the repository."""
+        return self.compare_offers(self._repository_provider.offers.list_all())
 
     def _report(self, message: str) -> None:
         if self._stage_reporter is not None:
