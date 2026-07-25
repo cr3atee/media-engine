@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-import importlib
-import pkgutil
+# ruff: noqa: E402,I001
+
 import sys
 from logging.config import fileConfig
 from pathlib import Path
@@ -16,7 +16,7 @@ if str(project_root) not in sys.path:
     sys.path.insert(0, str(project_root))
 
 from app.config.settings import settings
-from app.database.base import Base
+from app.database.metadata import get_metadata
 
 
 config = context.config
@@ -26,19 +26,7 @@ if config.config_file_name is not None:
     fileConfig(config.config_file_name)
 
 
-def import_model_modules() -> None:
-    import app.models as models_package
-
-    for module in pkgutil.walk_packages(
-        models_package.__path__,
-        prefix=f"{models_package.__name__}.",
-    ):
-        importlib.import_module(module.name)
-
-
-import_model_modules()
-
-target_metadata = Base.metadata
+target_metadata = get_metadata()
 
 
 def run_migrations_offline() -> None:

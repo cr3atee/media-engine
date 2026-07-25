@@ -159,3 +159,20 @@ Recommended scope for the PostgreSQL EPIC:
 - prove that repository-backed comparator demos still work with database-backed repositories.
 
 Scheduler, Telegram, and marketplace expansion should wait until durable repository-backed data is available. Otherwise they will automate or publish flows that still depend on temporary in-memory state.
+
+## PostgreSQL Foundation Status
+
+PostgreSQL foundation is being introduced as infrastructure only.
+
+Prepared scope:
+
+- async SQLAlchemy engine and session factory remain the database boundary;
+- Alembic metadata is initialized from current SQLAlchemy persistence models;
+- the initial migration covers only current database-backed persistence tables;
+- repository interfaces and business services remain unchanged;
+- PostgreSQL repository implementations are intentionally not introduced yet.
+
+Current limitation:
+
+- the application still uses memory repositories through `RepositoryProvider`;
+- switching repositories to PostgreSQL remains a separate story.
