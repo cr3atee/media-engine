@@ -9,6 +9,8 @@ The scheduler layer coordinates execution of existing marketplace pipelines. It 
 - `SchedulerService` registers jobs and optionally schedules interval execution.
 - `SchedulerService.execute_job()` runs a registered job and records the latest status.
 - `JobExecutionStatus` reports the latest state, run count, failure count, timestamps, and error message.
+- Scheduler retry handling is configured per job and remains outside business logic.
+- Scheduler statistics track total executions, successful executions, failed executions, retry attempts, last error, and last successful run.
 
 ## Verified Flow
 

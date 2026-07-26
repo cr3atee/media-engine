@@ -19,9 +19,14 @@ This document describes the reusable job layer used by `SchedulerService`.
 - Job execution status includes timestamps, duration, and error details.
 - `SchedulerService` can execute enabled jobs periodically using per-job intervals.
 - Schedule status includes the interval, enabled state, next scheduled run, and last execution time.
+- Retry count, retry delay, and execution timeout are configured in the scheduler.
+- Job failures do not stop the scheduler.
+- Scheduler logs `START`, `SUCCESS`, `FAILURE`, `RETRY`, `TIMEOUT`, and `STOP` lifecycle messages.
 
 ## Demo
 
 The demo starts the scheduler, registers `GGSELJob` and `PlayerokJob`, executes both jobs, prints execution details, and shuts the scheduler down.
 
 `scripts/demo_scheduler_periodic.py` demonstrates periodic execution with different job intervals and graceful shutdown.
+
+`scripts/demo_scheduler_retry.py` demonstrates retry handling with one successful job and one intentionally failing job.
