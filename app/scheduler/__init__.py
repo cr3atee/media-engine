@@ -8,13 +8,14 @@ from app.scheduler.jobs import (
     MarketplaceJob,
     PlayerokJob,
 )
-from app.scheduler.service import SchedulerService
+from app.scheduler.service import JobScheduleStatus, SchedulerService
 
 __all__ = [
     "BaseJob",
     "GGSELJob",
     "JobExecutionState",
     "JobExecutionStatus",
+    "JobScheduleStatus",
     "MarketplaceJob",
     "PlayerokJob",
     "SchedulerService",

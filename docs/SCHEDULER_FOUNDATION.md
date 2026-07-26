@@ -21,6 +21,5 @@ The scheduler starts, executes both jobs, prints execution statuses, and shuts d
 
 ## Current Limitations
 
-- The scheduler foundation does not define production intervals yet.
 - Marketplace pipeline success still depends on the underlying marketplace fetchers and network access.
 - Scheduler integration with PostgreSQL-backed providers is intentionally left for a later story.
