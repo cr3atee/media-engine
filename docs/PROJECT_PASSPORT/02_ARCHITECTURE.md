@@ -25,10 +25,12 @@ Current marketplace flow:
 3. Raw offers are normalized into `ParsedOffer`.
 4. Parsed offers are saved through `RepositoryProvider.offers`.
 5. Snapshots are attempted from parsed offers.
-6. Price changes are detected when comparable snapshots exist.
-7. Price drop events are built when prices decrease.
-8. Events are scored.
-9. Content is generated through the existing content generator and AI provider abstraction.
+6. The latest persisted snapshot is loaded through `RepositoryProvider.price_history`.
+7. The current snapshot is persisted through the same repository boundary.
+8. Price changes are detected synchronously when a comparable snapshot exists.
+9. Price drop events are built when prices decrease.
+10. Events are scored.
+11. Content is generated through the existing content generator and AI provider abstraction.
 
 ## Matching Flow
 
@@ -49,8 +51,14 @@ Current repository layer includes:
 - `OfferRepository`
 - `PriceHistoryRepository`
 - in-memory implementations under `app/repositories/memory`
+- PostgreSQL implementations under `app/repositories/postgres`
 - `RepositoryProvider`
 - `create_memory_provider()`
+- `create_postgres_provider()`
+
+Repository access is asynchronous for both memory and PostgreSQL backends.
+PostgreSQL is not the default backend, and complete pipeline transaction ownership
+is not implemented yet.
 
 ## Boundaries
 
@@ -58,4 +66,5 @@ Current repository layer includes:
 - Repository interfaces do not depend on SQLAlchemy or PostgreSQL.
 - Matching does not depend on marketplace-specific code.
 - Matching does not use AI, embeddings, or external services.
-- Marketplace pipeline persists parsed offers only through `RepositoryProvider`.
+- Marketplace pipeline persists parsed offers and price snapshots only through
+  `RepositoryProvider`.

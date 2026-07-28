@@ -9,46 +9,49 @@ from app.domain.events import PriceDropEvent
 from app.domain.price_snapshot import PriceSnapshot
 from app.insights.scoring import EventScorer
 from app.parsers.models import ParsedOffer
-from app.services.price_history import PriceHistoryService
+from app.repositories.provider import create_memory_provider
 from app.services.price_pipeline import PricePipeline
 
 
 async def main() -> None:
+    marketplace = "ggsel"
+    external_id = "minecraft-premium"
+    currency = "RUB"
     offer = ParsedOffer(
-        marketplace="ggsel",
-        external_id="minecraft-premium",
+        marketplace=marketplace,
+        external_id=external_id,
         title="Minecraft Premium",
         url="https://ggsel.net/catalog/minecraft-premium",
         price=Decimal("990"),
-        currency="RUB",
+        currency=currency,
     )
     first_snapshot = PriceSnapshot(
-        marketplace=offer.marketplace,
-        external_id=offer.external_id,
-        price=offer.price,
-        currency=offer.currency,
+        marketplace=marketplace,
+        external_id=external_id,
+        price=Decimal("990"),
+        currency=currency,
         collected_at=datetime.now(UTC),
     )
     second_snapshot = PriceSnapshot(
-        marketplace=offer.marketplace,
-        external_id=offer.external_id,
+        marketplace=marketplace,
+        external_id=external_id,
         price=Decimal("790"),
-        currency=offer.currency,
+        currency=currency,
         collected_at=datetime.now(UTC),
     )
 
-    history = PriceHistoryService()
+    history = create_memory_provider().price_history
     detector = PriceChangeDetector()
     pipeline = PricePipeline(detector)
     scorer = EventScorer()
 
-    history.add(first_snapshot)
-    previous_snapshot = history.get_last(offer.marketplace, offer.external_id)
+    await history.add(first_snapshot)
+    previous_snapshot = await history.get_last(marketplace, external_id)
     if previous_snapshot is None:
         return
 
     event = pipeline.process(previous_snapshot, second_snapshot)
-    history.add(second_snapshot)
+    await history.add(second_snapshot)
 
     if isinstance(event, PriceDropEvent):
         score = scorer.score(event)

@@ -45,7 +45,7 @@ class MemoryPriceHistoryRepository(PriceHistoryRepository):
         marketplace: str,
         external_id: str,
     ) -> list[PriceSnapshot]:
-        """Return all stored snapshots for a marketplace offer."""
+        """Return snapshots by collection time, then insertion order."""
         history = self._storage.get((marketplace, external_id), [])
         ordered = sorted(
             enumerate(history),

@@ -20,7 +20,6 @@ from app.parsers.normalizers import OfferNormalizer
 from app.repositories.provider import RepositoryProvider
 from app.services.content_generator import ContentGenerator
 from app.services.event_builder import EventBuilder
-from app.services.price_history import PriceHistoryService
 from app.services.snapshot_builder import SnapshotBuilder
 
 type StageReporter = Callable[[str], None]
@@ -37,7 +36,6 @@ class MarketplacePipeline:
         normalizer: OfferNormalizer,
         repository_provider: RepositoryProvider,
         snapshot_builder: SnapshotBuilder,
-        price_history: PriceHistoryService,
         price_change_detector: PriceChangeDetector,
         event_builder: EventBuilder,
         event_scorer: EventScorer,
@@ -54,7 +52,6 @@ class MarketplacePipeline:
         self._normalizer = normalizer
         self._repository_provider = repository_provider
         self._snapshot_builder = snapshot_builder
-        self._price_history = price_history
         self._price_change_detector = price_change_detector
         self._event_builder = event_builder
         self._event_scorer = event_scorer
@@ -110,14 +107,17 @@ class MarketplacePipeline:
         price_changes: list[PriceChange] = []
 
         for current_snapshot in snapshots:
-            previous_snapshot = self._price_history.get_last(
+            previous_snapshot = await self._repository_provider.price_history.get_last(
                 current_snapshot.marketplace,
                 current_snapshot.external_id,
             )
-            self._price_history.add(current_snapshot)
+            await self._repository_provider.price_history.add(current_snapshot)
             snapshots_count += 1
 
-            if previous_snapshot is None:
+            if (
+                previous_snapshot is None
+                or current_snapshot.collected_at < previous_snapshot.collected_at
+            ):
                 continue
 
             price_change = self._price_change_detector.detect(

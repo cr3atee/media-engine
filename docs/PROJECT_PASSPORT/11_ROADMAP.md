@@ -25,15 +25,18 @@ This document tracks only work that is reflected by the current repository state
 - In-memory repositories.
 - RepositoryProvider.
 - MarketplacePipeline parsed offer persistence through RepositoryProvider.
+- PostgreSQL repository implementations.
+- Async repository contracts for memory and PostgreSQL backends.
+- Repository-backed runtime price history.
 
 ## Current Status
 
-MediaEngine has a working foundation for fetching GGSEL HTML, extracting raw product payloads, normalizing them into parsed offers, saving parsed offers through an in-memory repository provider, and running deterministic product matching against canonical products.
+MediaEngine has a working foundation for fetching GGSEL HTML, extracting raw product payloads, normalizing them into parsed offers, persisting offers and price history through a repository provider, and running deterministic product matching against canonical products.
 
 ## Not Present Yet
 
-- PostgreSQL repository implementations.
 - Full price normalization for GGSEL extracted fields.
-- Persistent price history implementation.
+- Shared PostgreSQL session and transaction ownership for a complete pipeline run.
+- Database-level concurrent duplicate protection for price snapshots.
 - Telegram delivery implementation.
 - Production AI provider integration in the pipeline.

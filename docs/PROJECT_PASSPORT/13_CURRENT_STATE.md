@@ -23,15 +23,20 @@ The current implementation includes the first real marketplace processing path f
 - Similarity scores can be classified into `AUTO_MATCH`, `REVIEW`, or `NO_MATCH`.
 - `MatchingService` can select the best canonical product candidate for a parsed offer.
 - Repository contracts exist for canonical products, offers, and price history.
-- In-memory repository implementations exist for early development and demos.
-- `MarketplacePipeline` persists parsed offers through `RepositoryProvider`.
+- Async in-memory and PostgreSQL repository implementations exist.
+- `MarketplacePipeline` persists parsed offers and price snapshots through
+  `RepositoryProvider`.
+- Price-change detection reads the latest persisted snapshot before storing and
+  evaluating the current snapshot.
 
 ## Known Gaps
 
 - GGSEL extracted price fields are preserved in raw `extra` data, but full price normalization from marketplace-specific fields is not complete.
 - Snapshot creation is skipped when parsed offers do not contain normalized price and currency.
-- `PriceHistoryRepository` is currently an empty contract.
-- No PostgreSQL repository implementation exists.
+- PostgreSQL runtime still lacks one shared session and transaction boundary per
+  complete marketplace run.
+- Concurrent exact-snapshot duplicate protection is not enforced by a database
+  uniqueness constraint.
 - No Telegram delivery is implemented.
 - No production AI provider is wired into the marketplace pipeline.
 

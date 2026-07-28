@@ -2,9 +2,9 @@
 
 Date: 2026-07-28
 
-Status: specification plus Task 1 implementation log. The original
-specification did not implement application code or migrations; the Task 1
-status below records the first completed implementation step.
+Status: specification plus Task 1-3 implementation log. The original
+specification did not implement application code or migrations; the status
+sections below record completed implementation steps.
 
 ## Task 1 Implementation Status
 
@@ -117,6 +117,102 @@ Recommended Task 3:
   `PriceHistoryService` to `RepositoryProvider.price_history` while keeping
   snapshot construction, price-change detection, event scoring, and comparator
   logic synchronous after repository data is loaded.
+
+## Task 3 Implementation Status
+
+Status date: 2026-07-28.
+
+Completed active runtime migration:
+
+- `MarketplacePipeline` now reads and writes snapshots only through
+  `RepositoryProvider.price_history`;
+- repository reads and writes are awaited before synchronous price-change
+  detection runs;
+- the pipeline constructor no longer accepts a standalone price-history service;
+- marketplace, comparator, scheduler, GGSEL vertical-slice, and price-history
+  verification scripts now use the repository provider boundary;
+- `PriceHistoryService` was removed because no legitimate active or verification
+  caller remained.
+
+Runtime ordering:
+
+1. Build the current `PriceSnapshot`.
+2. Await the chronologically latest persisted snapshot for the same
+   `(marketplace, external_id)`.
+3. Await persistence of the current snapshot.
+4. If a previous snapshot exists, pass concrete snapshots to the synchronous
+   `PriceChangeDetector`.
+5. Preserve the existing event, scoring, and content flow.
+
+Snapshot ordering semantics:
+
+- histories are isolated by `(marketplace, external_id)`;
+- `get_history()` orders snapshots by `collected_at` ascending;
+- `get_last()` returns the chronologically latest snapshot;
+- `get_previous()` returns the entry immediately before that latest snapshot;
+- memory ties use insertion order and PostgreSQL ties use record `id`, so a later
+  insert at the same timestamp is considered later in both implementations;
+- out-of-order inserts are returned by collection chronology rather than raw
+  insertion order and are persisted without running a reverse chronological
+  price comparison;
+- no history returns `None`, one entry has no previous entry, and multiple
+  entries use the two latest ordered records.
+
+Duplicate and idempotency behavior:
+
+- an exact duplicate across marketplace, external ID, price, currency, and
+  collection timestamp is ignored by both repository implementations;
+- the same timestamp with a different price is retained and ordered by the
+  backend tie-break rule;
+- unchanged prices with a different collection timestamp are retained as valid
+  observations but produce no price-change event;
+- repeated processing of the same exact snapshot produces no additional history
+  row and no event;
+- scheduler retries that collect a new timestamp may add an unchanged observation
+  but do not produce a false price-drop event.
+
+PostgreSQL limitations:
+
+- exact-duplicate suppression is currently implemented by a repository read
+  before insert and is not protected against concurrent writers by a unique
+  database constraint;
+- a future migration should add an index for
+  `(marketplace, external_id, collected_at, id)` and finalize a uniqueness policy
+  for exact snapshot identity;
+- shared session ownership and one transaction per complete pipeline run remain
+  intentionally deferred;
+- PostgreSQL is still not the default provider.
+
+Scheduler impact:
+
+- scheduler jobs remain orchestration-only and contain no snapshot logic;
+- repeated scheduled GGSEL runs now observe history held by the configured
+  repository provider instead of process-local service state;
+- overlap protection, distributed locking, and transaction ownership remain
+  outside this task.
+
+Events and Decimal:
+
+- Task 2's `TYPE_CHECKING` branch in `app/domain/events.py` was a static-analysis
+  compatibility change and did not alter Pydantic serialization or runtime event
+  values;
+- snapshots and price-change calculations continue to use `Decimal`;
+- the existing float fields on `PriceDropEvent` remain a pre-existing boundary
+  inconsistency and were not changed as part of the price-history migration.
+
+Deviations:
+
+- no transaction boundary, Unit of Work, session ownership change, migration,
+  event persistence, or PostgreSQL default switch was introduced;
+- the duplicate price-change detector module remains documented technical debt;
+- no compatibility wrapper was retained for the removed `PriceHistoryService`.
+
+Recommended Task 4:
+
+- introduce an application runtime composition boundary that owns one
+  `AsyncSession` and one transaction for repository work in a marketplace run,
+  while keeping external HTTP before the transaction and content generation
+  after commit.
 
 ## 1. Executive Summary
 

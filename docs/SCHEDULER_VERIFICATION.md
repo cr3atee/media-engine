@@ -24,8 +24,10 @@ The verification demo runs this flow:
 9. Build a domain event.
 10. Score the event.
 11. Generate content with `FakeAIProvider`.
-12. Print scheduler statistics.
-13. Stop the scheduler gracefully.
+12. Execute `GGSELJob` again against the same repository-backed history and verify
+    that an unchanged price produces no additional event.
+13. Print scheduler statistics.
+14. Stop the scheduler gracefully.
 
 ## Scheduler Capabilities
 
@@ -39,7 +41,8 @@ The verification demo runs this flow:
 
 - The end-to-end verification uses deterministic local marketplace inputs instead of external network calls.
 - `BaseJob` records execution status only and does not expose returned pipeline results. Because of that, repository-backed downstream verification for Playerok persists offers through the existing `PlayerokPipeline` API after scheduled execution.
-- PostgreSQL-backed repositories are not used in this scheduler verification; the memory provider remains the safe verification backend.
+- PostgreSQL-backed repositories are not used in this scheduler verification; the memory provider remains the safe verification backend, including price history through `RepositoryProvider.price_history`.
+- Repeated GGSEL job execution reads repository-backed history, but scheduler overlap and distributed locking policies are not implemented.
 - Telegram delivery is still outside the scheduler flow.
 
 ## Production Readiness Assessment

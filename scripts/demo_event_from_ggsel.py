@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import sys
 from dataclasses import replace
 from datetime import timedelta
@@ -13,13 +14,13 @@ if str(PROJECT_ROOT) not in sys.path:
 HTML_RESPONSE_PATH = PROJECT_ROOT / "tmp" / "ggsel_response.html"
 
 
-def main() -> None:
+async def main() -> None:
     """Build a domain event from a price change based on real GGSEL data."""
     from app.analytics.price_change import PriceChangeDetector
     from app.parsers.ggsel_extractor import GGSelExtractor
     from app.parsers.normalizers import OfferNormalizer
+    from app.repositories.provider import create_memory_provider
     from app.services.event_builder import EventBuilder
-    from app.services.price_history import PriceHistoryService
     from app.services.snapshot_builder import SnapshotBuilder
 
     if not HTML_RESPONSE_PATH.exists():
@@ -40,15 +41,15 @@ def main() -> None:
         collected_at=current_snapshot.collected_at - timedelta(minutes=1),
     )
 
-    price_history = PriceHistoryService()
-    price_history.add(previous_snapshot)
-    price_history.add(current_snapshot)
+    price_history = create_memory_provider().price_history
+    await price_history.add(previous_snapshot)
+    await price_history.add(current_snapshot)
 
-    previous = price_history.get_previous(
+    previous = await price_history.get_previous(
         current_snapshot.marketplace,
         current_snapshot.external_id,
     )
-    current = price_history.get_last(
+    current = await price_history.get_last(
         current_snapshot.marketplace,
         current_snapshot.external_id,
     )
@@ -75,4 +76,4 @@ def main() -> None:
 
 
 if __name__ == "__main__":
-    main()
+    asyncio.run(main())

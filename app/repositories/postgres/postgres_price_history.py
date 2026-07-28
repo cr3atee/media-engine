@@ -84,7 +84,7 @@ class PostgresPriceHistoryRepository(PriceHistoryRepository):
         marketplace: str,
         external_id: str,
     ) -> list[PriceSnapshot]:
-        """Return all stored snapshots for a marketplace offer."""
+        """Return snapshots by collection time, then persistent record ID."""
         result = await self._session.execute(
             self._base_query(marketplace, external_id).order_by(
                 PriceSnapshotRecord.collected_at,

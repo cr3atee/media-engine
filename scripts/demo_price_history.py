@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import sys
 from datetime import UTC, datetime
 from decimal import Decimal
@@ -9,13 +10,12 @@ PROJECT_ROOT = Path(__file__).resolve().parents[1]
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
-from app.domain.price_snapshot import PriceSnapshot
-from app.services.price_history import PriceHistoryService
-
-
-def main() -> None:
+async def main() -> None:
     """Demonstrate in-memory price history lookup for two snapshots."""
-    history = PriceHistoryService()
+    from app.domain.price_snapshot import PriceSnapshot
+    from app.repositories.provider import create_memory_provider
+
+    history = create_memory_provider().price_history
     marketplace = "ggsel"
     external_id = "Minecraft Premium"
 
@@ -26,7 +26,7 @@ def main() -> None:
         currency="RUB",
         collected_at=datetime.now(UTC),
     )
-    history.add(first_snapshot)
+    await history.add(first_snapshot)
 
     second_snapshot = PriceSnapshot(
         marketplace=marketplace,
@@ -35,9 +35,9 @@ def main() -> None:
         currency="RUB",
         collected_at=datetime.now(UTC),
     )
-    history.add(second_snapshot)
+    await history.add(second_snapshot)
 
-    previous_snapshot = history.get_previous(marketplace, external_id)
+    previous_snapshot = await history.get_previous(marketplace, external_id)
 
     print("Price history")
     print(f"Marketplace: {marketplace}")
@@ -51,4 +51,4 @@ def main() -> None:
 
 
 if __name__ == "__main__":
-    main()
+    asyncio.run(main())

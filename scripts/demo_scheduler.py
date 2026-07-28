@@ -22,12 +22,11 @@ async def main() -> None:
     from app.parsers.playerok_fetcher import PlayerokFetcher
     from app.parsers.playerok_normalizer import PlayerokNormalizer
     from app.repositories.provider import create_memory_provider
-    from app.scheduler import SchedulerService
+    from app.scheduler import GGSELJob, PlayerokJob, SchedulerService
     from app.services.content_generator import ContentGenerator
     from app.services.event_builder import EventBuilder
     from app.services.marketplace_pipeline import MarketplacePipeline
     from app.services.playerok_pipeline import PlayerokPipeline
-    from app.services.price_history import PriceHistoryService
     from app.services.snapshot_builder import SnapshotBuilder
 
     scheduler = SchedulerService()
@@ -43,7 +42,6 @@ async def main() -> None:
             normalizer=OfferNormalizer(),
             repository_provider=repository_provider,
             snapshot_builder=SnapshotBuilder(),
-            price_history=PriceHistoryService(),
             price_change_detector=PriceChangeDetector(),
             event_builder=EventBuilder(),
             event_scorer=EventScorer(),
@@ -57,14 +55,8 @@ async def main() -> None:
             comparison_pipeline=ggsel_pipeline,
         )
 
-        scheduler.register_job(
-            "ggsel",
-            lambda: ggsel_pipeline.run("https://ggsel.net/"),
-        )
-        scheduler.register_job(
-            "playerok",
-            lambda: playerok_pipeline.run(),
-        )
+        scheduler.register_job(GGSELJob(ggsel_pipeline))
+        scheduler.register_job(PlayerokJob(playerok_pipeline))
 
         print("Start scheduler")
         scheduler.start()

@@ -11,7 +11,7 @@ class PriceHistoryRepository(BaseRepository):
 
     @abstractmethod
     async def add(self, snapshot: PriceSnapshot) -> None:
-        """Store a price snapshot."""
+        """Store a snapshot unless all persisted snapshot fields are identical."""
 
     @abstractmethod
     async def get_last(
@@ -19,7 +19,7 @@ class PriceHistoryRepository(BaseRepository):
         marketplace: str,
         external_id: str,
     ) -> PriceSnapshot | None:
-        """Return the latest snapshot for a marketplace offer."""
+        """Return the chronologically latest snapshot for an offer identity."""
 
     @abstractmethod
     async def get_previous(
@@ -27,7 +27,7 @@ class PriceHistoryRepository(BaseRepository):
         marketplace: str,
         external_id: str,
     ) -> PriceSnapshot | None:
-        """Return the snapshot before the latest one for a marketplace offer."""
+        """Return the snapshot immediately before the latest one."""
 
     @abstractmethod
     async def get_history(
@@ -35,4 +35,4 @@ class PriceHistoryRepository(BaseRepository):
         marketplace: str,
         external_id: str,
     ) -> list[PriceSnapshot]:
-        """Return all snapshots for a marketplace offer."""
+        """Return snapshots in ascending collection-time order."""

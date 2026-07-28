@@ -21,7 +21,6 @@ from app.repositories.provider import create_memory_provider
 from app.services.content_generator import ContentGenerator
 from app.services.event_builder import EventBuilder
 from app.services.marketplace_pipeline import MarketplacePipeline
-from app.services.price_history import PriceHistoryService
 from app.services.snapshot_builder import SnapshotBuilder
 
 GGSEL_CATALOG_URL = "https://ggsel.net/catalog"
@@ -38,7 +37,6 @@ async def main() -> None:
             normalizer=OfferNormalizer(marketplace="ggsel"),
             repository_provider=provider,
             snapshot_builder=SnapshotBuilder(),
-            price_history=PriceHistoryService(),
             price_change_detector=PriceChangeDetector(),
             event_builder=EventBuilder(),
             event_scorer=EventScorer(),

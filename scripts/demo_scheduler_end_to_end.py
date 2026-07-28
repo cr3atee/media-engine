@@ -34,7 +34,6 @@ from app.services.content_generator import ContentGenerator
 from app.services.event_builder import EventBuilder
 from app.services.marketplace_pipeline import MarketplacePipeline
 from app.services.playerok_pipeline import PlayerokPipeline
-from app.services.price_history import PriceHistoryService
 from app.services.snapshot_builder import SnapshotBuilder
 
 
@@ -104,8 +103,8 @@ async def _seed_canonical_products(provider: RepositoryProvider) -> None:
     )
 
 
-def _seed_price_history(price_history: PriceHistoryService) -> None:
-    price_history.add(
+async def _seed_price_history(provider: RepositoryProvider) -> None:
+    await provider.price_history.add(
         PriceSnapshot(
             marketplace="ggsel",
             external_id="1001",
@@ -118,7 +117,6 @@ def _seed_price_history(price_history: PriceHistoryService) -> None:
 
 def _build_ggsel_pipeline(
     provider: RepositoryProvider,
-    price_history: PriceHistoryService,
 ) -> MarketplacePipeline:
     return MarketplacePipeline(
         fetcher=cast(GGSelFetcher, DemoGGSelFetcher()),
@@ -126,7 +124,6 @@ def _build_ggsel_pipeline(
         normalizer=OfferNormalizer("ggsel"),
         repository_provider=provider,
         snapshot_builder=SnapshotBuilder(),
-        price_history=price_history,
         price_change_detector=PriceChangeDetector(),
         event_builder=EventBuilder(),
         event_scorer=EventScorer(),
@@ -193,11 +190,10 @@ async def _persist_playerok_offers(
 
 async def main() -> None:
     provider = create_memory_provider()
-    price_history = PriceHistoryService()
     await _seed_canonical_products(provider)
-    _seed_price_history(price_history)
+    await _seed_price_history(provider)
 
-    ggsel_pipeline = _build_ggsel_pipeline(provider, price_history)
+    ggsel_pipeline = _build_ggsel_pipeline(provider)
     playerok_pipeline = _build_playerok_pipeline(ggsel_pipeline)
 
     scheduler = SchedulerService()
@@ -234,14 +230,14 @@ async def main() -> None:
     _print_comparator_activity(comparison_results)
 
     _print_section("Price history update")
-    history = price_history.get_history("ggsel", "1001")
+    history = await provider.price_history.get_history("ggsel", "1001")
     print(f"GGSEL history entries: {len(history)}")
     for snapshot in history:
         print(f"- {snapshot.marketplace}:{snapshot.external_id} {snapshot.price}")
 
     _print_section("Price change detection")
-    previous = price_history.get_previous("ggsel", "1001")
-    current = price_history.get_last("ggsel", "1001")
+    previous = await provider.price_history.get_previous("ggsel", "1001")
+    current = await provider.price_history.get_last("ggsel", "1001")
     if previous is None or current is None:
         print("Price change unavailable.")
         change = None
@@ -261,6 +257,12 @@ async def main() -> None:
         content = await ContentGenerator(FakeAIProvider()).generate(event)
         print(f"Score: {score}")
         print(content)
+
+    _print_section("GGSEL repeated execution")
+    await scheduler.execute_job(ggsel_job.name)
+    print(scheduler.get_status(ggsel_job.name))
+    repeated_history = await provider.price_history.get_history("ggsel", "1001")
+    print(f"GGSEL history entries after repeat: {len(repeated_history)}")
 
     _print_section("Scheduler statistics")
     for statistics in scheduler.list_statistics():

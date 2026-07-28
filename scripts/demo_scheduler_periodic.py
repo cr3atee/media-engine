@@ -27,7 +27,6 @@ async def main() -> None:
     from app.services.event_builder import EventBuilder
     from app.services.marketplace_pipeline import MarketplacePipeline
     from app.services.playerok_pipeline import PlayerokPipeline
-    from app.services.price_history import PriceHistoryService
     from app.services.snapshot_builder import SnapshotBuilder
 
     scheduler = SchedulerService(tick_seconds=0.1)
@@ -43,7 +42,6 @@ async def main() -> None:
             normalizer=OfferNormalizer(),
             repository_provider=repository_provider,
             snapshot_builder=SnapshotBuilder(),
-            price_history=PriceHistoryService(),
             price_change_detector=PriceChangeDetector(),
             event_builder=EventBuilder(),
             event_scorer=EventScorer(),

@@ -9,18 +9,17 @@ PROJECT_ROOT = Path(__file__).resolve().parents[1]
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
-from app.ai.fake_provider import FakeAIProvider
-from app.analytics.price_change import PriceChangeDetector
-from app.insights.scoring import EventScorer
-from app.parsers.models import ParsedOffer
-from app.services.content_generator import ContentGenerator
-from app.services.event_builder import EventBuilder
-from app.services.price_history import PriceHistoryService
-from app.services.snapshot_builder import SnapshotBuilder
-
-
 async def main() -> None:
     """Run the complete demo workflow from parsed offer to generated content."""
+    from app.ai.fake_provider import FakeAIProvider
+    from app.analytics.price_change import PriceChangeDetector
+    from app.insights.scoring import EventScorer
+    from app.parsers.models import ParsedOffer
+    from app.repositories.provider import create_memory_provider
+    from app.services.content_generator import ContentGenerator
+    from app.services.event_builder import EventBuilder
+    from app.services.snapshot_builder import SnapshotBuilder
+
     previous_offer = ParsedOffer(
         marketplace="Playerok",
         external_id="Minecraft Premium",
@@ -39,17 +38,17 @@ async def main() -> None:
     )
 
     snapshot_builder = SnapshotBuilder()
-    price_history = PriceHistoryService()
+    price_history = create_memory_provider().price_history
     price_change_detector = PriceChangeDetector()
     event_builder = EventBuilder()
     event_scorer = EventScorer()
     content_generator = ContentGenerator(ai_provider=FakeAIProvider())
 
     previous_snapshot = snapshot_builder.build(previous_offer)
-    price_history.add(previous_snapshot)
+    await price_history.add(previous_snapshot)
 
     current_snapshot = snapshot_builder.build(current_offer)
-    stored_previous_snapshot = price_history.get_last(
+    stored_previous_snapshot = await price_history.get_last(
         current_snapshot.marketplace,
         current_snapshot.external_id,
     )
@@ -57,7 +56,7 @@ async def main() -> None:
         print("Previous snapshot was not found.")
         return
 
-    price_history.add(current_snapshot)
+    await price_history.add(current_snapshot)
     price_change = price_change_detector.detect(
         stored_previous_snapshot,
         current_snapshot,

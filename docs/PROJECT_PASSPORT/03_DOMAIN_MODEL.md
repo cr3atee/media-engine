@@ -63,6 +63,17 @@ Fields:
 - `currency`
 - `collected_at`
 
+Snapshots are identified for history lookup by `(marketplace, external_id)`.
+History is ordered by `collected_at`; equal timestamps use backend insertion
+identity as a deterministic tie-break. Exact duplicate snapshots are ignored.
+
+## PriceHistoryRepository
+
+`PriceHistoryRepository` is the active persistence boundary for price snapshots.
+It supports adding snapshots and loading the latest, previous, or complete ordered
+history. Memory and PostgreSQL implementations expose the same asynchronous
+contract through `RepositoryProvider.price_history`.
+
 ## PriceChange
 
 `PriceChange` represents a calculated difference between two `PriceSnapshot` objects.

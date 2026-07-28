@@ -196,6 +196,30 @@ def test_price_history_repository_orders_latest_and_previous_snapshots() -> None
     assert run_async(repository.get_previous("ggsel", "offer-1")) == middle
 
 
+def test_price_history_repository_uses_insertion_order_for_equal_timestamps() -> None:
+    repository = MemoryPriceHistoryRepository()
+    collected_at = datetime.now(UTC)
+    first = make_snapshot(price=Decimal("990.00"), collected_at=collected_at)
+    second = make_snapshot(price=Decimal("790.00"), collected_at=collected_at)
+
+    run_async(repository.add(first))
+    run_async(repository.add(second))
+
+    assert run_async(repository.get_history("ggsel", "offer-1")) == [first, second]
+    assert run_async(repository.get_previous("ggsel", "offer-1")) == first
+    assert run_async(repository.get_last("ggsel", "offer-1")) == second
+
+
+def test_price_history_repository_returns_no_previous_for_one_snapshot() -> None:
+    repository = MemoryPriceHistoryRepository()
+    snapshot = make_snapshot()
+
+    run_async(repository.add(snapshot))
+
+    assert run_async(repository.get_last("ggsel", "offer-1")) == snapshot
+    assert run_async(repository.get_previous("ggsel", "offer-1")) is None
+
+
 def test_price_history_repository_isolates_marketplace_and_external_id() -> None:
     repository = MemoryPriceHistoryRepository()
     ggsel_snapshot = make_snapshot(marketplace="ggsel", external_id="one")

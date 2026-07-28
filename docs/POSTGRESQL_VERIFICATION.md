@@ -36,8 +36,10 @@ The verification script exercises this flow:
 ## Remaining PostgreSQL Limitations
 
 - PostgreSQL repositories are available but are not the default provider.
-- Business pipelines still need explicit integration with async PostgreSQL repositories before they can be switched wholesale.
+- Marketplace runtime price history now uses the async repository contract through `RepositoryProvider`.
+- A complete marketplace run still does not own one shared `AsyncSession` transaction boundary.
 - Existing marketplace demos can still run on memory repositories.
+- Exact snapshot duplicate suppression is not protected against concurrent writes by a database uniqueness constraint.
 - A running PostgreSQL instance with Alembic migrations applied is required for the verification script.
 - The script verifies repository-backed backend flow, not live marketplace HTTP reliability.
 
@@ -47,5 +49,5 @@ The verification script exercises this flow:
 - PostgreSQL offer persistence: ready for integration testing.
 - PostgreSQL canonical product persistence: ready for integration testing.
 - PostgreSQL price history persistence: ready for integration testing.
-- Full backend with PostgreSQL repositories: partially ready.
-- Production persistence readiness: not complete until business pipelines are adapted to async repository usage and run against migrated PostgreSQL.
+- Full backend with PostgreSQL repositories: structurally compatible, with runtime transaction composition still pending.
+- Production persistence readiness: not complete until session ownership, transaction boundaries, and concurrent duplicate protection are implemented and verified.

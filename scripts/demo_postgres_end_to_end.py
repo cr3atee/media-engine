@@ -137,6 +137,10 @@ async def main() -> None:
                 collected_at=current_snapshot.collected_at - timedelta(minutes=10),
             )
             await price_history.add(previous_snapshot)
+            previous = await price_history.get_last(
+                current_snapshot.marketplace,
+                current_snapshot.external_id,
+            )
             await price_history.add(current_snapshot)
             await session.commit()
 
@@ -145,10 +149,6 @@ async def main() -> None:
                 current_snapshot.external_id,
             )
             latest = await price_history.get_last(
-                current_snapshot.marketplace,
-                current_snapshot.external_id,
-            )
-            previous = await price_history.get_previous(
                 current_snapshot.marketplace,
                 current_snapshot.external_id,
             )
