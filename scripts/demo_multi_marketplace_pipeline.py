@@ -35,7 +35,7 @@ async def main() -> None:
 
     provider = create_memory_provider()
     canonical_id = uuid4()
-    provider.canonical_products.save(
+    await provider.canonical_products.save(
         CanonicalProduct(
             id=canonical_id,
             name="Minecraft Premium",
@@ -67,8 +67,8 @@ async def main() -> None:
         canonical_product_id=None,
     )
 
-    provider.offers.save(ggsel_offer)
-    provider.offers.save(playerok_offer)
+    await provider.offers.save(ggsel_offer)
+    await provider.offers.save(playerok_offer)
 
     async with HttpClient() as http_client:
         ggsel_pipeline = MarketplacePipeline(
@@ -90,8 +90,8 @@ async def main() -> None:
             comparison_pipeline=ggsel_pipeline,
         )
 
-        comparison_results = playerok_pipeline.compare_offers(
-            provider.offers.list_all(),
+        comparison_results = await playerok_pipeline.compare_offers(
+            await provider.offers.list_all(),
         )
 
     for result in comparison_results:

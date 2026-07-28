@@ -5,7 +5,6 @@ import sys
 from datetime import timedelta
 from decimal import Decimal
 from pathlib import Path
-from typing import cast
 from uuid import uuid4
 
 project_root = Path(__file__).resolve().parents[1]
@@ -28,11 +27,6 @@ async def main() -> None:
     from app.matching.service import MatchingService
     from app.models.canonical_product import CanonicalProduct
     from app.parsers.models import ParsedOffer
-    from app.repositories.postgres import (
-        PostgresCanonicalProductRepository,
-        PostgresOfferRepository,
-        PostgresPriceHistoryRepository,
-    )
     from app.repositories.provider import create_repository_provider
     from app.services.content_generator import ContentGenerator
     from app.services.event_builder import EventBuilder
@@ -76,15 +70,9 @@ async def main() -> None:
 
         async with SessionLocal() as session:
             provider = create_repository_provider("postgres", session)
-            canonical_products = cast(
-                PostgresCanonicalProductRepository,
-                provider.canonical_products,
-            )
-            offers = cast(PostgresOfferRepository, provider.offers)
-            price_history = cast(
-                PostgresPriceHistoryRepository,
-                provider.price_history,
-            )
+            canonical_products = provider.canonical_products
+            offers = provider.offers
+            price_history = provider.price_history
 
             print("=== Offers parsed ===")
             for offer in marketplace_offers:

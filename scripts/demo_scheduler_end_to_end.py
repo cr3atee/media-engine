@@ -93,8 +93,8 @@ def _print_section(title: str) -> None:
     print(f"\n=== {title} ===")
 
 
-def _seed_canonical_products(provider: RepositoryProvider) -> None:
-    provider.canonical_products.save(
+async def _seed_canonical_products(provider: RepositoryProvider) -> None:
+    await provider.canonical_products.save(
         CanonicalProduct(
             id=uuid4(),
             name="Minecraft Premium",
@@ -146,9 +146,9 @@ def _build_playerok_pipeline(
     )
 
 
-def _print_repository_activity(provider: RepositoryProvider) -> None:
-    offers = provider.offers.list_all()
-    products = provider.canonical_products.list_all()
+async def _print_repository_activity(provider: RepositoryProvider) -> None:
+    offers = await provider.offers.list_all()
+    products = await provider.canonical_products.list_all()
     print(f"Stored offers: {len(offers)}")
     print(f"Canonical products: {len(products)}")
     for offer in offers:
@@ -187,14 +187,14 @@ async def _persist_playerok_offers(
 ) -> list[ParsedOffer]:
     offers = await pipeline.run("demo://playerok")
     for offer in offers:
-        provider.offers.save(offer)
-    return cast(list[ParsedOffer], offers)
+        await provider.offers.save(offer)
+    return offers
 
 
 async def main() -> None:
     provider = create_memory_provider()
     price_history = PriceHistoryService()
-    _seed_canonical_products(provider)
+    await _seed_canonical_products(provider)
     _seed_price_history(price_history)
 
     ggsel_pipeline = _build_ggsel_pipeline(provider, price_history)
@@ -227,10 +227,10 @@ async def main() -> None:
         "Playerok offers persisted after scheduled execution: "
         f"{len(playerok_offers)}",
     )
-    _print_repository_activity(provider)
+    await _print_repository_activity(provider)
 
     _print_section("Comparator activity")
-    comparison_results = ggsel_pipeline.compare_repository_offers()
+    comparison_results = await ggsel_pipeline.compare_repository_offers()
     _print_comparator_activity(comparison_results)
 
     _print_section("Price history update")

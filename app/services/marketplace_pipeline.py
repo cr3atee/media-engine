@@ -2,16 +2,17 @@ from __future__ import annotations
 
 from collections.abc import Callable, Sequence
 
+from app.analytics.models import PriceChange
+from app.analytics.price_change import PriceChangeDetector
 from app.comparator.difference import PriceDifferenceService
 from app.comparator.grouping import OfferGroupingService
 from app.comparator.models import MarketplaceOffer
 from app.comparator.result import ComparisonResult, ComparisonResultBuilder
 from app.comparator.selector import BestOfferSelector
-from app.analytics.models import PriceChange
-from app.analytics.price_change import PriceChangeDetector
 from app.domain.events import PriceDropEvent
 from app.domain.price_snapshot import PriceSnapshot
 from app.insights.scoring import EventScorer
+from app.models.canonical_product import CanonicalProduct
 from app.parsers.ggsel_extractor import GGSelExtractor
 from app.parsers.ggsel_fetcher import GGSelFetcher
 from app.parsers.models import ParsedOffer
@@ -85,11 +86,11 @@ class MarketplacePipeline:
         parsed_offers = [self._normalizer.normalize(offer) for offer in raw_offers]
         self._report(f"Normalized offers: {len(parsed_offers)}")
         for offer in parsed_offers:
-            self._repository_provider.offers.save(offer)
+            await self._repository_provider.offers.save(offer)
         self._report(f"Persisted offers: {len(parsed_offers)}")
 
         self._report("=== COMPARE OFFERS ===")
-        comparison_results = self.compare_repository_offers()
+        comparison_results = await self.compare_repository_offers()
         self._report(f"Comparison results: {len(comparison_results)}")
 
         self._report("=== BUILD SNAPSHOTS ===")
@@ -156,12 +157,27 @@ class MarketplacePipeline:
         self._report(f"Generated posts: {posts_count}")
         return comparison_results
 
-    def compare_offers(
+    async def compare_offers(
         self,
         parsed_offers: Sequence[ParsedOffer],
     ) -> list[ComparisonResult]:
         """Build comparison results for normalized marketplace offers."""
-        candidates = tuple(self._repository_provider.canonical_products.list_all())
+        candidates = tuple(
+            await self._repository_provider.canonical_products.list_all(),
+        )
+        return self._build_comparison_results(parsed_offers, candidates)
+
+    async def compare_repository_offers(self) -> list[ComparisonResult]:
+        """Build comparison results from offers stored in the repository."""
+        parsed_offers = await self._repository_provider.offers.list_all()
+        return await self.compare_offers(parsed_offers)
+
+    def _build_comparison_results(
+        self,
+        parsed_offers: Sequence[ParsedOffer],
+        candidates: Sequence[CanonicalProduct],
+    ) -> list[ComparisonResult]:
+        """Build comparison results after repository data has already loaded."""
         grouped_offers = self._comparison_grouping.group(
             [MarketplaceOffer(offer=offer) for offer in parsed_offers],
             candidates,
@@ -186,10 +202,6 @@ class MarketplacePipeline:
             )
 
         return comparison_results
-
-    def compare_repository_offers(self) -> list[ComparisonResult]:
-        """Build comparison results from offers stored in the repository."""
-        return self.compare_offers(self._repository_provider.offers.list_all())
 
     def _report(self, message: str) -> None:
         if self._stage_reporter is not None:

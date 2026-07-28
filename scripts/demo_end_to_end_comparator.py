@@ -1,17 +1,17 @@
 from __future__ import annotations
 
+import asyncio
 import sys
+from decimal import Decimal
 from pathlib import Path
 from uuid import uuid4
-
-from decimal import Decimal
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
 
-def main() -> None:
+async def main() -> None:
     """Demonstrate the full comparator flow using existing services only."""
     from app.comparator.difference import PriceDifferenceService
     from app.comparator.grouping import OfferGroupingService
@@ -31,7 +31,7 @@ def main() -> None:
         category=None,
         aliases=("minecraft",),
     )
-    provider.canonical_products.save(canonical_product)
+    await provider.canonical_products.save(canonical_product)
 
     ggsel_offer = ParsedOffer(
         marketplace="ggsel",
@@ -56,24 +56,24 @@ def main() -> None:
         canonical_product_id=None,
     )
 
-    provider.offers.save(ggsel_offer)
-    provider.offers.save(playerok_offer)
+    await provider.offers.save(ggsel_offer)
+    await provider.offers.save(playerok_offer)
 
     grouping_service = OfferGroupingService()
     selector = BestOfferSelector()
     difference_service = PriceDifferenceService()
     result_builder = ComparisonResultBuilder()
+    stored_offers = await provider.offers.list_all()
+    canonical_products = await provider.canonical_products.list_all()
 
     grouped = grouping_service.group(
-        [MarketplaceOffer(offer=offer) for offer in provider.offers.list_all()],
-        provider.canonical_products.list_all(),
+        [MarketplaceOffer(offer=offer) for offer in stored_offers],
+        canonical_products,
     )
-    product_index = {
-        product.id: product for product in provider.canonical_products.list_all()
-    }
+    product_index = {product.id: product for product in canonical_products}
 
     for group in grouped:
-        canonical_product = (
+        matched_product = (
             product_index.get(group.canonical_product_id)
             if group.canonical_product_id is not None
             else None
@@ -81,7 +81,7 @@ def main() -> None:
         selection = selector.select(group)
         difference = difference_service.compare(selection)
         comparison_result = result_builder.build(
-            canonical_product,
+            matched_product,
             selection,
             difference,
         )
@@ -96,7 +96,10 @@ def main() -> None:
         print("Marketplace Offers")
         for item in comparison_result.grouped_offers:
             offer = item.offer
-            print(f"  - {offer.marketplace}: {offer.title} {offer.price} {offer.currency}")
+            print(
+                f"  - {offer.marketplace}: {offer.title} "
+                f"{offer.price} {offer.currency}",
+            )
         print()
 
         print("Selected Best Offer")
@@ -127,4 +130,4 @@ def main() -> None:
 
 
 if __name__ == "__main__":
-    main()
+    asyncio.run(main())

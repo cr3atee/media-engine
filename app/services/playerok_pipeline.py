@@ -46,9 +46,9 @@ class PlayerokPipeline:
             raise RuntimeError(msg)
 
         parsed_offers = await self.run(url)
-        return self.compare_offers(parsed_offers)
+        return await self.compare_offers(parsed_offers)
 
-    def compare_offers(
+    async def compare_offers(
         self,
         parsed_offers: Sequence[ParsedOffer],
     ) -> list[ComparisonResult]:
@@ -57,12 +57,12 @@ class PlayerokPipeline:
             msg = "PlayerokPipeline requires a comparison pipeline."
             raise RuntimeError(msg)
 
-        return self._comparison_pipeline.compare_offers(parsed_offers)
+        return await self._comparison_pipeline.compare_offers(parsed_offers)
 
-    def compare_repository_offers(self) -> list[ComparisonResult]:
+    async def compare_repository_offers(self) -> list[ComparisonResult]:
         """Return unified comparison results from repository-backed offers."""
         if self._comparison_pipeline is None:
             msg = "PlayerokPipeline requires a comparison pipeline."
             raise RuntimeError(msg)
 
-        return self._comparison_pipeline.compare_repository_offers()
+        return await self._comparison_pipeline.compare_repository_offers()

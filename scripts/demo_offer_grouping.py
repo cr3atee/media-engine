@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import sys
 from pathlib import Path
 from uuid import uuid4
@@ -9,7 +10,7 @@ if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
 
-def main() -> None:
+async def main() -> None:
     """Load repository data and print grouped comparison inputs."""
     from app.comparator.grouping import OfferGroupingService
     from app.comparator.models import MarketplaceOffer
@@ -22,7 +23,7 @@ def main() -> None:
     minecraft_id = uuid4()
     gta_id = uuid4()
 
-    provider.canonical_products.save(
+    await provider.canonical_products.save(
         CanonicalProduct(
             id=minecraft_id,
             name="Minecraft Premium",
@@ -30,7 +31,7 @@ def main() -> None:
             aliases=("minecraft",),
         ),
     )
-    provider.canonical_products.save(
+    await provider.canonical_products.save(
         CanonicalProduct(
             id=gta_id,
             name="GTA V Account",
@@ -87,17 +88,17 @@ def main() -> None:
     ]
 
     for offer in offers:
-        provider.offers.save(offer)
+        await provider.offers.save(offer)
 
     grouping_service = OfferGroupingService()
+    stored_offers = await provider.offers.list_all()
+    canonical_products = await provider.canonical_products.list_all()
     grouped = grouping_service.group(
-        [MarketplaceOffer(offer=offer) for offer in provider.offers.list_all()],
-        provider.canonical_products.list_all(),
+        [MarketplaceOffer(offer=offer) for offer in stored_offers],
+        canonical_products,
     )
 
-    product_index = {
-        product.id: product for product in provider.canonical_products.list_all()
-    }
+    product_index = {product.id: product for product in canonical_products}
 
     for group in grouped:
         if group.canonical_product_id is None:
@@ -112,4 +113,4 @@ def main() -> None:
 
 
 if __name__ == "__main__":
-    main()
+    asyncio.run(main())

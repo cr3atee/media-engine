@@ -35,7 +35,7 @@ async def main() -> None:
 
     provider = create_memory_provider()
     canonical_id = uuid4()
-    provider.canonical_products.save(
+    await provider.canonical_products.save(
         CanonicalProduct(
             id=canonical_id,
             name="Minecraft Premium",
@@ -44,7 +44,7 @@ async def main() -> None:
         ),
     )
 
-    provider.offers.save(
+    await provider.offers.save(
         ParsedOffer(
             marketplace="ggsel",
             external_id="ggsel-1",
@@ -57,7 +57,7 @@ async def main() -> None:
             canonical_product_id=None,
         ),
     )
-    provider.offers.save(
+    await provider.offers.save(
         ParsedOffer(
             marketplace="playerok",
             external_id="playerok-1",
@@ -91,10 +91,10 @@ async def main() -> None:
             comparison_pipeline=marketplace_pipeline,
         )
 
-        comparison_results = playerok_pipeline.compare_repository_offers()
+        comparison_results = await playerok_pipeline.compare_repository_offers()
 
-    loaded_offers = provider.offers.list_all()
-    canonical_products = provider.canonical_products.list_all()
+    loaded_offers = await provider.offers.list_all()
+    canonical_products = await provider.canonical_products.list_all()
 
     print("Repository statistics")
     print(f"  Offers: {len(loaded_offers)}")

@@ -46,6 +46,78 @@ Recommended next task:
   methods so application services consistently `await` repository calls without
   introducing transaction boundaries yet.
 
+## Task 2 Implementation Status
+
+Status date: 2026-07-28.
+
+Completed application caller changes:
+
+- `MarketplacePipeline.run()` now awaits `RepositoryProvider.offers.save()`
+  before repository-backed comparison runs;
+- `MarketplacePipeline.compare_offers()` is async because it loads canonical
+  products through `RepositoryProvider.canonical_products.list_all()`;
+- `MarketplacePipeline.compare_repository_offers()` is async because it loads
+  offers through `RepositoryProvider.offers.list_all()`;
+- the pure comparison construction inside `MarketplacePipeline` remains
+  synchronous after offers and canonical products are loaded;
+- `PlayerokPipeline.run_comparison()`, `compare_offers()`, and
+  `compare_repository_offers()` now await the repository-backed comparison
+  pipeline;
+- PostgreSQL end-to-end verification now uses repository contracts directly
+  without casting provider repositories to concrete PostgreSQL classes.
+
+Updated repository call sites:
+
+- repository-backed comparator demos now await `save()` and `list_all()`;
+- marketplace pipeline persistence and comparator demos now await repository
+  reads after pipeline execution;
+- scheduler end-to-end verification now awaits canonical-product seeding,
+  offer persistence, repository activity reads, and repository-backed
+  comparison;
+- Playerok comparison demos now await the shared comparison pipeline helpers.
+
+Remaining synchronous callers:
+
+- direct `PriceHistoryService` callers remain synchronous because
+  `PriceHistoryService` is not a repository contract and the runtime migration
+  to `RepositoryProvider.price_history` is intentionally deferred;
+- older story/demo scripts that do not use `RepositoryProvider` may still use
+  `PriceHistoryService` directly;
+- obsolete scheduler demo variants may still require separate cleanup, but the
+  current scheduler end-to-end verification path is async-compatible.
+
+Remaining `PriceHistoryService` usage:
+
+- `MarketplacePipeline` still receives and uses `PriceHistoryService`;
+- GGSEL vertical-slice demos and scheduler verification still seed and read
+  price history through `PriceHistoryService`;
+- `RepositoryProvider.price_history` is not yet the active runtime price-history
+  path.
+
+Scheduler impact:
+
+- Scheduler architecture was not redesigned;
+- `BaseJob` and `SchedulerService` continue to await job execution as before;
+- `GGSELJob` works with the async repository-backed marketplace pipeline;
+- scheduler verification now awaits repository-backed helper calls outside the
+  scheduler layer.
+
+Deviations:
+
+- no transaction boundary, session ownership change, Unit of Work, migration, or
+  PostgreSQL default switch was introduced;
+- `PriceHistoryService` was documented as remaining runtime debt rather than
+  migrated in this task;
+- focused async tests use `asyncio.run()` only inside test helpers because the
+  project currently has no pytest async plugin configured.
+
+Recommended Task 3:
+
+- migrate the active marketplace runtime price-history path from
+  `PriceHistoryService` to `RepositoryProvider.price_history` while keeping
+  snapshot construction, price-change detection, event scoring, and comparator
+  logic synchronous after repository data is loaded.
+
 ## 1. Executive Summary
 
 MediaEngine has enough infrastructure to demonstrate its core backend value:

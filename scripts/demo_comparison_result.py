@@ -1,17 +1,17 @@
 from __future__ import annotations
 
+import asyncio
 import sys
+from decimal import Decimal
 from pathlib import Path
 from uuid import uuid4
-
-from decimal import Decimal
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
 
-def main() -> None:
+async def main() -> None:
     """Build and print a full comparison result for one canonical product."""
     from app.comparator.difference import PriceDifferenceService
     from app.comparator.grouping import OfferGroupingService
@@ -31,7 +31,7 @@ def main() -> None:
         category=None,
         aliases=("minecraft",),
     )
-    provider.canonical_products.save(canonical_product)
+    await provider.canonical_products.save(canonical_product)
 
     offers = [
         ParsedOffer(
@@ -69,21 +69,21 @@ def main() -> None:
         ),
     ]
     for offer in offers:
-        provider.offers.save(offer)
+        await provider.offers.save(offer)
 
     grouping_service = OfferGroupingService()
     selector = BestOfferSelector()
     difference_service = PriceDifferenceService()
     result_builder = ComparisonResultBuilder()
+    stored_offers = await provider.offers.list_all()
+    canonical_products = await provider.canonical_products.list_all()
 
     grouped = grouping_service.group(
-        [MarketplaceOffer(offer=offer) for offer in provider.offers.list_all()],
-        provider.canonical_products.list_all(),
+        [MarketplaceOffer(offer=offer) for offer in stored_offers],
+        canonical_products,
     )
 
-    canonical_index = {
-        product.id: product for product in provider.canonical_products.list_all()
-    }
+    canonical_index = {product.id: product for product in canonical_products}
 
     for group in grouped:
         selection = selector.select(group)
@@ -112,7 +112,10 @@ def main() -> None:
         print("All Marketplace Offers")
         for item in comparison_result.grouped_offers:
             offer = item.offer
-            print(f"  - {offer.marketplace}: {offer.title} {offer.price} {offer.currency}")
+            print(
+                f"  - {offer.marketplace}: {offer.title} "
+                f"{offer.price} {offer.currency}",
+            )
 
         print("Price Differences")
         if not comparison_result.comparison_entries:
@@ -131,4 +134,4 @@ def main() -> None:
 
 
 if __name__ == "__main__":
-    main()
+    asyncio.run(main())

@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+# ruff: noqa: E402, I001
+
 import asyncio
 import sys
 from pathlib import Path
@@ -15,6 +17,7 @@ from app.insights.scoring import EventScorer
 from app.parsers.ggsel_extractor import GGSelExtractor
 from app.parsers.ggsel_fetcher import GGSelFetcher, GGSelFetchError
 from app.parsers.normalizers import OfferNormalizer
+from app.repositories.provider import create_memory_provider
 from app.services.content_generator import ContentGenerator
 from app.services.event_builder import EventBuilder
 from app.services.marketplace_pipeline import MarketplacePipeline
@@ -26,11 +29,14 @@ GGSEL_CATALOG_URL = "https://ggsel.net/catalog"
 
 async def main() -> None:
     """Run the first real marketplace processing pipeline demo."""
+    provider = create_memory_provider()
+
     async with HttpClient() as http_client:
         pipeline = MarketplacePipeline(
             fetcher=GGSelFetcher(http_client),
             extractor=GGSelExtractor(),
             normalizer=OfferNormalizer(marketplace="ggsel"),
+            repository_provider=provider,
             snapshot_builder=SnapshotBuilder(),
             price_history=PriceHistoryService(),
             price_change_detector=PriceChangeDetector(),

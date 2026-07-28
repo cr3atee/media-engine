@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+# ruff: noqa: E402, I001
+
 import asyncio
 import sys
 from pathlib import Path
@@ -51,7 +53,7 @@ async def main() -> None:
             print(exc)
 
     print("=== SAVED OFFERS ===")
-    print(len(provider.offers.list_all()))
+    print(len(await provider.offers.list_all()))
 
 
 if __name__ == "__main__":

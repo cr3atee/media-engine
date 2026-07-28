@@ -2,10 +2,9 @@ from __future__ import annotations
 
 import asyncio
 import sys
+from decimal import Decimal
 from pathlib import Path
 from uuid import uuid4
-
-from decimal import Decimal
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 if str(PROJECT_ROOT) not in sys.path:
@@ -22,8 +21,8 @@ async def main() -> None:
     from app.models.canonical_product import CanonicalProduct
     from app.parsers.ggsel_extractor import GGSelExtractor
     from app.parsers.ggsel_fetcher import GGSelFetcher
-    from app.parsers.normalizers import OfferNormalizer
     from app.parsers.models import ParsedOffer
+    from app.parsers.normalizers import OfferNormalizer
     from app.repositories.provider import create_memory_provider
     from app.services.content_generator import ContentGenerator
     from app.services.event_builder import EventBuilder
@@ -33,7 +32,7 @@ async def main() -> None:
 
     provider = create_memory_provider()
     canonical_id = uuid4()
-    provider.canonical_products.save(
+    await provider.canonical_products.save(
         CanonicalProduct(
             id=canonical_id,
             name="Minecraft Premium",
@@ -42,7 +41,7 @@ async def main() -> None:
         ),
     )
 
-    provider.offers.save(
+    await provider.offers.save(
         ParsedOffer(
             marketplace="ggsel",
             external_id="ggsel-1",
@@ -55,7 +54,7 @@ async def main() -> None:
             canonical_product_id=None,
         ),
     )
-    provider.offers.save(
+    await provider.offers.save(
         ParsedOffer(
             marketplace="playerok",
             external_id="playerok-1",
@@ -83,8 +82,8 @@ async def main() -> None:
             content_generator=ContentGenerator(FakeAIProvider()),
         )
 
-        comparison_results: list[ComparisonResult] = pipeline.compare_offers(
-            list(provider.offers.list_all()),
+        comparison_results: list[ComparisonResult] = await pipeline.compare_offers(
+            list(await provider.offers.list_all()),
         )
 
     for result in comparison_results:
@@ -98,7 +97,10 @@ async def main() -> None:
         print("Marketplace Offers")
         for offer in result.grouped_offers:
             parsed = offer.offer
-            print(f"  - {parsed.marketplace}: {parsed.title} {parsed.price} {parsed.currency}")
+            print(
+                f"  - {parsed.marketplace}: {parsed.title} "
+                f"{parsed.price} {parsed.currency}",
+            )
         print()
 
         print("Best Offer")
@@ -114,8 +116,8 @@ async def main() -> None:
             print("  None")
         else:
             for entry in result.comparison_entries:
-                offer = entry.offer.offer
-                print(f"  - {offer.marketplace}: {offer.title}")
+                entry_offer = entry.offer.offer
+                print(f"  - {entry_offer.marketplace}: {entry_offer.title}")
                 print(f"    Absolute Difference: {entry.absolute_difference}")
                 print(f"    Percentage Difference: {entry.percentage_difference}")
                 if entry.reason is not None:

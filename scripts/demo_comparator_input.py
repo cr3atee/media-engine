@@ -1,5 +1,8 @@
 from __future__ import annotations
 
+# ruff: noqa: E402, I001
+
+import asyncio
 import sys
 from collections import defaultdict
 from pathlib import Path
@@ -9,12 +12,13 @@ PROJECT_ROOT = Path(__file__).resolve().parents[1]
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
+from app.comparator.models import MarketplaceOffer, ProductComparisonInput
+from app.parsers.models import ParsedOffer
+
 
 def _group_offers(
-    offers: list["ParsedOffer"],
-) -> list["ProductComparisonInput"]:
-    from app.comparator.models import MarketplaceOffer, ProductComparisonInput
-
+    offers: list[ParsedOffer],
+) -> list[ProductComparisonInput]:
     grouped: dict[UUID | None, list[MarketplaceOffer]] = defaultdict(list)
     for offer in offers:
         grouped[offer.canonical_product_id].append(MarketplaceOffer(offer=offer))
@@ -28,9 +32,8 @@ def _group_offers(
     ]
 
 
-def main() -> None:
+async def main() -> None:
     """Load offers from the repository provider and print comparison inputs."""
-    from app.parsers.models import ParsedOffer
     from app.repositories.provider import create_memory_provider
 
     provider = create_memory_provider()
@@ -86,9 +89,9 @@ def main() -> None:
     ]
 
     for offer in offers:
-        provider.offers.save(offer)
+        await provider.offers.save(offer)
 
-    loaded_offers = list(provider.offers.list_all())
+    loaded_offers = list(await provider.offers.list_all())
     comparison_inputs = _group_offers(loaded_offers)
 
     print(f"Loaded offers: {len(loaded_offers)}")
@@ -98,4 +101,4 @@ def main() -> None:
 
 
 if __name__ == "__main__":
-    main()
+    asyncio.run(main())
