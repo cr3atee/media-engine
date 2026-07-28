@@ -11,37 +11,44 @@ class MemoryPriceHistoryRepository(PriceHistoryRepository):
         """Initialize empty price history storage."""
         self._storage: dict[tuple[str, str], list[PriceSnapshot]] = {}
 
-    def add(self, snapshot: PriceSnapshot) -> None:
-        """Store a price snapshot in insertion order."""
+    async def add(self, snapshot: PriceSnapshot) -> None:
+        """Store a price snapshot when an identical one is absent."""
         key = (snapshot.marketplace, snapshot.external_id)
-        self._storage.setdefault(key, []).append(snapshot)
+        history = self._storage.setdefault(key, [])
+        if snapshot not in history:
+            history.append(snapshot)
 
-    def get_last(
+    async def get_last(
         self,
         marketplace: str,
         external_id: str,
     ) -> PriceSnapshot | None:
         """Return the latest stored snapshot for a marketplace offer."""
-        history = self._storage.get((marketplace, external_id))
+        history = await self.get_history(marketplace, external_id)
         if not history:
             return None
         return history[-1]
 
-    def get_previous(
+    async def get_previous(
         self,
         marketplace: str,
         external_id: str,
     ) -> PriceSnapshot | None:
         """Return the snapshot before the latest one for a marketplace offer."""
-        history = self._storage.get((marketplace, external_id))
-        if history is None or len(history) < 2:
+        history = await self.get_history(marketplace, external_id)
+        if len(history) < 2:
             return None
         return history[-2]
 
-    def get_history(
+    async def get_history(
         self,
         marketplace: str,
         external_id: str,
     ) -> list[PriceSnapshot]:
         """Return all stored snapshots for a marketplace offer."""
-        return list(self._storage.get((marketplace, external_id), []))
+        history = self._storage.get((marketplace, external_id), [])
+        ordered = sorted(
+            enumerate(history),
+            key=lambda item: (item[1].collected_at, item[0]),
+        )
+        return [snapshot for _, snapshot in ordered]

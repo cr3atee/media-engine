@@ -10,11 +10,11 @@ class PriceHistoryRepository(BaseRepository):
     """Abstract storage contract for price snapshot history."""
 
     @abstractmethod
-    def add(self, snapshot: PriceSnapshot) -> None:
+    async def add(self, snapshot: PriceSnapshot) -> None:
         """Store a price snapshot."""
 
     @abstractmethod
-    def get_last(
+    async def get_last(
         self,
         marketplace: str,
         external_id: str,
@@ -22,7 +22,7 @@ class PriceHistoryRepository(BaseRepository):
         """Return the latest snapshot for a marketplace offer."""
 
     @abstractmethod
-    def get_previous(
+    async def get_previous(
         self,
         marketplace: str,
         external_id: str,
@@ -30,7 +30,7 @@ class PriceHistoryRepository(BaseRepository):
         """Return the snapshot before the latest one for a marketplace offer."""
 
     @abstractmethod
-    def get_history(
+    async def get_history(
         self,
         marketplace: str,
         external_id: str,

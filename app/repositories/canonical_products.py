@@ -12,13 +12,13 @@ class CanonicalProductRepository(BaseRepository):
     """Abstract storage contract for canonical products."""
 
     @abstractmethod
-    def save(self, product: CanonicalProduct) -> None:
+    async def save(self, product: CanonicalProduct) -> None:
         """Persist or update a canonical product."""
 
     @abstractmethod
-    def get_by_id(self, id: UUID) -> CanonicalProduct | None:
+    async def get_by_id(self, id: UUID) -> CanonicalProduct | None:
         """Return a canonical product by identifier when it exists."""
 
     @abstractmethod
-    def list_all(self) -> Sequence[CanonicalProduct]:
+    async def list_all(self) -> Sequence[CanonicalProduct]:
         """Return all canonical products."""

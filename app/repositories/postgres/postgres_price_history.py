@@ -15,20 +15,32 @@ class PostgresPriceHistoryRepository(PriceHistoryRepository):
         """Initialize repository with an existing async database session."""
         self._session = session
 
-    async def add(self, snapshot: PriceSnapshot) -> None:  # type: ignore[override]
-        """Store a price snapshot in insertion order."""
-        self._session.add(
-            PriceSnapshotRecord(
-                marketplace=snapshot.marketplace,
-                external_id=snapshot.external_id,
-                price=snapshot.price,
-                currency=snapshot.currency,
-                collected_at=snapshot.collected_at,
+    async def add(self, snapshot: PriceSnapshot) -> None:
+        """Store a price snapshot when an identical one is absent."""
+        existing = await self._session.execute(
+            select(PriceSnapshotRecord)
+            .where(
+                PriceSnapshotRecord.marketplace == snapshot.marketplace,
+                PriceSnapshotRecord.external_id == snapshot.external_id,
+                PriceSnapshotRecord.price == snapshot.price,
+                PriceSnapshotRecord.currency == snapshot.currency,
+                PriceSnapshotRecord.collected_at == snapshot.collected_at,
             )
+            .limit(1)
         )
-        await self._session.flush()
+        if existing.scalar_one_or_none() is None:
+            self._session.add(
+                PriceSnapshotRecord(
+                    marketplace=snapshot.marketplace,
+                    external_id=snapshot.external_id,
+                    price=snapshot.price,
+                    currency=snapshot.currency,
+                    collected_at=snapshot.collected_at,
+                )
+            )
+            await self._session.flush()
 
-    async def get_last(  # type: ignore[override]
+    async def get_last(
         self,
         marketplace: str,
         external_id: str,
@@ -36,7 +48,10 @@ class PostgresPriceHistoryRepository(PriceHistoryRepository):
         """Return the latest stored snapshot for a marketplace offer."""
         result = await self._session.execute(
             self._base_query(marketplace, external_id)
-            .order_by(PriceSnapshotRecord.id.desc())
+            .order_by(
+                PriceSnapshotRecord.collected_at.desc(),
+                PriceSnapshotRecord.id.desc(),
+            )
             .limit(1)
         )
         record = result.scalar_one_or_none()
@@ -44,7 +59,7 @@ class PostgresPriceHistoryRepository(PriceHistoryRepository):
             return None
         return self._to_domain(record)
 
-    async def get_previous(  # type: ignore[override]
+    async def get_previous(
         self,
         marketplace: str,
         external_id: str,
@@ -52,7 +67,10 @@ class PostgresPriceHistoryRepository(PriceHistoryRepository):
         """Return the snapshot before the latest one for a marketplace offer."""
         result = await self._session.execute(
             self._base_query(marketplace, external_id)
-            .order_by(PriceSnapshotRecord.id.desc())
+            .order_by(
+                PriceSnapshotRecord.collected_at.desc(),
+                PriceSnapshotRecord.id.desc(),
+            )
             .offset(1)
             .limit(1)
         )
@@ -61,14 +79,17 @@ class PostgresPriceHistoryRepository(PriceHistoryRepository):
             return None
         return self._to_domain(record)
 
-    async def get_history(  # type: ignore[override]
+    async def get_history(
         self,
         marketplace: str,
         external_id: str,
     ) -> list[PriceSnapshot]:
         """Return all stored snapshots for a marketplace offer."""
         result = await self._session.execute(
-            self._base_query(marketplace, external_id).order_by(PriceSnapshotRecord.id)
+            self._base_query(marketplace, external_id).order_by(
+                PriceSnapshotRecord.collected_at,
+                PriceSnapshotRecord.id,
+            )
         )
         return [self._to_domain(record) for record in result.scalars()]
 

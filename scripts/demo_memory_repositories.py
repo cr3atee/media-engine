@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+# ruff: noqa: E402
+import asyncio
 import sys
 from decimal import Decimal
 from pathlib import Path
@@ -19,7 +21,7 @@ from app.repositories.memory import (
 )
 
 
-def main() -> None:
+async def main() -> None:
     """Demonstrate in-memory repository implementations."""
     product_repository = MemoryCanonicalProductRepository()
     offer_repository = MemoryOfferRepository()
@@ -38,10 +40,10 @@ def main() -> None:
         aliases=("gta 5",),
     )
 
-    product_repository.save(minecraft)
-    product_repository.save(gta)
+    await product_repository.save(minecraft)
+    await product_repository.save(gta)
 
-    offer_repository.save(
+    await offer_repository.save(
         ParsedOffer(
             marketplace="ggsel",
             external_id="ggsel-1",
@@ -52,7 +54,7 @@ def main() -> None:
             canonical_product_id=minecraft.id,
         ),
     )
-    offer_repository.save(
+    await offer_repository.save(
         ParsedOffer(
             marketplace="playerok",
             external_id="playerok-1",
@@ -65,17 +67,17 @@ def main() -> None:
     )
 
     print("Canonical products:")
-    pprint(product_repository.list_all())
+    pprint(await product_repository.list_all())
     print()
     print("Product by ID:")
-    pprint(product_repository.get_by_id(minecraft.id))
+    pprint(await product_repository.get_by_id(minecraft.id))
     print()
     print("Offers:")
-    pprint(offer_repository.list_all())
+    pprint(await offer_repository.list_all())
     print()
     print("Price history repository:")
     print(price_history_repository.__class__.__name__)
 
 
 if __name__ == "__main__":
-    main()
+    asyncio.run(main())

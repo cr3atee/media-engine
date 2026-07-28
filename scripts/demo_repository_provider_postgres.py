@@ -5,7 +5,6 @@ import sys
 from datetime import UTC, datetime
 from decimal import Decimal
 from pathlib import Path
-from typing import cast
 from uuid import uuid4
 
 project_root = Path(__file__).resolve().parents[1]
@@ -19,11 +18,6 @@ async def main() -> None:
     from app.domain.price_snapshot import PriceSnapshot
     from app.models.canonical_product import CanonicalProduct
     from app.parsers.models import ParsedOffer
-    from app.repositories.postgres import (
-        PostgresCanonicalProductRepository,
-        PostgresOfferRepository,
-        PostgresPriceHistoryRepository,
-    )
     from app.repositories.provider import create_repository_provider
 
     product = CanonicalProduct(
@@ -54,15 +48,9 @@ async def main() -> None:
     try:
         async with SessionLocal() as session:
             provider = create_repository_provider("postgres", session)
-            canonical_products = cast(
-                PostgresCanonicalProductRepository,
-                provider.canonical_products,
-            )
-            offers = cast(PostgresOfferRepository, provider.offers)
-            price_history = cast(
-                PostgresPriceHistoryRepository,
-                provider.price_history,
-            )
+            canonical_products = provider.canonical_products
+            offers = provider.offers
+            price_history = provider.price_history
 
             await canonical_products.save(product)
             await offers.save(offer)

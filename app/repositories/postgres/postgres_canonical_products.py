@@ -19,7 +19,7 @@ class PostgresCanonicalProductRepository(CanonicalProductRepository):
         """Initialize repository with an existing async database session."""
         self._session = session
 
-    async def save(self, product: CanonicalProduct) -> None:  # type: ignore[override]
+    async def save(self, product: CanonicalProduct) -> None:
         """Persist or update a canonical product."""
         record = await self._session.get(CanonicalProductRecord, product.id)
         if record is None:
@@ -39,7 +39,7 @@ class PostgresCanonicalProductRepository(CanonicalProductRepository):
 
         await self._session.flush()
 
-    async def get_by_id(  # type: ignore[override]
+    async def get_by_id(
         self,
         id: UUID,
     ) -> CanonicalProduct | None:
@@ -49,7 +49,7 @@ class PostgresCanonicalProductRepository(CanonicalProductRepository):
             return None
         return self._to_domain(record)
 
-    async def list_all(self) -> Sequence[CanonicalProduct]:  # type: ignore[override]
+    async def list_all(self) -> Sequence[CanonicalProduct]:
         """Return all canonical products in insertion order."""
         result = await self._session.execute(
             select(CanonicalProductRecord).order_by(

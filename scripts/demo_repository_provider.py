@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+# ruff: noqa: E402
+import asyncio
 import sys
 from decimal import Decimal
 from pathlib import Path
@@ -15,7 +17,7 @@ from app.parsers.models import ParsedOffer
 from app.repositories.provider import create_memory_provider
 
 
-def main() -> None:
+async def main() -> None:
     """Demonstrate repository access through RepositoryProvider."""
     provider = create_memory_provider()
 
@@ -25,8 +27,8 @@ def main() -> None:
         category="games",
         aliases=("minecraft account",),
     )
-    provider.canonical_products.save(product)
-    provider.offers.save(
+    await provider.canonical_products.save(product)
+    await provider.offers.save(
         ParsedOffer(
             marketplace="ggsel",
             external_id="ggsel-1",
@@ -39,17 +41,17 @@ def main() -> None:
     )
 
     print("Canonical products:")
-    pprint(provider.canonical_products.list_all())
+    pprint(await provider.canonical_products.list_all())
     print()
     print("Product by ID:")
-    pprint(provider.canonical_products.get_by_id(product.id))
+    pprint(await provider.canonical_products.get_by_id(product.id))
     print()
     print("Offers:")
-    pprint(provider.offers.list_all())
+    pprint(await provider.offers.list_all())
     print()
     print("Price history repository:")
     print(provider.price_history.__class__.__name__)
 
 
 if __name__ == "__main__":
-    main()
+    asyncio.run(main())

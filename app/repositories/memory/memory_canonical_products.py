@@ -14,14 +14,14 @@ class MemoryCanonicalProductRepository(CanonicalProductRepository):
         """Initialize empty in-memory product storage."""
         self._products: dict[UUID, CanonicalProduct] = {}
 
-    def save(self, product: CanonicalProduct) -> None:
+    async def save(self, product: CanonicalProduct) -> None:
         """Store or replace a canonical product by identifier."""
         self._products[product.id] = product
 
-    def get_by_id(self, id: UUID) -> CanonicalProduct | None:
+    async def get_by_id(self, id: UUID) -> CanonicalProduct | None:
         """Return a canonical product by identifier when it exists."""
         return self._products.get(id)
 
-    def list_all(self) -> Sequence[CanonicalProduct]:
+    async def list_all(self) -> Sequence[CanonicalProduct]:
         """Return all canonical products in insertion order."""
         return tuple(self._products.values())

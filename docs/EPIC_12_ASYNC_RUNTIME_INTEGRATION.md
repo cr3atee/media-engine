@@ -2,8 +2,49 @@
 
 Date: 2026-07-28
 
-Status: specification only. No application code or migrations are implemented by
-this document.
+Status: specification plus Task 1 implementation log. The original
+specification did not implement application code or migrations; the Task 1
+status below records the first completed implementation step.
+
+## Task 1 Implementation Status
+
+Status date: 2026-07-28.
+
+Completed:
+
+- repository contracts for offers, canonical products, and price history were
+  converted to async method signatures;
+- memory repositories now implement the same async public contract as
+  PostgreSQL repositories;
+- PostgreSQL repository methods structurally match the async contracts and no
+  longer require repository-specific `type: ignore[override]` comments;
+- `MemoryPriceHistoryRepository` is functional and supports deterministic
+  history ordering, latest snapshot lookup, previous snapshot lookup, and exact
+  duplicate snapshot suppression;
+- focused memory repository tests were added.
+
+Deviation from the original task list:
+
+- `OfferRepository.list_by_marketplace()` was added because Task 1 explicitly
+  requires marketplace filtering verification. This is a repository-level
+  lookup method and does not change marketplace or business pipeline
+  architecture.
+
+Remaining callers that still require async conversion:
+
+- `app/services/marketplace_pipeline.py`;
+- `app/services/playerok_pipeline.py` comparison helpers that delegate into
+  repository-backed marketplace pipeline methods;
+- scheduler and marketplace demo scripts that still compose the old synchronous
+  repository call pattern;
+- comparator/demo scripts that call `provider.offers` or
+  `provider.canonical_products` synchronously.
+
+Recommended next task:
+
+- adapt `RepositoryProvider` composition demos and repository-backed pipeline
+  methods so application services consistently `await` repository calls without
+  introducing transaction boundaries yet.
 
 ## 1. Executive Summary
 
