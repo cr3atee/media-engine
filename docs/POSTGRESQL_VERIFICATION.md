@@ -2,9 +2,8 @@
 
 ## Status
 
-PostgreSQL persistence, the EPIC 12 runtime, and EPIC 13 Task 3 durable market
-events are live-verified against PostgreSQL 17.10 in isolated Compose
-environments.
+PostgreSQL persistence, the EPIC 12 runtime, and EPIC 13 Task 4 transactional
+market-event ingestion are live-verified against isolated PostgreSQL 17.10.
 
 ## Verified Schema
 
@@ -67,11 +66,20 @@ environments.
   complete run and skip post-commit work.
 - Content failure after commit leaves persistence durable and is represented in
   `MarketplaceRunResult`.
+- Active ingestion inserts offers, exact snapshots, and deterministic market
+  events in one shared-session transaction.
+- First observations, increases, unchanged prices, reverse chronology, and exact
+  duplicate snapshots do not create price-drop events.
+- Event insertion failure rolls back the offer, current snapshot, and event; no
+  post-commit scoring/content runs.
+- Equal external IDs on GGSEL and Playerok produce independent event identities.
+- Exact ingestion replay creates no duplicate event row, and stored identity
+  matches domain recomputation from exact snapshot facts.
 
 ## Remaining Limits
 
-- Durable market events are not yet connected to active marketplace ingestion;
-  current runtime events remain unchanged until EPIC 13 Task 4.
+- Event scoring status is not yet updated by the active runtime; scoring remains a
+  temporary post-commit operation.
 - Generated-content and publication state are not persisted.
 - Post-commit publication retry is not implemented.
 - Scheduler overlap and multi-process coordination are not implemented.
@@ -81,4 +89,6 @@ environments.
 Complete evidence is recorded in `EPIC_12_FINAL_VERIFICATION.md`.
 EPIC 13 Task 3 evidence is implemented by
 `verify_epic13_market_events_postgres.py` and the shared/focused market-event
-repository tests.
+repository tests. EPIC 13 Task 4 ingestion evidence is implemented by
+`verify_epic13_ingestion_postgres.py` and the focused marketplace event
+integration tests.

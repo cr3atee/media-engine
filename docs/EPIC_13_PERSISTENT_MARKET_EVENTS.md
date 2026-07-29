@@ -48,19 +48,21 @@ Lifecycle implementation details:
 
 Current runtime compatibility:
 
-- The existing Pydantic `PriceDropEvent` remains unchanged and continues to be used by `EventBuilder`, `EventScorer`, prompts, content generation, and marketplace runtime DTOs.
-- `app/domain/events.py` re-exports the persistent event contracts but does not convert or replace runtime events.
-- No event persistence or application-runner integration is included.
+- The existing Pydantic `PriceDropEvent` remains the temporary scoring/content
+  DTO after commit.
+- A newly persisted `MarketEvent[PriceDropPayload]` is explicitly adapted to that
+  DTO; scoring and content do not construct a second event identity.
+- `RepositoryProvider.events` supplies memory or PostgreSQL event persistence in
+  the same repository scope as offers and price snapshots.
 - `app/analytics/price_change.py` remains the active detector.
 - `app/analytics/price_change_detector.py` remains a legacy duplicate pending the dedicated cleanup task; its calculation semantics were not changed.
 
 Remaining EPIC 13 work:
 
-- PostgreSQL repository implementations.
-- SQLAlchemy models and Alembic migrations.
-- Atomic event insertion in the marketplace transaction.
-- Durable scoring, content-generation, claim-recovery, and publication application services.
-- Scheduler job integration and live PostgreSQL verification.
+- Durable scoring and event-claim application service.
+- Generated-content persistence and recoverable content generation.
+- Publication persistence and lifecycle orchestration.
+- Dedicated event-processing Scheduler jobs and final end-to-end verification.
 
 ### Task 2 implementation status
 
@@ -144,17 +146,43 @@ Task 3 is complete. Revision `0007_create_market_events` creates only the
   re-upgrade, `alembic check`, idempotency, rollback, concurrent claims, and lease
   recovery confirmed.
 
-Task 3 does not add the event repository to `RepositoryProvider` or the active
-marketplace runtime. It does not create `generated_contents` or `publications`.
+Task 3 did not add the event repository to `RepositoryProvider` or the active
+marketplace runtime. Task 4 completes that integration without creating
+`generated_contents` or `publications`.
 
-Exact recommended Task 4:
+### Task 4 implementation status
 
-Integrate persistent event candidates into the existing ingestion transaction so
-offers, snapshots, and detected events commit or roll back atomically. Resolve the
-exact persisted snapshot rows through `PostgresMarketEventRepository`, preserve
-idempotency under repeated and overlapping ingestion, and keep scoring, AI, and
-publication outside that transaction. Do not add generated-content/publication
-persistence or post-commit workers in Task 4.
+Task 4 is complete:
+
+- `RepositoryProvider.events` exposes `MemoryMarketEventRepository` or
+  `PostgresMarketEventRepository` with the existing backend selection.
+- All PostgreSQL repositories in one ingestion scope share the caller-owned
+  `AsyncSession`; repositories still never commit or roll back.
+- `PriceDropMarketEventBuilder` converts the active `PriceChange` and exact
+  previous/current `PriceSnapshot` values into an immutable Decimal-safe event.
+- Event identity continues to use the Task 1 identity service and excludes title,
+  URL, canonical product, scoring, and content.
+- Offer, current snapshot, and idempotent event insertion execute in the existing
+  ingestion transaction. Unexpected event persistence failure rolls back the run
+  and prevents post-commit processing.
+- Exact duplicate snapshots do not build an event candidate or falsely report an
+  existing event. Compatible repository replay remains `EXISTING`; incompatible
+  immutable facts remain an explicit `RepositoryIdentityConflictError`.
+- `MarketplaceRunResult` distinguishes detected changes, candidates, created and
+  existing events, skipped candidates, durable IDs, scored events, generated
+  content, and post-commit errors.
+- Only newly created durable events enter the temporary post-commit path. An
+  explicit adapter supplies the existing Pydantic `PriceDropEvent` to unchanged
+  scoring and content components.
+- Live PostgreSQL verification confirms shared sessions, first-snapshot behavior,
+  atomic creation, deterministic identity, exact replay, rollback, marketplace
+  isolation, and durable events after content failure.
+
+Exact recommended next task is **Task 5: Event processing and durable scoring**.
+It should claim persisted events, reuse `EventScorer`, persist score/failure state,
+and add Scheduler orchestration without holding a transaction during scoring. AI,
+generated-content persistence, publication persistence, and Telegram remain out of
+Task 5.
 
 ### Current implementation facts
 
@@ -162,12 +190,15 @@ persistence or post-commit workers in Task 4.
 - `app/core/events.py` contains an older standard-library event hierarchy that is not used by the active pipeline.
 - `app/analytics/price_change.py` is the detector used by the active marketplace pipeline.
 - `app/analytics/price_change_detector.py` is a legacy duplicate used only by the older `PricePipeline` demo path.
-- Offers, canonical products, and price snapshots have repository contracts and PostgreSQL implementations.
-- `MarketplaceApplicationRunner` commits ingestion before scoring and content generation.
+- Offers, canonical products, price snapshots, and market events have repository
+  contracts plus memory and PostgreSQL implementations available through
+  `RepositoryProvider`.
+- `MarketplaceApplicationRunner` atomically commits offers, snapshots, and market
+  events before scoring and content generation.
 - Generated text and post-commit failures currently exist only in process memory.
 - Scheduler jobs orchestrate services and maintain execution statistics in memory.
-- Standalone memory repositories exist for persistent events, generated content,
-  and publications; no active runtime path or provider uses them yet.
+- The active runtime uses the event repository. Generated-content and publication
+  repositories remain standalone and are not in `RepositoryProvider`.
 
 ### Architectural invariants
 
@@ -1069,12 +1100,20 @@ Use a typed summary containing:
 
 ### Task 4: Ingestion transaction integration
 
+- Status: Completed.
 - Goal: Persist event candidates atomically with offers and snapshots while keeping current detection behavior.
-- Likely files: `app/services/marketplace_pipeline.py`, transaction DTOs, transaction manager/provider wiring, and integration tests.
-- Acceptance: A detected transition commits one event; duplicate ingestion creates no duplicate; rollback leaves no new snapshot or event; no scoring or AI occurs in the transaction.
-- Tests: Commit, rollback, duplicate run, out-of-order snapshot, unchanged price, price increase, price drop, concurrent ingestion.
+- Files: `app/services/price_drop_market_event_builder.py`, marketplace pipeline
+  and runner result DTOs, provider wiring, focused memory/PostgreSQL integration
+  tests, and live ingestion verification.
+- Acceptance: Confirmed. A detected transition commits one event; exact replay
+  creates no duplicate; event failure rolls back the run; scoring and content occur
+  only after commit.
+- Tests: Builder identity and immutability, first snapshot, increase, unchanged
+  price, exact duplicate, reverse chronology, price drop, identity conflict,
+  rollback, shared session, marketplace isolation, and post-commit failure.
 - Migration impact: None beyond Task 3.
-- Risks: Current snapshot domain objects do not expose database IDs; repository mapping must resolve exact persisted rows inside the transaction.
+- Resolved risk: Snapshot row IDs remain inside PostgreSQL mapping; the domain and
+  transaction DTO use exact persistence-neutral snapshot identities.
 - Dependencies: Task 3.
 - Non-goals: Post-commit scoring and content.
 

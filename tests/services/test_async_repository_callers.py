@@ -27,6 +27,7 @@ from app.parsers.playerok_extractor import PlayerokExtractor
 from app.parsers.playerok_fetcher import PlayerokFetcher
 from app.parsers.playerok_normalizer import PlayerokNormalizer
 from app.repositories.canonical_products import CanonicalProductRepository
+from app.repositories.memory import MemoryMarketEventRepository
 from app.repositories.offers import OfferRepository
 from app.repositories.price_history import PriceHistoryRepository
 from app.repositories.provider import RepositoryProvider
@@ -354,6 +355,7 @@ def make_provider(
                 fail_on_read=fail_on_history_read,
                 fail_on_write=fail_on_history_write,
             ),
+            events=MemoryMarketEventRepository(),
         ),
         state,
     )
@@ -485,9 +487,7 @@ def test_first_snapshot_is_persisted_without_event() -> None:
 
     run_async(pipeline.run("demo://ggsel"))
 
-    assert run_async(provider.price_history.get_history("ggsel", "1001")) == [
-        snapshot
-    ]
+    assert run_async(provider.price_history.get_history("ggsel", "1001")) == [snapshot]
     assert content.events == []
 
 
@@ -587,9 +587,7 @@ def test_exact_duplicate_snapshot_is_suppressed_without_event() -> None:
 
     run_async(pipeline.run("demo://ggsel"))
 
-    assert run_async(provider.price_history.get_history("ggsel", "1001")) == [
-        snapshot
-    ]
+    assert run_async(provider.price_history.get_history("ggsel", "1001")) == [snapshot]
     assert content.events == []
 
 

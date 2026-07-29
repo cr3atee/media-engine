@@ -6,14 +6,17 @@ from typing import Literal, overload
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.repositories.canonical_products import CanonicalProductRepository
+from app.repositories.events import MarketEventRepository
 from app.repositories.memory import (
     MemoryCanonicalProductRepository,
+    MemoryMarketEventRepository,
     MemoryOfferRepository,
     MemoryPriceHistoryRepository,
 )
 from app.repositories.offers import OfferRepository
 from app.repositories.postgres import (
     PostgresCanonicalProductRepository,
+    PostgresMarketEventRepository,
     PostgresOfferRepository,
     PostgresPriceHistoryRepository,
 )
@@ -29,6 +32,7 @@ class RepositoryProvider:
     canonical_products: CanonicalProductRepository
     offers: OfferRepository
     price_history: PriceHistoryRepository
+    events: MarketEventRepository
 
 
 def create_memory_provider() -> RepositoryProvider:
@@ -37,6 +41,7 @@ def create_memory_provider() -> RepositoryProvider:
         canonical_products=MemoryCanonicalProductRepository(),
         offers=MemoryOfferRepository(),
         price_history=MemoryPriceHistoryRepository(),
+        events=MemoryMarketEventRepository(),
     )
 
 
@@ -46,6 +51,7 @@ def create_postgres_provider(session: AsyncSession) -> RepositoryProvider:
         canonical_products=PostgresCanonicalProductRepository(session),
         offers=PostgresOfferRepository(session),
         price_history=PostgresPriceHistoryRepository(session),
+        events=PostgresMarketEventRepository(session),
     )
 
 

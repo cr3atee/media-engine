@@ -6,6 +6,14 @@ This document records notable Project Passport updates.
 
 ## Unreleased
 
+- Integrated deterministic market-event persistence into the existing ingestion
+  transaction.
+- Added event repositories to memory/PostgreSQL providers and preserved one shared
+  PostgreSQL session per run.
+- Added a Decimal-safe event builder, exact snapshot identity mapping, idempotent
+  insertion, rollback coverage, and a temporary post-commit legacy event adapter.
+- Added focused memory/PostgreSQL integration tests and live EPIC 13 Task 4
+  verification.
 - Completed EPIC 12 live verification against PostgreSQL 17.10.
 - Verified migration preflight, constraints, indexes, concurrency, FK behavior,
   transaction rollback, retry, Scheduler execution, and practical overlap.

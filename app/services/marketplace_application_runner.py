@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from collections.abc import Awaitable, Callable, Sequence
 from dataclasses import dataclass
+from uuid import UUID
 
 from app.domain.marketplace import Marketplace
 from app.parsers.models import ParsedOffer
@@ -23,7 +24,12 @@ class MarketplaceRunResult:
     snapshots_persisted: int
     skipped_offers: int
     price_changes_detected: int
+    event_candidates_built: int
     events_created: int
+    events_existing: int
+    skipped_event_candidates: int
+    event_ids: tuple[UUID, ...]
+    events_scored: int
     content_items_generated: int
     persistence_committed: bool
     errors: tuple[str, ...]
@@ -57,7 +63,9 @@ class MarketplaceApplicationRunner:
                 repository_provider,
             )
 
-        post_commit = await self._pipeline.process_after_commit(transactional.events)
+        post_commit = await self._pipeline.process_after_commit(
+            transactional.events_for_post_commit
+        )
         return MarketplaceRunResult(
             marketplace=self._marketplace,
             offers_received=len(parsed_offers),
@@ -67,7 +75,12 @@ class MarketplaceApplicationRunner:
             snapshots_persisted=transactional.snapshots_persisted,
             skipped_offers=prepared.skipped_offers,
             price_changes_detected=len(transactional.price_changes),
-            events_created=len(transactional.events),
+            event_candidates_built=len(transactional.event_results),
+            events_created=transactional.events_created,
+            events_existing=transactional.events_existing,
+            skipped_event_candidates=transactional.skipped_event_candidates,
+            event_ids=tuple(event.id for event in transactional.durable_events),
+            events_scored=post_commit.events_scored,
             content_items_generated=post_commit.content_items_generated,
             persistence_committed=True,
             errors=prepared.errors + post_commit.errors,

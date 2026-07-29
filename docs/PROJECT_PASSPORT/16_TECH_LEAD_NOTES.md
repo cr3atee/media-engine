@@ -22,8 +22,15 @@ This document captures architecture notes that are important for future reviews.
   PostgreSQL scope shares one session and transaction across repositories.
 - Live PostgreSQL verification covers migration preflight, two-session conflicts,
   FK behavior, commit/rollback, retries, Scheduler delegation, and UTC timestamps.
-- The next reliability boundary is persistent event and publication state, not a
-  broader marketplace transaction.
+- Durable market events now share the offer/snapshot ingestion transaction and use
+  exact persistence-neutral snapshot identities.
+- The Pydantic `PriceDropEvent` is a temporary post-commit adapter only; the
+  durable `MarketEvent` owns identity and audit facts.
+- Exact snapshot replay is suppressed before event construction. Repository-level
+  compatible replay remains `EXISTING`; immutable conflicts fail explicitly.
+- The next implementation task is durable event claiming and scoring. It must not
+  hold database locks while running scoring policy and must not add AI or
+  publication behavior.
 - GGSEL-specific price fields are not fully normalized into `ParsedOffer.price` and `ParsedOffer.currency` yet.
 
 ## Review Notes

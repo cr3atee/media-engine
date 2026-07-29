@@ -15,6 +15,7 @@ from app.analytics.models import PriceChange
 from app.analytics.price_change import PriceChangeDetector
 from app.database.repository_scope import create_postgres_repository_scope
 from app.domain.events import PriceDropEvent
+from app.domain.market_events import EventAddResult, MarketEventCandidate
 from app.domain.marketplace import Marketplace
 from app.domain.price_snapshot import PriceSnapshot
 from app.insights.scoring import EventScorer
@@ -22,10 +23,11 @@ from app.parsers.ggsel_extractor import GGSelExtractor
 from app.parsers.ggsel_fetcher import GGSelFetcher
 from app.parsers.models import ParsedOffer
 from app.parsers.normalizers import OfferNormalizer
-from app.repositories.memory import MemoryOfferRepository
+from app.repositories.memory import MemoryMarketEventRepository, MemoryOfferRepository
 from app.repositories.offers import OfferRepository
 from app.repositories.postgres import (
     PostgresCanonicalProductRepository,
+    PostgresMarketEventRepository,
     PostgresOfferRepository,
     PostgresPriceHistoryRepository,
 )
@@ -39,6 +41,7 @@ from app.services.marketplace_application_runner import (
     MarketplaceRunResult,
 )
 from app.services.marketplace_pipeline import MarketplacePipeline
+from app.services.price_drop_market_event_builder import PriceDropMarketEventBuilder
 from app.services.repository_scope import create_memory_repository_scope
 from app.services.snapshot_builder import SnapshotBuilder
 
@@ -253,6 +256,18 @@ class FailingPriceChangeDetector(PriceChangeDetector):
         raise RuntimeError(msg)
 
 
+class AddThenFailMarketEventRepository(MemoryMarketEventRepository):
+    """Persist an event in memory and then raise a controlled failure."""
+
+    async def add_idempotently(
+        self,
+        candidate: MarketEventCandidate,
+    ) -> EventAddResult:
+        await super().add_idempotently(candidate)
+        msg = "event insert failed"
+        raise RuntimeError(msg)
+
+
 class RecordingApplicationRunner:
     """Runner double used to verify scheduler delegation."""
 
@@ -271,7 +286,12 @@ class RecordingApplicationRunner:
             snapshots_persisted=0,
             skipped_offers=0,
             price_changes_detected=0,
+            event_candidates_built=0,
             events_created=0,
+            events_existing=0,
+            skipped_event_candidates=0,
+            event_ids=(),
+            events_scored=0,
             content_items_generated=0,
             persistence_committed=True,
             errors=(),
@@ -352,7 +372,11 @@ def test_successful_run_orders_phases_and_reports_counts() -> None:
     assert result.snapshots_created == 1
     assert result.snapshots_persisted == 1
     assert result.price_changes_detected == 1
+    assert result.event_candidates_built == 1
     assert result.events_created == 1
+    assert result.events_existing == 0
+    assert len(result.event_ids) == 1
+    assert result.events_scored == 1
     assert result.content_items_generated == 1
     assert result.persistence_committed is True
     assert result.errors == ()
@@ -456,6 +480,7 @@ def test_content_failure_is_reported_after_commit() -> None:
     assert "Post-commit content failed" in result.errors[0]
     assert len(run_async(provider.offers.list_all())) == 1
     assert len(run_async(provider.price_history.get_history("ggsel", "1001"))) == 2
+    assert len(run_async(provider.events.list_pending(datetime.now(UTC), 10))) == 1
 
 
 def test_memory_scope_reuses_state_without_sqlalchemy_transaction_objects() -> None:
@@ -501,6 +526,8 @@ def test_repeated_exact_snapshot_reports_one_persisted_record() -> None:
 
     assert first.snapshots_persisted == 1
     assert second.snapshots_persisted == 0
+    assert first.event_candidates_built == 0
+    assert second.event_candidates_built == 0
     assert len(run_async(provider.offers.list_all())) == 1
     assert run_async(provider.price_history.get_history("ggsel", "1001")) == [
         snapshot,
@@ -527,6 +554,7 @@ def test_postgres_scope_binds_all_repositories_to_one_session() -> None:
                         provider.price_history,
                     )._session,
                 ),
+                id(cast(PostgresMarketEventRepository, provider.events)._session),
             }
 
     assert len(run_async(inspect_scope())) == 1
@@ -540,3 +568,83 @@ def test_scheduler_job_delegates_to_application_runner() -> None:
 
     assert runner.urls == ["demo://ggsel"]
     assert job.status.state is JobExecutionState.SUCCEEDED
+
+
+def test_event_insert_failure_rolls_back_scope_and_skips_post_commit() -> None:
+    provider = create_memory_provider()
+    previous = PriceSnapshot(
+        marketplace="ggsel",
+        external_id="1001",
+        price=Decimal("990"),
+        currency="RUB",
+        collected_at=datetime.now(UTC) - timedelta(minutes=1),
+    )
+    run_async(provider.price_history.add(previous))
+    provider.events = AddThenFailMarketEventRepository()
+    content = RecordingContentGenerator()
+    scope = RecordingScopeFactory(provider)
+    runner = make_runner(
+        offers=(make_offer(),),
+        pipeline=make_pipeline(content_generator=content),
+        scope_factory=scope,
+    )
+
+    with pytest.raises(RuntimeError, match="event insert failed"):
+        run_async(runner.run("demo://ggsel"))
+
+    assert scope.state == ScopeState(entered=1, committed=0, rolled_back=1)
+    assert content.events == []
+
+
+def test_identity_conflict_propagates_and_skips_post_commit() -> None:
+    provider = create_memory_provider()
+    now = datetime.now(UTC)
+    previous = PriceSnapshot(
+        marketplace="ggsel",
+        external_id="1001",
+        price=Decimal("990"),
+        currency="RUB",
+        collected_at=now - timedelta(minutes=1),
+    )
+    current = PriceSnapshot(
+        marketplace="ggsel",
+        external_id="1001",
+        price=Decimal("790"),
+        currency="RUB",
+        collected_at=now,
+    )
+    change = PriceChangeDetector().detect(previous, current)
+    assert change is not None
+    conflicting_offer = ParsedOffer(
+        marketplace="ggsel",
+        external_id="1001",
+        title="Conflicting captured title",
+        url="https://example.com/conflict",
+        price=Decimal("790"),
+        currency="RUB",
+    )
+    existing = PriceDropMarketEventBuilder().build(
+        offer=conflicting_offer,
+        previous_snapshot=previous,
+        current_snapshot=current,
+        change=change,
+        detected_at=current.collected_at,
+    )
+    run_async(provider.events.add_idempotently(MarketEventCandidate(existing)))
+    run_async(provider.price_history.add(previous))
+    content = RecordingContentGenerator()
+    scope = RecordingScopeFactory(provider)
+    runner = make_runner(
+        offers=(make_offer(),),
+        pipeline=make_pipeline(
+            snapshot_builder=FixedSnapshotBuilder(current),
+            content_generator=content,
+        ),
+        scope_factory=scope,
+    )
+
+    with pytest.raises(ValueError, match="identity conflicts"):
+        run_async(runner.run("demo://ggsel"))
+
+    assert scope.state.rolled_back == 1
+    assert content.events == []

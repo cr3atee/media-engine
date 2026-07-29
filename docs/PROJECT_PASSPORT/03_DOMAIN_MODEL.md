@@ -85,9 +85,25 @@ It contains previous/current prices, difference, percentage, drop flag, marketpl
 
 ## PriceDropEvent
 
-`PriceDropEvent` is the current domain event used for price drop publication flow.
+`PriceDropEvent` is the temporary Pydantic application DTO used by the existing
+post-commit scoring and content flow.
 
 It includes product title, marketplace, old price, new price, currency, and computed discount percentage.
+
+## Persistent MarketEvent
+
+`MarketEvent[PriceDropPayload]` is the immutable durable source of truth for a
+detected price drop. It uses `Decimal`, UTC-aware timestamps, a versioned
+deterministic identity, optional canonical-product context, and exact previous and
+current `SnapshotIdentity` values.
+
+Identity is derived from event type, marketplace, external ID, and exact snapshot
+facts. Title, URL, canonical product, score, and generated content are excluded.
+The PostgreSQL repository resolves the exact snapshot rows internally, so ORM IDs
+do not leak into the domain.
+
+Only a newly created durable event is adapted to `PriceDropEvent` after commit.
+Scoring state and generated content are not yet persisted.
 
 ## Matching Models
 

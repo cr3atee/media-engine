@@ -34,17 +34,23 @@ This document tracks only work that is reflected by the current repository state
 - PostgreSQL constraints, indexes, canonical-product FK, and UTC timestamps.
 - Live PostgreSQL migration, concurrency, rollback, retry, and Scheduler
   verification for EPIC 12.
+- Persistent market-event domain contracts and deterministic identity.
+- Memory and PostgreSQL market-event repositories.
+- Atomic offer/snapshot/event ingestion through `RepositoryProvider.events`.
+- Live PostgreSQL verification of event identity, replay, rollback, marketplace
+  isolation, and post-commit compatibility.
 
 ## Current Status
 
 MediaEngine has a live-verified PostgreSQL runtime foundation for repository-backed
-offers and price history, deterministic comparison and event processing, bounded
-transactions, post-commit content generation, and Scheduler orchestration.
+offers, price history, and deterministic market events; bounded transactions;
+post-commit scoring/content; and Scheduler orchestration.
 
 ## Not Present Yet
 
 - Full price normalization for GGSEL extracted fields.
-- Persistent market events and publication state.
+- Durable event scoring and claim-based event processing.
+- Generated-content and publication persistence.
 - Content/publication retry after post-commit failure.
 - Scheduler overlap and multi-process coordination.
 - Telegram delivery implementation.

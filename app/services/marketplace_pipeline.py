@@ -11,7 +11,13 @@ from app.comparator.models import MarketplaceOffer
 from app.comparator.result import ComparisonResult, ComparisonResultBuilder
 from app.comparator.selector import BestOfferSelector
 from app.domain.events import PriceDropEvent
+from app.domain.market_events import (
+    EventAddResult,
+    MarketEventCandidate,
+    PriceDropMarketEvent,
+)
 from app.domain.price_snapshot import PriceSnapshot
+from app.domain.processing import IdempotentCreateStatus
 from app.insights.scoring import EventScorer
 from app.models.canonical_product import CanonicalProduct
 from app.parsers.ggsel_extractor import GGSelExtractor
@@ -21,6 +27,9 @@ from app.parsers.normalizers import OfferNormalizer
 from app.repositories.provider import RepositoryProvider
 from app.services.content_generator import ContentGenerator
 from app.services.event_builder import EventBuilder
+from app.services.price_drop_market_event_builder import (
+    PriceDropMarketEventBuilder,
+)
 from app.services.snapshot_builder import SnapshotBuilder
 
 type StageReporter = Callable[[str], None]
@@ -31,9 +40,22 @@ class PreparedMarketplaceRun:
     """Repository-independent data prepared before transaction entry."""
 
     offers: tuple[ParsedOffer, ...]
-    snapshots: tuple[PriceSnapshot, ...]
+    snapshot_candidates: tuple[PreparedSnapshotCandidate, ...]
     skipped_offers: int
     errors: tuple[str, ...]
+
+    @property
+    def snapshots(self) -> tuple[PriceSnapshot, ...]:
+        """Return prepared snapshots for compatibility and summary counts."""
+        return tuple(candidate.snapshot for candidate in self.snapshot_candidates)
+
+
+@dataclass(slots=True, frozen=True)
+class PreparedSnapshotCandidate:
+    """Keep one validated snapshot paired with its source offer context."""
+
+    offer: ParsedOffer
+    snapshot: PriceSnapshot
 
 
 @dataclass(slots=True, frozen=True)
@@ -44,7 +66,38 @@ class TransactionalMarketplaceResult:
     comparison_results: tuple[ComparisonResult, ...]
     snapshots_persisted: int
     price_changes: tuple[PriceChange, ...]
-    events: tuple[PriceDropEvent, ...]
+    event_results: tuple[EventAddResult, ...]
+    skipped_event_candidates: int
+
+    @property
+    def durable_events(self) -> tuple[PriceDropMarketEvent, ...]:
+        """Return every durable event observed during the transaction."""
+        return tuple(result.event for result in self.event_results)
+
+    @property
+    def events_for_post_commit(self) -> tuple[PriceDropMarketEvent, ...]:
+        """Return newly created events eligible for temporary post-commit work."""
+        return tuple(
+            result.event
+            for result in self.event_results
+            if result.status is IdempotentCreateStatus.CREATED
+        )
+
+    @property
+    def events_created(self) -> int:
+        """Return the number of newly persisted durable events."""
+        return sum(
+            result.status is IdempotentCreateStatus.CREATED
+            for result in self.event_results
+        )
+
+    @property
+    def events_existing(self) -> int:
+        """Return the number of compatible events already persisted."""
+        return sum(
+            result.status is IdempotentCreateStatus.EXISTING
+            for result in self.event_results
+        )
 
 
 @dataclass(slots=True, frozen=True)
@@ -52,6 +105,7 @@ class PostCommitMarketplaceResult:
     """Content processing outcome produced after persistence commits."""
 
     content_items_generated: int
+    events_scored: int
     errors: tuple[str, ...]
 
 
@@ -75,6 +129,7 @@ class MarketplacePipeline:
         comparison_difference: PriceDifferenceService | None = None,
         comparison_result_builder: ComparisonResultBuilder | None = None,
         stage_reporter: StageReporter | None = None,
+        market_event_builder: PriceDropMarketEventBuilder | None = None,
     ) -> None:
         """Initialize the pipeline with existing project components."""
         self._fetcher = fetcher
@@ -84,13 +139,14 @@ class MarketplacePipeline:
         self._snapshot_builder = snapshot_builder
         self._price_change_detector = price_change_detector
         self._event_builder = event_builder
+        self._market_event_builder = (
+            market_event_builder or PriceDropMarketEventBuilder()
+        )
         self._event_scorer = event_scorer
         self._content_generator = content_generator
         self._comparison_grouping = comparison_grouping or OfferGroupingService()
         self._comparison_selector = comparison_selector or BestOfferSelector()
-        self._comparison_difference = (
-            comparison_difference or PriceDifferenceService()
-        )
+        self._comparison_difference = comparison_difference or PriceDifferenceService()
         self._comparison_result_builder = (
             comparison_result_builder or ComparisonResultBuilder()
         )
@@ -120,24 +176,29 @@ class MarketplacePipeline:
     ) -> PreparedMarketplaceRun:
         """Build valid snapshot candidates before opening a transaction."""
         self._report("=== BUILD SNAPSHOTS ===")
-        snapshots: list[PriceSnapshot] = []
+        snapshot_candidates: list[PreparedSnapshotCandidate] = []
         errors: list[str] = []
 
         for offer in parsed_offers:
             try:
-                snapshots.append(self._snapshot_builder.build(offer))
+                snapshot_candidates.append(
+                    PreparedSnapshotCandidate(
+                        offer=offer,
+                        snapshot=self._snapshot_builder.build(offer),
+                    )
+                )
             except ValueError as exc:
                 identity = offer.external_id or "unknown"
                 errors.append(
                     f"Skipped snapshot for {offer.marketplace}/{identity}: {exc}",
                 )
 
-        skipped_offers = len(parsed_offers) - len(snapshots)
-        self._report(f"Built snapshots: {len(snapshots)}")
+        skipped_offers = len(parsed_offers) - len(snapshot_candidates)
+        self._report(f"Built snapshots: {len(snapshot_candidates)}")
         self._report(f"Skipped snapshots: {skipped_offers}")
         return PreparedMarketplaceRun(
             offers=tuple(parsed_offers),
-            snapshots=tuple(snapshots),
+            snapshot_candidates=tuple(snapshot_candidates),
             skipped_offers=skipped_offers,
             errors=tuple(errors),
         )
@@ -161,18 +222,30 @@ class MarketplacePipeline:
         self._report("=== UPDATE PRICE HISTORY ===")
         snapshots_persisted = 0
         price_changes: list[PriceChange] = []
-        for current_snapshot in prepared.snapshots:
+        event_results: list[EventAddResult] = []
+        skipped_event_candidates = 0
+        for snapshot_candidate in prepared.snapshot_candidates:
+            offer = snapshot_candidate.offer
+            current_snapshot = snapshot_candidate.snapshot
             previous_snapshot = await repository_provider.price_history.get_last(
                 current_snapshot.marketplace,
                 current_snapshot.external_id,
             )
-            if await repository_provider.price_history.add(current_snapshot):
+            snapshot_inserted = await repository_provider.price_history.add(
+                current_snapshot
+            )
+            if snapshot_inserted:
                 snapshots_persisted += 1
+
+            if not snapshot_inserted:
+                skipped_event_candidates += 1
+                continue
 
             if (
                 previous_snapshot is None
                 or current_snapshot.collected_at < previous_snapshot.collected_at
             ):
+                skipped_event_candidates += 1
                 continue
 
             price_change = self._price_change_detector.detect(
@@ -182,43 +255,68 @@ class MarketplacePipeline:
             if price_change is not None:
                 price_changes.append(price_change)
 
+            runtime_candidate = (
+                self._event_builder.build(price_change)
+                if price_change is not None
+                else None
+            )
+            if runtime_candidate is None:
+                skipped_event_candidates += 1
+                continue
+            assert price_change is not None
+
+            durable_event = self._market_event_builder.build(
+                offer=offer,
+                previous_snapshot=previous_snapshot,
+                current_snapshot=current_snapshot,
+                change=price_change,
+                detected_at=current_snapshot.collected_at,
+            )
+            event_results.append(
+                await repository_provider.events.add_idempotently(
+                    MarketEventCandidate(event=durable_event)
+                )
+            )
+
         self._report(f"Stored snapshots: {snapshots_persisted}")
         self._report("=== DETECT PRICE CHANGES ===")
         self._report(f"Detected price changes: {len(price_changes)}")
 
-        self._report("=== BUILD EVENTS ===")
-        events = tuple(
-            event
-            for price_change in price_changes
-            if (event := self._event_builder.build(price_change)) is not None
+        self._report("=== PERSIST EVENTS ===")
+        self._report(f"Event candidates: {len(event_results)}")
+        self._report(
+            f"Durable events created: {sum(result.created for result in event_results)}"
         )
-        self._report(f"Built events: {len(events)}")
         return TransactionalMarketplaceResult(
             offers_persisted=len(prepared.offers),
             comparison_results=tuple(comparison_results),
             snapshots_persisted=snapshots_persisted,
             price_changes=tuple(price_changes),
-            events=events,
+            event_results=tuple(event_results),
+            skipped_event_candidates=skipped_event_candidates,
         )
 
     async def process_after_commit(
         self,
-        events: Sequence[PriceDropEvent],
+        events: Sequence[PriceDropMarketEvent],
     ) -> PostCommitMarketplaceResult:
         """Score events and generate content after successful persistence."""
         errors: list[str] = []
         generated_count = 0
+        scored_count = 0
 
         self._report("=== SCORE EVENTS ===")
         if not events:
             self._report("No events to score.")
 
-        for event in events:
+        for durable_event in events:
+            event = self._market_event_builder.to_runtime_event(durable_event)
             try:
                 score = self._event_scorer.score(event)
             except Exception as exc:
                 errors.append(self._post_commit_error("scoring", event, exc))
                 continue
+            scored_count += 1
             self._report(f"Score: {score}")
 
             self._report("=== GENERATE CONTENT ===")
@@ -235,6 +333,7 @@ class MarketplacePipeline:
         self._report(f"Generated posts: {generated_count}")
         return PostCommitMarketplaceResult(
             content_items_generated=generated_count,
+            events_scored=scored_count,
             errors=tuple(errors),
         )
 
@@ -244,7 +343,7 @@ class MarketplacePipeline:
         parsed_offers = await self.fetch_and_normalize(url)
         prepared = self.prepare_offers(parsed_offers)
         transactional = await self.process_with_repositories(prepared, provider)
-        await self.process_after_commit(transactional.events)
+        await self.process_after_commit(transactional.events_for_post_commit)
         return list(transactional.comparison_results)
 
     async def compare_offers(

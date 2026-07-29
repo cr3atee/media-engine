@@ -14,6 +14,8 @@ repository-backed price history, transaction-bounded application execution,
 post-commit content generation, and Scheduler orchestration.
 
 EPIC 12 is live-verified and complete against PostgreSQL 17.10.
+EPIC 13 Task 4 is complete: deterministic price-drop events now persist atomically
+with their source snapshot transitions.
 
 ## Active Capabilities
 
@@ -42,12 +44,22 @@ EPIC 12 is live-verified and complete against PostgreSQL 17.10.
 - Active persistence timestamps are timezone-aware UTC values.
 - Scheduler can retry and report a PostgreSQL-backed application run without
   owning business logic or database lifecycle.
+- Memory and PostgreSQL providers expose `MarketEventRepository` in the same
+  repository container as offers and price history.
+- `PriceDropMarketEventBuilder` creates immutable Decimal-safe events from the
+  active detector and exact snapshot identities.
+- `MarketplaceApplicationRunner` reports durable event candidates, created and
+  existing outcomes, event IDs, scored events, and post-commit errors.
+- Live PostgreSQL ingestion verification confirms atomic commit/rollback,
+  deterministic identity, replay suppression, marketplace isolation, and durable
+  event retention after content failure.
 
 ## Known Gaps
 
 - GGSEL extracted price fields are preserved in raw `extra` data, but full price normalization from marketplace-specific fields is not complete.
 - Snapshot creation is skipped when parsed offers do not contain normalized price and currency.
-- Market events and publication attempts are not persisted.
+- Event scoring state is not updated by the active runtime.
+- Generated content and publication attempts are not persisted.
 - Post-commit content failures cannot be resumed reliably.
 - Scheduler has no explicit overlap or multi-process coordination policy.
 - No Telegram delivery is implemented.
@@ -63,6 +75,5 @@ Current architecture separates:
 - deterministic matching;
 - pipeline orchestration.
 
-The final EPIC 12 verification passed 89 live PostgreSQL checks, 47 tests, and
-strict MyPy across 105 source files. Full-project Ruff still has pre-existing
-legacy/demo debt; all EPIC 12 files pass.
+EPIC 13 Task 4 adds focused memory/PostgreSQL tests and a 12-check live ingestion
+verification. Full-project legacy/demo quality debt remains outside this task.

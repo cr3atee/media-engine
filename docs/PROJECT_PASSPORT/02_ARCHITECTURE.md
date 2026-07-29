@@ -28,9 +28,12 @@ Current marketplace flow:
 6. The latest persisted snapshot is loaded through `RepositoryProvider.price_history`.
 7. The current snapshot is persisted through the same repository boundary.
 8. Price changes are detected synchronously when a comparable snapshot exists.
-9. Price drop events are built when prices decrease.
-10. Events are scored.
-11. Content is generated through the existing content generator and AI provider abstraction.
+9. Price drops are converted into deterministic immutable market events.
+10. Events are inserted idempotently through `RepositoryProvider.events` in the
+    same transaction as offers and snapshots.
+11. After commit, newly created durable events are adapted to the legacy
+    `PriceDropEvent` scoring/content DTO.
+12. Events are scored and content is generated outside the database transaction.
 
 ## Matching Flow
 
@@ -50,6 +53,7 @@ Current repository layer includes:
 - `CanonicalProductRepository`
 - `OfferRepository`
 - `PriceHistoryRepository`
+- `MarketEventRepository`
 - in-memory implementations under `app/repositories/memory`
 - PostgreSQL implementations under `app/repositories/postgres`
 - `RepositoryProvider`
@@ -57,11 +61,12 @@ Current repository layer includes:
 - `create_postgres_provider()`
 
 Repository access is asynchronous for both memory and PostgreSQL backends.
-PostgreSQL is not hardcoded as the default backend. Production-shaped execution
+PostgreSQL is not hardcoded as the default backend. Memory and PostgreSQL
+providers both include event repositories. Production-shaped execution
 uses `MarketplaceApplicationRunner` with one repository scope, one shared
 `AsyncSession`, and one transaction for a bounded marketplace run. HTTP and
-normalization execute before that scope; scoring and content execute after a
-successful commit.
+normalization execute before that scope; offer, snapshot, and durable event writes
+execute inside it; scoring and content execute after a successful commit.
 
 ## Boundaries
 
@@ -69,7 +74,7 @@ successful commit.
 - Repository interfaces do not depend on SQLAlchemy or PostgreSQL.
 - Matching does not depend on marketplace-specific code.
 - Matching does not use AI, embeddings, or external services.
-- Marketplace pipeline persists parsed offers and price snapshots only through
-  `RepositoryProvider`.
+- Marketplace pipeline persists parsed offers, price snapshots, and deterministic
+  market events only through `RepositoryProvider`.
 - Scheduler jobs delegate to application runners and do not own repositories,
   sessions, or business logic.
