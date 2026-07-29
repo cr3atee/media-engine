@@ -42,7 +42,7 @@ from app.repositories.postgres import (
 )
 
 DATABASE_URL_ENV = "EPIC13_DATABASE_URL"
-EXPECTED_REVISION = "0007_create_market_events"
+EXPECTED_REVISION = "0008_content_publications"
 NOW = datetime(2026, 7, 29, 12, 0, tzinfo=UTC)
 
 
@@ -115,7 +115,9 @@ async def reset_database(engine: AsyncEngine) -> None:
     """Clear only event verification data in the isolated database."""
     async with engine.begin() as connection:
         await connection.execute(
-            text("TRUNCATE TABLE market_events, price_snapshots RESTART IDENTITY")
+            text(
+                "TRUNCATE TABLE market_events, price_snapshots RESTART IDENTITY CASCADE"
+            )
         )
 
 

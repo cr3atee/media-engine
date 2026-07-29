@@ -6,6 +6,14 @@ This document records notable Project Passport updates.
 
 ## Unreleased
 
+- Completed final EPIC 13 production-shaped verification against isolated
+  PostgreSQL 17.10: 83 end-to-end checks passed from ingestion through durable
+  publication intent.
+- Verified restart recovery, idempotency, rollback, multi-worker contention,
+  short transaction boundaries, audit linkage, and orchestration-only Scheduler
+  execution.
+- Updated legacy EPIC 13 live scripts for migration head `0008` and restrictive
+  downstream foreign keys; removed two obsolete MyPy ignore comments.
 - Added revision `0008_content_publications` for immutable generated-content
   attempts and channel-independent publication intents.
 - Added memory/PostgreSQL generated-content and publication repositories to

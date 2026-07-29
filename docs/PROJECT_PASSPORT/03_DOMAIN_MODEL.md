@@ -155,3 +155,12 @@ Fields:
 - `AUTO_MATCH`
 - `REVIEW`
 - `NO_MATCH`
+
+## Persistent Lifecycle Verification
+
+The production-shaped PostgreSQL flow verified exact links from `ParsedOffer` to
+two `PriceSnapshot` records, one deterministic `MarketEvent`, one successful
+`GeneratedContentAttempt`, and one `Publication`. These domain DTOs cross service
+boundaries without exposing ORM records. Decimal prices, UTC timestamps,
+deterministic identity keys, immutable attempt history, and guarded claims remain
+intact across fresh sessions and retries.

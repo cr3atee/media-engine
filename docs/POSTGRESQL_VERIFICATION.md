@@ -4,8 +4,9 @@
 
 PostgreSQL persistence, the EPIC 12 runtime, EPIC 13 transactional market-event
 ingestion, durable scoring, generated content, and publication-intent state are
-live-verified. Task 6 was verified against an isolated PostgreSQL 16 container
-without using a project or production database.
+live-verified. Final EPIC 13 verification passed 83 checks against isolated
+PostgreSQL 17.10 at revision `0008_content_publications` without using a project
+or production database.
 
 ## Verified Schema
 
@@ -134,3 +135,9 @@ Task 6 evidence is implemented by
 migration, scored-event eligibility, committed claims, transaction-free AI,
 durable success/failure/retry, fresh sessions, worker contention, rollback,
 idempotency, ambiguous publication protection, and Scheduler delegation.
+
+Final evidence is recorded in `EPIC_13_FINAL_VERIFICATION.md` and implemented by
+`verify_epic13_end_to_end_postgres.py`. Clean migration, downgrade/re-upgrade,
+schema constraints, fresh-session restart, idempotency, rollback, concurrency,
+audit linkage, and complete Scheduler orchestration all pass. External delivery
+remains intentionally unimplemented.

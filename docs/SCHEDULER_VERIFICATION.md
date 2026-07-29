@@ -64,3 +64,10 @@ Durable event job evidence is recorded by the Task 5 service/Scheduler tests and
 `verify_epic13_event_processing_postgres.py` (14 checks passed).
 Durable content/publication job evidence is recorded by the Task 6 focused tests
 and `verify_epic13_content_publication_postgres.py` (18 checks passed).
+
+Final EPIC 13 verification also runs ingestion, scoring, content generation, and
+all three stale-claim recovery jobs in one Scheduler instance against PostgreSQL.
+The sequence completes with durable event, content, and publication state. Source
+inspection confirms that these jobs remain orchestration-only. Five existing
+Scheduler demos exit normally; restricted live marketplace access is surfaced as
+failed job status without stopping Scheduler.

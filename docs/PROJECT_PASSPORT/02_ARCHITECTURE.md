@@ -103,3 +103,11 @@ run inside ingestion or scoring transactions.
   outside the current runtime.
 - Generated content and publication intent share one completion transaction when
   an explicit destination is configured.
+
+## EPIC 13 Verification
+
+The complete repository-backed lifecycle was verified on PostgreSQL 17.10 with
+fresh services at every durable boundary. Ingestion, scoring, AI generation, and
+publication-intent persistence retain their existing layer direction: external
+work is outside transactions, repositories own no policy, and Scheduler jobs only
+delegate. No alternate active event or content-processing path remains.

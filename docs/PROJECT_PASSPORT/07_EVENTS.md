@@ -56,3 +56,10 @@ explicit target is configured. Delivery itself is not implemented.
   ambiguous and cannot be automatically resent.
 - The inactive `app/core/events.py` hierarchy was removed; durable market events
   and the temporary content/scoring adapter are the only remaining event roles.
+
+## Verification Status
+
+EPIC 13 is verified and complete. Live PostgreSQL checks cover atomic event
+creation, deterministic replay, scoring success/failure/retry, stale claims,
+multi-worker contention, restart recovery, downstream content linkage, and audit
+history. Actual external delivery remains outside the event layer.

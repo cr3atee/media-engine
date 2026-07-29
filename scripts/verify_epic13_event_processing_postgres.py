@@ -169,7 +169,9 @@ async def reset_database(engine: AsyncEngine) -> None:
     """Clear event verification data in the isolated database."""
     async with engine.begin() as connection:
         await connection.execute(
-            text("TRUNCATE TABLE market_events, price_snapshots RESTART IDENTITY")
+            text(
+                "TRUNCATE TABLE market_events, price_snapshots RESTART IDENTITY CASCADE"
+            )
         )
 
 

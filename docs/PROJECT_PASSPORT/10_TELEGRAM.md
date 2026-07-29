@@ -27,3 +27,10 @@ invented.
   automatically returned to pending.
 - Actual delivery, provider error mapping, rate limiting, and reconciliation are
   work for the Telegram delivery EPIC.
+
+## Verification Status
+
+Publication intent, claim contention, idempotency, cancellation, terminal
+published state, and protected ambiguous recovery are verified against live
+PostgreSQL. No Telegram API was called and no external message was sent. The next
+recommended EPIC is **Telegram Publication Adapter and Delivery Workflow**.

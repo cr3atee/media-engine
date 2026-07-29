@@ -38,3 +38,10 @@ content service does not redesign `EventScorer` or infer an importance policy.
 
 Daily and weekly digest preparation remains planned infrastructure only. No
 digest generation is connected to the durable event-processing path.
+
+## Verification Status
+
+Durable scoring was verified with committed claims, transaction-free scorer
+execution, bounded retry, permanent failure, stale-token rejection, lease
+recovery, and concurrent `SKIP LOCKED` workers. The scoring rules themselves were
+not changed by final verification.

@@ -8,6 +8,11 @@ deterministic market events atomically with ingestion, process scoring through
 durable claims, and persist generated-content attempts plus channel-independent
 publication intents with retry and stale-claim recovery.
 
+Final production-shaped verification is complete. An isolated PostgreSQL 17.10
+run passed 83 named checks across migration, ingestion, scoring, generation,
+publication intent, restart, concurrency, rollback, audit, and Scheduler paths.
+The final status is **verified and complete**.
+
 EPIC 13 closes that durability gap. It introduces a persistent, auditable event lifecycle without moving business logic into repositories, holding database transactions during external calls, or coupling the domain to Telegram.
 
 This document is the implementation specification and task-status record. It does
@@ -64,11 +69,8 @@ Current runtime compatibility:
   duplicates were removed after targeted import verification; price-change
   calculation semantics were not changed.
 
-Remaining EPIC 13 work:
-
-- Final production-shaped lifecycle verification and acceptance audit from
-  ingestion through durable publication intent.
-- Actual Telegram delivery remains a separate delivery-adapter EPIC.
+Remaining work is outside EPIC 13: actual Telegram delivery remains a separate
+delivery-adapter EPIC.
 
 ### Task 2 implementation status
 
@@ -214,11 +216,9 @@ Task 5 is complete:
   preventing a durable event from being scored before it is claimed.
 
 Task 6 supersedes the previously proposed cleanup-only task by completing durable
-generated content and publication state while including the safe cleanup. The
-exact recommended next task is **Final EPIC 13 verification: compose and verify
-ingestion -> scoring -> generated content -> publication intent in one
-production-shaped runtime, with restart, overlap, and acceptance evidence**.
-External Telegram delivery remains outside EPIC 13.
+generated content and publication state while including the safe cleanup. Final
+production-shaped verification is now complete. External Telegram delivery
+remains outside EPIC 13.
 
 ### Task 6 implementation status
 
@@ -1284,16 +1284,16 @@ Use a typed summary containing:
 - Dependencies: Tasks 7, 9, and 10.
 - Non-goals: Frontend, FastAPI endpoints, authentication, and authorization.
 
-### Final EPIC 13 task: production-shaped end-to-end verification
+### Final EPIC 13 verification: completed
 
-- Goal: Verify ingestion through persisted event, scoring, content generation, publication preparation, retry, and restart recovery.
-- Likely files: verification scripts, integration tests, and a new verification document.
-- Acceptance: Live PostgreSQL proves exactly-once logical event creation, at-least-once processing with idempotent completion, no open transaction during AI, restart recovery, and audit history.
-- Tests: Full happy path, every failure in Section 19, two-worker claims, duplicate scheduler, transaction rollback, AI failure, publication ambiguity.
-- Migration impact: Applies all EPIC 13 migrations to a clean and upgraded EPIC 12 database.
-- Risks: A demo-only happy path can hide concurrency defects; live integration tests are mandatory.
-- Dependencies: Tasks 1 through 11 as applicable.
-- Non-goals: Production Telegram delivery and public release.
+- Result: 83 production-shaped checks pass from deterministic ingestion through
+  durable publication intent.
+- Evidence: `verify_epic13_end_to_end_postgres.py` and
+  `EPIC_13_FINAL_VERIFICATION.md`.
+- Coverage: clean migration, identity, retry, restart, two-worker claims,
+  rollback, transaction boundaries, publication ambiguity, audit, and Scheduler.
+- Environment: isolated PostgreSQL 17.10 at `0008_content_publications`.
+- Non-goal retained: no production Telegram delivery or external send.
 
 ## 21. Test Plan
 
@@ -1367,11 +1367,6 @@ EPIC 13 is complete when all of the following are true:
 
 ## 23. Recommended Next Implementation Task
 
-Proceed with **Final EPIC 13 verification: compose and verify ingestion ->
-scoring -> generated content -> publication intent in one production-shaped
-runtime, including restart, duplicate Scheduler invocation, overlap, rollback,
-and fresh-session evidence**.
-
-After that verification, the remaining product integration is a separate
-Telegram delivery-adapter EPIC. It must consume durable publication records and
-must preserve the protected ambiguous state; EPIC 13 does not send messages.
+Proceed with **Telegram Publication Adapter and Delivery Workflow**. It must
+consume durable publication records and preserve idempotency plus the protected
+ambiguous state. EPIC 13 itself does not send messages.

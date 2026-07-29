@@ -57,6 +57,8 @@ This document tracks only work that is reflected by the current repository state
 - Removal of the inactive duplicate price detector and event hierarchy after
   targeted reference verification.
 - An 18-check live PostgreSQL content/publication verification.
+- Final 83-check production-shaped EPIC 13 PostgreSQL verification covering the
+  complete ingestion-to-publication-intent lifecycle.
 
 ## Current Status
 
@@ -68,8 +70,10 @@ publication intent; and Scheduler orchestration.
 ## Not Present Yet
 
 - Full price normalization for GGSEL extracted fields.
-- Final production-shaped EPIC 13 lifecycle composition and acceptance
-  verification.
 - Scheduler overlap and multi-process coordination.
 - Actual Telegram delivery implementation.
 - Production AI provider integration in the pipeline.
+
+## Recommended Next EPIC
+
+**Telegram Publication Adapter and Delivery Workflow**.

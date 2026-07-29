@@ -54,10 +54,12 @@ This document captures architecture notes that are important for future reviews.
 - The duplicate price detector and inactive `app/core/events.py` hierarchy were
   removed after targeted reference verification. `PriceDropEvent` remains only a
   transient adapter for existing scoring/prompt interfaces.
-- The exact next implementation task is final EPIC 13 production-shaped
-  verification across ingestion, scoring, content, and publication intent.
-- External Telegram delivery remains separate and must preserve publication
-  idempotency and ambiguous-state protection.
+- Final EPIC 13 production-shaped verification passed 83 live PostgreSQL checks
+  across ingestion, scoring, content, publication intent, restart, concurrency,
+  rollback, Scheduler delegation, and audit linkage.
+- The exact next implementation task is **Telegram Publication Adapter and
+  Delivery Workflow**. It must preserve publication idempotency and
+  ambiguous-state protection.
 - GGSEL-specific price fields are not fully normalized into `ParsedOffer.price` and `ParsedOffer.currency` yet.
 
 ## Review Notes

@@ -2,13 +2,13 @@
 
 ## Purpose
 
-This document lists only confirmed work remaining after EPIC 13 Task 6.
+This document lists only confirmed work remaining after final EPIC 13
+verification.
 
 ## Immediate
 
-- Run the final production-shaped EPIC 13 verification from ingestion through
-  scoring, durable content, and publication intent, including restart and overlap
-  evidence.
+- Implement **Telegram Publication Adapter and Delivery Workflow** over the
+  existing durable publication repository.
 
 ## Delivery
 

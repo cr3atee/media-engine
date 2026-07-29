@@ -14,9 +14,10 @@ repository-backed price history, transaction-bounded application execution,
 durable post-commit event scoring, and Scheduler orchestration.
 
 EPIC 12 is live-verified and complete against PostgreSQL 17.10.
-EPIC 13 Task 6 is complete: deterministic price-drop events persist atomically,
-are scored through durable claims, and produce persistent immutable content
-attempts plus idempotent channel-independent publication intents.
+EPIC 13 is verified and complete: deterministic price-drop events persist
+atomically, are scored through durable claims, and produce persistent immutable
+content attempts plus idempotent channel-independent publication intents. The
+complete lifecycle passed 83 named checks on PostgreSQL 17.10.
 
 ## Active Capabilities
 
@@ -85,13 +86,15 @@ attempts plus idempotent channel-independent publication intents.
   detector/event modules were removed without changing calculation behavior.
 - The unreferenced direct `MarketplacePipeline.process_after_commit()` helper was
   removed; production content has one durable claim-based processing path.
+- Final verification confirms restart-safe ingestion, scoring, content, and
+  publication-intent stages with fresh repositories and services.
 
 ## Known Gaps
 
 - GGSEL extracted price fields are preserved in raw `extra` data, but full price normalization from marketplace-specific fields is not complete.
 - Snapshot creation is skipped when parsed offers do not contain normalized price and currency.
-- Ingestion, scoring, and durable content processing are separate services and are
-  not yet composed in one production process bootstrap.
+- Ingestion, scoring, and durable content processing are separate services and
+  still require production process/bootstrap configuration.
 - Scheduler has no explicit overlap or multi-process coordination policy.
 - Publication delivery is not implemented; persisted publication rows are future
   delivery intents only.
@@ -107,9 +110,7 @@ Current architecture separates:
 - deterministic matching;
 - pipeline orchestration.
 
-EPIC 13 Task 6 adds shared content/publication contracts, focused
-memory/PostgreSQL/Scheduler tests, reversible migration verification, and an
-18-check live verification. The exact next task is final EPIC 13
-production-shaped verification of ingestion -> scoring -> content -> publication
-intent, including restart and overlap evidence. Actual Telegram delivery remains
-a separate EPIC.
+EPIC 13 final verification adds one production-shaped 83-check PostgreSQL path
+across ingestion, scoring, content, publication intent, restart, overlap,
+rollback, Scheduler delegation, and audit evidence. Actual Telegram delivery
+remains a separate EPIC and is the recommended next implementation step.

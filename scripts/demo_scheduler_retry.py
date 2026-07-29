@@ -15,7 +15,7 @@ if str(project_root) not in sys.path:
 from app.scheduler import BaseJob, SchedulerService
 
 
-class SuccessfulJob(BaseJob):  # type: ignore[misc]
+class SuccessfulJob(BaseJob):
     """Demo job that always succeeds."""
 
     def __init__(self) -> None:
@@ -31,7 +31,7 @@ class SuccessfulJob(BaseJob):  # type: ignore[misc]
         return None
 
 
-class FailingJob(BaseJob):  # type: ignore[misc]
+class FailingJob(BaseJob):
     """Demo job that fails intentionally."""
 
     def __init__(self) -> None:
