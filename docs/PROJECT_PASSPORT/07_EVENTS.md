@@ -33,8 +33,14 @@ recovered explicitly and idempotently after lease expiry.
 Durable events are created with pending scoring state. Scoring status, score,
 attempt count, retry time, safe error, lease metadata, and optimistic version are
 persisted. Default retries are bounded to three attempts with exponential backoff
-from five seconds to five minutes. Generated-content persistence, publication
-persistence, and delivery are not connected yet.
+from five seconds to five minutes.
+
+Successfully scored events with an allowed disposition are eligible for durable
+content processing. `ContentGenerationProcessingService` creates and claims an
+immutable attempt, runs content generation outside the repository transaction,
+then persists success/failure in a guarded transaction. Successful content may
+create one idempotent channel-independent publication intent atomically when an
+explicit target is configured. Delivery itself is not implemented.
 
 ## Boundaries
 
@@ -44,3 +50,9 @@ persistence, and delivery are not connected yet.
 - Scheduler remains orchestration-only.
 - Claim-token and version guards prevent stale workers from overwriting newer
   lifecycle state.
+- Content failure retry creates a new attempt number; prior attempts remain audit
+  history.
+- Expired content claims become abandoned, while expired publication claims become
+  ambiguous and cannot be automatically resent.
+- The inactive `app/core/events.py` hierarchy was removed; durable market events
+  and the temporary content/scoring adapter are the only remaining event roles.

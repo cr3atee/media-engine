@@ -64,6 +64,14 @@ class MarketEventRepository(BaseRepository):
         """Reserve expired scoring claims for bounded recovery."""
 
     @abstractmethod
+    async def list_content_eligible(
+        self,
+        limit: int,
+        offset: int = 0,
+    ) -> Sequence[PriceDropMarketEvent]:
+        """List scored events eligible for durable content preparation."""
+
+    @abstractmethod
     async def mark_scored(
         self,
         event_id: UUID,

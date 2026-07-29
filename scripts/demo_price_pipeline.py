@@ -4,7 +4,7 @@ import asyncio
 from datetime import UTC, datetime
 from decimal import Decimal
 
-from app.analytics.price_change_detector import PriceChangeDetector
+from app.analytics.price_change import PriceChangeDetector
 from app.domain.events import PriceDropEvent
 from app.domain.price_snapshot import PriceSnapshot
 from app.insights.scoring import EventScorer

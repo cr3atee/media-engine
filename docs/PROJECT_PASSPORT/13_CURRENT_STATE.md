@@ -14,9 +14,9 @@ repository-backed price history, transaction-bounded application execution,
 durable post-commit event scoring, and Scheduler orchestration.
 
 EPIC 12 is live-verified and complete against PostgreSQL 17.10.
-EPIC 13 Task 5 is complete: deterministic price-drop events persist atomically
-with source snapshot transitions and are scored through durable claims, retries,
-and stale-lease recovery.
+EPIC 13 Task 6 is complete: deterministic price-drop events persist atomically,
+are scored through durable claims, and produce persistent immutable content
+attempts plus idempotent channel-independent publication intents.
 
 ## Active Capabilities
 
@@ -64,16 +64,37 @@ and stale-lease recovery.
 - A 14-check live isolated PostgreSQL verification confirms fresh-session
   durability, concurrency, rollback safety, retry/recovery, stale-token rejection,
   terminal failure, and Scheduler delegation.
+- Memory and PostgreSQL providers expose generated-content and publication
+  repositories through the same transaction scope as other persistence
+  boundaries.
+- `ContentGenerationProcessingService` claims immutable attempts in short
+  transactions, runs AI/content generation without an open database scope, and
+  persists guarded success or sanitized retryable failure.
+- Successful generated content and its publication intent commit atomically when
+  an explicit channel-independent target is configured.
+- Expired content claims are abandoned; expired publication claims become
+  protected ambiguous outcomes and are not automatically retried.
+- Scheduler jobs delegate pending content generation and stale
+  content/publication recovery to application services only.
+- Revision `0008_content_publications` upgrades, downgrades to `0007`, re-applies,
+  and matches SQLAlchemy metadata.
+- An 18-check live isolated PostgreSQL verification confirms committed claims,
+  transaction-free AI, retry, concurrency, rollback, fresh-session durability,
+  idempotency, ambiguous-state protection, and Scheduler delegation.
+- `app/analytics/price_change.py` is the sole detector; inactive duplicate
+  detector/event modules were removed without changing calculation behavior.
+- The unreferenced direct `MarketplacePipeline.process_after_commit()` helper was
+  removed; production content has one durable claim-based processing path.
 
 ## Known Gaps
 
 - GGSEL extracted price fields are preserved in raw `extra` data, but full price normalization from marketplace-specific fields is not complete.
 - Snapshot creation is skipped when parsed offers do not contain normalized price and currency.
-- Generated content and publication attempts are not persisted.
-- Content generation is not invoked by the active ingestion or durable scoring
-  path and cannot yet be resumed from persisted work.
+- Ingestion, scoring, and durable content processing are separate services and are
+  not yet composed in one production process bootstrap.
 - Scheduler has no explicit overlap or multi-process coordination policy.
-- No Telegram delivery is implemented.
+- Publication delivery is not implemented; persisted publication rows are future
+  delivery intents only.
 - No production AI provider is wired into the marketplace pipeline.
 
 ## Architecture Review
@@ -86,8 +107,9 @@ Current architecture separates:
 - deterministic matching;
 - pipeline orchestration.
 
-EPIC 13 Task 5 adds focused memory/PostgreSQL/Scheduler tests and a 14-check live
-event-processing verification. The exact next task is Task 6: redirect remaining
-imports to the active price-change/event path, verify parity, then remove duplicate
-legacy detector/event modules. Full-project legacy/demo quality debt remains
-outside this task.
+EPIC 13 Task 6 adds shared content/publication contracts, focused
+memory/PostgreSQL/Scheduler tests, reversible migration verification, and an
+18-check live verification. The exact next task is final EPIC 13
+production-shaped verification of ingestion -> scoring -> content -> publication
+intent, including restart and overlap evidence. Actual Telegram delivery remains
+a separate EPIC.

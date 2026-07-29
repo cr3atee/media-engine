@@ -46,19 +46,30 @@ This document tracks only work that is reflected by the current repository state
   `EventProcessingService`.
 - Live PostgreSQL verification of scoring transactions, concurrent workers,
   retry/recovery, terminal failure, and Scheduler delegation.
+- Generated-content and publication domain contracts with shared memory and
+  PostgreSQL repository behavior.
+- Migration `0008_content_publications` with reversible live verification.
+- Durable content generation outside repository transactions with immutable
+  attempts, bounded retry, and stale-claim recovery.
+- Atomic generated-content completion and idempotent channel-independent
+  publication-intent creation.
+- Scheduler jobs for content processing and stale content/publication recovery.
+- Removal of the inactive duplicate price detector and event hierarchy after
+  targeted reference verification.
+- An 18-check live PostgreSQL content/publication verification.
 
 ## Current Status
 
 MediaEngine has a live-verified PostgreSQL runtime foundation for repository-backed
 offers, price history, and deterministic market events; bounded transactions;
-durable post-commit scoring with recovery; and Scheduler orchestration.
+durable post-commit scoring and content generation with recovery; persisted
+publication intent; and Scheduler orchestration.
 
 ## Not Present Yet
 
 - Full price normalization for GGSEL extracted fields.
-- Duplicate detector and inactive legacy event cleanup.
-- Generated-content and publication persistence.
-- Content-generation and publication retry.
+- Final production-shaped EPIC 13 lifecycle composition and acceptance
+  verification.
 - Scheduler overlap and multi-process coordination.
-- Telegram delivery implementation.
+- Actual Telegram delivery implementation.
 - Production AI provider integration in the pipeline.

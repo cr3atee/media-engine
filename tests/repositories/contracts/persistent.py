@@ -339,6 +339,35 @@ class MarketEventRepositoryContract:
         assert result.outcome is StateTransitionOutcome.NOT_FOUND
         assert result.version is None
 
+    def test_only_successfully_scored_events_are_content_eligible(self) -> None:
+        repository = self.make_repository()
+        event = make_event()
+        self.prepare_event(repository, event)
+        run_async(repository.add_idempotently(MarketEventCandidate(event=event)))
+
+        assert run_async(repository.list_content_eligible(10)) == ()
+        claimed = run_async(
+            repository.claim_pending(
+                NOW + timedelta(minutes=10),
+                "worker",
+                NOW + timedelta(minutes=11),
+                1,
+            ),
+        )[0]
+        run_async(
+            repository.mark_scored(
+                event.id,
+                claimed.claim.token,
+                claimed.event.version,
+                80,
+                NOW + timedelta(minutes=10, seconds=1),
+            ),
+        )
+
+        eligible = run_async(repository.list_content_eligible(10))
+        assert tuple(item.id for item in eligible) == (event.id,)
+        assert run_async(repository.list_content_eligible(10, 1)) == ()
+
 
 class GeneratedContentRepositoryContract:
     """Behavior every generated-content repository must satisfy."""
@@ -536,12 +565,15 @@ class GeneratedContentRepositoryContract:
         assert retry_result.status is IdempotentCreateStatus.CREATED
 
     def test_content_review_transitions_are_guarded_and_terminal(self) -> None:
-        for decision, forbidden in (
-            (ContentReviewStatus.APPROVED, ContentReviewStatus.REJECTED),
-            (ContentReviewStatus.REJECTED, ContentReviewStatus.APPROVED),
+        for number, decision, forbidden in (
+            (1, ContentReviewStatus.APPROVED, ContentReviewStatus.REJECTED),
+            (2, ContentReviewStatus.REJECTED, ContentReviewStatus.APPROVED),
         ):
             repository = self.make_repository()
-            command = make_content_command()
+            command = make_content_command(
+                number=number,
+                event_id=uuid_for(100 + number),
+            )
             run_async(repository.create_attempt(command))
             claimed = run_async(
                 repository.claim_pending(
@@ -657,6 +689,37 @@ class GeneratedContentRepositoryContract:
         assert stored.generation_status is ContentGenerationStatus.ABANDONED
         assert stored.claim is None
         assert stale.outcome is StateTransitionOutcome.VERSION_CONFLICT
+
+    def test_expired_content_claim_supports_explicit_idempotent_recovery(self) -> None:
+        repository = self.make_repository()
+        command = make_content_command()
+        run_async(repository.create_attempt(command))
+        run_async(
+            repository.claim_pending(
+                NOW + timedelta(minutes=10),
+                "worker",
+                NOW + timedelta(minutes=11),
+                1,
+            ),
+        )
+
+        expired = run_async(
+            repository.list_expired_claims(NOW + timedelta(minutes=11), 10)
+        )
+        transition = run_async(
+            repository.release_claim(
+                command.id,
+                expired[0].claim.token,
+                expired[0].content.version,
+                NOW + timedelta(minutes=11),
+            )
+        )
+
+        assert transition.outcome is StateTransitionOutcome.APPLIED
+        assert (
+            run_async(repository.list_expired_claims(NOW + timedelta(minutes=12), 10))
+            == ()
+        )
 
     def test_content_missing_update_has_typed_not_found_outcome(self) -> None:
         repository = self.make_repository()
@@ -820,6 +883,41 @@ class PublicationRepositoryContract:
         assert stored.status is PublicationStatus.AMBIGUOUS
         assert stored.last_error is not None
         assert stored.last_error.code == "lease_expired_ambiguous"
+
+    def test_publication_expiry_supports_explicit_ambiguous_recovery(self) -> None:
+        repository = self.make_repository()
+        command = make_publication_command()
+        run_async(repository.create_idempotently(command))
+        run_async(
+            repository.claim_pending(
+                NOW + timedelta(minutes=10),
+                "worker",
+                NOW + timedelta(minutes=11),
+                1,
+            ),
+        )
+
+        expired = run_async(
+            repository.list_expired_claims(NOW + timedelta(minutes=11), 10)
+        )
+        transition = run_async(
+            repository.mark_ambiguous(
+                command.id,
+                expired[0].claim.token,
+                expired[0].publication.version,
+                ProcessingError(
+                    code="lease_expired_ambiguous",
+                    summary="Publication claim expired.",
+                ),
+                NOW + timedelta(minutes=11),
+            )
+        )
+
+        assert transition.outcome is StateTransitionOutcome.APPLIED
+        assert (
+            run_async(repository.list_expired_claims(NOW + timedelta(minutes=12), 10))
+            == ()
+        )
 
     def test_publication_publish_is_idempotent_and_terminal(self) -> None:
         repository = self.make_repository()

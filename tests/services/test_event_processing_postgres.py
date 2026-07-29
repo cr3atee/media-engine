@@ -28,8 +28,10 @@ from app.domain.market_events import (
 from app.domain.price_snapshot import PriceSnapshot
 from app.domain.processing import StateTransitionResult
 from app.insights.scoring import EventScorer
+from app.models.generated_content_record import GeneratedContentRecord
 from app.models.market_event_record import MarketEventRecord
 from app.models.price_snapshot_record import PriceSnapshotRecord
+from app.models.publication_record import PublicationRecord
 from app.repositories.postgres import (
     PostgresMarketEventRepository,
     PostgresPriceHistoryRepository,
@@ -344,6 +346,8 @@ async def reset_database() -> None:
     """Create metadata and clear event dependencies in the isolated database."""
     async with engine().begin() as connection:
         await connection.run_sync(get_metadata().create_all)
+        await connection.execute(delete(PublicationRecord))
+        await connection.execute(delete(GeneratedContentRecord))
         await connection.execute(delete(MarketEventRecord))
         await connection.execute(delete(PriceSnapshotRecord))
 

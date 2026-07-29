@@ -7,20 +7,26 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.repositories.canonical_products import CanonicalProductRepository
 from app.repositories.events import MarketEventRepository
+from app.repositories.generated_contents import GeneratedContentRepository
 from app.repositories.memory import (
     MemoryCanonicalProductRepository,
+    MemoryGeneratedContentRepository,
     MemoryMarketEventRepository,
     MemoryOfferRepository,
     MemoryPriceHistoryRepository,
+    MemoryPublicationRepository,
 )
 from app.repositories.offers import OfferRepository
 from app.repositories.postgres import (
     PostgresCanonicalProductRepository,
+    PostgresGeneratedContentRepository,
     PostgresMarketEventRepository,
     PostgresOfferRepository,
     PostgresPriceHistoryRepository,
+    PostgresPublicationRepository,
 )
 from app.repositories.price_history import PriceHistoryRepository
+from app.repositories.publications import PublicationRepository
 
 RepositoryBackend = Literal["memory", "postgres"]
 
@@ -33,6 +39,8 @@ class RepositoryProvider:
     offers: OfferRepository
     price_history: PriceHistoryRepository
     events: MarketEventRepository
+    generated_contents: GeneratedContentRepository
+    publications: PublicationRepository
 
 
 def create_memory_provider() -> RepositoryProvider:
@@ -42,6 +50,8 @@ def create_memory_provider() -> RepositoryProvider:
         offers=MemoryOfferRepository(),
         price_history=MemoryPriceHistoryRepository(),
         events=MemoryMarketEventRepository(),
+        generated_contents=MemoryGeneratedContentRepository(),
+        publications=MemoryPublicationRepository(),
     )
 
 
@@ -52,6 +62,8 @@ def create_postgres_provider(session: AsyncSession) -> RepositoryProvider:
         offers=PostgresOfferRepository(session),
         price_history=PostgresPriceHistoryRepository(session),
         events=PostgresMarketEventRepository(session),
+        generated_contents=PostgresGeneratedContentRepository(session),
+        publications=PostgresPublicationRepository(session),
     )
 
 

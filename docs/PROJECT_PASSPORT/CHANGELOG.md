@@ -6,6 +6,21 @@ This document records notable Project Passport updates.
 
 ## Unreleased
 
+- Added revision `0008_content_publications` for immutable generated-content
+  attempts and channel-independent publication intents.
+- Added memory/PostgreSQL generated-content and publication repositories to
+  `RepositoryProvider` with shared behavioral contracts.
+- Added durable content processing with committed claims, transaction-free AI,
+  atomic content/publication completion, bounded retry, safe persisted errors,
+  and stale-claim recovery.
+- Added Scheduler jobs for pending content generation and stale
+  content/publication claim recovery without external delivery logic.
+- Added PostgreSQL contention, rollback, fresh-session, retry, and recovery tests
+  plus an 18-check live verification.
+- Removed the inactive duplicate price detector and `app/core/events.py` hierarchy
+  after redirecting the remaining legacy demo import to the active detector.
+- Removed the unreferenced direct marketplace post-commit scoring/content helper,
+  leaving one durable claim-based content-generation path.
 - Added durable bounded market-event claiming and scoring through
   `EventProcessingService`.
 - Added the explicit durable-event scoring adapter, immutable processing result

@@ -3,10 +3,10 @@
 ## Status and Scope
 
 EPIC 12 established an asynchronous PostgreSQL runtime with one transaction
-boundary for offer and price-snapshot persistence. EPIC 13 Tasks 1-5 now persist
-deterministic market events atomically with ingestion and process their scoring
-through durable claims, retries, and recovery. Generated content and publication
-state are not yet persisted.
+boundary for offer and price-snapshot persistence. EPIC 13 Tasks 1-6 now persist
+deterministic market events atomically with ingestion, process scoring through
+durable claims, and persist generated-content attempts plus channel-independent
+publication intents with retry and stale-claim recovery.
 
 EPIC 13 closes that durability gap. It introduces a persistent, auditable event lifecycle without moving business logic into repositories, holding database transactions during external calls, or coupling the domain to Telegram.
 
@@ -59,14 +59,16 @@ Current runtime compatibility:
 - `RepositoryProvider.events` supplies memory or PostgreSQL event persistence in
   the same repository scope as offers and price snapshots.
 - `app/analytics/price_change.py` remains the active detector.
-- `app/analytics/price_change_detector.py` remains a legacy duplicate pending the dedicated cleanup task; its calculation semantics were not changed.
+- `app/analytics/price_change.py` is the only active price-change detector.
+- The unused `app/analytics/price_change_detector.py` and `app/core/events.py`
+  duplicates were removed after targeted import verification; price-change
+  calculation semantics were not changed.
 
 Remaining EPIC 13 work:
 
-- Duplicate detector and inactive legacy event cleanup (Task 6).
-- Generated-content persistence and recoverable content generation.
-- Publication persistence and lifecycle orchestration.
-- Final end-to-end lifecycle verification after content/publication tasks.
+- Final production-shaped lifecycle verification and acceptance audit from
+  ingestion through durable publication intent.
+- Actual Telegram delivery remains a separate delivery-adapter EPIC.
 
 ### Task 2 implementation status
 
@@ -211,27 +213,64 @@ Task 5 is complete:
 - Active ingestion no longer invokes the legacy immediate scoring/content path,
   preventing a durable event from being scored before it is claimed.
 
-Exact recommended next task is **Task 6: Duplicate detector and legacy event
-cleanup**. Generated-content persistence, content processing, publication
-persistence, and delivery remain later Tasks 7-10.
+Task 6 supersedes the previously proposed cleanup-only task by completing durable
+generated content and publication state while including the safe cleanup. The
+exact recommended next task is **Final EPIC 13 verification: compose and verify
+ingestion -> scoring -> generated content -> publication intent in one
+production-shaped runtime, with restart, overlap, and acceptance evidence**.
+External Telegram delivery remains outside EPIC 13.
+
+### Task 6 implementation status
+
+Task 6 is complete:
+
+- Revision `0008_content_publications` creates `generated_contents` and
+  `publications` with UTC timestamps, restrictive audit-history foreign keys,
+  deterministic idempotency constraints, lifecycle checks, optimistic versions,
+  and claim/retry indexes. Offline generation, live upgrade, downgrade to `0007`,
+  re-upgrade, and `alembic check` pass.
+- Memory and PostgreSQL generated-content/publication repositories implement the
+  same async contracts. PostgreSQL claims use caller-owned sessions and
+  `FOR UPDATE SKIP LOCKED`; repositories never commit or roll back.
+- `ContentGenerationProcessingService` creates and claims a durable immutable
+  attempt in a short transaction, calls `ContentGenerator` after the transaction
+  closes, and records success/failure in a new short transaction.
+- Transient generation failure schedules bounded exponential retry. A retry is a
+  new immutable attempt number; an expired claim becomes `abandoned` before new
+  work can be prepared.
+- Generated text and its publication intent commit atomically. A missing explicit
+  publication target leaves valid generated content without inventing a channel
+  or destination.
+- Publication identity is deterministic over event, content, channel, and
+  destination. Expired delivery claims become `ambiguous` and are never returned
+  automatically to pending.
+- `PendingContentGenerationJob`, `StaleContentClaimRecoveryJob`, and
+  `StalePublicationClaimRecoveryJob` delegate bounded application-service calls
+  and contain no repository, AI, retry-policy, or delivery logic.
+- The active ingestion runner still ends after durable event commit. Scoring and
+  content generation have one claim-based durable path; the unreferenced legacy
+  `MarketplacePipeline.process_after_commit()` direct path was removed.
+- The active detector is `app/analytics/price_change.py`. The unreferenced
+  duplicate detector and inactive `app/core/events.py` hierarchy were removed.
+- Shared memory/PostgreSQL contracts, focused service/Scheduler tests, PostgreSQL
+  contention/rollback tests, and an 18-check isolated live PostgreSQL verification
+  pass. No external AI or publication provider is called.
 
 ### Current implementation facts
 
 - `app/domain/events.py` is the active event model used by `EventBuilder`, `EventScorer`, prompts, and content generation.
-- `app/core/events.py` contains an older standard-library event hierarchy that is not used by the active pipeline.
 - `app/analytics/price_change.py` is the detector used by the active marketplace pipeline.
-- `app/analytics/price_change_detector.py` is a legacy duplicate used only by the older `PricePipeline` demo path.
 - Offers, canonical products, price snapshots, and market events have repository
   contracts plus memory and PostgreSQL implementations available through
   `RepositoryProvider`.
 - `MarketplaceApplicationRunner` atomically commits offers, snapshots, and market
   events, then returns without invoking scoring or content generation.
 - `EventProcessingService` owns durable post-commit scoring and retry state.
-- Generated text is not part of the active ingestion or durable event-processing
-  path.
+- Generated text is produced only by the durable content-processing service after
+  successful persisted scoring.
 - Scheduler jobs orchestrate services and maintain execution statistics in memory.
-- The active runtime uses the event repository. Generated-content and publication
-  repositories remain standalone and are not in `RepositoryProvider`.
+- Memory and PostgreSQL providers expose event, generated-content, and publication
+  repositories in one repository scope.
 
 ### Architectural invariants
 
@@ -280,7 +319,7 @@ class PriceDropPayload:
     current_snapshot: SnapshotIdentity
 ```
 
-This is a design target, not code to be added as part of this documentation task.
+This shape is implemented by the database-independent durable event contracts.
 
 ### Event envelope responsibilities
 
@@ -804,7 +843,9 @@ async def mark_ambiguous(...) -> bool: ...
 
 ### Provider integration
 
-`RepositoryProvider` eventually gains `events`, `generated_contents`, and `publications` fields for both memory and PostgreSQL configurations. Add them together only after their contracts and implementations exist. Existing repository fields and business-service call sites remain compatible.
+`RepositoryProvider` exposes `events`, `generated_contents`, and `publications`
+for both memory and PostgreSQL configurations. PostgreSQL repositories created
+inside one scope share the same caller-owned `AsyncSession`.
 
 ### Prohibited repository behavior
 
@@ -1177,18 +1218,18 @@ Use a typed summary containing:
 - Dependencies: Task 4.
 - Non-goals: AI and publication.
 
-### Task 6: Duplicate detector and legacy event cleanup
+### Task 6: Durable content/publication processing and safe cleanup (completed)
 
-- Goal: Establish `app/analytics/price_change.py` and the new persistent domain model as the only active paths.
-- Likely files: `app/services/price_pipeline.py`, affected demos/imports, deletion of unused modules after verification, and tests.
-- Acceptance: No runtime import references the legacy detector or inactive event hierarchy; all previous detector behavior remains unchanged.
-- Tests: Parity tests for decrease, increase, unchanged price, zero baseline, metadata preservation.
-- Migration impact: None.
-- Risks: Demo-only imports can conceal remaining usage; perform targeted import search before deletion.
-- Dependencies: Task 5 is preferred so the target event path already exists.
-- Non-goals: Algorithm changes or new event types.
+- Status: Completed.
+- Goal: Persist immutable content attempts and channel-independent publication
+  intents, process AI outside transactions, recover stale claims, and remove only
+  proven inactive event/detector duplicates.
+- Acceptance: Confirmed through shared contracts, focused memory/PostgreSQL
+  tests, Scheduler tests, migration verification, and 18 live PostgreSQL checks.
+- Migration impact: Revision `0008_content_publications`.
+- Non-goals: External publication delivery and scoring/price algorithm changes.
 
-### Task 7: Generated content contracts and persistence
+### Historical Task 7 plan: folded into completed Task 6
 
 - Goal: Add immutable content attempts, repository contracts, memory/PostgreSQL implementations, and migration.
 - Likely files: domain content models, `app/repositories/generated_contents.py`, memory/PostgreSQL implementations, `app/models/generated_content.py`, provider wiring, `alembic/versions/*`, and tests.
@@ -1199,7 +1240,7 @@ Use a typed summary containing:
 - Dependencies: Tasks 3 and 5.
 - Non-goals: Telegram and public admin UI.
 
-### Task 8: Content generation service and scheduler job
+### Historical Task 8 plan: folded into completed Task 6
 
 - Goal: Move content generation from immediate post-commit memory processing to claimed durable attempts.
 - Likely files: new application service, scheduler job module, runtime composition, existing content generator adapters, and tests.
@@ -1210,7 +1251,7 @@ Use a typed summary containing:
 - Dependencies: Task 7.
 - Non-goals: External provider redesign and publication delivery.
 
-### Task 9: Publication contracts and persistence
+### Historical Task 9 plan: folded into completed Task 6
 
 - Goal: Add channel-neutral publication domain model, repositories, SQLAlchemy model, and migration.
 - Likely files: domain publication models, repository contracts and implementations, `app/models/publication.py`, provider wiring, `alembic/versions/*`, and tests.
@@ -1221,7 +1262,7 @@ Use a typed summary containing:
 - Dependencies: Task 7.
 - Non-goals: Concrete Telegram API calls.
 
-### Task 10: Lifecycle orchestration and recovery
+### Historical Task 10 plan: folded into completed Task 6
 
 - Goal: Add publication and stale-claim application services, persisted retry policies, and scheduler jobs.
 - Likely files: application services, scheduler jobs, runtime composition, configuration, and tests.
@@ -1232,7 +1273,7 @@ Use a typed summary containing:
 - Dependencies: Tasks 8 and 9.
 - Non-goals: Distributed broker and Telegram adapter.
 
-### Task 11: Administrative application operations
+### Historical Task 11 plan: deferred outside current EPIC acceptance
 
 - Goal: Add typed services for event disposition, content review, human revision, publication scheduling, cancellation, retry, and ambiguity resolution.
 - Likely files: application services, repository contracts where transitions are missing, and tests.
@@ -1243,7 +1284,7 @@ Use a typed summary containing:
 - Dependencies: Tasks 7, 9, and 10.
 - Non-goals: Frontend, FastAPI endpoints, authentication, and authorization.
 
-### Task 12: End-to-end PostgreSQL verification
+### Final EPIC 13 task: production-shaped end-to-end verification
 
 - Goal: Verify ingestion through persisted event, scoring, content generation, publication preparation, retry, and restart recovery.
 - Likely files: verification scripts, integration tests, and a new verification document.
@@ -1326,9 +1367,11 @@ EPIC 13 is complete when all of the following are true:
 
 ## 23. Recommended Next Implementation Task
 
-Proceed with **Task 6: Duplicate detector and legacy event cleanup**.
+Proceed with **Final EPIC 13 verification: compose and verify ingestion ->
+scoring -> generated content -> publication intent in one production-shaped
+runtime, including restart, duplicate Scheduler invocation, overlap, rollback,
+and fresh-session evidence**.
 
-The task must redirect the remaining `PricePipeline` path to the active detector,
-verify all imports, and remove the duplicate detector and inactive event hierarchy
-only after behavior parity is confirmed. It must not change detector algorithms,
-event identity, scoring policy, repositories, generated content, or publication.
+After that verification, the remaining product integration is a separate
+Telegram delivery-adapter EPIC. It must consume durable publication records and
+must preserve the protected ambiguous state; EPIC 13 does not send messages.

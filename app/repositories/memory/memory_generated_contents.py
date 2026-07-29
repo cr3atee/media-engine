@@ -226,6 +226,30 @@ class MemoryGeneratedContentRepository(GeneratedContentRepository):
 
         return tuple(claimed)
 
+    async def list_expired_claims(
+        self,
+        now: datetime,
+        limit: int,
+    ) -> Sequence[ClaimedContentAttempt]:
+        """List expired generation claims without changing their state."""
+        now = normalize_utc(now, field_name="now")
+        _validate_limit(limit)
+        expired = sorted(
+            (
+                content
+                for content in self._contents_by_id.values()
+                if content.generation_status is ContentGenerationStatus.IN_PROGRESS
+                and content.claim is not None
+                and content.claim.lease_expires_at <= now
+            ),
+            key=_expired_claim_order,
+        )[:limit]
+        return tuple(
+            ClaimedContentAttempt(content=content, claim=content.claim)
+            for content in expired
+            if content.claim is not None
+        )
+
     async def complete_attempt(
         self,
         content_id: UUID,
@@ -378,6 +402,7 @@ class MemoryGeneratedContentRepository(GeneratedContentRepository):
             completed_at=released_at,
             next_retry_at=None,
             claim=None,
+            last_error=_EXPIRED_CONTENT_ERROR,
             version=content.version + 1,
         )
         self._store(updated)
@@ -467,6 +492,13 @@ def _content_revision_order(
     content: GeneratedContentAttempt,
 ) -> tuple[int, datetime, str]:
     return (content.attempt_number, content.created_at, content.id.hex)
+
+
+def _expired_claim_order(
+    content: GeneratedContentAttempt,
+) -> tuple[datetime, datetime, str]:
+    assert content.claim is not None
+    return (content.claim.lease_expires_at, content.created_at, content.id.hex)
 
 
 def _guard_content_claim(

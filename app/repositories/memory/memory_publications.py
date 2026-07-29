@@ -195,6 +195,30 @@ class MemoryPublicationRepository(PublicationRepository):
 
         return tuple(claimed)
 
+    async def list_expired_claims(
+        self,
+        now: datetime,
+        limit: int,
+    ) -> Sequence[ClaimedPublication]:
+        """List expired delivery claims without changing their state."""
+        now = normalize_utc(now, field_name="now")
+        _validate_limit(limit)
+        expired = sorted(
+            (
+                publication
+                for publication in self._publications_by_id.values()
+                if publication.status is PublicationStatus.IN_PROGRESS
+                and publication.claim is not None
+                and publication.claim.lease_expires_at <= now
+            ),
+            key=_expired_claim_order,
+        )[:limit]
+        return tuple(
+            ClaimedPublication(publication=publication, claim=publication.claim)
+            for publication in expired
+            if publication.claim is not None
+        )
+
     async def mark_published(
         self,
         publication_id: UUID,
@@ -407,6 +431,17 @@ def _publication_processing_order(
         publication.next_retry_at or publication.scheduled_at or publication.created_at
     )
     return (ready_at, publication.created_at, publication.id.hex)
+
+
+def _expired_claim_order(
+    publication: Publication,
+) -> tuple[datetime, datetime, str]:
+    assert publication.claim is not None
+    return (
+        publication.claim.lease_expires_at,
+        publication.created_at,
+        publication.id.hex,
+    )
 
 
 def _guard_publication_claim(

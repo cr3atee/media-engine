@@ -106,7 +106,25 @@ do not leak into the domain.
 temporary `PriceDropEvent` boundary while preserving external ID, URL, Decimal
 discount percentage, and UTC timestamps. Persisted scoring lifecycle fields
 include status, score, attempts, retry time, guarded claim metadata, safe error,
-and optimistic version. Generated content is not yet persisted.
+and optimistic version.
+
+## GeneratedContentAttempt
+
+`GeneratedContentAttempt` is an immutable audit record for one AI or human
+content revision. Its deterministic identity includes event, content type,
+language, prompt version, and attempt number. It stores non-secret provider/model
+labels, generation and review states, checksum, retry/error metadata, claim lease,
+parent revision, UTC timestamps, and optimistic version. Failed retry creates a
+new attempt; prior rows are never rewritten into a new attempt.
+
+## Publication
+
+`Publication` is a channel-independent delivery intent linked to one durable event
+and generated-content revision. Identity includes event, content, channel, and
+destination key. Lifecycle state supports pending, in-progress, published,
+failed, ambiguous, and cancelled outcomes without importing Telegram or another
+delivery SDK. An expired in-progress claim becomes ambiguous and is not an
+automatic retry candidate.
 
 ## Event Processing Results
 
@@ -115,6 +133,12 @@ and optimistic version. Generated content is not yet persisted.
 processing counts, score/state, retry eligibility, and typed conflict/error
 categories without exposing ORM objects, sessions, claim tokens, or raw database
 exceptions.
+
+`ContentProcessingItemResult`, `ContentProcessingBatchResult`,
+`ContentClaimRecoveryResult`, and `PublicationRecoveryResult` are immutable
+application results. They expose IDs, attempt/result counts, retry timestamps,
+safe error categories, and idempotent publication outcomes without ORM objects,
+claim tokens, or raw provider exceptions.
 
 ## Matching Models
 

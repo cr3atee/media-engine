@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from app.analytics.price_change_detector import PriceChangeDetector
+from app.analytics.price_change import PriceChangeDetector
 from app.domain.events import PriceDropEvent
 from app.domain.price_snapshot import PriceSnapshot
 

@@ -7,7 +7,10 @@ from app.scheduler.jobs import (
     JobExecutionStatus,
     MarketEventScoringJob,
     MarketplaceJob,
+    PendingContentGenerationJob,
     PlayerokJob,
+    StaleContentClaimRecoveryJob,
+    StalePublicationClaimRecoveryJob,
     StaleScoringClaimRecoveryJob,
 )
 from app.scheduler.service import (
@@ -27,7 +30,10 @@ __all__ = [
     "JobScheduleStatus",
     "MarketEventScoringJob",
     "MarketplaceJob",
+    "PendingContentGenerationJob",
     "PlayerokJob",
     "SchedulerService",
+    "StaleContentClaimRecoveryJob",
+    "StalePublicationClaimRecoveryJob",
     "StaleScoringClaimRecoveryJob",
 ]

@@ -27,7 +27,11 @@ from app.parsers.playerok_extractor import PlayerokExtractor
 from app.parsers.playerok_fetcher import PlayerokFetcher
 from app.parsers.playerok_normalizer import PlayerokNormalizer
 from app.repositories.canonical_products import CanonicalProductRepository
-from app.repositories.memory import MemoryMarketEventRepository
+from app.repositories.memory import (
+    MemoryGeneratedContentRepository,
+    MemoryMarketEventRepository,
+    MemoryPublicationRepository,
+)
 from app.repositories.offers import OfferRepository
 from app.repositories.price_history import PriceHistoryRepository
 from app.repositories.provider import RepositoryProvider
@@ -356,6 +360,8 @@ def make_provider(
                 fail_on_write=fail_on_history_write,
             ),
             events=MemoryMarketEventRepository(),
+            generated_contents=MemoryGeneratedContentRepository(),
+            publications=MemoryPublicationRepository(),
         ),
         state,
     )

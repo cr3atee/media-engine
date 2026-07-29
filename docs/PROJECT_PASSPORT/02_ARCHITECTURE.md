@@ -39,6 +39,15 @@ Current marketplace flow:
 14. Scoring success/failure is persisted in a new short transaction guarded by
     claim token and optimistic version.
 15. A separate bounded recovery operation handles expired scoring claims.
+16. `ContentGenerationProcessingService` selects successfully scored eligible
+    events and creates/claims immutable content attempts in a short transaction.
+17. Prompt adaptation and AI/content generation execute after that transaction
+    closes.
+18. A short completion transaction persists generated text and checksum and,
+    when an explicit target exists, creates one idempotent channel-independent
+    publication intent atomically.
+19. Separate recovery services abandon expired generation claims and protect
+    expired publication claims as ambiguous.
 
 ## Matching Flow
 
@@ -59,6 +68,8 @@ Current repository layer includes:
 - `OfferRepository`
 - `PriceHistoryRepository`
 - `MarketEventRepository`
+- `GeneratedContentRepository`
+- `PublicationRepository`
 - in-memory implementations under `app/repositories/memory`
 - PostgreSQL implementations under `app/repositories/postgres`
 - `RepositoryProvider`
@@ -72,7 +83,8 @@ uses `MarketplaceApplicationRunner` with one repository scope, one shared
 `AsyncSession`, and one transaction for a bounded marketplace run. HTTP and
 normalization execute before that scope; offer, snapshot, and durable event writes
 execute inside it. Durable scoring is a separate claim-based application-service
-flow; generated content is not part of active ingestion or scoring.
+flow. Durable content generation is a subsequent claim-based service; it does not
+run inside ingestion or scoring transactions.
 
 ## Boundaries
 
@@ -85,3 +97,9 @@ flow; generated content is not part of active ingestion or scoring.
 - Scheduler jobs delegate to application services and do not own repositories,
   sessions, scoring policy, or business logic.
 - Scoring never runs while a claim repository scope or row lock remains open.
+- AI/content providers are called only after the generation-claim transaction has
+  committed.
+- Publication persistence is channel independent; external delivery adapters are
+  outside the current runtime.
+- Generated content and publication intent share one completion transaction when
+  an explicit destination is configured.

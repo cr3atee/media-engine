@@ -59,6 +59,14 @@ class PublicationRepository(BaseRepository):
         """Claim publications eligible for channel delivery."""
 
     @abstractmethod
+    async def list_expired_claims(
+        self,
+        now: datetime,
+        limit: int,
+    ) -> Sequence[ClaimedPublication]:
+        """Reserve expired delivery claims for ambiguous-state recovery."""
+
+    @abstractmethod
     async def mark_published(
         self,
         publication_id: UUID,

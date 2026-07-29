@@ -229,6 +229,24 @@ class MemoryMarketEventRepository(MarketEventRepository):
             if event.claim is not None
         )
 
+    async def list_content_eligible(
+        self,
+        limit: int,
+        offset: int = 0,
+    ) -> Sequence[PriceDropMarketEvent]:
+        """List successfully scored processable events deterministically."""
+        _validate_limit(limit)
+        _validate_limit(offset)
+        eligible = (
+            event
+            for event in self._events_by_id.values()
+            if event.disposition in _ELIGIBLE_DISPOSITIONS
+            and event.scoring_status is ScoringStatus.SUCCEEDED
+            and event.score is not None
+        )
+        ordered = sorted(eligible, key=_content_eligibility_order)
+        return tuple(ordered[offset : offset + limit])
+
     async def mark_scoring_failed(
         self,
         event_id: UUID,
@@ -352,6 +370,12 @@ def _expired_claim_order(
 ) -> tuple[datetime, datetime, str]:
     assert event.claim is not None
     return (event.claim.lease_expires_at, event.created_at, event.id.hex)
+
+
+def _content_eligibility_order(
+    event: PriceDropMarketEvent,
+) -> tuple[datetime, str]:
+    return (event.created_at, event.id.hex)
 
 
 def _guard_event_claim(

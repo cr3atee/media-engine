@@ -269,6 +269,29 @@ class PostgresMarketEventRepository(MarketEventRepository):
             claimed.append(ClaimedMarketEvent(event=event, claim=event.claim))
         return tuple(claimed)
 
+    async def list_content_eligible(
+        self,
+        limit: int,
+        offset: int = 0,
+    ) -> Sequence[PriceDropMarketEvent]:
+        """List scored processable events for content preparation."""
+        _validate_limit(limit)
+        _validate_limit(offset)
+        if limit == 0:
+            return ()
+        result = await self._session.execute(
+            self._event_query()
+            .where(
+                MarketEventRecord.disposition.in_(_ELIGIBLE_DISPOSITIONS),
+                MarketEventRecord.scoring_status == ScoringStatus.SUCCEEDED.value,
+                MarketEventRecord.score.is_not(None),
+            )
+            .order_by(MarketEventRecord.created_at, MarketEventRecord.id)
+            .limit(limit)
+            .offset(offset)
+        )
+        return tuple(self._map_row(row) for row in result.all())
+
     async def mark_scoring_failed(
         self,
         event_id: UUID,

@@ -31,9 +31,11 @@ from app.domain.market_events import (
 from app.domain.marketplace import Marketplace
 from app.domain.price_snapshot import PriceSnapshot
 from app.insights.scoring import EventScorer
+from app.models.generated_content_record import GeneratedContentRecord
 from app.models.market_event_record import MarketEventRecord
 from app.models.offer import Offer
 from app.models.price_snapshot_record import PriceSnapshotRecord
+from app.models.publication_record import PublicationRecord
 from app.parsers.ggsel_extractor import GGSelExtractor
 from app.parsers.ggsel_fetcher import GGSelFetcher
 from app.parsers.models import ParsedOffer
@@ -279,6 +281,8 @@ async def reset_database() -> None:
     """Create metadata and clear active ingestion tables in dependency order."""
     async with engine().begin() as connection:
         await connection.run_sync(get_metadata().create_all)
+        await connection.execute(delete(PublicationRecord))
+        await connection.execute(delete(GeneratedContentRecord))
         await connection.execute(delete(MarketEventRecord))
         await connection.execute(delete(PriceSnapshotRecord))
         await connection.execute(delete(Offer))

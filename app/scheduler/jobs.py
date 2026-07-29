@@ -44,6 +44,39 @@ class EventProcessingRunner(Protocol):
         """Recover one bounded batch of expired scoring claims."""
 
 
+class ContentProcessingRunner(Protocol):
+    """Application boundary invoked by durable content Scheduler jobs."""
+
+    async def process_pending(
+        self,
+        *,
+        worker_id: str,
+        limit: int,
+        now: datetime,
+    ) -> object:
+        """Process one bounded batch of generation attempts."""
+
+    async def recover_stale_generation_claims(
+        self,
+        *,
+        limit: int,
+        now: datetime,
+    ) -> object:
+        """Recover one bounded batch of expired generation claims."""
+
+
+class PublicationRecoveryRunner(Protocol):
+    """Application boundary for publication-claim recovery."""
+
+    async def recover_stale_publication_claims(
+        self,
+        *,
+        limit: int,
+        now: datetime,
+    ) -> object:
+        """Recover one bounded batch of expired publication claims."""
+
+
 class JobExecutionState(StrEnum):
     """Possible scheduler job execution states."""
 
@@ -227,6 +260,81 @@ class StaleScoringClaimRecoveryJob(BaseJob):
     def run(self) -> Awaitable[object]:
         """Delegate one bounded stale-claim recovery batch."""
         return self._service.recover_stale_scoring_claims(
+            limit=self._batch_size,
+            now=self._clock(),
+        )
+
+
+class PendingContentGenerationJob(BaseJob):
+    """Invoke bounded durable content generation."""
+
+    def __init__(
+        self,
+        service: ContentProcessingRunner,
+        *,
+        worker_id: str,
+        batch_size: int,
+        clock: Callable[[], datetime] = _utc_now,
+    ) -> None:
+        """Configure service delegation without repository or AI logic."""
+        super().__init__("pending-content-generation")
+        self._service = service
+        self._worker_id = worker_id
+        self._batch_size = batch_size
+        self._clock = clock
+
+    def run(self) -> Awaitable[object]:
+        """Delegate one bounded content-generation batch."""
+        return self._service.process_pending(
+            worker_id=self._worker_id,
+            limit=self._batch_size,
+            now=self._clock(),
+        )
+
+
+class StaleContentClaimRecoveryJob(BaseJob):
+    """Invoke bounded recovery of expired generation claims."""
+
+    def __init__(
+        self,
+        service: ContentProcessingRunner,
+        *,
+        batch_size: int,
+        clock: Callable[[], datetime] = _utc_now,
+    ) -> None:
+        """Configure recovery delegation without lifecycle policy."""
+        super().__init__("stale-content-claim-recovery")
+        self._service = service
+        self._batch_size = batch_size
+        self._clock = clock
+
+    def run(self) -> Awaitable[object]:
+        """Delegate one bounded stale generation-claim recovery batch."""
+        return self._service.recover_stale_generation_claims(
+            limit=self._batch_size,
+            now=self._clock(),
+        )
+
+
+class StalePublicationClaimRecoveryJob(BaseJob):
+    """Invoke bounded recovery of expired publication claims."""
+
+    def __init__(
+        self,
+        service: PublicationRecoveryRunner,
+        *,
+        batch_size: int,
+        clock: Callable[[], datetime] = _utc_now,
+    ) -> None:
+        """Configure recovery delegation without delivery behavior."""
+        super().__init__("stale-publication-claim-recovery")
+        self._service = service
+        self._batch_size = batch_size
+        self._clock = clock
+
+    def run(self) -> Awaitable[object]:
+        """Delegate one bounded stale publication-claim recovery batch."""
+        return self._service.recover_stale_publication_claims(
             limit=self._batch_size,
             now=self._clock(),
         )

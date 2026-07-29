@@ -2,10 +2,10 @@
 
 ## Status
 
-PostgreSQL persistence, the EPIC 12 runtime, EPIC 13 Task 4 transactional
-market-event ingestion, and Task 5 durable scoring are live-verified. Task 5 was
-verified against an isolated PostgreSQL 16 container without using a project or
-production database.
+PostgreSQL persistence, the EPIC 12 runtime, EPIC 13 transactional market-event
+ingestion, durable scoring, generated content, and publication-intent state are
+live-verified. Task 6 was verified against an isolated PostgreSQL 16 container
+without using a project or production database.
 
 ## Verified Schema
 
@@ -33,6 +33,14 @@ production database.
 - Pending/retry claims, expired leases, offer timelines, and canonical-product
   timelines have explicit indexes matching repository queries.
 - `alembic check` reports no pending schema operations.
+- Revision `0008_content_publications` creates immutable generated-content
+  attempts and channel-independent publication intents. Offline SQL generation,
+  live upgrade, downgrade to `0007`, and re-upgrade pass.
+- Content and publication identity, active-attempt uniqueness, lifecycle payload,
+  complete claim metadata, optimistic version, event/content lookup, and lease
+  recovery rules are database constrained and indexed.
+- Generated-content and publication foreign keys use `ON DELETE RESTRICT` so
+  event/content audit history is not destroyed by cascade deletion.
 
 ## Verified Repositories
 
@@ -61,6 +69,13 @@ production database.
   rejects stale claim tokens and optimistic versions.
 - Transient retry state, terminal permanent failure, UTC timestamps, and score
   precision survive fresh sessions.
+- Shared generated-content and publication contracts pass against memory and
+  PostgreSQL repositories, including immutable attempt ordering, retries, review
+  transitions, terminal-state protection, ambiguous publication state, stale
+  claim tokens, and optimistic-version conflicts.
+- PostgreSQL-specific tests verify two-session generation/publication contention,
+  durable fresh-session round trips, unique idempotency, rollback, and atomic
+  content/publication completion.
 
 ## Verified Transactions
 
@@ -86,13 +101,20 @@ production database.
 - Equal external IDs on GGSEL and Playerok produce independent event identities.
 - Exact ingestion replay creates no duplicate event row, and stored identity
   matches domain recomputation from exact snapshot facts.
+- Content claims commit before AI execution. Provider calls run with no repository
+  scope open; completion/failure uses a new short transaction.
+- Generated text and publication intent commit atomically. A simulated completion
+  transaction failure leaves the attempt claimed for recovery and creates no
+  partial publication row.
+- Expired generation claims become abandoned. Expired publication claims become
+  ambiguous and cannot be automatically reclaimed for delivery.
 
 ## Remaining Limits
 
-- Durable event scoring is implemented, but it is not yet composed into a single
-  production process bootstrap with marketplace ingestion.
-- Generated-content and publication state are not persisted.
-- Content-generation and publication retries are not implemented.
+- Durable ingestion, scoring, and content processing are implemented as separate
+  production-shaped services but are not yet composed in one process bootstrap.
+- External publication delivery is not implemented; publication rows are durable
+  delivery intents only.
 - Scheduler overlap and multi-process coordination are not implemented.
 - Null external IDs remain intentionally append-only.
 - Legacy foundation tables remain present and inactive.
@@ -107,3 +129,8 @@ integration tests. EPIC 13 Task 5 evidence is implemented by
 durable success, fresh sessions, duplicate suppression, transaction boundaries,
 concurrency, retry, active leases, recovery, stale tokens, terminal failure, and
 Scheduler delegation.
+Task 6 evidence is implemented by
+`verify_epic13_content_publication_postgres.py`: all 18 live checks pass, covering
+migration, scored-event eligibility, committed claims, transaction-free AI,
+durable success/failure/retry, fresh sessions, worker contention, rollback,
+idempotency, ambiguous publication protection, and Scheduler delegation.

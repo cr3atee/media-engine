@@ -60,6 +60,14 @@ class GeneratedContentRepository(BaseRepository):
         """Claim content attempts eligible for generation."""
 
     @abstractmethod
+    async def list_expired_claims(
+        self,
+        now: datetime,
+        limit: int,
+    ) -> Sequence[ClaimedContentAttempt]:
+        """Reserve expired generation claims for explicit recovery."""
+
+    @abstractmethod
     async def complete_attempt(
         self,
         content_id: UUID,

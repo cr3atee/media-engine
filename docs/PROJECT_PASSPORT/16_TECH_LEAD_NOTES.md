@@ -37,10 +37,27 @@ This document captures architecture notes that are important for future reviews.
   expose only lifecycle-specific async transitions and typed outcomes.
 - Scheduler event jobs only delegate bounded service calls; persisted work-item
   retries are separate from Scheduler invocation retries/statistics.
-- The exact next implementation task is Task 6: duplicate detector and legacy
-  event cleanup after targeted import and behavior-parity verification.
-- Generated-content persistence, publication persistence, AI execution, and
-  delivery remain outside the active durable event-processing flow.
+- Durable content processing uses three boundaries: attempt preparation/claim,
+  provider execution with no open repository scope, and guarded completion or
+  failure persistence.
+- Generated text and publication intent are atomic when a target is supplied;
+  missing target configuration leaves generated content valid without inventing
+  delivery metadata.
+- Failed generation retries create new immutable attempts. Expired content claims
+  become abandoned; expired publication claims become ambiguous and cannot be
+  automatically resent.
+- `RepositoryProvider` exposes generated-content and publication repositories for
+  both memory and PostgreSQL scopes; PostgreSQL repositories share the
+  caller-owned session and never commit.
+- Scheduler content/recovery jobs delegate only to application services and own
+  neither retry policy nor delivery behavior.
+- The duplicate price detector and inactive `app/core/events.py` hierarchy were
+  removed after targeted reference verification. `PriceDropEvent` remains only a
+  transient adapter for existing scoring/prompt interfaces.
+- The exact next implementation task is final EPIC 13 production-shaped
+  verification across ingestion, scoring, content, and publication intent.
+- External Telegram delivery remains separate and must preserve publication
+  idempotency and ambiguous-state protection.
 - GGSEL-specific price fields are not fully normalized into `ParsedOffer.price` and `ParsedOffer.currency` yet.
 
 ## Review Notes

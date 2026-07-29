@@ -2,8 +2,9 @@
 
 ## Status
 
-Scheduler orchestration is verified for PostgreSQL-backed marketplace ingestion
-and durable market-event scoring/recovery.
+Scheduler orchestration is verified for PostgreSQL-backed marketplace ingestion,
+durable market-event scoring/recovery, content generation, and content/publication
+stale-claim recovery.
 
 ## Verified Flow
 
@@ -24,6 +25,12 @@ and durable market-event scoring/recovery.
     same application service.
 12. Durable scoring success and stale-lease recovery are confirmed against fresh
     PostgreSQL sessions.
+13. `PendingContentGenerationJob` delegates a bounded durable generation batch.
+14. `StaleContentClaimRecoveryJob` delegates expired content-claim recovery.
+15. `StalePublicationClaimRecoveryJob` delegates protected ambiguous-state
+    recovery without delivery or resend.
+16. Generated content and publication intent remain visible through fresh
+    PostgreSQL sessions after Scheduler execution.
 
 ## Verified Responsibilities
 
@@ -38,16 +45,22 @@ and durable market-event scoring/recovery.
   lifecycle updates themselves.
 - Per-event retry state is persisted by the application service and remains
   independent from Scheduler invocation retries/statistics.
+- Content jobs create no repositories, sessions, AI provider, publication target,
+  or retry policy. They pass configured limits, worker identity, and time to the
+  application service only.
+- Publication recovery jobs never call a delivery adapter and never return an
+  ambiguous publication to pending.
 
 ## Remaining Limits
 
 - There is no explicit same-job overlap guard.
 - Multiple Scheduler processes are not coordinated.
-- Market-event scoring progress is durable; generated content and publication
-  attempts are not yet durable.
-- No content-generation or publication-delivery jobs exist yet.
+- Generated content and publication intent are durable; actual publication
+  delivery and its Scheduler job are not implemented.
 - Production intervals, monitoring, and alerting are not verified.
 
 Marketplace live evidence is recorded in `EPIC_12_FINAL_VERIFICATION.md`.
 Durable event job evidence is recorded by the Task 5 service/Scheduler tests and
 `verify_epic13_event_processing_postgres.py` (14 checks passed).
+Durable content/publication job evidence is recorded by the Task 6 focused tests
+and `verify_epic13_content_publication_postgres.py` (18 checks passed).

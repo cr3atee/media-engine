@@ -10,7 +10,6 @@ from app.comparator.grouping import OfferGroupingService
 from app.comparator.models import MarketplaceOffer
 from app.comparator.result import ComparisonResult, ComparisonResultBuilder
 from app.comparator.selector import BestOfferSelector
-from app.domain.events import PriceDropEvent
 from app.domain.market_events import (
     EventAddResult,
     MarketEventCandidate,
@@ -75,15 +74,6 @@ class TransactionalMarketplaceResult:
         return tuple(result.event for result in self.event_results)
 
     @property
-    def events_for_post_commit(self) -> tuple[PriceDropMarketEvent, ...]:
-        """Return newly created events eligible for temporary post-commit work."""
-        return tuple(
-            result.event
-            for result in self.event_results
-            if result.status is IdempotentCreateStatus.CREATED
-        )
-
-    @property
     def events_created(self) -> int:
         """Return the number of newly persisted durable events."""
         return sum(
@@ -98,15 +88,6 @@ class TransactionalMarketplaceResult:
             result.status is IdempotentCreateStatus.EXISTING
             for result in self.event_results
         )
-
-
-@dataclass(slots=True, frozen=True)
-class PostCommitMarketplaceResult:
-    """Content processing outcome produced after persistence commits."""
-
-    content_items_generated: int
-    events_scored: int
-    errors: tuple[str, ...]
 
 
 class MarketplacePipeline:
@@ -142,8 +123,7 @@ class MarketplacePipeline:
         self._market_event_builder = (
             market_event_builder or PriceDropMarketEventBuilder()
         )
-        self._event_scorer = event_scorer
-        self._content_generator = content_generator
+        del event_scorer, content_generator
         self._comparison_grouping = comparison_grouping or OfferGroupingService()
         self._comparison_selector = comparison_selector or BestOfferSelector()
         self._comparison_difference = comparison_difference or PriceDifferenceService()
@@ -296,47 +276,6 @@ class MarketplacePipeline:
             skipped_event_candidates=skipped_event_candidates,
         )
 
-    async def process_after_commit(
-        self,
-        events: Sequence[PriceDropMarketEvent],
-    ) -> PostCommitMarketplaceResult:
-        """Score events and generate content after successful persistence."""
-        errors: list[str] = []
-        generated_count = 0
-        scored_count = 0
-
-        self._report("=== SCORE EVENTS ===")
-        if not events:
-            self._report("No events to score.")
-
-        for durable_event in events:
-            event = self._market_event_builder.to_runtime_event(durable_event)
-            try:
-                score = self._event_scorer.score(event)
-            except Exception as exc:
-                errors.append(self._post_commit_error("scoring", event, exc))
-                continue
-            scored_count += 1
-            self._report(f"Score: {score}")
-
-            self._report("=== GENERATE CONTENT ===")
-            try:
-                post = await self._content_generator.generate(event)
-            except Exception as exc:
-                errors.append(self._post_commit_error("content", event, exc))
-                continue
-            generated_count += 1
-            self._report(post)
-
-        if generated_count == 0:
-            self._report("No generated posts.")
-        self._report(f"Generated posts: {generated_count}")
-        return PostCommitMarketplaceResult(
-            content_items_generated=generated_count,
-            events_scored=scored_count,
-            errors=tuple(errors),
-        )
-
     async def run(self, url: str) -> list[ComparisonResult]:
         """Execute the compatibility flow with a preconfigured provider."""
         provider = self._require_repository_provider()
@@ -399,17 +338,6 @@ class MarketplacePipeline:
             msg = "MarketplacePipeline requires a repository provider for this call."
             raise RuntimeError(msg)
         return self._repository_provider
-
-    @staticmethod
-    def _post_commit_error(
-        phase: str,
-        event: PriceDropEvent,
-        exc: Exception,
-    ) -> str:
-        return (
-            f"Post-commit {phase} failed for {event.marketplace}/{event.title}: "
-            f"{type(exc).__name__}: {exc}"
-        )
 
     def _report(self, message: str) -> None:
         if self._stage_reporter is not None:

@@ -27,7 +27,12 @@ policy.
 
 `InsightEngine.select_events()` remains a pass-through foundation. Event
 selection, deduplication beyond durable identity, importance aggregation, and
-publication policy are not implemented.
+publication ranking are not implemented.
+
+The active content eligibility policy preserves existing behavior: events must
+have an allowed disposition and successful persisted scoring, but there is no new
+score threshold. Repository queries provide deterministic bounded pages; the
+content service does not redesign `EventScorer` or infer an importance policy.
 
 ## Digest Preparation
 

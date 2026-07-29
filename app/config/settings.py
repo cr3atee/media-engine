@@ -67,6 +67,32 @@ class EventProcessingSettings(BaseSettings):
     stale_claim_recovery_interval_seconds: int = Field(default=30, gt=0)
 
 
+class ContentProcessingSettings(BaseSettings):
+    model_config = SettingsConfigDict(
+        env_file=".env",
+        env_file_encoding="utf-8",
+        env_prefix="CONTENT_PROCESSING_",
+        extra="ignore",
+    )
+
+    batch_size: int = Field(default=20, gt=0)
+    lease_seconds: int = Field(default=120, gt=0)
+    maximum_attempts: int = Field(default=5, gt=0)
+    initial_retry_seconds: int = Field(default=30, gt=0)
+    maximum_retry_seconds: int = Field(default=1800, gt=0)
+    stale_content_batch_size: int = Field(default=50, gt=0)
+    stale_content_recovery_interval_seconds: int = Field(default=60, gt=0)
+    stale_publication_batch_size: int = Field(default=50, gt=0)
+    stale_publication_recovery_interval_seconds: int = Field(default=60, gt=0)
+    content_type: str = "telegram_post"
+    language: str = "ru"
+    provider_label: str = "configured"
+    model_label: str = "configured"
+    prompt_version: str = "price_drop_v1"
+    publication_channel: str = ""
+    publication_destination_key: str = ""
+
+
 class LoggingSettings(BaseSettings):
     model_config = SettingsConfigDict(
         env_file=".env",
@@ -91,6 +117,9 @@ class Settings(BaseSettings):
     scheduler: SchedulerSettings = Field(default_factory=SchedulerSettings)
     event_processing: EventProcessingSettings = Field(
         default_factory=EventProcessingSettings
+    )
+    content_processing: ContentProcessingSettings = Field(
+        default_factory=ContentProcessingSettings
     )
     logging: LoggingSettings = Field(default_factory=LoggingSettings)
 
