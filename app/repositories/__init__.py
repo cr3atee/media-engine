@@ -2,12 +2,18 @@ from __future__ import annotations
 
 from app.repositories.base import BaseRepository
 from app.repositories.canonical_products import CanonicalProductRepository
+from app.repositories.events import MarketEventRepository
+from app.repositories.generated_contents import GeneratedContentRepository
 from app.repositories.offers import OfferRepository
 from app.repositories.price_history import PriceHistoryRepository
+from app.repositories.publications import PublicationRepository
 
 __all__ = (
     "BaseRepository",
     "CanonicalProductRepository",
+    "GeneratedContentRepository",
+    "MarketEventRepository",
     "OfferRepository",
     "PriceHistoryRepository",
+    "PublicationRepository",
 )

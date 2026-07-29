@@ -5,6 +5,40 @@ from typing import TYPE_CHECKING
 
 from pydantic import BaseModel, Field, computed_field
 
+from app.domain.market_events import (
+    CURRENT_EVENT_IDENTITY_VERSION,
+    ClaimedMarketEvent,
+    EventAddResult,
+    EventIdentity,
+    MarketEvent,
+    MarketEventCandidate,
+    MarketEventType,
+    PriceDropMarketEvent,
+    PriceDropPayload,
+    SnapshotIdentity,
+    UnsupportedEventIdentityVersion,
+    build_event_identity,
+    create_price_drop_market_event,
+)
+
+__all__ = (
+    "CURRENT_EVENT_IDENTITY_VERSION",
+    "BaseEvent",
+    "ClaimedMarketEvent",
+    "EventAddResult",
+    "EventIdentity",
+    "MarketEvent",
+    "MarketEventCandidate",
+    "MarketEventType",
+    "PriceDropEvent",
+    "PriceDropMarketEvent",
+    "PriceDropPayload",
+    "SnapshotIdentity",
+    "UnsupportedEventIdentityVersion",
+    "build_event_identity",
+    "create_price_drop_market_event",
+)
+
 
 class BaseEvent(BaseModel):
     """Base domain event model."""

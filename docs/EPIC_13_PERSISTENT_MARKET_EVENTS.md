@@ -8,6 +8,63 @@ EPIC 13 closes that durability gap. It introduces a persistent, auditable event 
 
 This document is the implementation specification. It does not introduce application code or database migrations.
 
+### Task 1 implementation status
+
+Task 1 is implemented as a database-independent foundation.
+
+Implemented models and value objects:
+
+- Immutable generic `MarketEvent` envelope and `PriceDropPayload`.
+- Exact `SnapshotIdentity` containing marketplace, external ID, UTC observation time, `Decimal` price, and normalized currency.
+- Versioned `EventIdentity` with `CURRENT_EVENT_IDENTITY_VERSION = 1`.
+- Separate event disposition, scoring, content generation, content review, and publication enums.
+- Deterministic lifecycle transition validators that reject invalid and terminal-state transitions.
+- Immutable generated-content attempt/revision, publication, work-claim, safe error, and typed repository-result contracts.
+
+Implemented repository boundaries:
+
+- Async `MarketEventRepository`.
+- Async `GeneratedContentRepository`.
+- Async `PublicationRepository`.
+- Lifecycle-specific methods and typed outcomes without SQLAlchemy, transaction ownership, retry loops, or provider logic.
+
+Identity implementation details:
+
+- Event identity is SHA-256 over the version, stable event type value, normalized marketplace, external ID, previous snapshot identity, and current snapshot identity.
+- Identity fields are UTF-8 encoded, pipe separated, and escape backslashes and pipe characters before joining.
+- UTC timestamps use ISO 8601 with six fractional digits and a `Z` suffix.
+- Decimal values use fixed-point notation with insignificant trailing fractional zeros removed, so `Decimal("10.0")` and `Decimal("10.00")` are the same logical value.
+- Unsupported identity versions fail explicitly instead of falling back to the current algorithm.
+
+Lifecycle implementation details:
+
+- Failed scoring may return to pending for a persisted retry.
+- Failed content attempts are immutable terminal attempts; a retry creates a new attempt number.
+- Failed publications may return to pending for a known-failure retry.
+- Ambiguous publications may move only through explicit reconciliation to pending, published, or cancelled; they are not automatic retry candidates.
+- Published and cancelled publications are terminal.
+- Rejected content cannot become approved; a new revision is required.
+
+Current runtime compatibility:
+
+- The existing Pydantic `PriceDropEvent` remains unchanged and continues to be used by `EventBuilder`, `EventScorer`, prompts, content generation, and marketplace runtime DTOs.
+- `app/domain/events.py` re-exports the persistent event contracts but does not convert or replace runtime events.
+- No event persistence or application-runner integration is included.
+- `app/analytics/price_change.py` remains the active detector.
+- `app/analytics/price_change_detector.py` remains a legacy duplicate pending the dedicated cleanup task; its calculation semantics were not changed.
+
+Remaining EPIC 13 work:
+
+- Memory and PostgreSQL repository implementations.
+- SQLAlchemy models and Alembic migrations.
+- Atomic event insertion in the marketplace transaction.
+- Durable scoring, content-generation, claim-recovery, and publication application services.
+- Scheduler job integration and live PostgreSQL verification.
+
+Exact recommended Task 2:
+
+Implement deterministic in-memory repositories for the three Task 1 interfaces and a shared repository contract test suite. Task 2 must not add SQLAlchemy, migrations, `RepositoryProvider` fields, runtime integration, scheduler jobs, AI calls, or publication delivery.
+
 ### Current implementation facts
 
 - `app/domain/events.py` is the active event model used by `EventBuilder`, `EventScorer`, prompts, and content generation.
@@ -134,6 +191,8 @@ Canonicalization rules:
 - `external_id` is preserved exactly as the marketplace identifier after existing normalization.
 - UTC timestamps use ISO 8601 with six fractional digits and a `Z` suffix.
 - Decimal values use fixed-point notation, never scientific notation and never `float` conversion.
+- Insignificant trailing fractional zeros are removed before hashing.
+- Backslashes and pipe characters are escaped before pipe-separated fields are joined.
 - The UTF-8 canonical string is hashed with SHA-256 and stored as 64 lowercase hexadecimal characters.
 
 ### Fields excluded from identity
@@ -888,16 +947,16 @@ Use a typed summary containing:
 - Dependencies: Existing `PriceSnapshot`, `PriceChange`, and marketplace identity conventions.
 - Non-goals: Persistence, scoring, content generation, publication delivery.
 
-### Task 2: Event repository contracts and memory implementation
+### Task 2: Memory implementations and repository contract tests
 
-- Goal: Define asynchronous lifecycle-specific event repository operations and a deterministic memory implementation.
-- Likely files: `app/repositories/events.py`, `app/repositories/memory/memory_events.py`, package exports, provider construction, and tests.
+- Goal: Implement deterministic memory repositories for the existing asynchronous event, generated-content, and publication contracts.
+- Likely files: `app/repositories/memory/memory_events.py`, `app/repositories/memory/memory_generated_contents.py`, `app/repositories/memory/memory_publications.py`, memory package exports, and shared repository contract tests.
 - Acceptance: Idempotent add, pending listing, claim, guarded completion, failure, and disposition transitions work without database dependencies.
-- Tests: Duplicate identity, claim exclusivity, stale claim, lost claim token, invalid transitions, insertion order where observable.
+- Tests: Run one behavioral contract suite against each memory repository, covering duplicate identity, claim exclusivity, stale claim, lost claim token, invalid transitions, immutable revisions, and insertion order where observable.
 - Migration impact: None.
-- Risks: Memory concurrency semantics may diverge from PostgreSQL; contract tests must run against both implementations later.
+- Risks: Memory concurrency semantics can diverge from PostgreSQL; the same behavioral contract suite must be reused for PostgreSQL implementations later.
 - Dependencies: Task 1.
-- Non-goals: PostgreSQL, scheduler jobs, scoring policy.
+- Non-goals: `RepositoryProvider` changes, PostgreSQL, scheduler jobs, runtime integration, scoring policy, AI calls, and publication delivery.
 
 ### Task 3: PostgreSQL event model and migration
 
