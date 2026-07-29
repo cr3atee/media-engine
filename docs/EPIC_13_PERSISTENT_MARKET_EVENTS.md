@@ -6,7 +6,8 @@ EPIC 12 established an asynchronous PostgreSQL runtime with a single transaction
 
 EPIC 13 closes that durability gap. It introduces a persistent, auditable event lifecycle without moving business logic into repositories, holding database transactions during external calls, or coupling the domain to Telegram.
 
-This document is the implementation specification. It does not introduce application code or database migrations.
+This document is the implementation specification and task-status record. It does
+not itself introduce database migrations.
 
 ### Task 1 implementation status
 
@@ -55,15 +56,77 @@ Current runtime compatibility:
 
 Remaining EPIC 13 work:
 
-- Memory and PostgreSQL repository implementations.
+- PostgreSQL repository implementations.
 - SQLAlchemy models and Alembic migrations.
 - Atomic event insertion in the marketplace transaction.
 - Durable scoring, content-generation, claim-recovery, and publication application services.
 - Scheduler job integration and live PostgreSQL verification.
 
-Exact recommended Task 2:
+### Task 2 implementation status
 
-Implement deterministic in-memory repositories for the three Task 1 interfaces and a shared repository contract test suite. Task 2 must not add SQLAlchemy, migrations, `RepositoryProvider` fields, runtime integration, scheduler jobs, AI calls, or publication delivery.
+Task 2 is implemented as standalone, database-independent memory persistence.
+
+Implemented repositories:
+
+- `MemoryMarketEventRepository` with deterministic identity lookup, guarded
+  scoring transitions, disposition transitions, retry eligibility, and claim
+  release.
+- `MemoryGeneratedContentRepository` with immutable attempts, deterministic
+  revision history, guarded generation/review transitions, and parent links.
+- `MemoryPublicationRepository` with channel-neutral idempotency, scheduling,
+  known-failure retry, confirmed delivery, ambiguous delivery, and cancellation.
+
+Fixed contract semantics:
+
+- Repeated event, content-attempt, and publication identities return the original
+  immutable record with `IdempotentCreateStatus.EXISTING`.
+- An event/content identity that is reused with incompatible immutable facts raises
+  `RepositoryIdentityConflictError`; repositories never merge those facts.
+- A publication retry with the same idempotency key preserves the original ID,
+  creation time, and schedule.
+- Exact duplicate publication success is idempotently `APPLIED` without changing
+  the first external message ID or publication time. A different external message
+  ID is an explicit `INVALID_STATE` outcome.
+- Guarded updates distinguish `NOT_FOUND`, `VERSION_CONFLICT`, `CLAIM_LOST`,
+  `INVALID_STATE`, and `APPLIED`, and every applied mutation increments the
+  optimistic version once.
+
+Claim and lease behavior:
+
+- Repository time comes from explicit UTC-aware method arguments; claim tokens are
+  generated through an injectable factory for deterministic tests.
+- Active claims cannot be stolen. An expired scoring claim can be reclaimed with a
+  new token and version.
+- An expired content-generation claim becomes `abandoned`; the failed work is not
+  rewritten or silently retried.
+- An expired publication claim becomes `ambiguous`, blocking automatic resend when
+  provider acceptance cannot be proven.
+
+Stable ordering:
+
+- Events use readiness/next-retry time, creation time, then UUID.
+- Generated content uses attempt number, creation time, then UUID.
+- Publications use next-retry/scheduled readiness, creation time, then UUID.
+- All list methods return detached immutable sequences; repository instances keep
+  isolated, non-global state.
+
+Shared contract tests live under `tests/repositories/contracts/`. Concrete memory
+tests inherit the three behavior suites and supply only repository factories. The
+same suites are intended for Task 3 PostgreSQL implementations without depending
+on memory internals.
+
+Task 2 does not change `RepositoryProvider`, SQLAlchemy models, migrations,
+transactions, scheduler jobs, marketplace runtime paths, AI generation, or
+publication delivery.
+
+Exact recommended Task 3:
+
+Implement only the `market_events` SQLAlchemy model, Alembic migration, domain/ORM
+mapping, and `PostgresMarketEventRepository`. Run the shared market-event repository
+contract against PostgreSQL, verify identity conflicts and concurrent
+`FOR UPDATE SKIP LOCKED` claims, and keep transaction commit ownership outside the
+repository. Do not add generated-content/publication tables or runtime integration
+in Task 3.
 
 ### Current implementation facts
 
@@ -75,7 +138,8 @@ Implement deterministic in-memory repositories for the three Task 1 interfaces a
 - `MarketplaceApplicationRunner` commits ingestion before scoring and content generation.
 - Generated text and post-commit failures currently exist only in process memory.
 - Scheduler jobs orchestrate services and maintain execution statistics in memory.
-- No persistent event, generated-content, or publication repository exists.
+- Standalone memory repositories exist for persistent events, generated content,
+  and publications; no active runtime path or provider uses them yet.
 
 ### Architectural invariants
 
@@ -949,10 +1013,15 @@ Use a typed summary containing:
 
 ### Task 2: Memory implementations and repository contract tests
 
+- Status: Completed.
+
 - Goal: Implement deterministic memory repositories for the existing asynchronous event, generated-content, and publication contracts.
 - Likely files: `app/repositories/memory/memory_events.py`, `app/repositories/memory/memory_generated_contents.py`, `app/repositories/memory/memory_publications.py`, memory package exports, and shared repository contract tests.
 - Acceptance: Idempotent add, pending listing, claim, guarded completion, failure, and disposition transitions work without database dependencies.
-- Tests: Run one behavioral contract suite against each memory repository, covering duplicate identity, claim exclusivity, stale claim, lost claim token, invalid transitions, immutable revisions, and insertion order where observable.
+- Tests: Reusable behavioral contract classes run against each memory repository,
+  covering duplicate identity, claim exclusivity, stale claim recovery, lost claim
+  token, optimistic conflicts, invalid transitions, immutable revisions, and stable
+  ordering.
 - Migration impact: None.
 - Risks: Memory concurrency semantics can diverge from PostgreSQL; the same behavioral contract suite must be reused for PostgreSQL implementations later.
 - Dependencies: Task 1.

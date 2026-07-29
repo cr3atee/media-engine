@@ -5,3 +5,7 @@ from abc import ABC
 
 class BaseRepository(ABC):  # noqa: B024
     """Base abstract marker for repository contracts."""
+
+
+class RepositoryIdentityConflictError(ValueError):
+    """Raised when one deterministic identity describes conflicting data."""

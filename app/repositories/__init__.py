@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from app.repositories.base import BaseRepository
+from app.repositories.base import BaseRepository, RepositoryIdentityConflictError
 from app.repositories.canonical_products import CanonicalProductRepository
 from app.repositories.events import MarketEventRepository
 from app.repositories.generated_contents import GeneratedContentRepository
@@ -16,4 +16,5 @@ __all__ = (
     "OfferRepository",
     "PriceHistoryRepository",
     "PublicationRepository",
+    "RepositoryIdentityConflictError",
 )
