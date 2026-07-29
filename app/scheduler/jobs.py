@@ -7,13 +7,16 @@ from datetime import UTC, datetime, timedelta
 from enum import StrEnum
 from inspect import isawaitable
 from time import perf_counter
-from typing import cast
+from typing import Protocol
 
-from app.comparator.result import ComparisonResult
-from app.parsers.models import ParsedOffer
 from app.parsers.playerok_fetcher import PlayerokFetcher
-from app.services.marketplace_pipeline import MarketplacePipeline
-from app.services.playerok_pipeline import PlayerokPipeline
+
+
+class MarketplaceRunner(Protocol):
+    """Application entry point accepted by marketplace scheduler jobs."""
+
+    async def run(self, url: str) -> object:
+        """Execute one bounded marketplace application run."""
 
 
 class JobExecutionState(StrEnum):
@@ -124,19 +127,16 @@ class GGSELJob(MarketplaceJob):
 
     def __init__(
         self,
-        pipeline: MarketplacePipeline,
+        runner: MarketplaceRunner,
         url: str = DEFAULT_URL,
     ) -> None:
-        """Initialize the GGSEL scheduler job with an existing pipeline."""
+        """Initialize the GGSEL scheduler job with an application runner."""
         super().__init__("ggsel", url)
-        self._pipeline = pipeline
+        self._runner = runner
 
-    def run(self) -> Awaitable[list[ComparisonResult]]:
-        """Execute the existing GGSEL marketplace pipeline."""
-        return cast(
-            Awaitable[list[ComparisonResult]],
-            self._pipeline.run(self.url),
-        )
+    def run(self) -> Awaitable[object]:
+        """Execute the configured GGSEL application runner."""
+        return self._runner.run(self.url)
 
 
 class PlayerokJob(MarketplaceJob):
@@ -144,13 +144,13 @@ class PlayerokJob(MarketplaceJob):
 
     def __init__(
         self,
-        pipeline: PlayerokPipeline,
+        runner: MarketplaceRunner,
         url: str = PlayerokFetcher.DEFAULT_URL,
     ) -> None:
-        """Initialize the Playerok scheduler job with an existing pipeline."""
+        """Initialize the Playerok scheduler job with an application runner."""
         super().__init__("playerok", url)
-        self._pipeline = pipeline
+        self._runner = runner
 
-    def run(self) -> Awaitable[list[ParsedOffer]]:
-        """Execute the existing Playerok pipeline."""
-        return cast(Awaitable[list[ParsedOffer]], self._pipeline.run(self.url))
+    def run(self) -> Awaitable[object]:
+        """Execute the configured Playerok application runner."""
+        return self._runner.run(self.url)

@@ -2,8 +2,8 @@
 
 Date: 2026-07-28
 
-Status: approved implementation design; no application code or migrations are
-included in this document.
+Status: implemented transaction architecture; database integrity migrations are
+intentionally deferred.
 
 ## 1. Executive Summary
 
@@ -36,6 +36,35 @@ This design does not make content delivery reliable. Events are not persisted, s
 a crash after commit can lose post-commit content work. Persisted event/publication
 intent should be the next reliability task after Task 4, before Telegram delivery.
 
+## Implementation Status
+
+Implemented on 2026-07-29:
+
+- `MarketplaceApplicationRunner` is the reusable application entry point for one
+  bounded marketplace run;
+- `MarketplacePipeline` exposes `fetch_and_normalize()`, `prepare_offers()`,
+  `process_with_repositories()`, and `process_after_commit()` phases;
+- `app/database/repository_scope.py` creates one `AsyncSession`, enters one
+  `session.begin()` transaction, and builds all PostgreSQL repositories from that
+  session;
+- `app/services/repository_scope.py` provides the SQLAlchemy-free memory scope;
+- `MarketplaceRunResult` reports backend-neutral counts, commit state, and
+  recoverable pre-transaction or post-commit errors;
+- repository and deterministic processing failures escape the runner, causing
+  the PostgreSQL context to roll back and preventing post-commit work;
+- scoring and content generation start only after successful scope exit;
+- content failures are recorded in the result and do not attempt to roll back
+  committed data;
+- scheduler marketplace jobs depend on a narrow runner protocol and do not own
+  sessions, repositories, transactions, or business processing;
+- focused tests cover phase order, successful execution, repository/snapshot/
+  deterministic failures, post-commit content failure, memory reuse, shared
+  PostgreSQL session construction, and scheduler delegation.
+
+`MarketplacePipeline.run()` remains as a compatibility path for existing memory
+demos with a preconfigured provider. PostgreSQL-shaped composition must use
+`MarketplaceApplicationRunner` with `create_postgres_repository_scope()`.
+
 ## 2. Current Runtime Lifecycle
 
 ### Engine
@@ -52,14 +81,15 @@ intent should be the next reliability task after Task 4, before Telegram deliver
   global engine.
 - `expire_on_commit=False` is configured.
 - `get_session()` yields a session but does not define commit or rollback policy.
-- No current application code uses `session.begin()`.
+- `create_postgres_repository_scope()` owns `session.begin()` for marketplace
+  application runs.
 
 ### Session
 
-- PostgreSQL demos create sessions manually with `async with SessionLocal()`.
-- Demos call `session.commit()` explicitly, sometimes more than once in one
-  script.
-- No reusable rollback boundary exists for a complete marketplace run.
+- Older PostgreSQL demos still create sessions manually with
+  `async with SessionLocal()` and call `session.commit()` explicitly.
+- `MarketplaceApplicationRunner` uses the reusable repository scope for one
+  complete marketplace transaction and rollback boundary.
 - Closing a session will clean up an uncommitted transaction, but that is not an
   explicit application policy.
 
@@ -992,52 +1022,48 @@ Keep `docs/ARCHITECTURE_REVIEW_5.md` unchanged as a historical checkpoint.
 
 ## 18. Task 4 Acceptance Criteria
 
-- [ ] One marketplace application run has one explicitly owned PostgreSQL
+- [x] One marketplace application run has one explicitly owned PostgreSQL
   `AsyncSession`.
-- [ ] All PostgreSQL repositories in the run share that session.
-- [ ] `RepositoryProvider` remains a simple container.
-- [ ] Repository contracts expose no SQLAlchemy types or transaction methods.
-- [ ] Marketplace HTTP, extraction, normalization, and validation finish before
+- [x] All PostgreSQL repositories in the run share that session.
+- [x] `RepositoryProvider` remains a simple container.
+- [x] Repository contracts expose no SQLAlchemy types or transaction methods.
+- [x] Marketplace HTTP, extraction, normalization, and validation finish before
   transaction entry.
-- [ ] Offer persistence, canonical reads, snapshot reads, and snapshot writes run
+- [x] Offer persistence, canonical reads, snapshot reads, and snapshot writes run
   inside one transaction.
-- [ ] Deterministic price changes and events are produced from transaction-loaded
+- [x] Deterministic price changes and events are produced from transaction-loaded
   DTOs.
-- [ ] Successful scope exit commits exactly once.
-- [ ] Any transaction-phase failure rolls back all writes from the run.
-- [ ] Scoring and content generation start only after commit.
-- [ ] Content failure does not roll back committed marketplace data.
-- [ ] Scheduler jobs invoke the application runner without session/repository
+- [x] Successful scope exit commits exactly once.
+- [x] Any transaction-phase failure rolls back all writes from the run.
+- [x] Scoring and content generation start only after commit.
+- [x] Content failure does not roll back committed marketplace data.
+- [x] Scheduler jobs invoke the application runner without session/repository
   construction.
-- [ ] Memory runner behavior remains available without SQLAlchemy lifecycle
+- [x] Memory runner behavior remains available without SQLAlchemy lifecycle
   semantics.
 - [ ] Offer upsert and exact snapshot deduplication are protected by PostgreSQL
-  constraints before concurrent production scheduling is enabled.
-- [ ] First snapshot, decrease, increase, unchanged, equal-timestamp, and
+  constraints before concurrent production scheduling is enabled. This is the
+  explicitly deferred migration task.
+- [x] First snapshot, decrease, increase, unchanged, equal-timestamp, and
   out-of-order semantics remain unchanged.
-- [ ] Focused rollback, phase-order, scheduler, and idempotency tests pass.
-- [ ] Ruff and MyPy pass for all touched modules without new broad ignores.
-- [ ] No Telegram, frontend, FunPay, matching/comparator redesign, event bus,
+- [x] Focused rollback, phase-order, scheduler, and idempotency tests pass.
+- [x] Ruff and MyPy pass for all touched modules without new broad ignores.
+- [x] No Telegram, frontend, FunPay, matching/comparator redesign, event bus,
   Redis, Celery, Kafka, or distributed lock is introduced.
 
-## 19. Recommended First Implementation Commit
+## 19. Recommended Next Task
 
-Recommended commit:
+Implement the deferred database-integrity migrations and race-safe repository
+operations described in Sections 12 and 16:
 
-`refactor(pipeline): separate transactional processing phases`
+- enforce non-null offer identity uniqueness;
+- add canonical association foreign-key/index integrity;
+- enforce exact snapshot identity uniqueness and history lookup indexes;
+- replace race-prone lookup-then-insert behavior with PostgreSQL conflict-safe
+  writes.
 
-This is the smallest safe first step because the current monolithic
-`MarketplacePipeline.run()` cannot be wrapped in a database transaction without
-also enclosing marketplace HTTP and AI generation. The commit should:
-
-- expose normalized-offer ingestion separately;
-- extract one provider-driven persistence/analysis phase returning in-memory
-  events and counts;
-- expose post-commit scoring/content separately;
-- preserve existing algorithms and memory-backed behavior;
-- add phase-order regression tests;
-- introduce no session scope, transaction manager, migration, scheduler change,
-  or new business rule.
-
-Only after this phase boundary is proven should the next commit add the
-PostgreSQL repository scope and `MarketplaceApplicationRunner`.
+Until that task is complete, deploy only one scheduler process, avoid overlapping
+runs for the same bounded source, and treat application-level duplicate checks as
+best-effort rather than concurrency-safe guarantees. Persisted event/publication
+intent remains the following reliability task because content cannot currently be
+recovered after a process failure following commit.

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from collections.abc import Callable, Sequence
+from dataclasses import dataclass
 
 from app.analytics.models import PriceChange
 from app.analytics.price_change import PriceChangeDetector
@@ -25,8 +26,37 @@ from app.services.snapshot_builder import SnapshotBuilder
 type StageReporter = Callable[[str], None]
 
 
+@dataclass(slots=True, frozen=True)
+class PreparedMarketplaceRun:
+    """Repository-independent data prepared before transaction entry."""
+
+    offers: tuple[ParsedOffer, ...]
+    snapshots: tuple[PriceSnapshot, ...]
+    skipped_offers: int
+    errors: tuple[str, ...]
+
+
+@dataclass(slots=True, frozen=True)
+class TransactionalMarketplaceResult:
+    """Domain data and counts produced inside one repository scope."""
+
+    offers_persisted: int
+    comparison_results: tuple[ComparisonResult, ...]
+    snapshots_persisted: int
+    price_changes: tuple[PriceChange, ...]
+    events: tuple[PriceDropEvent, ...]
+
+
+@dataclass(slots=True, frozen=True)
+class PostCommitMarketplaceResult:
+    """Content processing outcome produced after persistence commits."""
+
+    content_items_generated: int
+    errors: tuple[str, ...]
+
+
 class MarketplacePipeline:
-    """Orchestrates marketplace offer processing without persistence or delivery."""
+    """Orchestrates pure marketplace processing phases."""
 
     def __init__(
         self,
@@ -34,12 +64,12 @@ class MarketplacePipeline:
         fetcher: GGSelFetcher,
         extractor: GGSelExtractor,
         normalizer: OfferNormalizer,
-        repository_provider: RepositoryProvider,
         snapshot_builder: SnapshotBuilder,
         price_change_detector: PriceChangeDetector,
         event_builder: EventBuilder,
         event_scorer: EventScorer,
         content_generator: ContentGenerator,
+        repository_provider: RepositoryProvider | None = None,
         comparison_grouping: OfferGroupingService | None = None,
         comparison_selector: BestOfferSelector | None = None,
         comparison_difference: PriceDifferenceService | None = None,
@@ -66,8 +96,8 @@ class MarketplacePipeline:
         )
         self._stage_reporter = stage_reporter
 
-    async def run(self, url: str) -> list[ComparisonResult]:
-        """Execute the full marketplace processing pipeline for one source URL."""
+    async def fetch_and_normalize(self, url: str) -> list[ParsedOffer]:
+        """Fetch, extract, and normalize GGSEL offers before persistence."""
         self._report("=== FETCH HTML ===")
         html = await self._fetcher.fetch_html(url)
         self._report(f"Fetched HTML: {len(html)} characters")
@@ -82,37 +112,60 @@ class MarketplacePipeline:
         self._report("=== NORMALIZE OFFERS ===")
         parsed_offers = [self._normalizer.normalize(offer) for offer in raw_offers]
         self._report(f"Normalized offers: {len(parsed_offers)}")
-        for offer in parsed_offers:
-            await self._repository_provider.offers.save(offer)
-        self._report(f"Persisted offers: {len(parsed_offers)}")
+        return parsed_offers
 
-        self._report("=== COMPARE OFFERS ===")
-        comparison_results = await self.compare_repository_offers()
-        self._report(f"Comparison results: {len(comparison_results)}")
-
+    def prepare_offers(
+        self,
+        parsed_offers: Sequence[ParsedOffer],
+    ) -> PreparedMarketplaceRun:
+        """Build valid snapshot candidates before opening a transaction."""
         self._report("=== BUILD SNAPSHOTS ===")
         snapshots: list[PriceSnapshot] = []
-        skipped_snapshots_count = 0
+        errors: list[str] = []
+
         for offer in parsed_offers:
             try:
                 snapshots.append(self._snapshot_builder.build(offer))
-            except ValueError:
-                skipped_snapshots_count += 1
+            except ValueError as exc:
+                identity = offer.external_id or "unknown"
+                errors.append(
+                    f"Skipped snapshot for {offer.marketplace}/{identity}: {exc}",
+                )
 
+        skipped_offers = len(parsed_offers) - len(snapshots)
         self._report(f"Built snapshots: {len(snapshots)}")
-        self._report(f"Skipped snapshots: {skipped_snapshots_count}")
+        self._report(f"Skipped snapshots: {skipped_offers}")
+        return PreparedMarketplaceRun(
+            offers=tuple(parsed_offers),
+            snapshots=tuple(snapshots),
+            skipped_offers=skipped_offers,
+            errors=tuple(errors),
+        )
+
+    async def process_with_repositories(
+        self,
+        prepared: PreparedMarketplaceRun,
+        repository_provider: RepositoryProvider,
+    ) -> TransactionalMarketplaceResult:
+        """Persist and process prepared offers within one repository scope."""
+        for offer in prepared.offers:
+            await repository_provider.offers.save(offer)
+        self._report(f"Persisted offers: {len(prepared.offers)}")
+
+        self._report("=== COMPARE OFFERS ===")
+        comparison_results = await self.compare_repository_offers(
+            repository_provider,
+        )
+        self._report(f"Comparison results: {len(comparison_results)}")
 
         self._report("=== UPDATE PRICE HISTORY ===")
-        snapshots_count = 0
         price_changes: list[PriceChange] = []
-
-        for current_snapshot in snapshots:
-            previous_snapshot = await self._repository_provider.price_history.get_last(
+        for current_snapshot in prepared.snapshots:
+            previous_snapshot = await repository_provider.price_history.get_last(
                 current_snapshot.marketplace,
                 current_snapshot.external_id,
             )
-            await self._repository_provider.price_history.add(current_snapshot)
-            snapshots_count += 1
+            await repository_provider.price_history.add(current_snapshot)
 
             if (
                 previous_snapshot is None
@@ -127,57 +180,95 @@ class MarketplacePipeline:
             if price_change is not None:
                 price_changes.append(price_change)
 
-        self._report(f"Stored snapshots: {snapshots_count}")
-
+        self._report(f"Stored snapshots: {len(prepared.snapshots)}")
         self._report("=== DETECT PRICE CHANGES ===")
         self._report(f"Detected price changes: {len(price_changes)}")
 
         self._report("=== BUILD EVENTS ===")
-        events: list[PriceDropEvent] = []
-        for price_change in price_changes:
-            event = self._event_builder.build(price_change)
-            if event is not None:
-                events.append(event)
+        events = tuple(
+            event
+            for price_change in price_changes
+            if (event := self._event_builder.build(price_change)) is not None
+        )
         self._report(f"Built events: {len(events)}")
+        return TransactionalMarketplaceResult(
+            offers_persisted=len(prepared.offers),
+            comparison_results=tuple(comparison_results),
+            snapshots_persisted=len(prepared.snapshots),
+            price_changes=tuple(price_changes),
+            events=events,
+        )
+
+    async def process_after_commit(
+        self,
+        events: Sequence[PriceDropEvent],
+    ) -> PostCommitMarketplaceResult:
+        """Score events and generate content after successful persistence."""
+        errors: list[str] = []
+        generated_count = 0
 
         self._report("=== SCORE EVENTS ===")
         if not events:
             self._report("No events to score.")
-        for event in events:
-            self._report(f"Score: {self._event_scorer.score(event)}")
 
-        self._report("=== GENERATE CONTENT ===")
-        posts_count = 0
         for event in events:
-            post = await self._content_generator.generate(event)
-            posts_count += 1
+            try:
+                score = self._event_scorer.score(event)
+            except Exception as exc:
+                errors.append(self._post_commit_error("scoring", event, exc))
+                continue
+            self._report(f"Score: {score}")
+
+            self._report("=== GENERATE CONTENT ===")
+            try:
+                post = await self._content_generator.generate(event)
+            except Exception as exc:
+                errors.append(self._post_commit_error("content", event, exc))
+                continue
+            generated_count += 1
             self._report(post)
-        if posts_count == 0:
+
+        if generated_count == 0:
             self._report("No generated posts.")
-        self._report(f"Generated posts: {posts_count}")
-        return comparison_results
+        self._report(f"Generated posts: {generated_count}")
+        return PostCommitMarketplaceResult(
+            content_items_generated=generated_count,
+            errors=tuple(errors),
+        )
+
+    async def run(self, url: str) -> list[ComparisonResult]:
+        """Execute the compatibility flow with a preconfigured provider."""
+        provider = self._require_repository_provider()
+        parsed_offers = await self.fetch_and_normalize(url)
+        prepared = self.prepare_offers(parsed_offers)
+        transactional = await self.process_with_repositories(prepared, provider)
+        await self.process_after_commit(transactional.events)
+        return list(transactional.comparison_results)
 
     async def compare_offers(
         self,
         parsed_offers: Sequence[ParsedOffer],
+        repository_provider: RepositoryProvider | None = None,
     ) -> list[ComparisonResult]:
         """Build comparison results for normalized marketplace offers."""
-        candidates = tuple(
-            await self._repository_provider.canonical_products.list_all(),
-        )
+        provider = repository_provider or self._require_repository_provider()
+        candidates = tuple(await provider.canonical_products.list_all())
         return self._build_comparison_results(parsed_offers, candidates)
 
-    async def compare_repository_offers(self) -> list[ComparisonResult]:
+    async def compare_repository_offers(
+        self,
+        repository_provider: RepositoryProvider | None = None,
+    ) -> list[ComparisonResult]:
         """Build comparison results from offers stored in the repository."""
-        parsed_offers = await self._repository_provider.offers.list_all()
-        return await self.compare_offers(parsed_offers)
+        provider = repository_provider or self._require_repository_provider()
+        parsed_offers = await provider.offers.list_all()
+        return await self.compare_offers(parsed_offers, provider)
 
     def _build_comparison_results(
         self,
         parsed_offers: Sequence[ParsedOffer],
         candidates: Sequence[CanonicalProduct],
     ) -> list[ComparisonResult]:
-        """Build comparison results after repository data has already loaded."""
         grouped_offers = self._comparison_grouping.group(
             [MarketplaceOffer(offer=offer) for offer in parsed_offers],
             candidates,
@@ -202,6 +293,23 @@ class MarketplacePipeline:
             )
 
         return comparison_results
+
+    def _require_repository_provider(self) -> RepositoryProvider:
+        if self._repository_provider is None:
+            msg = "MarketplacePipeline requires a repository provider for this call."
+            raise RuntimeError(msg)
+        return self._repository_provider
+
+    @staticmethod
+    def _post_commit_error(
+        phase: str,
+        event: PriceDropEvent,
+        exc: Exception,
+    ) -> str:
+        return (
+            f"Post-commit {phase} failed for {event.marketplace}/{event.title}: "
+            f"{type(exc).__name__}: {exc}"
+        )
 
     def _report(self, message: str) -> None:
         if self._stage_reporter is not None:

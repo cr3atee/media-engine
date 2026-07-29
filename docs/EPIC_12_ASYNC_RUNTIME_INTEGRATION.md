@@ -2,9 +2,51 @@
 
 Date: 2026-07-28
 
-Status: specification plus Task 1-3 implementation log. The original
+Status: specification plus Task 1-4 implementation log. The original
 specification did not implement application code or migrations; the status
 sections below record completed implementation steps.
+
+## Task 4 Transaction Runtime Implementation Status
+
+Status date: 2026-07-29.
+
+The composition-root transaction design approved in
+`EPIC_12_TASK_4_TRANSACTION_DESIGN.md` is implemented:
+
+- `MarketplaceApplicationRunner` coordinates one bounded marketplace run;
+- ingestion and snapshot validation complete before repository scope entry;
+- the PostgreSQL repository scope creates one `AsyncSession`, enters
+  `session.begin()`, and builds every repository from that session;
+- repositories continue to use `flush()` where required and never own commit,
+  rollback, close, or hidden sessions;
+- repository persistence, canonical reads, comparison, price-history access,
+  deterministic change detection, and event construction execute inside the
+  scope;
+- successful context exit commits and transaction-phase exceptions roll back;
+- scoring and content generation execute after commit;
+- post-commit content errors are reported in `MarketplaceRunResult` without
+  attempting rollback;
+- memory execution uses a no-op async repository scope and keeps state across
+  runs without SQLAlchemy transaction objects;
+- scheduler marketplace jobs call a runner protocol and remain free of database
+  lifecycle and business logic.
+
+Verification completed:
+
+- focused runner/transaction tests pass;
+- the full Pytest suite passes (`35` tests);
+- MyPy strict validation passes for `app` and `tests` (`102` source files);
+- Ruff passes for every file changed by Task 4;
+- the existing scheduler memory end-to-end demo remains runnable.
+
+Live PostgreSQL commit/rollback verification remains environment-dependent. The
+local database endpoint was not available during implementation, so construction,
+shared-session ownership, context behavior, and failure propagation were verified
+without claiming a live database transaction result.
+
+Remaining work is intentionally unchanged: database uniqueness/index migrations,
+race-safe PostgreSQL upserts, event/publication persistence, and scheduler overlap
+control are not part of this task.
 
 ## Task 1 Implementation Status
 
@@ -941,6 +983,10 @@ Non-goals:
 
 ### Task 5 - Introduce runtime transaction boundary
 
+Implementation status: completed by the Task 4 transaction-runtime implementation
+on 2026-07-29. The numbering differs because the approved implementation request
+combined the phase-separation and transaction-boundary work into one task.
+
 Objective:
 
 - define one session/transaction per complete PostgreSQL pipeline run.
@@ -1369,37 +1415,12 @@ EPIC 12 is complete when:
 - no Telegram, frontend, FunPay, event bus, queue, or unrelated feature work is
   introduced.
 
-## 15. Recommended First Implementation Task
+## 15. Recommended Next Implementation Task
 
-Recommended first task:
+Implement database-enforced offer and exact-snapshot identity with the supporting
+indexes and conflict-safe PostgreSQL writes. The current application transaction
+boundary prevents partial writes within one run, but lookup-then-insert remains
+race-prone across overlapping sessions until those constraints exist.
 
-**Convert repository contracts and memory repositories to async signatures.**
-
-Why this is the smallest safe first step:
-
-- it directly fixes the root interface mismatch;
-- it does not require migrations;
-- it does not change business algorithms;
-- it allows PostgreSQL repositories to remove override ignores;
-- it makes all later pipeline and scheduler work explicit because callers must
-  `await` repository methods;
-- memory repositories can remain deterministic and simple.
-
-Scope of the first task:
-
-- update `app/repositories/canonical_products.py`;
-- update `app/repositories/offers.py`;
-- update `app/repositories/price_history.py`;
-- update `app/repositories/memory/*.py`;
-- remove matching override ignores from PostgreSQL repositories if signatures now
-  align;
-- update only the minimal repository demo/import checks needed to prove the
-  contract.
-
-Non-goals of the first task:
-
-- no migrations;
-- no transaction manager;
-- no scheduler changes;
-- no marketplace pipeline rewrite;
-- no Telegram or AI changes.
+After database idempotency is established, persist event/publication intent so a
+process failure after marketplace commit cannot lose or duplicate content work.
