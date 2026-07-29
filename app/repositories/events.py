@@ -97,3 +97,20 @@ class MarketEventRepository(BaseRepository):
         next_retry_at: datetime | None,
     ) -> StateTransitionResult:
         """Release a scoring claim after recoverable worker interruption."""
+
+
+def event_immutable_signature(
+    event: PriceDropMarketEvent,
+) -> tuple[object, ...]:
+    """Return immutable facts used to validate idempotent event creation."""
+    return (
+        event.identity_key,
+        event.identity_version,
+        event.event_type,
+        event.marketplace,
+        event.external_id,
+        event.canonical_product_id,
+        event.occurred_at,
+        event.detected_at,
+        event.payload,
+    )

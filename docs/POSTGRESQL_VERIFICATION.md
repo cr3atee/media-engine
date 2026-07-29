@@ -2,8 +2,9 @@
 
 ## Status
 
-PostgreSQL persistence and the EPIC 12 runtime are live-verified against
-PostgreSQL 17.10 in an isolated Compose environment.
+PostgreSQL persistence, the EPIC 12 runtime, and EPIC 13 Task 3 durable market
+events are live-verified against PostgreSQL 17.10 in isolated Compose
+environments.
 
 ## Verified Schema
 
@@ -18,6 +19,18 @@ PostgreSQL 17.10 in an isolated Compose environment.
   `ON DELETE SET NULL`.
 - Revision `0006_use_utc_timestamps` aligns active PostgreSQL columns with the
   UTC-aware application runtime and is reversible.
+- Revision `0007_create_market_events` creates only durable market-event storage
+  and successfully upgrades, downgrades to `0006`, and re-applies.
+- Event deterministic identity is protected by
+  `uq_market_events_identity_key`; exact persisted snapshot transitions are
+  protected by `uq_market_events_snapshot_transition`.
+- Previous and current snapshots use named `ON DELETE RESTRICT` foreign keys;
+  the optional canonical-product reference uses `ON DELETE SET NULL`.
+- Event lifecycle checks enforce valid state values, non-negative attempts,
+  score/state consistency, complete claim leases, paired error fields, and
+  positive optimistic versions.
+- Pending/retry claims, expired leases, offer timelines, and canonical-product
+  timelines have explicit indexes matching repository queries.
 - `alembic check` reports no pending schema operations.
 
 ## Verified Repositories
@@ -30,11 +43,25 @@ PostgreSQL 17.10 in an isolated Compose environment.
 - Two-session offer and snapshot conflicts complete without leaving failed
   transactions.
 - Memory and PostgreSQL repositories retain the same public async contract.
+- `PostgresMarketEventRepository` preserves typed payload fields, exact snapshot
+  identities, `Decimal`, UTC timestamps, enum values, claims, errors, and
+  optimistic versions through explicit mapping.
+- Repeated compatible event creation returns the existing row; incompatible
+  immutable facts raise `RepositoryIdentityConflictError` without overwriting the
+  stored event.
+- Shared market-event contracts pass against both memory and PostgreSQL
+  implementations.
+- Focused PostgreSQL tests pass for concurrent creation, identity conflict,
+  `FOR UPDATE SKIP LOCKED`, one-event contention, lease recovery, stale versions,
+  outer rollback, and exact precision.
 
 ## Verified Transactions
 
 - One repository scope supplies one `AsyncSession` to all repositories.
 - Repositories do not commit independently.
+- Event insertion and claim changes roll back with the caller-owned transaction.
+- Event claims lock only the selection/update transaction; scoring work is not
+  performed while the row lock is held.
 - Successful runner scope exit commits once.
 - Offer, snapshot, deterministic processing, and commit failures roll back the
   complete run and skip post-commit work.
@@ -43,10 +70,15 @@ PostgreSQL 17.10 in an isolated Compose environment.
 
 ## Remaining Limits
 
-- Event and publication state are not persisted.
+- Durable market events are not yet connected to active marketplace ingestion;
+  current runtime events remain unchanged until EPIC 13 Task 4.
+- Generated-content and publication state are not persisted.
 - Post-commit publication retry is not implemented.
 - Scheduler overlap and multi-process coordination are not implemented.
 - Null external IDs remain intentionally append-only.
 - Legacy foundation tables remain present and inactive.
 
 Complete evidence is recorded in `EPIC_12_FINAL_VERIFICATION.md`.
+EPIC 13 Task 3 evidence is implemented by
+`verify_epic13_market_events_postgres.py` and the shared/focused market-event
+repository tests.

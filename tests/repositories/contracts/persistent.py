@@ -13,7 +13,11 @@ from app.domain.lifecycle import (
     PublicationStatus,
     ScoringStatus,
 )
-from app.domain.market_events import MarketEventCandidate
+from app.domain.market_events import (
+    EventAddResult,
+    MarketEventCandidate,
+    PriceDropMarketEvent,
+)
 from app.domain.processing import (
     IdempotentCreateStatus,
     ProcessingError,
@@ -41,6 +45,24 @@ class MarketEventRepositoryContract:
     def make_repository(self) -> MarketEventRepository:
         raise NotImplementedError
 
+    def prepare_event(
+        self,
+        repository: MarketEventRepository,
+        event: PriceDropMarketEvent,
+    ) -> None:
+        """Prepare implementation-specific event dependencies when required."""
+
+    def add_event(
+        self,
+        repository: MarketEventRepository,
+        event: PriceDropMarketEvent,
+    ) -> EventAddResult:
+        """Prepare and persist an event through the shared contract."""
+        self.prepare_event(repository, event)
+        return run_async(
+            repository.add_idempotently(MarketEventCandidate(event=event)),
+        )
+
     def test_event_create_is_idempotent_and_retrievable(self) -> None:
         repository = self.make_repository()
         event = make_event()
@@ -50,12 +72,8 @@ class MarketEventRepositoryContract:
             created_at=event.created_at + timedelta(minutes=1),
         )
 
-        created = run_async(
-            repository.add_idempotently(MarketEventCandidate(event=event)),
-        )
-        existing = run_async(
-            repository.add_idempotently(MarketEventCandidate(event=duplicate)),
-        )
+        created = self.add_event(repository, event)
+        existing = self.add_event(repository, duplicate)
 
         assert created.status is IdempotentCreateStatus.CREATED
         assert created.created is True
@@ -75,14 +93,10 @@ class MarketEventRepositoryContract:
             id=uuid_for(998),
             payload=replace(event.payload, title="Conflicting immutable title"),
         )
-        run_async(repository.add_idempotently(MarketEventCandidate(event=event)))
+        self.add_event(repository, event)
 
         with pytest.raises(RepositoryIdentityConflictError):
-            run_async(
-                repository.add_idempotently(
-                    MarketEventCandidate(event=conflicting),
-                ),
-            )
+            self.add_event(repository, conflicting)
 
         assert run_async(repository.get_by_identity(event.identity_key)) == event
 
@@ -108,7 +122,7 @@ class MarketEventRepositoryContract:
             created_at=NOW + timedelta(seconds=5),
         )
         for event in (later_high_id, earliest, later_low_id):
-            run_async(repository.add_idempotently(MarketEventCandidate(event=event)))
+            self.add_event(repository, event)
 
         pending = run_async(repository.list_pending(NOW + timedelta(minutes=1), 10))
 
@@ -125,7 +139,7 @@ class MarketEventRepositoryContract:
     def test_event_claim_is_exclusive_and_expired_lease_is_reclaimed(self) -> None:
         repository = self.make_repository()
         event = make_event()
-        run_async(repository.add_idempotently(MarketEventCandidate(event=event)))
+        self.add_event(repository, event)
         claimed_at = NOW + timedelta(minutes=10)
         lease_until = claimed_at + timedelta(minutes=1)
 
@@ -163,7 +177,7 @@ class MarketEventRepositoryContract:
     def test_event_claim_and_version_conflicts_are_typed(self) -> None:
         repository = self.make_repository()
         event = make_event()
-        run_async(repository.add_idempotently(MarketEventCandidate(event=event)))
+        self.add_event(repository, event)
         claim = run_async(
             repository.claim_pending(
                 NOW + timedelta(minutes=10),
@@ -200,7 +214,7 @@ class MarketEventRepositoryContract:
     def test_event_scoring_failure_retry_release_and_success(self) -> None:
         repository = self.make_repository()
         event = make_event()
-        run_async(repository.add_idempotently(MarketEventCandidate(event=event)))
+        self.add_event(repository, event)
         first = run_async(
             repository.claim_pending(
                 NOW + timedelta(minutes=10),
@@ -282,7 +296,7 @@ class MarketEventRepositoryContract:
     def test_event_disposition_transitions_and_terminal_exclusion(self) -> None:
         repository = self.make_repository()
         event = make_event()
-        run_async(repository.add_idempotently(MarketEventCandidate(event=event)))
+        self.add_event(repository, event)
 
         ignored = run_async(
             repository.set_disposition(

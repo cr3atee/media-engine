@@ -27,7 +27,7 @@ from app.domain.processing import (
     WorkClaim,
 )
 from app.repositories.base import RepositoryIdentityConflictError
-from app.repositories.events import MarketEventRepository
+from app.repositories.events import MarketEventRepository, event_immutable_signature
 
 type ClaimTokenFactory = Callable[[], UUID]
 
@@ -58,7 +58,7 @@ class MemoryMarketEventRepository(MarketEventRepository):
         existing_id = self._event_ids_by_identity.get(event.identity_key)
         if existing_id is not None:
             existing = self._events_by_id[existing_id]
-            if _immutable_event_signature(existing) != _immutable_event_signature(
+            if event_immutable_signature(existing) != event_immutable_signature(
                 event,
             ):
                 msg = (
@@ -302,20 +302,6 @@ class MemoryMarketEventRepository(MarketEventRepository):
     def _store(self, event: PriceDropMarketEvent) -> None:
         self._events_by_id[event.id] = event
         self._event_ids_by_identity[event.identity_key] = event.id
-
-
-def _immutable_event_signature(event: PriceDropMarketEvent) -> tuple[object, ...]:
-    return (
-        event.identity_key,
-        event.identity_version,
-        event.event_type,
-        event.marketplace,
-        event.external_id,
-        event.canonical_product_id,
-        event.occurred_at,
-        event.detected_at,
-        event.payload,
-    )
 
 
 def _is_event_claimable(event: PriceDropMarketEvent, now: datetime) -> bool:

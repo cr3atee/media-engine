@@ -111,22 +111,50 @@ Stable ordering:
   isolated, non-global state.
 
 Shared contract tests live under `tests/repositories/contracts/`. Concrete memory
-tests inherit the three behavior suites and supply only repository factories. The
-same suites are intended for Task 3 PostgreSQL implementations without depending
-on memory internals.
+and PostgreSQL event tests inherit the same market-event behavior suite and supply
+only repository factories and dependency preparation. PostgreSQL-specific tests
+separately cover database concurrency, rollback, and exact value round trips.
 
 Task 2 does not change `RepositoryProvider`, SQLAlchemy models, migrations,
 transactions, scheduler jobs, marketplace runtime paths, AI generation, or
 publication delivery.
 
-Exact recommended Task 3:
+### Task 3 implementation status
 
-Implement only the `market_events` SQLAlchemy model, Alembic migration, domain/ORM
-mapping, and `PostgresMarketEventRepository`. Run the shared market-event repository
-contract against PostgreSQL, verify identity conflicts and concurrent
-`FOR UPDATE SKIP LOCKED` claims, and keep transaction commit ownership outside the
-repository. Do not add generated-content/publication tables or runtime integration
-in Task 3.
+Task 3 is complete. Revision `0007_create_market_events` creates only the
+`market_events` table after `0006_use_utc_timestamps`. The implementation includes:
+
+- explicit relational persistence for the approved event envelope and typed
+  price-drop payload;
+- exact foreign keys to previous and current `price_snapshots` rows with
+  `ON DELETE RESTRICT`;
+- nullable canonical-product reference with `ON DELETE SET NULL`;
+- database-unique deterministic identity and snapshot-transition constraints;
+- separate disposition, scoring, retry, claim, error, and optimistic-version
+  columns;
+- explicit domain-to-ORM and ORM-to-domain mapping with `Decimal`, UTC, enum,
+  identity, claim, error, and version preservation;
+- `PostgresMarketEventRepository` using a caller-owned `AsyncSession`, race-safe
+  `INSERT ... ON CONFLICT DO NOTHING`, deterministic pending selection, guarded
+  lifecycle updates, and `FOR UPDATE SKIP LOCKED` claims;
+- shared memory/PostgreSQL contract execution plus focused PostgreSQL tests for
+  concurrent creation, identity conflict, lock skipping, one-row contention,
+  expired-lease recovery, stale versions, rollback, and exact precision;
+- live verification on isolated PostgreSQL 17.10 with revision upgrade, downgrade,
+  re-upgrade, `alembic check`, idempotency, rollback, concurrent claims, and lease
+  recovery confirmed.
+
+Task 3 does not add the event repository to `RepositoryProvider` or the active
+marketplace runtime. It does not create `generated_contents` or `publications`.
+
+Exact recommended Task 4:
+
+Integrate persistent event candidates into the existing ingestion transaction so
+offers, snapshots, and detected events commit or roll back atomically. Resolve the
+exact persisted snapshot rows through `PostgresMarketEventRepository`, preserve
+idempotency under repeated and overlapping ingestion, and keep scoring, AI, and
+publication outside that transaction. Do not add generated-content/publication
+persistence or post-commit workers in Task 4.
 
 ### Current implementation facts
 
@@ -1029,12 +1057,13 @@ Use a typed summary containing:
 
 ### Task 3: PostgreSQL event model and migration
 
+- Status: Completed.
 - Goal: Add `market_events` SQLAlchemy model, migration, mapping, and PostgreSQL repository.
-- Likely files: `app/models/market_event.py`, `app/repositories/postgres/postgres_events.py`, model imports, repository provider, `alembic/versions/*`, and repository tests.
-- Acceptance: Schema matches Section 15; concurrent duplicate inserts return one logical event; claims use `FOR UPDATE SKIP LOCKED`; repositories never commit.
-- Tests: PostgreSQL contract tests, unique constraints, check constraints, FK behavior, exact snapshot resolution, concurrent claims, timezone and Decimal round trips.
-- Migration impact: Creates `market_events` and its constraints/indexes.
-- Risks: Resolving persisted snapshot IDs without leaking ORM identifiers into the domain boundary.
+- Files: `app/models/market_event_record.py`, explicit PostgreSQL mapping and repository modules, `0007_create_market_events`, shared contract integration, focused PostgreSQL tests, and live verification script.
+- Acceptance: Confirmed. Concurrent compatible inserts produce one logical row; conflicting immutable facts remain explicit; claims use `FOR UPDATE SKIP LOCKED`; repositories never commit or roll back.
+- Tests: Shared contract passes for memory and PostgreSQL. PostgreSQL-specific creation races, claim contention, lease recovery, optimistic conflicts, rollback, and timezone/Decimal round trips pass.
+- Migration impact: Creates only `market_events` and its named constraints/indexes; downgrade removes only that table.
+- Resolved risk: Snapshot row IDs remain internal to PostgreSQL mapping and never enter domain or repository contracts.
 - Dependencies: Tasks 1 and 2; EPIC 12 transaction manager and PostgreSQL test environment.
 - Non-goals: Generated content and publication tables.
 

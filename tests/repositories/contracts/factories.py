@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import atexit
 from collections.abc import Coroutine
 from datetime import UTC, datetime, timedelta
 from decimal import Decimal
@@ -17,11 +18,13 @@ from app.domain.market_events import (
 from app.domain.publications import CreatePublication
 
 NOW = datetime(2026, 7, 29, 9, 0, tzinfo=UTC)
+_ASYNC_RUNNER = asyncio.Runner()
+atexit.register(_ASYNC_RUNNER.close)
 
 
 def run_async[T](awaitable: Coroutine[Any, Any, T]) -> T:
     """Run async repository contracts without an async Pytest plugin."""
-    return asyncio.run(awaitable)
+    return _ASYNC_RUNNER.run(awaitable)
 
 
 def uuid_for(value: int) -> UUID:
