@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from sqlalchemy import Select, select
+from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.domain.price_snapshot import PriceSnapshot
@@ -15,30 +16,19 @@ class PostgresPriceHistoryRepository(PriceHistoryRepository):
         """Initialize repository with an existing async database session."""
         self._session = session
 
-    async def add(self, snapshot: PriceSnapshot) -> None:
-        """Store a price snapshot when an identical one is absent."""
-        existing = await self._session.execute(
-            select(PriceSnapshotRecord)
-            .where(
-                PriceSnapshotRecord.marketplace == snapshot.marketplace,
-                PriceSnapshotRecord.external_id == snapshot.external_id,
-                PriceSnapshotRecord.price == snapshot.price,
-                PriceSnapshotRecord.currency == snapshot.currency,
-                PriceSnapshotRecord.collected_at == snapshot.collected_at,
-            )
-            .limit(1)
-        )
-        if existing.scalar_one_or_none() is None:
-            self._session.add(
-                PriceSnapshotRecord(
-                    marketplace=snapshot.marketplace,
-                    external_id=snapshot.external_id,
-                    price=snapshot.price,
-                    currency=snapshot.currency,
-                    collected_at=snapshot.collected_at,
-                )
-            )
-            await self._session.flush()
+    async def add(self, snapshot: PriceSnapshot) -> bool:
+        """Insert a snapshot and report whether PostgreSQL created a row."""
+        statement = insert(PriceSnapshotRecord).values(
+            marketplace=snapshot.marketplace,
+            external_id=snapshot.external_id,
+            price=snapshot.price,
+            currency=snapshot.currency,
+            collected_at=snapshot.collected_at,
+        ).on_conflict_do_nothing(
+            constraint="uq_price_snapshots_exact_identity",
+        ).returning(PriceSnapshotRecord.id)
+        result = await self._session.execute(statement)
+        return result.scalar_one_or_none() is not None
 
     async def get_last(
         self,

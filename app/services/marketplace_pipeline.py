@@ -159,13 +159,15 @@ class MarketplacePipeline:
         self._report(f"Comparison results: {len(comparison_results)}")
 
         self._report("=== UPDATE PRICE HISTORY ===")
+        snapshots_persisted = 0
         price_changes: list[PriceChange] = []
         for current_snapshot in prepared.snapshots:
             previous_snapshot = await repository_provider.price_history.get_last(
                 current_snapshot.marketplace,
                 current_snapshot.external_id,
             )
-            await repository_provider.price_history.add(current_snapshot)
+            if await repository_provider.price_history.add(current_snapshot):
+                snapshots_persisted += 1
 
             if (
                 previous_snapshot is None
@@ -180,7 +182,7 @@ class MarketplacePipeline:
             if price_change is not None:
                 price_changes.append(price_change)
 
-        self._report(f"Stored snapshots: {len(prepared.snapshots)}")
+        self._report(f"Stored snapshots: {snapshots_persisted}")
         self._report("=== DETECT PRICE CHANGES ===")
         self._report(f"Detected price changes: {len(price_changes)}")
 
@@ -194,7 +196,7 @@ class MarketplacePipeline:
         return TransactionalMarketplaceResult(
             offers_persisted=len(prepared.offers),
             comparison_results=tuple(comparison_results),
-            snapshots_persisted=len(prepared.snapshots),
+            snapshots_persisted=snapshots_persisted,
             price_changes=tuple(price_changes),
             events=events,
         )

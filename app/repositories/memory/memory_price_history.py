@@ -11,12 +11,14 @@ class MemoryPriceHistoryRepository(PriceHistoryRepository):
         """Initialize empty price history storage."""
         self._storage: dict[tuple[str, str], list[PriceSnapshot]] = {}
 
-    async def add(self, snapshot: PriceSnapshot) -> None:
-        """Store a price snapshot when an identical one is absent."""
+    async def add(self, snapshot: PriceSnapshot) -> bool:
+        """Store a snapshot and report whether it was newly inserted."""
         key = (snapshot.marketplace, snapshot.external_id)
         history = self._storage.setdefault(key, [])
-        if snapshot not in history:
-            history.append(snapshot)
+        if snapshot in history:
+            return False
+        history.append(snapshot)
+        return True
 
     async def get_last(
         self,

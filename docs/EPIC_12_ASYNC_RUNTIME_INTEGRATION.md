@@ -2,9 +2,63 @@
 
 Date: 2026-07-28
 
-Status: specification plus Task 1-4 implementation log. The original
+Status: specification plus Task 1-5 implementation log. The original
 specification did not implement application code or migrations; the status
 sections below record completed implementation steps.
+
+## Task 5 Persistence Integrity Implementation Status
+
+Status date: 2026-07-29.
+
+Implemented:
+
+- Alembic revision `0005_add_persistence_integrity` adds the approved offer,
+  snapshot, and canonical-reference integrity rules;
+- non-null offer identity is protected by the partial unique index
+  `uq_offers_marketplace_external_id_not_null` on
+  `(marketplace, external_id)`;
+- offers without `external_id` remain nullable append-only rows and receive no
+  synthetic identity;
+- `PostgresOfferRepository.save()` uses PostgreSQL
+  `INSERT ... ON CONFLICT DO UPDATE` for stable identities;
+- conflicting offer writes update title, URL, price, currency, seller fields,
+  and canonical product ID only when the incoming value is non-null;
+- memory offer persistence follows the same non-null update policy;
+- exact snapshot identity is protected by
+  `uq_price_snapshots_exact_identity` over marketplace, external ID,
+  collection timestamp, price, and currency;
+- snapshot insertion uses `ON CONFLICT DO NOTHING`, so an expected exact
+  duplicate is non-fatal and no application pre-check is relied upon;
+- `PriceHistoryRepository.add()` now returns `bool`, allowing
+  `MarketplaceRunResult.snapshots_persisted` to count physical inserts rather
+  than suppressed attempts without exposing SQLAlchemy;
+- `ix_price_snapshots_history_order` supports identity-filtered chronological
+  history and reverse B-tree scans for latest/previous queries;
+- `offers.canonical_product_id` is indexed and references
+  `canonical_products.id` with nullable `ON DELETE SET NULL` behavior;
+- migration preflight raises a clear error for duplicate stable offer identities,
+  exact duplicate snapshots, or orphan canonical references instead of deleting
+  or rewriting existing data.
+
+Verification completed:
+
+- SQLAlchemy metadata contains the expected constraints and indexes;
+- PostgreSQL-dialect compilation verifies offer upsert and snapshot conflict
+  statements;
+- offline Alembic upgrade and downgrade SQL generation succeeds;
+- the full Pytest suite passes (`46` tests);
+- strict MyPy passes for `app`, `tests`, and the migration (`104` files);
+- Ruff passes for all Task 5 files.
+
+Live PostgreSQL migration and two-session concurrency verification could not run
+because the configured `db` hostname is unavailable in the local environment.
+No live upgrade, downgrade, foreign-key enforcement, or concurrency result is
+claimed.
+
+Legacy `marketplaces`, `products`, and `prices` tables are not used by the active
+offer/canonical/snapshot repositories. They remain as deprecated foundation
+schema pending a separate ownership and cleanup decision; Task 5 does not drop or
+extend them.
 
 ## Task 4 Transaction Runtime Implementation Status
 
@@ -1034,6 +1088,9 @@ Non-goals:
 
 ### Task 6 - Add idempotent offer persistence
 
+Implementation status: completed by Task 5 on 2026-07-29 without changing the
+repository contract.
+
 Objective:
 
 - repeated scheduled runs do not duplicate offers.
@@ -1079,6 +1136,10 @@ Non-goals:
 - no historical offer versioning.
 
 ### Task 7 - Add price snapshot idempotency and ordering
+
+Implementation status: completed by Task 5 on 2026-07-29. Exact duplicates are
+database-constrained while same-price/new-timestamp and
+same-timestamp/different-price snapshots remain valid.
 
 Objective:
 
@@ -1415,12 +1476,19 @@ EPIC 12 is complete when:
 - no Telegram, frontend, FunPay, event bus, queue, or unrelated feature work is
   introduced.
 
-## 15. Recommended Next Implementation Task
+## 15. Recommended Final EPIC 12 Verification Task
 
-Implement database-enforced offer and exact-snapshot identity with the supporting
-indexes and conflict-safe PostgreSQL writes. The current application transaction
-boundary prevents partial writes within one run, but lookup-then-insert remains
-race-prone across overlapping sessions until those constraints exist.
+Run one focused live PostgreSQL verification task in an environment where the
+database hostname resolves:
 
-After database idempotency is established, persist event/publication intent so a
-process failure after marketplace commit cannot lose or duplicate content work.
+- apply revision `0005` to an existing-data fixture and inspect constraints;
+- downgrade to `0004` and upgrade again;
+- execute two-session offer and exact-snapshot conflict tests;
+- verify canonical foreign-key rejection and `ON DELETE SET NULL` behavior;
+- execute `MarketplaceApplicationRunner` commit, rollback, repeated-run, and
+  Scheduler retry scenarios against PostgreSQL;
+- update PostgreSQL and Scheduler verification records with measured results.
+
+This final verification task should add no features. Event/publication persistence
+is the next reliability EPIC after EPIC 12 because a process failure after commit
+can still lose post-commit content work.

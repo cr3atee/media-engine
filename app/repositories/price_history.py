@@ -10,8 +10,8 @@ class PriceHistoryRepository(BaseRepository):
     """Abstract storage contract for price snapshot history."""
 
     @abstractmethod
-    async def add(self, snapshot: PriceSnapshot) -> None:
-        """Store a snapshot unless all persisted snapshot fields are identical."""
+    async def add(self, snapshot: PriceSnapshot) -> bool:
+        """Store a snapshot and return whether a new record was inserted."""
 
     @abstractmethod
     async def get_last(

@@ -137,14 +137,16 @@ class RecordingPriceHistoryRepository(PriceHistoryRepository):
         self._fail_on_read = fail_on_read
         self._fail_on_write = fail_on_write
 
-    async def add(self, snapshot: PriceSnapshot) -> None:
+    async def add(self, snapshot: PriceSnapshot) -> bool:
         """Store a snapshot and record the awaited write."""
         self._state.history_add_count += 1
         if self._fail_on_write:
             msg = "price history write failed"
             raise RuntimeError(msg)
-        if snapshot not in self._history:
-            self._history.append(snapshot)
+        if snapshot in self._history:
+            return False
+        self._history.append(snapshot)
+        return True
 
     async def get_last(
         self,

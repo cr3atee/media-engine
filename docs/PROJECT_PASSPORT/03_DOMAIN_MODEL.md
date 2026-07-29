@@ -72,7 +72,8 @@ identity as a deterministic tie-break. Exact duplicate snapshots are ignored.
 `PriceHistoryRepository` is the active persistence boundary for price snapshots.
 It supports adding snapshots and loading the latest, previous, or complete ordered
 history. Memory and PostgreSQL implementations expose the same asynchronous
-contract through `RepositoryProvider.price_history`.
+contract through `RepositoryProvider.price_history`. `add()` returns `True` when
+a new snapshot is inserted and `False` when an exact duplicate is suppressed.
 
 ## PriceChange
 

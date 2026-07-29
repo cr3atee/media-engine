@@ -3,7 +3,7 @@ from __future__ import annotations
 from datetime import datetime
 from decimal import Decimal
 
-from sqlalchemy import BigInteger, Numeric, String
+from sqlalchemy import BigInteger, Index, Numeric, String, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.database.base import Base
@@ -13,6 +13,23 @@ class PriceSnapshotRecord(Base):
     """SQLAlchemy persistence model for marketplace price snapshots."""
 
     __tablename__ = "price_snapshots"
+    __table_args__ = (
+        UniqueConstraint(
+            "marketplace",
+            "external_id",
+            "collected_at",
+            "price",
+            "currency",
+            name="uq_price_snapshots_exact_identity",
+        ),
+        Index(
+            "ix_price_snapshots_history_order",
+            "marketplace",
+            "external_id",
+            "collected_at",
+            "id",
+        ),
+    )
 
     id: Mapped[int] = mapped_column(
         BigInteger,

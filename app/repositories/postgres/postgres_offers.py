@@ -1,8 +1,11 @@
 from __future__ import annotations
 
 from collections.abc import Sequence
+from datetime import UTC, datetime
+from uuid import uuid4
 
-from sqlalchemy import select
+from sqlalchemy import func, select
+from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.offer import Offer
@@ -18,38 +21,44 @@ class PostgresOfferRepository(OfferRepository):
         self._session = session
 
     async def save(self, offer: ParsedOffer) -> None:
-        """Persist or update a parsed offer using the active async session."""
-        record = None
+        """Insert or race-safely update a parsed offer by stable identity."""
+        statement = insert(Offer).values(
+            id=uuid4(),
+            marketplace=offer.marketplace,
+            external_id=offer.external_id,
+            title=offer.title,
+            url=offer.url,
+            price=offer.price,
+            currency=offer.currency,
+            seller_id=offer.seller_id,
+            seller_name=offer.seller_name,
+            canonical_product_id=offer.canonical_product_id,
+            created_at=datetime.now(UTC),
+        )
+
         if offer.external_id is not None:
-            record = await self._get_record_by_identity(
-                offer.marketplace,
-                offer.external_id,
+            excluded = statement.excluded
+            statement = statement.on_conflict_do_update(
+                index_elements=(Offer.marketplace, Offer.external_id),
+                index_where=Offer.external_id.is_not(None),
+                set_={
+                    "title": func.coalesce(excluded.title, Offer.title),
+                    "url": func.coalesce(excluded.url, Offer.url),
+                    "price": func.coalesce(excluded.price, Offer.price),
+                    "currency": func.coalesce(excluded.currency, Offer.currency),
+                    "seller_id": func.coalesce(excluded.seller_id, Offer.seller_id),
+                    "seller_name": func.coalesce(
+                        excluded.seller_name,
+                        Offer.seller_name,
+                    ),
+                    "canonical_product_id": func.coalesce(
+                        excluded.canonical_product_id,
+                        Offer.canonical_product_id,
+                    ),
+                },
             )
 
-        if record is None:
-            self._session.add(
-                Offer(
-                    marketplace=offer.marketplace,
-                    external_id=offer.external_id,
-                    title=offer.title,
-                    url=offer.url,
-                    price=offer.price,
-                    currency=offer.currency,
-                    seller_id=offer.seller_id,
-                    seller_name=offer.seller_name,
-                    canonical_product_id=offer.canonical_product_id,
-                )
-            )
-        else:
-            record.title = offer.title
-            record.url = offer.url
-            record.price = offer.price
-            record.currency = offer.currency
-            record.seller_id = offer.seller_id
-            record.seller_name = offer.seller_name
-            record.canonical_product_id = offer.canonical_product_id
-
-        await self._session.flush()
+        await self._session.execute(statement)
 
     async def get_by_identity(
         self,

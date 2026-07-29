@@ -139,6 +139,17 @@ class RecordingSnapshotBuilder(SnapshotBuilder):
         return super().build(offer)
 
 
+class FixedSnapshotBuilder(SnapshotBuilder):
+    """Return one fixed snapshot for repeated-run idempotency tests."""
+
+    def __init__(self, snapshot: PriceSnapshot) -> None:
+        self._snapshot = snapshot
+
+    def build(self, offer: ParsedOffer) -> PriceSnapshot:
+        """Return the same exact snapshot for every run."""
+        return self._snapshot
+
+
 class RecordingContentGenerator(ContentGenerator):
     """Record post-commit content generation and optionally fail."""
 
@@ -199,7 +210,7 @@ class FailingOfferRepository(OfferRepository):
 class FailingPriceHistoryRepository(PriceHistoryRepository):
     """Price-history contract double that fails every write."""
 
-    async def add(self, snapshot: PriceSnapshot) -> None:
+    async def add(self, snapshot: PriceSnapshot) -> bool:
         """Raise a deterministic persistence failure."""
         msg = "snapshot write failed"
         raise RuntimeError(msg)
@@ -465,6 +476,35 @@ def test_memory_scope_reuses_state_without_sqlalchemy_transaction_objects() -> N
     assert second.persistence_committed is True
     assert len(run_async(provider.offers.list_all())) == 1
     assert len(run_async(provider.price_history.get_history("ggsel", "1001"))) == 2
+
+
+def test_repeated_exact_snapshot_reports_one_persisted_record() -> None:
+    provider = create_memory_provider()
+    scope_factory = create_memory_repository_scope(provider)
+    snapshot = PriceSnapshot(
+        marketplace="ggsel",
+        external_id="1001",
+        price=Decimal("790"),
+        currency="RUB",
+        collected_at=datetime.now(UTC),
+    )
+    pipeline = make_pipeline(snapshot_builder=FixedSnapshotBuilder(snapshot))
+    runner = MarketplaceApplicationRunner(
+        marketplace=Marketplace.GGSEL,
+        ingestion=RecordingIngestion((make_offer(),)),
+        repository_scope_factory=scope_factory,
+        pipeline=pipeline,
+    )
+
+    first = run_async(runner.run("demo://ggsel"))
+    second = run_async(runner.run("demo://ggsel"))
+
+    assert first.snapshots_persisted == 1
+    assert second.snapshots_persisted == 0
+    assert len(run_async(provider.offers.list_all())) == 1
+    assert run_async(provider.price_history.get_history("ggsel", "1001")) == [
+        snapshot,
+    ]
 
 
 def test_postgres_scope_binds_all_repositories_to_one_session() -> None:

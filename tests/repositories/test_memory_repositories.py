@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 from collections.abc import Coroutine
+from dataclasses import replace
 from datetime import UTC, datetime, timedelta
 from decimal import Decimal
 from typing import Any
@@ -104,6 +105,57 @@ def test_offer_repository_updates_by_marketplace_and_external_id() -> None:
 
     assert tuple(run_async(repository.list_all())) == (updated,)
     assert run_async(repository.get_by_identity("ggsel", "same")) == updated
+
+
+def test_offer_repository_preserves_meaningful_optional_values() -> None:
+    repository = MemoryOfferRepository()
+    product_id = uuid4()
+    original = make_offer(
+        external_id="same",
+        title="Old title",
+        canonical_product_id=product_id,
+    )
+    incoming = ParsedOffer(
+        marketplace="ggsel",
+        external_id="same",
+        title="New title",
+        url=None,
+        price=None,
+        currency=None,
+        seller_id=None,
+        seller_name=None,
+        canonical_product_id=None,
+    )
+
+    run_async(repository.save(original))
+    run_async(repository.save(incoming))
+
+    assert run_async(repository.get_by_identity("ggsel", "same")) == replace(
+        original,
+        title="New title",
+    )
+
+
+def test_offer_repository_isolates_same_external_id_by_marketplace() -> None:
+    repository = MemoryOfferRepository()
+    ggsel_offer = make_offer(marketplace="ggsel", external_id="shared")
+    playerok_offer = make_offer(marketplace="playerok", external_id="shared")
+
+    run_async(repository.save(ggsel_offer))
+    run_async(repository.save(playerok_offer))
+
+    assert tuple(run_async(repository.list_all())) == (ggsel_offer, playerok_offer)
+
+
+def test_offer_repository_appends_offers_without_external_id() -> None:
+    repository = MemoryOfferRepository()
+    first = make_offer(external_id=None, title="First")
+    second = make_offer(external_id=None, title="Second")
+
+    run_async(repository.save(first))
+    run_async(repository.save(second))
+
+    assert tuple(run_async(repository.list_all())) == (first, second)
 
 
 def test_offer_repository_filters_by_marketplace() -> None:
@@ -210,6 +262,21 @@ def test_price_history_repository_uses_insertion_order_for_equal_timestamps() ->
     assert run_async(repository.get_last("ggsel", "offer-1")) == second
 
 
+def test_price_history_repository_keeps_same_price_at_new_timestamp() -> None:
+    repository = MemoryPriceHistoryRepository()
+    collected_at = datetime.now(UTC)
+    first = make_snapshot(price=Decimal("790.00"), collected_at=collected_at)
+    second = make_snapshot(
+        price=Decimal("790.00"),
+        collected_at=collected_at + timedelta(minutes=1),
+    )
+
+    run_async(repository.add(first))
+    run_async(repository.add(second))
+
+    assert run_async(repository.get_history("ggsel", "offer-1")) == [first, second]
+
+
 def test_price_history_repository_returns_no_previous_for_one_snapshot() -> None:
     repository = MemoryPriceHistoryRepository()
     snapshot = make_snapshot()
@@ -239,8 +306,8 @@ def test_price_history_repository_ignores_exact_duplicate_snapshots() -> None:
     repository = MemoryPriceHistoryRepository()
     snapshot = make_snapshot()
 
-    run_async(repository.add(snapshot))
-    run_async(repository.add(snapshot))
+    assert run_async(repository.add(snapshot)) is True
+    assert run_async(repository.add(snapshot)) is False
 
     assert run_async(repository.get_history("ggsel", "offer-1")) == [snapshot]
 

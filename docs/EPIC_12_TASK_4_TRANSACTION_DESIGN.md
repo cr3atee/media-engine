@@ -2,8 +2,8 @@
 
 Date: 2026-07-28
 
-Status: implemented transaction architecture; database integrity migrations are
-intentionally deferred.
+Status: implemented transaction architecture and Task 5 persistence integrity;
+live PostgreSQL verification remains pending.
 
 ## 1. Executive Summary
 
@@ -65,6 +65,26 @@ Implemented on 2026-07-29:
 demos with a preconfigured provider. PostgreSQL-shaped composition must use
 `MarketplaceApplicationRunner` with `create_postgres_repository_scope()`.
 
+### Task 5 persistence integrity
+
+Implemented on 2026-07-29:
+
+- revision `0005_add_persistence_integrity` combines the approved offer,
+  canonical-reference, snapshot-identity, and history-index changes;
+- stable offer identities use a partial unique index and PostgreSQL-native upsert;
+- nullable external IDs remain append-only;
+- exact snapshot conflicts use a database unique constraint and
+  `ON CONFLICT DO NOTHING`;
+- canonical references use an indexed nullable foreign key with
+  `ON DELETE SET NULL`;
+- migration preflight blocks duplicate identities and orphan references without
+  silently deleting data;
+- metadata, compiled PostgreSQL statements, offline migration SQL, memory
+  semantics, and runner regressions are covered by the test suite.
+
+Live database concurrency is not claimed because PostgreSQL was unavailable in
+the implementation environment.
+
 ## 2. Current Runtime Lifecycle
 
 ### Engine
@@ -97,9 +117,10 @@ demos with a preconfigured provider. PostgreSQL-shaped composition must use
 
 - Every PostgreSQL repository constructor receives an existing `AsyncSession`.
 - Repositories do not create or close sessions.
-- `PostgresOfferRepository.save()` and
-  `PostgresCanonicalProductRepository.save()` call `flush()` after insert/update.
-- `PostgresPriceHistoryRepository.add()` calls `flush()` only when it inserts.
+- `PostgresOfferRepository.save()` and `PostgresPriceHistoryRepository.add()`
+  execute PostgreSQL conflict-aware Core statements in the shared session.
+- `PostgresCanonicalProductRepository.save()` calls `flush()` after
+  insert/update.
 - Repositories do not commit, rollback, or refresh records.
 - This behavior is compatible with one shared outer transaction.
 
@@ -184,7 +205,7 @@ runs without introducing fake SQLAlchemy behavior.
 ### Why this fits MediaEngine
 
 - PostgreSQL repositories already accept a shared external session.
-- Repositories already use `flush()` instead of `commit()`.
+- Repositories use session execution or `flush()` instead of `commit()`.
 - The provider already builds repositories around a supplied session.
 - The missing responsibility is only outer lifecycle and phase separation.
 - Scheduler, CLI, future FastAPI endpoints, and tests can call the same runner.
@@ -350,11 +371,11 @@ snapshot identity, not only application lookups.
 ### `app/repositories/postgres/postgres_offers.py`
 
 - Keep constructor injection of `AsyncSession`.
-- Replace lookup-then-insert with PostgreSQL upsert after the offer identity
-  migration exists.
+- PostgreSQL upsert replaces lookup-then-insert for stable identities.
 - Use `(marketplace, external_id)` when `external_id` is non-null.
 - Preserve record `id` and `created_at` on update.
-- Continue `flush()` so constraint failures surface before transaction exit.
+- Preserve existing optional values when the incoming value is null.
+- Execute the upsert in the shared session without an internal commit.
 - Do not commit or rollback.
 
 ### `app/repositories/postgres/postgres_canonical_products.py`
@@ -366,19 +387,19 @@ snapshot identity, not only application lookups.
 ### `app/repositories/postgres/postgres_price_history.py`
 
 - Keep constructor injection of the shared session.
-- Replace lookup-then-insert duplicate suppression with database uniqueness plus
-  `ON CONFLICT DO NOTHING` after the snapshot migration exists.
+- Database uniqueness plus `ON CONFLICT DO NOTHING` replaces the race-prone
+  lookup-then-insert duplicate check.
 - Continue ordering by `collected_at`, then `id`.
-- Continue `flush()` after a real insert.
 - Do not commit or rollback.
 
 ### Repository contracts
 
 - No SQLAlchemy types or transaction methods are added.
 - No commit/rollback methods are added.
-- Existing async interfaces remain unchanged unless a return value is later
-  required to report whether an insert was suppressed; that is not required for
-  the first transaction-boundary commit.
+- Task 5 changes only `PriceHistoryRepository.add()` to return `bool`: `True`
+  means a physical insert and `False` means an exact duplicate was suppressed.
+  This keeps `MarketplaceRunResult.snapshots_persisted` accurate without leaking
+  backend details.
 
 ### Flush and refresh policy
 
@@ -543,12 +564,13 @@ runner unit tests.
 
 Natural identity is `(marketplace, external_id)` when `external_id` is not null.
 
-Current state:
+Implemented state:
 
 - memory save updates by this identity;
-- PostgreSQL save performs lookup then insert/update;
-- schema has no unique constraint;
-- two sessions can race and create duplicate rows.
+- PostgreSQL save performs partial-index `ON CONFLICT DO UPDATE`;
+- non-null identities have a database uniqueness guarantee;
+- nullable external IDs remain append-only by explicit policy;
+- incoming null optional fields do not erase stored meaningful values.
 
 Required behavior:
 
@@ -580,9 +602,8 @@ collection timestamp, and record ID.
 
 ### Canonical-product associations
 
-`offers.canonical_product_id` currently has neither a foreign key nor an index.
-Add a nullable foreign key to `canonical_products.id` with `ON DELETE SET NULL`
-and an index on the column.
+`offers.canonical_product_id` now has a nullable foreign key to
+`canonical_products.id` with `ON DELETE SET NULL` and a dedicated lookup index.
 
 Task 4 must not automatically persist `MatchingService` output. The accepted
 administrator confirmation/rejection rules require a separate association
@@ -948,18 +969,17 @@ Non-goals:
 - event-builder exception rolls back;
 - result DTO contains no mapped SQLAlchemy objects.
 
-## 16. Migration Plan
+## 16. Implemented Migration
 
-No migration is created by this design task.
-
-### Migration 0005 - offer identity and canonical association integrity
+### Migration 0005 - persistence integrity
 
 Preflight:
 
 - detect duplicate non-null `(marketplace, external_id)` rows;
-- select a deterministic survivor and merge/update data before adding uniqueness;
-- detect orphan `canonical_product_id` values and set them to null or resolve them
-  through an approved data-cleanup decision.
+- detect exact duplicate snapshots;
+- detect orphan `canonical_product_id` values;
+- fail with a manual-cleanup instruction before DDL instead of choosing a survivor
+  or rewriting data.
 
 DDL:
 
@@ -971,21 +991,15 @@ DDL:
 - add nullable foreign key
   `offers.canonical_product_id -> canonical_products.id` with
   `ON DELETE SET NULL`.
-
-### Migration 0006 - price snapshot identity and lookup
-
-Preflight:
-
-- remove exact duplicate rows using the smallest `id` as survivor;
-- preserve rows with a new timestamp or a different price/currency.
-
-DDL:
-
 - create unique constraint/index
   `uq_price_snapshots_exact_identity` on
   `(marketplace, external_id, collected_at, price, currency)`;
 - create lookup index `ix_price_snapshots_history_order` on
-  `(marketplace, external_id, collected_at DESC, id DESC)`.
+  `(marketplace, external_id, collected_at, id)`. PostgreSQL can scan this B-tree
+  backward for the current latest/previous descending queries.
+
+Downgrade removes both snapshot objects, the canonical foreign key/index, and the
+offer partial unique index in reverse dependency order.
 
 ### Deferred migration decisions
 
@@ -1041,9 +1055,8 @@ Keep `docs/ARCHITECTURE_REVIEW_5.md` unchanged as a historical checkpoint.
   construction.
 - [x] Memory runner behavior remains available without SQLAlchemy lifecycle
   semantics.
-- [ ] Offer upsert and exact snapshot deduplication are protected by PostgreSQL
-  constraints before concurrent production scheduling is enabled. This is the
-  explicitly deferred migration task.
+- [x] Offer upsert and exact snapshot deduplication are protected by PostgreSQL
+  constraints before concurrent production scheduling is enabled.
 - [x] First snapshot, decrease, increase, unchanged, equal-timestamp, and
   out-of-order semantics remain unchanged.
 - [x] Focused rollback, phase-order, scheduler, and idempotency tests pass.
@@ -1051,19 +1064,14 @@ Keep `docs/ARCHITECTURE_REVIEW_5.md` unchanged as a historical checkpoint.
 - [x] No Telegram, frontend, FunPay, matching/comparator redesign, event bus,
   Redis, Celery, Kafka, or distributed lock is introduced.
 
-## 19. Recommended Next Task
+## 19. Recommended Final EPIC 12 Task
 
-Implement the deferred database-integrity migrations and race-safe repository
-operations described in Sections 12 and 16:
+Perform live PostgreSQL verification of revision `0005`, two-session conflict
+behavior, canonical foreign-key deletion semantics, application-runner rollback,
+and Scheduler retry behavior. Record real upgrade/downgrade and concurrency
+results without adding features.
 
-- enforce non-null offer identity uniqueness;
-- add canonical association foreign-key/index integrity;
-- enforce exact snapshot identity uniqueness and history lookup indexes;
-- replace race-prone lookup-then-insert behavior with PostgreSQL conflict-safe
-  writes.
-
-Until that task is complete, deploy only one scheduler process, avoid overlapping
-runs for the same bounded source, and treat application-level duplicate checks as
-best-effort rather than concurrency-safe guarantees. Persisted event/publication
-intent remains the following reliability task because content cannot currently be
-recovered after a process failure following commit.
+Database row integrity is now designed for overlapping writes, but event/content
+idempotency and Scheduler overlap control remain unresolved. Until live
+verification and those later reliability controls exist, avoid overlapping the
+same bounded source and run one Scheduler process.
