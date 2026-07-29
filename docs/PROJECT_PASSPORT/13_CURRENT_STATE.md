@@ -8,7 +8,12 @@ This document records the current implementation state of MediaEngine.
 
 Foundation is complete.
 
-The current implementation includes the first real marketplace processing path for GGSEL HTML retrieval, raw payload extraction, parsed offer normalization, in-memory offer persistence, deterministic matching infrastructure, and content generation infrastructure.
+The current implementation includes the first marketplace processing path,
+async memory and PostgreSQL repositories, deterministic matching/comparison,
+repository-backed price history, transaction-bounded application execution,
+post-commit content generation, and Scheduler orchestration.
+
+EPIC 12 is live-verified and complete against PostgreSQL 17.10.
 
 ## Active Capabilities
 
@@ -28,15 +33,23 @@ The current implementation includes the first real marketplace processing path f
   `RepositoryProvider`.
 - Price-change detection reads the latest persisted snapshot before storing and
   evaluating the current snapshot.
+- `MarketplaceApplicationRunner` keeps HTTP/normalization before the database
+  transaction and content generation after commit.
+- One PostgreSQL repository scope shares one `AsyncSession` across all
+  repositories and owns commit/rollback.
+- Database constraints protect stable offer identity, exact snapshot identity,
+  and canonical-product references.
+- Active persistence timestamps are timezone-aware UTC values.
+- Scheduler can retry and report a PostgreSQL-backed application run without
+  owning business logic or database lifecycle.
 
 ## Known Gaps
 
 - GGSEL extracted price fields are preserved in raw `extra` data, but full price normalization from marketplace-specific fields is not complete.
 - Snapshot creation is skipped when parsed offers do not contain normalized price and currency.
-- PostgreSQL runtime still lacks one shared session and transaction boundary per
-  complete marketplace run.
-- Concurrent exact-snapshot duplicate protection is not enforced by a database
-  uniqueness constraint.
+- Market events and publication attempts are not persisted.
+- Post-commit content failures cannot be resumed reliably.
+- Scheduler has no explicit overlap or multi-process coordination policy.
 - No Telegram delivery is implemented.
 - No production AI provider is wired into the marketplace pipeline.
 
@@ -50,4 +63,6 @@ Current architecture separates:
 - deterministic matching;
 - pipeline orchestration.
 
-No application code was changed during this documentation sync.
+The final EPIC 12 verification passed 89 live PostgreSQL checks, 47 tests, and
+strict MyPy across 105 source files. Full-project Ruff still has pre-existing
+legacy/demo debt; all EPIC 12 files pass.

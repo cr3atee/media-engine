@@ -6,13 +6,14 @@ from datetime import UTC, datetime
 from decimal import Decimal
 from typing import Any, cast
 
-from sqlalchemy import Table, UniqueConstraint
+from sqlalchemy import DateTime, Table, UniqueConstraint
 from sqlalchemy.dialects.postgresql.base import PGDialect
 from sqlalchemy.engine import Dialect
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.sql import ClauseElement
 
 from app.domain.price_snapshot import PriceSnapshot
+from app.models.canonical_product_record import CanonicalProductRecord
 from app.models.offer import Offer
 from app.models.price_snapshot_record import PriceSnapshotRecord
 from app.parsers.models import ParsedOffer
@@ -118,6 +119,22 @@ def test_snapshot_metadata_defines_exact_identity_and_history_index() -> None:
         "collected_at",
         "id",
     )
+
+
+def test_active_postgres_timestamps_are_timezone_aware() -> None:
+    offer_created_at = cast(DateTime, Offer.__table__.c.created_at.type)
+    product_created_at = cast(
+        DateTime,
+        CanonicalProductRecord.__table__.c.created_at.type,
+    )
+    snapshot_collected_at = cast(
+        DateTime,
+        PriceSnapshotRecord.__table__.c.collected_at.type,
+    )
+
+    assert offer_created_at.timezone is True
+    assert product_created_at.timezone is True
+    assert snapshot_collected_at.timezone is True
 
 
 def test_offer_save_compiles_partial_identity_upsert() -> None:

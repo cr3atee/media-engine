@@ -1,53 +1,38 @@
 # Scheduler Verification
 
-## Verified Components
+## Status
 
-- `SchedulerService` registers jobs, starts, executes registered jobs, records status, records runtime statistics, and shuts down cleanly.
-- `BaseJob`, `GGSELJob`, and `PlayerokJob` execute existing pipeline objects without adding business logic to the scheduler layer.
-- `MarketplacePipeline` verifies the GGSEL path through fetching, extraction, normalization, repository writes, comparator execution, price history updates, price change detection, event creation, scoring, and content generation.
-- `PlayerokPipeline` verifies the Playerok path through fetching, extraction, and normalization.
-- `RepositoryProvider` verifies repository-backed access through the memory provider.
-- Comparator, price history, analytics, event builder, scorer, and content generator are exercised as existing downstream services.
+Scheduler orchestration is verified through a PostgreSQL-backed
+`MarketplaceApplicationRunner`.
 
-## Execution Flow
+## Verified Flow
 
-The verification demo runs this flow:
+1. `SchedulerService` executes `GGSELJob`.
+2. The job delegates to the application runner.
+3. The runner opens the PostgreSQL repository scope.
+4. Persistence, comparison, history, change detection, and event construction
+   run in one transaction.
+5. Scoring and content run after commit.
+6. A controlled failed call is retried by Scheduler.
+7. A permanently failing job is reported as failed without stopping Scheduler.
+8. A repeated successful run reuses persisted history and remains idempotent for
+   the exact snapshot.
+9. Scheduler shuts down cleanly.
 
-1. Start `SchedulerService`.
-2. Register `GGSELJob` and `PlayerokJob`.
-3. Execute `GGSELJob`.
-4. Execute `PlayerokJob`.
-5. Verify repository activity through `RepositoryProvider`.
-6. Run repository-backed comparison through the existing comparator path.
-7. Verify price history entries.
-8. Detect a price change.
-9. Build a domain event.
-10. Score the event.
-11. Generate content with `FakeAIProvider`.
-12. Execute `GGSELJob` again against the same repository-backed history and verify
-    that an unchanged price produces no additional event.
-13. Print scheduler statistics.
-14. Stop the scheduler gracefully.
+## Verified Responsibilities
 
-## Scheduler Capabilities
+- Jobs own no sessions or repositories.
+- Scheduler contains no marketplace business logic.
+- Transaction ownership remains in the runner repository scope.
+- Scheduler records successful, failed, and retry statistics correctly for the
+  verified non-overlapping execution path.
 
-- Manual job execution is working.
-- Registered job status tracking is working.
-- Runtime statistics are available after execution.
-- Graceful shutdown is working.
-- Retry, timeout, and periodic execution are implemented in the scheduler layer and remain separate from marketplace business logic.
+## Remaining Limits
 
-## Remaining Limitations
+- There is no explicit same-job overlap guard.
+- Multiple Scheduler processes are not coordinated.
+- Events and publication attempts are not durable.
+- Failed post-commit content cannot yet be resumed by Scheduler.
+- Production intervals, monitoring, and alerting are not verified.
 
-- The end-to-end verification uses deterministic local marketplace inputs instead of external network calls.
-- `BaseJob` records execution status only and does not expose returned pipeline results. Because of that, repository-backed downstream verification for Playerok persists offers through the existing `PlayerokPipeline` API after scheduled execution.
-- PostgreSQL-backed repositories are not used in this scheduler verification; the memory provider remains the safe verification backend, including price history through `RepositoryProvider.price_history`.
-- Repeated GGSEL job execution reads repository-backed history, but scheduler overlap and distributed locking policies are not implemented.
-- Telegram delivery is still outside the scheduler flow.
-
-## Production Readiness Assessment
-
-- Scheduler orchestration foundation is ready for controlled development use.
-- Job execution and failure isolation are ready for further integration testing.
-- Production use still requires real marketplace runtime configuration, environment-specific intervals, monitoring, and a clear policy for handling job output.
-- The scheduler remains correctly isolated from business logic and can continue to evolve without changing marketplace pipelines.
+Complete live evidence is recorded in `EPIC_12_FINAL_VERIFICATION.md`.

@@ -16,10 +16,14 @@ This document captures architecture notes that are important for future reviews.
   `RepositoryProvider`, not through concrete repositories or a parallel service.
 - Price-history ordering is chronological by collection timestamp with a
   deterministic backend tie-break for equal timestamps.
-- Exact snapshot duplicates are suppressed in repositories; database-enforced
-  protection against concurrent duplicate writes remains pending.
-- The next persistence step is shared PostgreSQL session and transaction ownership
-  for a complete runtime pipeline execution.
+- Exact snapshot duplicates are suppressed by memory semantics and a PostgreSQL
+  unique constraint with race-safe `ON CONFLICT DO NOTHING`.
+- `MarketplaceApplicationRunner` owns the production-shaped run boundary; one
+  PostgreSQL scope shares one session and transaction across repositories.
+- Live PostgreSQL verification covers migration preflight, two-session conflicts,
+  FK behavior, commit/rollback, retries, Scheduler delegation, and UTC timestamps.
+- The next reliability boundary is persistent event and publication state, not a
+  broader marketplace transaction.
 - GGSEL-specific price fields are not fully normalized into `ParsedOffer.price` and `ParsedOffer.currency` yet.
 
 ## Review Notes

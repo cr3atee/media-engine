@@ -3,7 +3,7 @@ from __future__ import annotations
 from datetime import datetime
 from decimal import Decimal
 
-from sqlalchemy import BigInteger, Index, Numeric, String, UniqueConstraint
+from sqlalchemy import BigInteger, DateTime, Index, Numeric, String, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.database.base import Base
@@ -40,4 +40,7 @@ class PriceSnapshotRecord(Base):
     external_id: Mapped[str] = mapped_column(String(255), nullable=False)
     price: Mapped[Decimal] = mapped_column(Numeric(12, 2), nullable=False)
     currency: Mapped[str] = mapped_column(String(16), nullable=False)
-    collected_at: Mapped[datetime] = mapped_column(nullable=False)
+    collected_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        nullable=False,
+    )

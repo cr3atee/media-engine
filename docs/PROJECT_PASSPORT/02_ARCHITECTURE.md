@@ -57,8 +57,11 @@ Current repository layer includes:
 - `create_postgres_provider()`
 
 Repository access is asynchronous for both memory and PostgreSQL backends.
-PostgreSQL is not the default backend, and complete pipeline transaction ownership
-is not implemented yet.
+PostgreSQL is not hardcoded as the default backend. Production-shaped execution
+uses `MarketplaceApplicationRunner` with one repository scope, one shared
+`AsyncSession`, and one transaction for a bounded marketplace run. HTTP and
+normalization execute before that scope; scoring and content execute after a
+successful commit.
 
 ## Boundaries
 
@@ -68,3 +71,5 @@ is not implemented yet.
 - Matching does not use AI, embeddings, or external services.
 - Marketplace pipeline persists parsed offers and price snapshots only through
   `RepositoryProvider`.
+- Scheduler jobs delegate to application runners and do not own repositories,
+  sessions, or business logic.

@@ -2,9 +2,28 @@
 
 Date: 2026-07-28
 
-Status: specification plus Task 1-5 implementation log. The original
-specification did not implement application code or migrations; the status
-sections below record completed implementation steps.
+Status: verified and complete. The specification and Task 1-5 implementation
+log remain below as an architectural record.
+
+## Final Verification Status
+
+Status date: 2026-07-29.
+
+EPIC 12 was verified against an isolated PostgreSQL 17.10 Compose service.
+Verification covered migration `0005`, all preflight failures, constraints,
+indexes, race-safe repository writes, two-session conflicts, canonical-product
+FK behavior, shared-session ownership, application-runner commit and rollback,
+post-commit failure, retries, Scheduler execution, and practical overlap.
+
+Live verification exposed one persistence defect: UTC-aware application values
+were written to timezone-naive active columns. Revision
+`0006_use_utc_timestamps` and matching ORM metadata resolve it without changing
+business behavior. The final result is 89 live checks, 47 passing tests, and
+strict MyPy success across 105 source files.
+
+See `EPIC_12_FINAL_VERIFICATION.md` for evidence, remaining limitations, and the
+acceptance checklist. The next recommended EPIC is Persistent Market Events and
+Publication State; it is not implemented here.
 
 ## Task 5 Persistence Integrity Implementation Status
 

@@ -66,6 +66,8 @@ Fields:
 Snapshots are identified for history lookup by `(marketplace, external_id)`.
 History is ordered by `collected_at`; equal timestamps use backend insertion
 identity as a deterministic tie-break. Exact duplicate snapshots are ignored.
+PostgreSQL stores `collected_at` as a timezone-aware value; runtime timestamps
+are UTC.
 
 ## PriceHistoryRepository
 

@@ -28,15 +28,24 @@ This document tracks only work that is reflected by the current repository state
 - PostgreSQL repository implementations.
 - Async repository contracts for memory and PostgreSQL backends.
 - Repository-backed runtime price history.
+- Shared PostgreSQL session and transaction scope per marketplace run.
+- `MarketplaceApplicationRunner` transaction and post-commit boundary.
+- Race-safe offer upsert and exact snapshot conflict suppression.
+- PostgreSQL constraints, indexes, canonical-product FK, and UTC timestamps.
+- Live PostgreSQL migration, concurrency, rollback, retry, and Scheduler
+  verification for EPIC 12.
 
 ## Current Status
 
-MediaEngine has a working foundation for fetching GGSEL HTML, extracting raw product payloads, normalizing them into parsed offers, persisting offers and price history through a repository provider, and running deterministic product matching against canonical products.
+MediaEngine has a live-verified PostgreSQL runtime foundation for repository-backed
+offers and price history, deterministic comparison and event processing, bounded
+transactions, post-commit content generation, and Scheduler orchestration.
 
 ## Not Present Yet
 
 - Full price normalization for GGSEL extracted fields.
-- Shared PostgreSQL session and transaction ownership for a complete pipeline run.
-- Database-level concurrent duplicate protection for price snapshots.
+- Persistent market events and publication state.
+- Content/publication retry after post-commit failure.
+- Scheduler overlap and multi-process coordination.
 - Telegram delivery implementation.
 - Production AI provider integration in the pipeline.

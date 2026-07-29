@@ -4,7 +4,7 @@ from datetime import UTC, datetime
 from decimal import Decimal
 from uuid import UUID, uuid4
 
-from sqlalchemy import ForeignKey, Index, Numeric, String, Uuid, text
+from sqlalchemy import DateTime, ForeignKey, Index, Numeric, String, Uuid, text
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.database.base import Base
@@ -44,6 +44,7 @@ class Offer(Base):
         nullable=True,
     )
     created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
         nullable=False,
         default=lambda: datetime.now(UTC),
     )

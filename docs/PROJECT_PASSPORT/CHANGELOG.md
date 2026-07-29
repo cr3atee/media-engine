@@ -6,6 +6,12 @@ This document records notable Project Passport updates.
 
 ## Unreleased
 
+- Completed EPIC 12 live verification against PostgreSQL 17.10.
+- Verified migration preflight, constraints, indexes, concurrency, FK behavior,
+  transaction rollback, retry, Scheduler execution, and practical overlap.
+- Added reversible UTC-aware timestamp migration `0006_use_utc_timestamps` after
+  live `asyncpg` verification exposed a timezone schema mismatch.
+- Recorded the final EPIC 12 acceptance checklist and production limitations.
 - Migrated active runtime price history to `RepositoryProvider.price_history`.
 - Removed the duplicate standalone `PriceHistoryService`.
 - Documented deterministic snapshot ordering and duplicate behavior.
