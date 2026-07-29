@@ -37,6 +37,7 @@ def test_repository_contracts_expose_lifecycle_specific_operations() -> None:
             "get_by_identity",
             "list_pending",
             "claim_pending",
+            "list_expired_scoring_claims",
             "mark_scored",
             "mark_scoring_failed",
             "set_disposition",

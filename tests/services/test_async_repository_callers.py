@@ -491,7 +491,7 @@ def test_first_snapshot_is_persisted_without_event() -> None:
     assert content.events == []
 
 
-def test_price_decrease_uses_persisted_snapshot_and_generates_content() -> None:
+def test_price_decrease_persists_pending_event_without_content() -> None:
     product = make_product()
     provider, state = make_provider(product=product)
     now = datetime.now(UTC)
@@ -519,9 +519,8 @@ def test_price_decrease_uses_persisted_snapshot_and_generates_content() -> None:
     assert detector.calls == [(previous, current)]
     assert state.history_get_last_count == 1
     assert state.history_add_count == 2
-    assert len(content.events) == 1
-    assert content.events[0].old_price == 990.0
-    assert content.events[0].new_price == 790.0
+    assert content.events == []
+    assert len(run_async(provider.events.list_pending(now, 10))) == 1
 
 
 def test_price_increase_is_persisted_without_price_drop_event() -> None:

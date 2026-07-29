@@ -341,10 +341,10 @@ async def verify_ingestion(
         and await row_count(session_factory, MarketEventRecord) == 1,
     )
     verification.check(
-        "post-commit adapter preserves price values",
-        len(content.events) == 1
-        and content.events[0].old_price == 990.0
-        and content.events[0].new_price == 790.0,
+        "ingestion leaves scoring and content to durable processing",
+        len(content.events) == 0
+        and drop.events_scored == 0
+        and drop.content_items_generated == 0,
     )
 
 
@@ -415,12 +415,12 @@ async def verify_marketplace_isolation(
     )
 
 
-async def verify_content_failure(
+async def verify_content_boundary(
     verification: Verification,
     engine: AsyncEngine,
     session_factory: async_sessionmaker[AsyncSession],
 ) -> None:
-    """Verify post-commit content failure cannot remove durable state."""
+    """Verify ingestion never invokes even a failing content generator."""
     await reset_database(engine)
     baseline = make_offer(price=Decimal("990.00"))
     await seed_snapshot(session_factory, baseline, NOW)
@@ -431,10 +431,10 @@ async def verify_content_failure(
         content_generator=RecordingContentGenerator(fail=True),
     ).run("verify://content-failure")
     verification.check(
-        "content failure leaves event committed",
+        "failing content provider is outside ingestion",
         result.events_created == 1
         and result.content_items_generated == 0
-        and len(result.errors) == 1
+        and result.errors == ()
         and await row_count(session_factory, MarketEventRecord) == 1,
     )
 
@@ -449,7 +449,7 @@ async def run_verification(database_url: str) -> None:
         await verify_ingestion(verification, engine, session_factory)
         await verify_rollback(verification, engine, session_factory)
         await verify_marketplace_isolation(verification, engine, session_factory)
-        await verify_content_failure(verification, engine, session_factory)
+        await verify_content_boundary(verification, engine, session_factory)
         await reset_database(engine)
         print(f"Checks passed: {verification.passed}")
         print("SUCCESS")

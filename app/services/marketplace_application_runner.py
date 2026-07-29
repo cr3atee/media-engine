@@ -63,9 +63,6 @@ class MarketplaceApplicationRunner:
                 repository_provider,
             )
 
-        post_commit = await self._pipeline.process_after_commit(
-            transactional.events_for_post_commit
-        )
         return MarketplaceRunResult(
             marketplace=self._marketplace,
             offers_received=len(parsed_offers),
@@ -80,8 +77,8 @@ class MarketplaceApplicationRunner:
             events_existing=transactional.events_existing,
             skipped_event_candidates=transactional.skipped_event_candidates,
             event_ids=tuple(event.id for event in transactional.durable_events),
-            events_scored=post_commit.events_scored,
-            content_items_generated=post_commit.content_items_generated,
+            events_scored=0,
+            content_items_generated=0,
             persistence_committed=True,
-            errors=prepared.errors + post_commit.errors,
+            errors=prepared.errors,
         )

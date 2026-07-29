@@ -205,15 +205,41 @@ class MemoryMarketEventRepository(MarketEventRepository):
         self._store(updated)
         return _applied(updated.id, updated.version)
 
+    async def list_expired_scoring_claims(
+        self,
+        now: datetime,
+        limit: int,
+    ) -> Sequence[ClaimedMarketEvent]:
+        """List expired in-progress claims in deterministic lease order."""
+        now = normalize_utc(now, field_name="now")
+        _validate_limit(limit)
+        expired = sorted(
+            (
+                event
+                for event in self._events_by_id.values()
+                if event.scoring_status is ScoringStatus.IN_PROGRESS
+                and event.claim is not None
+                and event.claim.lease_expires_at <= now
+            ),
+            key=_expired_claim_order,
+        )[:limit]
+        return tuple(
+            ClaimedMarketEvent(event=event, claim=event.claim)
+            for event in expired
+            if event.claim is not None
+        )
+
     async def mark_scoring_failed(
         self,
         event_id: UUID,
         claim_token: UUID,
         expected_version: int,
         error: ProcessingError,
+        failed_at: datetime,
         next_retry_at: datetime | None,
     ) -> StateTransitionResult:
         """Persist a known scoring failure and optional retry time."""
+        normalize_utc(failed_at, field_name="failed_at")
         next_retry_at = _normalize_optional_utc(
             next_retry_at,
             field_name="next_retry_at",
@@ -311,19 +337,21 @@ def _is_event_claimable(event: PriceDropMarketEvent, now: datetime) -> bool:
         return event.next_retry_at is None or event.next_retry_at <= now
     if event.scoring_status is ScoringStatus.FAILED:
         return event.next_retry_at is not None and event.next_retry_at <= now
-    if event.scoring_status is ScoringStatus.IN_PROGRESS:
-        return event.claim is not None and event.claim.lease_expires_at <= now
     return False
 
 
 def _event_processing_order(
     event: PriceDropMarketEvent,
 ) -> tuple[datetime, datetime, str]:
-    if event.scoring_status is ScoringStatus.IN_PROGRESS and event.claim is not None:
-        ready_at = event.claim.lease_expires_at
-    else:
-        ready_at = event.next_retry_at or event.created_at
+    ready_at = event.next_retry_at or event.created_at
     return (ready_at, event.created_at, event.id.hex)
+
+
+def _expired_claim_order(
+    event: PriceDropMarketEvent,
+) -> tuple[datetime, datetime, str]:
+    assert event.claim is not None
+    return (event.claim.lease_expires_at, event.created_at, event.id.hex)
 
 
 def _guard_event_claim(

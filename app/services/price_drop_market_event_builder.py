@@ -13,6 +13,7 @@ from app.domain.market_events import (
 )
 from app.domain.price_snapshot import PriceSnapshot
 from app.parsers.models import ParsedOffer
+from app.services.market_event_scoring_adapter import MarketEventScoringAdapter
 
 
 class PriceDropMarketEventBuilder:
@@ -56,14 +57,7 @@ class PriceDropMarketEventBuilder:
     @staticmethod
     def to_runtime_event(event: PriceDropMarketEvent) -> PriceDropEvent:
         """Adapt a durable event to the current scoring/content DTO."""
-        return PriceDropEvent(
-            title=event.payload.title or event.external_id,
-            marketplace=event.marketplace,
-            old_price=float(event.payload.old_price),
-            new_price=float(event.payload.new_price),
-            currency=event.payload.currency,
-            created_at=event.created_at,
-        )
+        return MarketEventScoringAdapter().adapt(event)
 
     @staticmethod
     def _validate_inputs(

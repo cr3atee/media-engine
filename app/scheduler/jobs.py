@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from collections.abc import Awaitable
+from collections.abc import Awaitable, Callable
 from dataclasses import dataclass, replace
 from datetime import UTC, datetime, timedelta
 from enum import StrEnum
@@ -12,11 +12,36 @@ from typing import Protocol
 from app.parsers.playerok_fetcher import PlayerokFetcher
 
 
+def _utc_now() -> datetime:
+    return datetime.now(UTC)
+
+
 class MarketplaceRunner(Protocol):
     """Application entry point accepted by marketplace scheduler jobs."""
 
     async def run(self, url: str) -> object:
         """Execute one bounded marketplace application run."""
+
+
+class EventProcessingRunner(Protocol):
+    """Application boundary invoked by durable event Scheduler jobs."""
+
+    async def process_pending(
+        self,
+        *,
+        worker_id: str,
+        limit: int,
+        now: datetime,
+    ) -> object:
+        """Process one bounded batch of pending market events."""
+
+    async def recover_stale_scoring_claims(
+        self,
+        *,
+        limit: int,
+        now: datetime,
+    ) -> object:
+        """Recover one bounded batch of expired scoring claims."""
 
 
 class JobExecutionState(StrEnum):
@@ -154,3 +179,54 @@ class PlayerokJob(MarketplaceJob):
     def run(self) -> Awaitable[object]:
         """Execute the configured Playerok application runner."""
         return self._runner.run(self.url)
+
+
+class MarketEventScoringJob(BaseJob):
+    """Invoke bounded durable market-event scoring."""
+
+    def __init__(
+        self,
+        service: EventProcessingRunner,
+        *,
+        worker_id: str,
+        batch_size: int,
+        clock: Callable[[], datetime] = _utc_now,
+    ) -> None:
+        """Configure service delegation without repository or scoring logic."""
+        super().__init__("market-event-scoring")
+        self._service = service
+        self._worker_id = worker_id
+        self._batch_size = batch_size
+        self._clock = clock
+
+    def run(self) -> Awaitable[object]:
+        """Delegate one bounded scoring batch to the application service."""
+        return self._service.process_pending(
+            worker_id=self._worker_id,
+            limit=self._batch_size,
+            now=self._clock(),
+        )
+
+
+class StaleScoringClaimRecoveryJob(BaseJob):
+    """Invoke bounded recovery of expired market-event scoring claims."""
+
+    def __init__(
+        self,
+        service: EventProcessingRunner,
+        *,
+        batch_size: int,
+        clock: Callable[[], datetime] = _utc_now,
+    ) -> None:
+        """Configure recovery delegation without persistence policy."""
+        super().__init__("stale-scoring-claim-recovery")
+        self._service = service
+        self._batch_size = batch_size
+        self._clock = clock
+
+    def run(self) -> Awaitable[object]:
+        """Delegate one bounded stale-claim recovery batch."""
+        return self._service.recover_stale_scoring_claims(
+            limit=self._batch_size,
+            now=self._clock(),
+        )

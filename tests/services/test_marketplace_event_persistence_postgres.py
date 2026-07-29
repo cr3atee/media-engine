@@ -172,7 +172,7 @@ def make_runner(
     )
 
 
-def test_price_drop_commits_one_durable_event_and_legacy_values() -> None:
+def test_price_drop_commits_one_pending_durable_event() -> None:
     run_async(reset_database())
     run_async(seed_snapshot(make_offer(price=Decimal("990.00")), NOW))
     content = RecordingContentGenerator()
@@ -188,16 +188,14 @@ def test_price_drop_commits_one_durable_event_and_legacy_values() -> None:
     assert result.event_candidates_built == 1
     assert result.events_created == 1
     assert result.events_existing == 0
-    assert result.events_scored == 1
-    assert result.content_items_generated == 1
+    assert result.events_scored == 0
+    assert result.content_items_generated == 0
     assert result.event_ids == (stored[0].id,)
     assert stored[0].previous_snapshot.collected_at == NOW
     assert stored[0].current_snapshot.collected_at == NOW + timedelta(minutes=1)
     assert stored[0].payload.old_price == Decimal("990.00")
     assert stored[0].payload.new_price == Decimal("790.00")
-    assert len(content.events) == 1
-    assert content.events[0].old_price == 990.0
-    assert content.events[0].new_price == 790.0
+    assert content.events == []
 
 
 def test_repeated_exact_ingestion_does_not_duplicate_event() -> None:
@@ -236,7 +234,7 @@ def test_event_failure_rolls_back_offer_snapshot_and_event() -> None:
     assert run_async(row_count(MarketEventRecord)) == 0
 
 
-def test_content_failure_keeps_committed_durable_event() -> None:
+def test_ingestion_does_not_invoke_failing_content_generator() -> None:
     run_async(reset_database())
     run_async(seed_snapshot(make_offer(price=Decimal("990.00")), NOW))
     result = run_async(
@@ -248,9 +246,9 @@ def test_content_failure_keeps_committed_durable_event() -> None:
     )
 
     assert result.events_created == 1
-    assert result.events_scored == 1
+    assert result.events_scored == 0
     assert result.content_items_generated == 0
-    assert len(result.errors) == 1
+    assert result.errors == ()
     assert run_async(row_count(MarketEventRecord)) == 1
 
 

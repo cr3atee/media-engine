@@ -1,11 +1,11 @@
 from __future__ import annotations
 
 from collections.abc import Callable, Sequence
-from datetime import UTC, datetime
+from datetime import datetime
 from typing import Any
 from uuid import UUID, uuid4
 
-from sqlalchemy import Select, and_, case, func, or_, select
+from sqlalchemy import Select, and_, func, or_, select
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.engine import Row
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -238,15 +238,48 @@ class PostgresMarketEventRepository(MarketEventRepository):
         _clear_error(record)
         return await self._finish_update(record, completed_at)
 
+    async def list_expired_scoring_claims(
+        self,
+        now: datetime,
+        limit: int,
+    ) -> Sequence[ClaimedMarketEvent]:
+        """Lock expired scoring claims for bounded recovery with SKIP LOCKED."""
+        now = normalize_utc(now, field_name="now")
+        _validate_limit(limit)
+        if limit == 0:
+            return ()
+        result = await self._session.execute(
+            self._event_query()
+            .where(
+                MarketEventRecord.scoring_status == ScoringStatus.IN_PROGRESS.value,
+                MarketEventRecord.lease_expires_at <= now,
+            )
+            .order_by(
+                MarketEventRecord.lease_expires_at,
+                MarketEventRecord.created_at,
+                MarketEventRecord.id,
+            )
+            .limit(limit)
+            .with_for_update(of=MarketEventRecord, skip_locked=True)
+        )
+        claimed: list[ClaimedMarketEvent] = []
+        for row in result.all():
+            event = self._map_row(row)
+            assert event.claim is not None
+            claimed.append(ClaimedMarketEvent(event=event, claim=event.claim))
+        return tuple(claimed)
+
     async def mark_scoring_failed(
         self,
         event_id: UUID,
         claim_token: UUID,
         expected_version: int,
         error: ProcessingError,
+        failed_at: datetime,
         next_retry_at: datetime | None,
     ) -> StateTransitionResult:
         """Record a known scoring failure and optional retry eligibility."""
+        failed_at = normalize_utc(failed_at, field_name="failed_at")
         next_retry_at = _normalize_optional_utc(
             next_retry_at,
             field_name="next_retry_at",
@@ -266,7 +299,7 @@ class PostgresMarketEventRepository(MarketEventRepository):
         _clear_claim(record)
         record.last_error_code = error.code
         record.last_error_summary = error.summary
-        return await self._finish_update(record, datetime.now(UTC))
+        return await self._finish_update(record, failed_at)
 
     async def set_disposition(
         self,
@@ -430,24 +463,14 @@ def _claimable_at(now: datetime) -> ColumnElement[bool]:
                 MarketEventRecord.next_retry_at.is_not(None),
                 MarketEventRecord.next_retry_at <= now,
             ),
-            and_(
-                MarketEventRecord.scoring_status == ScoringStatus.IN_PROGRESS.value,
-                MarketEventRecord.lease_expires_at <= now,
-            ),
         ),
     )
 
 
 def _claim_order() -> tuple[Any, ...]:
-    ready_at = case(
-        (
-            MarketEventRecord.scoring_status == ScoringStatus.IN_PROGRESS.value,
-            MarketEventRecord.lease_expires_at,
-        ),
-        else_=func.coalesce(
-            MarketEventRecord.next_retry_at,
-            MarketEventRecord.created_at,
-        ),
+    ready_at = func.coalesce(
+        MarketEventRecord.next_retry_at,
+        MarketEventRecord.created_at,
     )
     return (ready_at, MarketEventRecord.created_at, MarketEventRecord.id)
 

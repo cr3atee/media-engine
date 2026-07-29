@@ -6,6 +6,17 @@ This document records notable Project Passport updates.
 
 ## Unreleased
 
+- Added durable bounded market-event claiming and scoring through
+  `EventProcessingService`.
+- Added the explicit durable-event scoring adapter, immutable processing result
+  DTOs, safe error categories, bounded exponential retry policy, and idempotent
+  stale-claim recovery.
+- Added Scheduler jobs for pending scoring and stale scoring-claim recovery while
+  preserving orchestration-only boundaries.
+- Stopped active ingestion from invoking the legacy immediate scoring/content
+  path before durable claims.
+- Added memory, PostgreSQL, concurrency, rollback, retry/recovery, and Scheduler
+  coverage plus a 14-check live PostgreSQL verification.
 - Integrated deterministic market-event persistence into the existing ingestion
   transaction.
 - Added event repositories to memory/PostgreSQL providers and preserved one shared

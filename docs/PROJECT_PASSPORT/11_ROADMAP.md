@@ -39,19 +39,26 @@ This document tracks only work that is reflected by the current repository state
 - Atomic offer/snapshot/event ingestion through `RepositoryProvider.events`.
 - Live PostgreSQL verification of event identity, replay, rollback, marketplace
   isolation, and post-commit compatibility.
+- Durable bounded market-event claiming and scoring persistence.
+- Guarded scoring completion with claim-token and optimistic-version conflicts.
+- Bounded retry/backoff and idempotent stale scoring-claim recovery.
+- Scheduler scoring and stale-recovery jobs that delegate only to
+  `EventProcessingService`.
+- Live PostgreSQL verification of scoring transactions, concurrent workers,
+  retry/recovery, terminal failure, and Scheduler delegation.
 
 ## Current Status
 
 MediaEngine has a live-verified PostgreSQL runtime foundation for repository-backed
 offers, price history, and deterministic market events; bounded transactions;
-post-commit scoring/content; and Scheduler orchestration.
+durable post-commit scoring with recovery; and Scheduler orchestration.
 
 ## Not Present Yet
 
 - Full price normalization for GGSEL extracted fields.
-- Durable event scoring and claim-based event processing.
+- Duplicate detector and inactive legacy event cleanup.
 - Generated-content and publication persistence.
-- Content/publication retry after post-commit failure.
+- Content-generation and publication retry.
 - Scheduler overlap and multi-process coordination.
 - Telegram delivery implementation.
 - Production AI provider integration in the pipeline.

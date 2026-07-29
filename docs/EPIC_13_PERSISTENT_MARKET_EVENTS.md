@@ -2,7 +2,11 @@
 
 ## Status and Scope
 
-EPIC 12 established an asynchronous PostgreSQL runtime with a single transaction boundary for offer and price-snapshot persistence. The active marketplace flow currently detects price changes and creates `PriceDropEvent` objects in memory. Scoring and content generation run after commit, but events, generated content, and publication state are not persisted.
+EPIC 12 established an asynchronous PostgreSQL runtime with one transaction
+boundary for offer and price-snapshot persistence. EPIC 13 Tasks 1-5 now persist
+deterministic market events atomically with ingestion and process their scoring
+through durable claims, retries, and recovery. Generated content and publication
+state are not yet persisted.
 
 EPIC 13 closes that durability gap. It introduces a persistent, auditable event lifecycle without moving business logic into repositories, holding database transactions during external calls, or coupling the domain to Telegram.
 
@@ -49,9 +53,9 @@ Lifecycle implementation details:
 Current runtime compatibility:
 
 - The existing Pydantic `PriceDropEvent` remains the temporary scoring/content
-  DTO after commit.
-- A newly persisted `MarketEvent[PriceDropPayload]` is explicitly adapted to that
-  DTO; scoring and content do not construct a second event identity.
+  DTO.
+- A claimed `MarketEvent[PriceDropPayload]` is explicitly adapted to an enriched
+  scorer input; no second event identity is constructed.
 - `RepositoryProvider.events` supplies memory or PostgreSQL event persistence in
   the same repository scope as offers and price snapshots.
 - `app/analytics/price_change.py` remains the active detector.
@@ -59,10 +63,10 @@ Current runtime compatibility:
 
 Remaining EPIC 13 work:
 
-- Durable scoring and event-claim application service.
+- Duplicate detector and inactive legacy event cleanup (Task 6).
 - Generated-content persistence and recoverable content generation.
 - Publication persistence and lifecycle orchestration.
-- Dedicated event-processing Scheduler jobs and final end-to-end verification.
+- Final end-to-end lifecycle verification after content/publication tasks.
 
 ### Task 2 implementation status
 
@@ -171,18 +175,45 @@ Task 4 is complete:
 - `MarketplaceRunResult` distinguishes detected changes, candidates, created and
   existing events, skipped candidates, durable IDs, scored events, generated
   content, and post-commit errors.
-- Only newly created durable events enter the temporary post-commit path. An
-  explicit adapter supplies the existing Pydantic `PriceDropEvent` to unchanged
-  scoring and content components.
+- Newly created durable events remain `pending` after ingestion. Scoring is
+  performed only by the separate claim-based processing path added in Task 5.
 - Live PostgreSQL verification confirms shared sessions, first-snapshot behavior,
   atomic creation, deterministic identity, exact replay, rollback, marketplace
-  isolation, and durable events after content failure.
+  isolation, and a clean boundary before durable post-commit processing.
 
-Exact recommended next task is **Task 5: Event processing and durable scoring**.
-It should claim persisted events, reuse `EventScorer`, persist score/failure state,
-and add Scheduler orchestration without holding a transaction during scoring. AI,
-generated-content persistence, publication persistence, and Telegram remain out of
-Task 5.
+Task 5 follows this ingestion boundary with durable event processing; its current
+implementation status is recorded below.
+
+### Task 5 implementation status
+
+Task 5 is complete:
+
+- `EventProcessingService` claims bounded batches in one short repository scope,
+  runs deterministic scoring after that scope closes, and persists each guarded
+  success or failure in a new short scope.
+- `MarketEventScoringAdapter` is the single temporary boundary from durable
+  `PriceDropMarketEvent` facts to the existing `EventScorer` input. Durable
+  identity and price-change calculations are not rebuilt.
+- Scoring retries use deterministic bounded exponential backoff: three attempts,
+  five-second initial delay, and five-minute maximum delay by default.
+- Active leases cannot be stolen. Expired `in_progress` claims are handled only
+  by the explicit, idempotent stale-claim recovery operation.
+- Completion requires the active claim token and optimistic version. Lost claims,
+  version conflicts, invalid states, missing rows, and persistence failures remain
+  typed application outcomes.
+- Safe persisted errors contain a category and exception class only; stack traces,
+  raw provider responses, and secrets are not stored.
+- `MarketEventScoringJob` and `StaleScoringClaimRecoveryJob` delegate bounded work
+  to the application service without constructing repositories, sessions, or a
+  scorer.
+- Memory tests, shared repository contracts, PostgreSQL integration tests, the
+  Scheduler demo, and a 14-check live isolated PostgreSQL verification pass.
+- Active ingestion no longer invokes the legacy immediate scoring/content path,
+  preventing a durable event from being scored before it is claimed.
+
+Exact recommended next task is **Task 6: Duplicate detector and legacy event
+cleanup**. Generated-content persistence, content processing, publication
+persistence, and delivery remain later Tasks 7-10.
 
 ### Current implementation facts
 
@@ -194,8 +225,10 @@ Task 5.
   contracts plus memory and PostgreSQL implementations available through
   `RepositoryProvider`.
 - `MarketplaceApplicationRunner` atomically commits offers, snapshots, and market
-  events before scoring and content generation.
-- Generated text and post-commit failures currently exist only in process memory.
+  events, then returns without invoking scoring or content generation.
+- `EventProcessingService` owns durable post-commit scoring and retry state.
+- Generated text is not part of the active ingestion or durable event-processing
+  path.
 - Scheduler jobs orchestrate services and maintain execution statistics in memory.
 - The active runtime uses the event repository. Generated-content and publication
   repositories remain standalone and are not in `RepositoryProvider`.
@@ -524,7 +557,9 @@ Scoring moves to a separate `EventProcessingService`:
 2. Commit the claim.
 3. Calculate the deterministic score outside a database transaction.
 4. Persist success or failure in a short transaction guarded by claim token and version.
-5. Create the first content-generation attempt when policy permits.
+
+Creation of content-generation attempts remains Task 7/8 work and is not part of
+the implemented scoring transaction.
 
 ### Content generation
 
@@ -648,10 +683,10 @@ Scheduler remains orchestration only. It does not detect price changes, calculat
 | Job | Application service invoked | EPIC 13 role |
 |---|---|---|
 | Marketplace ingestion jobs | Existing marketplace application runners | Persist offers, snapshots, and event candidates |
-| Pending event processing job | `EventProcessingService` | Claim and score persisted events |
+| Pending event processing job | `EventProcessingService` | Implemented: claim and score persisted events |
 | Content generation job | `ContentGenerationService` | Claim attempts and generate content |
 | Publication delivery job | `PublicationService` | Deliver approved content when an adapter exists |
-| Stale claim recovery job | `ClaimRecoveryService` | Recover expired work leases safely |
+| Stale scoring-claim recovery job | `EventProcessingService` | Implemented: recover expired scoring leases safely |
 
 The first EPIC 13 implementation does not need a Telegram adapter. Publication delivery remains inactive until a channel adapter is configured.
 
@@ -985,7 +1020,9 @@ Builds a typed event candidate from `PriceChange`, current offer context, and ex
 
 ### Event processing service
 
-Claims persisted events, runs the existing deterministic `EventScorer`, persists the score, and creates a content-generation attempt when policy permits.
+Claims persisted events, runs the existing deterministic `EventScorer` outside
+the claim transaction, and persists guarded scoring success or failure. It does
+not generate content or create publication work.
 
 ### Content generation service
 
@@ -997,7 +1034,9 @@ Claims publication rows, invokes a channel-neutral delivery port, and records pu
 
 ### Claim recovery service
 
-Recovers expired leases according to work type and ambiguity rules. It does not retry work directly.
+The implemented scoring recovery operation on `EventProcessingService` recovers
+expired scoring leases according to the persisted attempt budget. Recovery for
+future content and publication work remains unimplemented.
 
 ### Administrative lifecycle service
 
@@ -1106,8 +1145,8 @@ Use a typed summary containing:
   and runner result DTOs, provider wiring, focused memory/PostgreSQL integration
   tests, and live ingestion verification.
 - Acceptance: Confirmed. A detected transition commits one event; exact replay
-  creates no duplicate; event failure rolls back the run; scoring and content occur
-  only after commit.
+  creates no duplicate; event failure rolls back the run; ingestion performs no
+  scoring or content work.
 - Tests: Builder identity and immutability, first snapshot, increase, unchanged
   price, exact duplicate, reverse chronology, price drop, identity conflict,
   rollback, shared session, marketplace isolation, and post-commit failure.
@@ -1119,10 +1158,20 @@ Use a typed summary containing:
 
 ### Task 5: Event processing and durable scoring
 
-- Goal: Claim persisted events, reuse `EventScorer`, persist score and failure state, and create content work eligibility.
-- Likely files: new `app/services/event_processing.py`, event repository contracts/implementations, scheduler job wiring, and tests.
-- Acceptance: Scoring survives restart, retries are bounded, duplicate workers do not score the same claim concurrently, and score remains within 0 to 100.
-- Tests: Success, transient failure, permanent failure, lease expiry, lost token, disabled/rejected event, duplicate scheduler invocation.
+- Status: Completed.
+- Goal: Claim persisted events, reuse `EventScorer`, and persist score/failure
+  state. Content work remains deferred because generated-content persistence is
+  outside Task 5.
+- Files: `app/services/event_processing.py`, the explicit scoring adapter, focused
+  error types, lifecycle-specific repository extensions, Scheduler jobs,
+  configuration, memory/PostgreSQL tests, and live verification.
+- Acceptance: Confirmed. Scoring survives fresh sessions, retries are bounded,
+  duplicate workers do not score one event concurrently, active leases cannot be
+  stolen, stale claims recover explicitly, guarded completion rejects stale
+  workers, and scores remain within the existing scorer range.
+- Tests: Success, empty/blocked batches, transient and permanent failure,
+  exhaustion, lease expiry, idempotent recovery, stale token/version, rollback
+  during completion, concurrent workers, Scheduler delegation, and batch counts.
 - Migration impact: None beyond Task 3.
 - Risks: Current scorer accepts transient Pydantic `PriceDropEvent` with floats; conversion must preserve persisted Decimal facts and existing thresholds.
 - Dependencies: Task 4.
@@ -1275,19 +1324,11 @@ EPIC 13 is complete when all of the following are true:
 - No secrets, authorization headers, or provider credentials are persisted.
 - PostgreSQL end-to-end verification covers restart, duplicate, concurrency, rollback, and failure scenarios.
 
-## 23. Recommended First Implementation Task
+## 23. Recommended Next Implementation Task
 
-Start with **Task 1: Persistent event domain contracts**.
+Proceed with **Task 6: Duplicate detector and legacy event cleanup**.
 
-It is the smallest safe step because it has no migration, provider, scheduler, AI, or marketplace side effects. It establishes the event vocabulary, Decimal and UTC invariants, snapshot identity, lifecycle enums, and idempotency algorithm required by every later repository and migration.
-
-The first implementation commit should contain only:
-
-- Typed event envelope and price-drop payload.
-- Snapshot identity value object.
-- Event identity builder with `identity_version = 1`.
-- Lifecycle enums and typed add/claim result DTOs needed by the next repository task.
-- Focused unit tests for identity, Decimal, UTC, and payload invariants.
-- A compatibility adapter for the existing transient `PriceDropEvent` only if current imports require it.
-
-It must not contain SQLAlchemy models, Alembic migrations, repository implementations, scheduler jobs, AI calls, publication code, or cleanup of legacy modules.
+The task must redirect the remaining `PricePipeline` path to the active detector,
+verify all imports, and remove the duplicate detector and inactive event hierarchy
+only after behavior parity is confirmed. It must not change detector algorithms,
+event identity, scoring policy, repositories, generated content, or publication.

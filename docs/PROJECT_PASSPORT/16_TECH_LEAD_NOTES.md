@@ -24,13 +24,23 @@ This document captures architecture notes that are important for future reviews.
   FK behavior, commit/rollback, retries, Scheduler delegation, and UTC timestamps.
 - Durable market events now share the offer/snapshot ingestion transaction and use
   exact persistence-neutral snapshot identities.
-- The Pydantic `PriceDropEvent` is a temporary post-commit adapter only; the
+- The Pydantic `PriceDropEvent` is a temporary scoring/content adapter only; the
   durable `MarketEvent` owns identity and audit facts.
 - Exact snapshot replay is suppressed before event construction. Repository-level
   compatible replay remains `EXISTING`; immutable conflicts fail explicitly.
-- The next implementation task is durable event claiming and scoring. It must not
-  hold database locks while running scoring policy and must not add AI or
-  publication behavior.
+- Durable scoring uses three boundaries: short claim transaction, deterministic
+  scoring with no open repository scope, and short guarded completion/failure
+  transaction.
+- Expired `in_progress` claims are never silently stolen by normal claim polling;
+  only the explicit recovery operation invalidates and reschedules them.
+- Application retry policy owns backoff and failure classification. Repositories
+  expose only lifecycle-specific async transitions and typed outcomes.
+- Scheduler event jobs only delegate bounded service calls; persisted work-item
+  retries are separate from Scheduler invocation retries/statistics.
+- The exact next implementation task is Task 6: duplicate detector and legacy
+  event cleanup after targeted import and behavior-parity verification.
+- Generated-content persistence, publication persistence, AI execution, and
+  delivery remain outside the active durable event-processing flow.
 - GGSEL-specific price fields are not fully normalized into `ParsedOffer.price` and `ParsedOffer.currency` yet.
 
 ## Review Notes

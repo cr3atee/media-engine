@@ -34,7 +34,7 @@ from app.domain.market_events import (
     create_price_drop_market_event,
 )
 from app.domain.price_snapshot import PriceSnapshot
-from app.domain.processing import IdempotentCreateStatus
+from app.domain.processing import IdempotentCreateStatus, ProcessingError
 from app.models.market_event_record import MarketEventRecord
 from app.repositories.postgres import (
     PostgresMarketEventRepository,
@@ -297,6 +297,17 @@ async def verify_claims(
 
     first_token = first[0].claim.token
     async with session_factory() as session, session.begin():
+        repository = PostgresMarketEventRepository(session)
+        expired = await repository.list_expired_scoring_claims(lease_until, 1)
+        recovered = await repository.mark_scoring_failed(
+            expired[0].event.id,
+            expired[0].claim.token,
+            expired[0].event.version,
+            ProcessingError(code="lease_expired", summary="Lease expired"),
+            lease_until,
+            lease_until,
+        )
+    async with session_factory() as session, session.begin():
         reclaimed = await PostgresMarketEventRepository(
             session,
             claim_token_factory=SequentialTokenFactory(30_000),
@@ -307,8 +318,10 @@ async def verify_claims(
             1,
         )
     verification.check(
-        "expired lease is reclaimed with a new token",
-        len(reclaimed) == 1 and reclaimed[0].claim.token != first_token,
+        "expired lease is explicitly recovered before retry",
+        recovered.applied
+        and len(reclaimed) == 1
+        and reclaimed[0].claim.token != first_token,
     )
 
 

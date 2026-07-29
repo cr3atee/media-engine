@@ -136,7 +136,7 @@ class MarketEventRepositoryContract:
         )
         assert len(limited) == 2
 
-    def test_event_claim_is_exclusive_and_expired_lease_is_reclaimed(self) -> None:
+    def test_event_claim_is_exclusive_and_expiry_requires_recovery(self) -> None:
         repository = self.make_repository()
         event = make_event()
         self.add_event(repository, event)
@@ -154,7 +154,7 @@ class MarketEventRepositoryContract:
                 1,
             ),
         )
-        reclaimed = run_async(
+        still_unavailable = run_async(
             repository.claim_pending(
                 lease_until,
                 "worker-two",
@@ -168,11 +168,15 @@ class MarketEventRepositoryContract:
         assert first[0].event.version == 2
         assert first[0].event.scoring_attempt_count == 1
         assert unavailable == ()
-        assert len(reclaimed) == 1
-        assert reclaimed[0].claim.worker_id == "worker-two"
-        assert reclaimed[0].claim.token != first[0].claim.token
-        assert reclaimed[0].event.version == 3
-        assert reclaimed[0].event.scoring_attempt_count == 2
+        expired = run_async(
+            repository.list_expired_scoring_claims(lease_until, 1),
+        )
+
+        assert still_unavailable == ()
+        assert len(expired) == 1
+        assert expired[0].claim.token == first[0].claim.token
+        assert expired[0].event.version == 2
+        assert expired[0].event.scoring_attempt_count == 1
 
     def test_event_claim_and_version_conflicts_are_typed(self) -> None:
         repository = self.make_repository()
@@ -230,6 +234,7 @@ class MarketEventRepositoryContract:
                 first.claim.token,
                 first.event.version,
                 ProcessingError(code="temporary", summary="Temporary failure"),
+                NOW + timedelta(minutes=10, seconds=30),
                 retry_at,
             ),
         )

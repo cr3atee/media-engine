@@ -2,8 +2,10 @@
 
 ## Status
 
-PostgreSQL persistence, the EPIC 12 runtime, and EPIC 13 Task 4 transactional
-market-event ingestion are live-verified against isolated PostgreSQL 17.10.
+PostgreSQL persistence, the EPIC 12 runtime, EPIC 13 Task 4 transactional
+market-event ingestion, and Task 5 durable scoring are live-verified. Task 5 was
+verified against an isolated PostgreSQL 16 container without using a project or
+production database.
 
 ## Verified Schema
 
@@ -53,19 +55,28 @@ market-event ingestion are live-verified against isolated PostgreSQL 17.10.
 - Focused PostgreSQL tests pass for concurrent creation, identity conflict,
   `FOR UPDATE SKIP LOCKED`, one-event contention, lease recovery, stale versions,
   outer rollback, and exact precision.
+- Durable scoring claims only pending/retry-eligible rows. Active leases block
+  other workers, while expired claims are exposed only to explicit recovery.
+- Guarded scoring completion persists score and success state atomically and
+  rejects stale claim tokens and optimistic versions.
+- Transient retry state, terminal permanent failure, UTC timestamps, and score
+  precision survive fresh sessions.
 
 ## Verified Transactions
 
 - One repository scope supplies one `AsyncSession` to all repositories.
 - Repositories do not commit independently.
 - Event insertion and claim changes roll back with the caller-owned transaction.
-- Event claims lock only the selection/update transaction; scoring work is not
-  performed while the row lock is held.
+- Event claims lock only the selection/update transaction; the repository scope
+  is closed before deterministic scoring starts.
+- Each scoring completion or failure uses a new short transaction. A completion
+  rollback cannot falsely mark the event scored; lease recovery can make the
+  retained claim retryable.
 - Successful runner scope exit commits once.
 - Offer, snapshot, deterministic processing, and commit failures roll back the
   complete run and skip post-commit work.
-- Content failure after commit leaves persistence durable and is represented in
-  `MarketplaceRunResult`.
+- Active ingestion ends after durable event commit and does not invoke the legacy
+  in-memory scoring/content path.
 - Active ingestion inserts offers, exact snapshots, and deterministic market
   events in one shared-session transaction.
 - First observations, increases, unchanged prices, reverse chronology, and exact
@@ -78,10 +89,10 @@ market-event ingestion are live-verified against isolated PostgreSQL 17.10.
 
 ## Remaining Limits
 
-- Event scoring status is not yet updated by the active runtime; scoring remains a
-  temporary post-commit operation.
+- Durable event scoring is implemented, but it is not yet composed into a single
+  production process bootstrap with marketplace ingestion.
 - Generated-content and publication state are not persisted.
-- Post-commit publication retry is not implemented.
+- Content-generation and publication retries are not implemented.
 - Scheduler overlap and multi-process coordination are not implemented.
 - Null external IDs remain intentionally append-only.
 - Legacy foundation tables remain present and inactive.
@@ -91,4 +102,8 @@ EPIC 13 Task 3 evidence is implemented by
 `verify_epic13_market_events_postgres.py` and the shared/focused market-event
 repository tests. EPIC 13 Task 4 ingestion evidence is implemented by
 `verify_epic13_ingestion_postgres.py` and the focused marketplace event
-integration tests.
+integration tests. EPIC 13 Task 5 evidence is implemented by
+`verify_epic13_event_processing_postgres.py`: all 14 live checks pass, covering
+durable success, fresh sessions, duplicate suppression, transaction boundaries,
+concurrency, retry, active leases, recovery, stale tokens, terminal failure, and
+Scheduler delegation.

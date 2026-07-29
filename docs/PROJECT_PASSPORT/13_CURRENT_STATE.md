@@ -11,11 +11,12 @@ Foundation is complete.
 The current implementation includes the first marketplace processing path,
 async memory and PostgreSQL repositories, deterministic matching/comparison,
 repository-backed price history, transaction-bounded application execution,
-post-commit content generation, and Scheduler orchestration.
+durable post-commit event scoring, and Scheduler orchestration.
 
 EPIC 12 is live-verified and complete against PostgreSQL 17.10.
-EPIC 13 Task 4 is complete: deterministic price-drop events now persist atomically
-with their source snapshot transitions.
+EPIC 13 Task 5 is complete: deterministic price-drop events persist atomically
+with source snapshot transitions and are scored through durable claims, retries,
+and stale-lease recovery.
 
 ## Active Capabilities
 
@@ -36,7 +37,7 @@ with their source snapshot transitions.
 - Price-change detection reads the latest persisted snapshot before storing and
   evaluating the current snapshot.
 - `MarketplaceApplicationRunner` keeps HTTP/normalization before the database
-  transaction and content generation after commit.
+  transaction and returns after the durable ingestion commit.
 - One PostgreSQL repository scope shares one `AsyncSession` across all
   repositories and owns commit/rollback.
 - Database constraints protect stable offer identity, exact snapshot identity,
@@ -52,15 +53,25 @@ with their source snapshot transitions.
   existing outcomes, event IDs, scored events, and post-commit errors.
 - Live PostgreSQL ingestion verification confirms atomic commit/rollback,
   deterministic identity, replay suppression, marketplace isolation, and durable
-  event retention after content failure.
+  event retention across the ingestion/application boundary.
+- `EventProcessingService` claims bounded batches, closes the claim transaction
+  before scoring, and persists guarded success/failure in follow-up transactions.
+- Active leases block competing workers; expired claims are recovered explicitly
+  and idempotently according to the durable attempt budget.
+- Transient scoring failures retry with bounded exponential backoff; invalid
+  inputs and exhausted attempts reach explicit terminal states.
+- Scheduler scoring and recovery jobs delegate only to the application service.
+- A 14-check live isolated PostgreSQL verification confirms fresh-session
+  durability, concurrency, rollback safety, retry/recovery, stale-token rejection,
+  terminal failure, and Scheduler delegation.
 
 ## Known Gaps
 
 - GGSEL extracted price fields are preserved in raw `extra` data, but full price normalization from marketplace-specific fields is not complete.
 - Snapshot creation is skipped when parsed offers do not contain normalized price and currency.
-- Event scoring state is not updated by the active runtime.
 - Generated content and publication attempts are not persisted.
-- Post-commit content failures cannot be resumed reliably.
+- Content generation is not invoked by the active ingestion or durable scoring
+  path and cannot yet be resumed from persisted work.
 - Scheduler has no explicit overlap or multi-process coordination policy.
 - No Telegram delivery is implemented.
 - No production AI provider is wired into the marketplace pipeline.
@@ -75,5 +86,8 @@ Current architecture separates:
 - deterministic matching;
 - pipeline orchestration.
 
-EPIC 13 Task 4 adds focused memory/PostgreSQL tests and a 12-check live ingestion
-verification. Full-project legacy/demo quality debt remains outside this task.
+EPIC 13 Task 5 adds focused memory/PostgreSQL/Scheduler tests and a 14-check live
+event-processing verification. The exact next task is Task 6: redirect remaining
+imports to the active price-change/event path, verify parity, then remove duplicate
+legacy detector/event modules. Full-project legacy/demo quality debt remains
+outside this task.

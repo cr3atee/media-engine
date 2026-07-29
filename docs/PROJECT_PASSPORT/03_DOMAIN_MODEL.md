@@ -85,8 +85,8 @@ It contains previous/current prices, difference, percentage, drop flag, marketpl
 
 ## PriceDropEvent
 
-`PriceDropEvent` is the temporary Pydantic application DTO used by the existing
-post-commit scoring and content flow.
+`PriceDropEvent` is the temporary Pydantic application DTO expected by the
+existing deterministic scorer and prompt/content components.
 
 It includes product title, marketplace, old price, new price, currency, and computed discount percentage.
 
@@ -102,8 +102,19 @@ facts. Title, URL, canonical product, score, and generated content are excluded.
 The PostgreSQL repository resolves the exact snapshot rows internally, so ORM IDs
 do not leak into the domain.
 
-Only a newly created durable event is adapted to `PriceDropEvent` after commit.
-Scoring state and generated content are not yet persisted.
+`MarketEventScoringAdapter` adapts a claimed durable event to an enriched
+temporary `PriceDropEvent` boundary while preserving external ID, URL, Decimal
+discount percentage, and UTC timestamps. Persisted scoring lifecycle fields
+include status, score, attempts, retry time, guarded claim metadata, safe error,
+and optimistic version. Generated content is not yet persisted.
+
+## Event Processing Results
+
+`EventProcessingItemResult`, `EventProcessingBatchResult`, and
+`StaleClaimRecoveryResult` are immutable application DTOs. They expose durable
+processing counts, score/state, retry eligibility, and typed conflict/error
+categories without exposing ORM objects, sessions, claim tokens, or raw database
+exceptions.
 
 ## Matching Models
 

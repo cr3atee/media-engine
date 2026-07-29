@@ -364,7 +364,6 @@ def test_successful_run_orders_phases_and_reports_counts() -> None:
         "snapshot_preparation",
         "transaction_enter",
         "transaction_commit",
-        "content",
     ]
     assert scope.state == ScopeState(entered=1, committed=1, rolled_back=0)
     assert result.offers_received == 1
@@ -376,8 +375,8 @@ def test_successful_run_orders_phases_and_reports_counts() -> None:
     assert result.events_created == 1
     assert result.events_existing == 0
     assert len(result.event_ids) == 1
-    assert result.events_scored == 1
-    assert result.content_items_generated == 1
+    assert result.events_scored == 0
+    assert result.content_items_generated == 0
     assert result.persistence_committed is True
     assert result.errors == ()
 
@@ -450,7 +449,7 @@ def test_deterministic_processing_failure_rolls_back() -> None:
     assert content.events == []
 
 
-def test_content_failure_is_reported_after_commit() -> None:
+def test_ingestion_does_not_invoke_legacy_content_processing() -> None:
     provider = create_memory_provider()
     run_async(
         provider.price_history.add(
@@ -476,8 +475,9 @@ def test_content_failure_is_reported_after_commit() -> None:
     assert scope.state == ScopeState(entered=1, committed=1, rolled_back=0)
     assert result.persistence_committed is True
     assert result.content_items_generated == 0
-    assert len(result.errors) == 1
-    assert "Post-commit content failed" in result.errors[0]
+    assert result.events_scored == 0
+    assert result.errors == ()
+    assert content.events == []
     assert len(run_async(provider.offers.list_all())) == 1
     assert len(run_async(provider.price_history.get_history("ggsel", "1001"))) == 2
     assert len(run_async(provider.events.list_pending(datetime.now(UTC), 10))) == 1

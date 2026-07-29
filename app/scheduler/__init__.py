@@ -5,8 +5,10 @@ from app.scheduler.jobs import (
     GGSELJob,
     JobExecutionState,
     JobExecutionStatus,
+    MarketEventScoringJob,
     MarketplaceJob,
     PlayerokJob,
+    StaleScoringClaimRecoveryJob,
 )
 from app.scheduler.service import (
     JobRetrySettings,
@@ -23,7 +25,9 @@ __all__ = [
     "JobRetrySettings",
     "JobRuntimeStatistics",
     "JobScheduleStatus",
+    "MarketEventScoringJob",
     "MarketplaceJob",
     "PlayerokJob",
     "SchedulerService",
+    "StaleScoringClaimRecoveryJob",
 ]

@@ -50,6 +50,23 @@ class SchedulerSettings(BaseSettings):
     timezone: str = "UTC"
 
 
+class EventProcessingSettings(BaseSettings):
+    model_config = SettingsConfigDict(
+        env_file=".env",
+        env_file_encoding="utf-8",
+        env_prefix="EVENT_PROCESSING_",
+        extra="ignore",
+    )
+
+    scoring_batch_size: int = Field(default=50, gt=0)
+    scoring_lease_seconds: int = Field(default=60, gt=0)
+    scoring_maximum_attempts: int = Field(default=3, gt=0)
+    scoring_initial_retry_seconds: int = Field(default=5, gt=0)
+    scoring_maximum_retry_seconds: int = Field(default=300, gt=0)
+    stale_claim_recovery_batch_size: int = Field(default=50, gt=0)
+    stale_claim_recovery_interval_seconds: int = Field(default=30, gt=0)
+
+
 class LoggingSettings(BaseSettings):
     model_config = SettingsConfigDict(
         env_file=".env",
@@ -72,6 +89,9 @@ class Settings(BaseSettings):
     telegram: TelegramSettings = Field(default_factory=TelegramSettings)
     openrouter: OpenRouterSettings = Field(default_factory=OpenRouterSettings)
     scheduler: SchedulerSettings = Field(default_factory=SchedulerSettings)
+    event_processing: EventProcessingSettings = Field(
+        default_factory=EventProcessingSettings
+    )
     logging: LoggingSettings = Field(default_factory=LoggingSettings)
 
 

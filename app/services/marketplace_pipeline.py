@@ -343,7 +343,6 @@ class MarketplacePipeline:
         parsed_offers = await self.fetch_and_normalize(url)
         prepared = self.prepare_offers(parsed_offers)
         transactional = await self.process_with_repositories(prepared, provider)
-        await self.process_after_commit(transactional.events_for_post_commit)
         return list(transactional.comparison_results)
 
     async def compare_offers(

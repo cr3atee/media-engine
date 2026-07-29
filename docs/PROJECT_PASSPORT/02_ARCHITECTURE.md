@@ -31,9 +31,14 @@ Current marketplace flow:
 9. Price drops are converted into deterministic immutable market events.
 10. Events are inserted idempotently through `RepositoryProvider.events` in the
     same transaction as offers and snapshots.
-11. After commit, newly created durable events are adapted to the legacy
-    `PriceDropEvent` scoring/content DTO.
-12. Events are scored and content is generated outside the database transaction.
+11. Ingestion commits and returns with the durable event in `pending` scoring
+    state.
+12. `EventProcessingService` claims a bounded event batch in a short transaction.
+13. The durable event is adapted to the existing scorer input and scored after
+    the claim transaction closes.
+14. Scoring success/failure is persisted in a new short transaction guarded by
+    claim token and optimistic version.
+15. A separate bounded recovery operation handles expired scoring claims.
 
 ## Matching Flow
 
@@ -66,7 +71,8 @@ providers both include event repositories. Production-shaped execution
 uses `MarketplaceApplicationRunner` with one repository scope, one shared
 `AsyncSession`, and one transaction for a bounded marketplace run. HTTP and
 normalization execute before that scope; offer, snapshot, and durable event writes
-execute inside it; scoring and content execute after a successful commit.
+execute inside it. Durable scoring is a separate claim-based application-service
+flow; generated content is not part of active ingestion or scoring.
 
 ## Boundaries
 
@@ -76,5 +82,6 @@ execute inside it; scoring and content execute after a successful commit.
 - Matching does not use AI, embeddings, or external services.
 - Marketplace pipeline persists parsed offers, price snapshots, and deterministic
   market events only through `RepositoryProvider`.
-- Scheduler jobs delegate to application runners and do not own repositories,
-  sessions, or business logic.
+- Scheduler jobs delegate to application services and do not own repositories,
+  sessions, scoring policy, or business logic.
+- Scoring never runs while a claim repository scope or row lock remains open.

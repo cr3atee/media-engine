@@ -56,6 +56,14 @@ class MarketEventRepository(BaseRepository):
         """Claim eligible scoring work without owning transaction commit."""
 
     @abstractmethod
+    async def list_expired_scoring_claims(
+        self,
+        now: datetime,
+        limit: int,
+    ) -> Sequence[ClaimedMarketEvent]:
+        """Reserve expired scoring claims for bounded recovery."""
+
+    @abstractmethod
     async def mark_scored(
         self,
         event_id: UUID,
@@ -73,6 +81,7 @@ class MarketEventRepository(BaseRepository):
         claim_token: UUID,
         expected_version: int,
         error: ProcessingError,
+        failed_at: datetime,
         next_retry_at: datetime | None,
     ) -> StateTransitionResult:
         """Record a scoring failure and optional retry eligibility."""

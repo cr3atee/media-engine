@@ -26,6 +26,7 @@ from app.domain.market_events import (
 from app.domain.price_snapshot import PriceSnapshot
 from app.domain.processing import (
     IdempotentCreateStatus,
+    ProcessingError,
     StateTransitionOutcome,
 )
 from app.models.market_event_record import MarketEventRecord
@@ -223,7 +224,7 @@ def test_skip_locked_one_event_contention_has_one_winner() -> None:
     assert run_async(contend()) == (1, 0)
 
 
-def test_expired_lease_is_reclaimed_with_new_token() -> None:
+def test_expired_lease_requires_explicit_recovery_before_retry() -> None:
     run_async(_reset_database())
     event = make_event()
     run_async(_seed_snapshots(event))
@@ -247,6 +248,23 @@ def test_expired_lease_is_reclaimed_with_new_token() -> None:
     first_token, first_version = run_async(
         claim(claimed_at, "worker-one", lease_until, 73_000),
     )
+
+    async def recover() -> None:
+        async with _session_factory()() as session, session.begin():
+            repository = PostgresMarketEventRepository(session)
+            expired = await repository.list_expired_scoring_claims(lease_until, 1)
+            assert expired[0].claim.token == first_token
+            result = await repository.mark_scoring_failed(
+                event.id,
+                expired[0].claim.token,
+                expired[0].event.version,
+                ProcessingError(code="lease_expired", summary="Lease expired"),
+                lease_until,
+                lease_until,
+            )
+            assert result.applied
+
+    run_async(recover())
     second_token, second_version = run_async(
         claim(
             lease_until,
@@ -258,7 +276,7 @@ def test_expired_lease_is_reclaimed_with_new_token() -> None:
 
     assert second_token != first_token
     assert first_version == 2
-    assert second_version == 3
+    assert second_version == 4
 
 
 def test_stale_optimistic_version_is_explicit() -> None:
