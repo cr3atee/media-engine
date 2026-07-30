@@ -77,6 +77,19 @@ class PublicationRecoveryRunner(Protocol):
         """Recover one bounded batch of expired publication claims."""
 
 
+class PublicationDeliveryRunner(Protocol):
+    """Application boundary for bounded publication delivery."""
+
+    async def process_batch(
+        self,
+        *,
+        worker_id: str,
+        limit: int,
+        now: datetime,
+    ) -> object:
+        """Process one bounded publication-delivery batch."""
+
+
 class JobExecutionState(StrEnum):
     """Possible scheduler job execution states."""
 
@@ -335,6 +348,33 @@ class StalePublicationClaimRecoveryJob(BaseJob):
     def run(self) -> Awaitable[object]:
         """Delegate one bounded stale publication-claim recovery batch."""
         return self._service.recover_stale_publication_claims(
+            limit=self._batch_size,
+            now=self._clock(),
+        )
+
+
+class PendingPublicationDeliveryJob(BaseJob):
+    """Invoke bounded durable publication delivery without owning its policy."""
+
+    def __init__(
+        self,
+        service: PublicationDeliveryRunner,
+        *,
+        worker_id: str,
+        batch_size: int,
+        clock: Callable[[], datetime] = _utc_now,
+    ) -> None:
+        """Configure delivery delegation without repository or adapter logic."""
+        super().__init__("pending-publication-delivery")
+        self._service = service
+        self._worker_id = worker_id
+        self._batch_size = batch_size
+        self._clock = clock
+
+    def run(self) -> Awaitable[object]:
+        """Delegate one bounded delivery batch to the application service."""
+        return self._service.process_batch(
+            worker_id=self._worker_id,
             limit=self._batch_size,
             now=self._clock(),
         )

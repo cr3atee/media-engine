@@ -1,4 +1,4 @@
-from pydantic import Field, SecretStr
+from pydantic import Field, SecretStr, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -28,6 +28,39 @@ class TelegramSettings(BaseSettings):
     request_timeout_seconds: float = Field(default=10.0, gt=0)
     disable_web_page_preview: bool = True
     maximum_message_length: int = Field(default=4096, ge=1, le=4096)
+    delivery_enabled: bool = False
+    dry_run: bool = True
+    allow_live_delivery: bool = False
+    test_chat_id: str = ""
+    allowed_destination_ids: list[str] = Field(default_factory=list)
+    delivery_batch_size: int = Field(default=10, gt=0)
+    publication_lease_seconds: int = Field(default=60, gt=0)
+    maximum_attempts: int = Field(default=5, gt=0)
+    initial_retry_seconds: int = Field(default=30, gt=0)
+    maximum_retry_seconds: int = Field(default=1800, gt=0)
+
+    @model_validator(mode="after")
+    def validate_delivery_safety(self) -> "TelegramSettings":
+        if self.maximum_retry_seconds < self.initial_retry_seconds:
+            msg = "Telegram maximum retry delay must not be below initial retry delay."
+            raise ValueError(msg)
+        if (
+            self.delivery_enabled
+            and self.publication_lease_seconds <= self.request_timeout_seconds
+        ):
+            msg = "Telegram publication lease must exceed request timeout."
+            raise ValueError(msg)
+        if self.delivery_enabled and not self.dry_run:
+            if not self.allow_live_delivery:
+                msg = "Live Telegram delivery requires TELEGRAM_ALLOW_LIVE_DELIVERY."
+                raise ValueError(msg)
+            if not self.bot_token.get_secret_value().strip():
+                msg = "Live Telegram delivery requires TELEGRAM_BOT_TOKEN."
+                raise ValueError(msg)
+            if not self.allowed_destination_ids:
+                msg = "Live Telegram delivery requires allowlisted destinations."
+                raise ValueError(msg)
+        return self
 
 
 class OpenRouterSettings(BaseSettings):

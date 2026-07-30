@@ -6,6 +6,16 @@ This document records notable Project Passport updates.
 
 ## Unreleased
 
+- Implemented EPIC 14 Task 2 durable Telegram publication delivery
+  orchestration without live sending.
+- Added generic channel-scoped publication claims and attempt-budget filtering
+  for memory and PostgreSQL publication repositories.
+- Added `PublicationDeliveryService` with short claim/read/completion scopes,
+  retry/backoff policy, success, permanent failure, retryable failure, ambiguous
+  outcome handling, and read-only dry-run.
+- Added `PendingPublicationDeliveryJob` as an orchestration-only Scheduler job.
+- Added focused delivery-service tests, PostgreSQL-guarded verification, and
+  documentation updates for live Task 3 requirements.
 - Completed final EPIC 13 production-shaped verification against isolated
   PostgreSQL 17.10: 83 end-to-end checks passed from ingestion through durable
   publication intent.

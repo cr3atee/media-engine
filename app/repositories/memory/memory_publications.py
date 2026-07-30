@@ -137,6 +137,8 @@ class MemoryPublicationRepository(PublicationRepository):
         worker_id: str,
         lease_until: datetime,
         limit: int,
+        channel: str | None = None,
+        maximum_attempts: int | None = None,
     ) -> Sequence[ClaimedPublication]:
         """Claim due deliveries and quarantine expired unknown outcomes."""
         now, lease_until, worker_id = _validate_claim_request(
@@ -144,13 +146,16 @@ class MemoryPublicationRepository(PublicationRepository):
             lease_until,
             worker_id,
         )
+        channel = _normalize_optional_channel(channel)
+        _validate_maximum_attempts(maximum_attempts)
         _validate_limit(limit)
         self._mark_expired_claims_ambiguous(now)
         eligible = sorted(
             (
                 publication
                 for publication in self._publications_by_id.values()
-                if _is_publication_claimable(publication, now)
+                if _is_publication_claimable(publication, now, maximum_attempts)
+                and _matches_channel(publication, channel)
             ),
             key=_publication_processing_order,
         )[:limit]
@@ -411,7 +416,13 @@ class MemoryPublicationRepository(PublicationRepository):
         self._publication_ids_by_key[publication.idempotency_key] = publication.id
 
 
-def _is_publication_claimable(publication: Publication, now: datetime) -> bool:
+def _is_publication_claimable(
+    publication: Publication,
+    now: datetime,
+    maximum_attempts: int | None = None,
+) -> bool:
+    if maximum_attempts is not None and publication.attempt_count >= maximum_attempts:
+        return False
     scheduled = publication.scheduled_at is None or publication.scheduled_at <= now
     if not scheduled:
         return False
@@ -422,6 +433,20 @@ def _is_publication_claimable(publication: Publication, now: datetime) -> bool:
             publication.next_retry_at is not None and publication.next_retry_at <= now
         )
     return False
+
+
+def _matches_channel(publication: Publication, channel: str | None) -> bool:
+    return channel is None or publication.channel == channel
+
+
+def _normalize_optional_channel(channel: str | None) -> str | None:
+    if channel is None:
+        return None
+    channel = channel.strip().lower()
+    if not channel:
+        msg = "Publication channel filter must not be empty."
+        raise ValueError(msg)
+    return channel
 
 
 def _publication_processing_order(
@@ -512,6 +537,12 @@ def _validate_claim_request(
 def _validate_limit(limit: int) -> None:
     if limit < 0:
         msg = "Repository limit must not be negative."
+        raise ValueError(msg)
+
+
+def _validate_maximum_attempts(maximum_attempts: int | None) -> None:
+    if maximum_attempts is not None and maximum_attempts < 1:
+        msg = "Maximum publication attempts must be positive."
         raise ValueError(msg)
 
 

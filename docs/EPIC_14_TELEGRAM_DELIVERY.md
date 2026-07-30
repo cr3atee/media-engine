@@ -121,6 +121,61 @@ Makefile. The full verification therefore used
 `uv run mypy --explicit-package-bases app scripts tests` and did not perform an
 unrelated packaging cleanup.
 
+## Task 2 Implementation Status
+
+**Status: implemented in code and verified offline without Telegram network.**
+
+Implemented boundaries:
+
+- `PublicationRepository.claim_pending()` now supports an optional generic
+  `channel` filter and an optional attempt budget while preserving existing
+  callers;
+- memory and PostgreSQL publication repositories apply the same channel and
+  attempt-budget semantics;
+- PostgreSQL applies the channel predicate before `FOR UPDATE SKIP LOCKED`
+  selection;
+- `PublicationDeliveryService` claims one Telegram publication at a time,
+  reloads durable content/event data, formats the message, calls the adapter
+  outside repository scopes, and completes success/failure/ambiguous outcomes in
+  short guarded transactions;
+- successful delivery persists `external_message_id` and `published_at`;
+- retryable outcomes persist sanitized errors and bounded retry timestamps;
+- Telegram `429` honors provider `retry_after` and stops the current batch;
+- permanent failures are terminal and do not schedule retry;
+- ambiguous outcomes are terminal for automatic delivery and are excluded from
+  normal pending claims;
+- dry-run loads one explicit publication, validates and renders it, calls no
+  adapter, and performs zero durable mutation;
+- `PendingPublicationDeliveryJob` delegates only to
+  `PublicationDeliveryService.process_batch()`;
+- Telegram delivery settings now include disabled-by-default delivery flags,
+  dry-run default, allowlist, batch size, lease duration, attempt budget, and
+  retry delays;
+- `scripts/verify_epic14_delivery_service_postgres.py` provides the offline
+  PostgreSQL/mock-Telegram verification entry point and refuses to fabricate a
+  PostgreSQL result when no isolated `EPIC14_DATABASE_URL` is configured.
+
+Verification evidence in this environment:
+
+- focused repository, service, scheduler, and Telegram tests passed;
+- Task 1 offline adapter verifier still passed `16/16` checks;
+- Task 2 PostgreSQL verifier guard ran and reported that
+  `EPIC14_DATABASE_URL` is required for live isolated PostgreSQL verification;
+- full MyPy passed with explicit package bases for 226 source files;
+- full Pytest passed with 264 tests and 54 environment/integration skips;
+- Ruff check and Ruff format check passed for all touched Python files.
+
+Remaining Task 3 scope:
+
+- run the guarded live test-chat verification with explicit
+  `TELEGRAM_DELIVERY_ENABLED`, `TELEGRAM_ALLOW_LIVE_DELIVERY`,
+  allowlisted test chat, non-empty token, `--live`, and exact chat confirmation;
+- send exactly one marked test message to the allowlisted test chat;
+- verify Telegram's real Bot API response, stored message ID, and durable
+  publication state;
+- keep production delivery disabled by default and do not introduce inbound bot
+  update handling.
+
 ## Design Principles
 
 1. A Telegram adapter sends one prepared message and reports one typed outcome.
@@ -894,25 +949,25 @@ must never fall back to a production destination.
 - [x] One long-lived async HTTP client is reused per adapter instance.
 - [x] Existing retrying `HttpClient` is not used for `sendMessage`.
 - [x] Adapter performs one request and no retries.
-- [ ] Delivery service owns lifecycle and retry decisions.
-- [ ] Network calls occur outside database transactions.
-- [ ] Pending claims are filtered by channel before locking.
-- [ ] Memory and PostgreSQL repository behavior remains equivalent.
+- [x] Delivery service owns lifecycle and retry decisions.
+- [x] Network calls occur outside database transactions.
+- [x] Pending claims are filtered by channel before locking.
+- [x] Memory and PostgreSQL repository behavior remains equivalent.
 - [x] Plain text is the default and rich markup is disabled.
 - [x] Empty and oversized messages are rejected before network access.
 - [x] Successful responses verify destination and message ID.
-- [ ] Success persists `external_message_id` and `published_at`.
+- [x] Success persists `external_message_id` and `published_at`.
 - [x] Adapter returns the confirmed external message ID without persisting it.
 - [x] Retryable, permanent, and ambiguous outcomes are distinct.
 - [x] Adapter parses and returns `429 retry_after` without calculating policy.
 - [x] Adapter never retries ambiguous outcomes or any other outcome.
-- [ ] Stale delivery claims recover conservatively to `ambiguous`.
-- [ ] Active claim and version protections remain enforced.
-- [ ] Dry-run is read-only and does not claim publications.
-- [ ] Live delivery is disabled by default.
+- [x] Stale delivery claims recover conservatively to `ambiguous`.
+- [x] Active claim and version protections remain enforced.
+- [x] Dry-run is read-only and does not claim publications.
+- [x] Live delivery is disabled by default.
 - [ ] Live test mode requires an allowlisted exact test chat and CLI confirmation.
 - [x] Tokens, token-bearing URLs, and raw responses are absent from logs/errors.
-- [ ] Scheduler job contains orchestration only.
+- [x] Scheduler job contains orchestration only.
 - [x] Offline verification performs no external network request.
 - [ ] Optional live verification sends exactly one marked test message.
 - [x] No content-generation, event, matching, or comparator behavior changed.
@@ -920,15 +975,14 @@ must never fall back to a production destination.
 
 ## 26. Recommended Next Implementation Task
 
-Implement **Task 2 - Durable delivery orchestration**.
+Implement **Task 3 - Guarded live test-chat verification**.
 
-Add optional generic channel filtering to publication claims in the repository
-contract plus memory/PostgreSQL implementations. Then implement
-`PublicationDeliveryService` with short claim/read/completion scopes, eligibility
-checks, durable retry and ambiguity transitions, and typed batch results. Add
-`PendingPublicationDeliveryJob`, reuse existing stale-publication recovery, and
-extend offline verification through the durable lifecycle. Do not add live
-test-chat delivery in Task 2.
+Use the durable `PublicationDeliveryService` and `PendingPublicationDeliveryJob`
+without changing their business behavior. Add only the explicitly gated live
+verification path for one allowlisted test chat, require all live-send safety
+flags and exact chat confirmation, persist the returned Telegram message ID, and
+document real Bot API observations. Production delivery must remain disabled by
+default.
 
 ## References
 

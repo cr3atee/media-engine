@@ -18,6 +18,10 @@ EPIC 13 is verified and complete: deterministic price-drop events persist
 atomically, are scored through durable claims, and produce persistent immutable
 content attempts plus idempotent channel-independent publication intents. The
 complete lifecycle passed 83 named checks on PostgreSQL 17.10.
+EPIC 14 Task 2 is implemented: Telegram publication claims are channel-scoped,
+delivery orchestration is durable, dry-run is read-only, Scheduler delegation is
+available, and live Telegram sending remains disabled until guarded Task 3
+verification.
 
 ## Active Capabilities
 
@@ -77,6 +81,18 @@ complete lifecycle passed 83 named checks on PostgreSQL 17.10.
   protected ambiguous outcomes and are not automatically retried.
 - Scheduler jobs delegate pending content generation and stale
   content/publication recovery to application services only.
+- `PublicationRepository.claim_pending()` supports generic channel filtering and
+  an attempt budget for delivery workers.
+- `PublicationDeliveryService` claims one Telegram publication at a time, loads
+  durable generated content and event data, formats a plain-text message, calls
+  the delivery adapter outside repository scopes, and persists success,
+  retryable failure, permanent failure, or ambiguous outcome in guarded
+  completion scopes.
+- Read-only dry-run can render and validate one explicit publication without
+  creating a claim, incrementing attempts, changing retry state, or calling
+  Telegram.
+- `PendingPublicationDeliveryJob` delegates bounded publication delivery to the
+  service and contains no repository, formatting, adapter, or retry logic.
 - Revision `0008_content_publications` upgrades, downgrades to `0007`, re-applies,
   and matches SQLAlchemy metadata.
 - An 18-check live isolated PostgreSQL verification confirms committed claims,
@@ -96,8 +112,8 @@ complete lifecycle passed 83 named checks on PostgreSQL 17.10.
 - Ingestion, scoring, and durable content processing are separate services and
   still require production process/bootstrap configuration.
 - Scheduler has no explicit overlap or multi-process coordination policy.
-- Publication delivery is not implemented; persisted publication rows are future
-  delivery intents only.
+- Live Telegram delivery is not yet verified; Task 2 uses offline mock transport
+  and leaves production sending disabled by default.
 - No production AI provider is wired into the marketplace pipeline.
 
 ## Architecture Review
@@ -112,5 +128,6 @@ Current architecture separates:
 
 EPIC 13 final verification adds one production-shaped 83-check PostgreSQL path
 across ingestion, scoring, content, publication intent, restart, overlap,
-rollback, Scheduler delegation, and audit evidence. Actual Telegram delivery
-remains a separate EPIC and is the recommended next implementation step.
+rollback, Scheduler delegation, and audit evidence. EPIC 14 Task 2 connects the
+Telegram adapter to durable publication state offline. The remaining delivery
+step is guarded live test-chat verification, not production broadcast.

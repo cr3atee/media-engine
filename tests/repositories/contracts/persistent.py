@@ -845,6 +845,94 @@ class PublicationRepositoryContract:
             )
         ) == (early.id, late_low.id, late_high.id)
 
+    def test_publication_claim_can_filter_by_channel_and_attempt_budget(self) -> None:
+        repository = self.make_repository()
+        telegram = make_publication_command(
+            number=1,
+            publication_id=uuid_for(321),
+            content_id=uuid_for(211),
+            channel="telegram",
+            destination_key="-100111",
+        )
+        email = make_publication_command(
+            number=2,
+            publication_id=uuid_for(322),
+            content_id=uuid_for(212),
+            channel="email",
+            destination_key="email-channel",
+        )
+        exhausted = make_publication_command(
+            number=3,
+            publication_id=uuid_for(323),
+            content_id=uuid_for(213),
+            channel="telegram",
+            destination_key="-100222",
+            scheduled_at=NOW + timedelta(minutes=20),
+        )
+        for command in (telegram, email, exhausted):
+            run_async(repository.create_idempotently(command))
+
+        claimed_once = run_async(
+            repository.claim_pending(
+                NOW + timedelta(minutes=10),
+                "worker-one",
+                NOW + timedelta(minutes=11),
+                1,
+                channel="telegram",
+                maximum_attempts=5,
+            )
+        )[0]
+        failed = run_async(
+            repository.mark_failed(
+                telegram.id,
+                claimed_once.claim.token,
+                claimed_once.publication.version,
+                ProcessingError(code="transport", summary="Known failure"),
+                NOW + timedelta(minutes=10, seconds=10),
+                NOW + timedelta(minutes=11),
+            )
+        )
+        assert failed.outcome is StateTransitionOutcome.APPLIED
+
+        for attempt in range(2, 6):
+            retry_time = NOW + timedelta(minutes=10 + attempt)
+            claimed_retry = run_async(
+                repository.claim_pending(
+                    retry_time,
+                    f"worker-{attempt}",
+                    retry_time + timedelta(minutes=1),
+                    1,
+                    channel="telegram",
+                    maximum_attempts=5,
+                )
+            )[0]
+            run_async(
+                repository.mark_failed(
+                    telegram.id,
+                    claimed_retry.claim.token,
+                    claimed_retry.publication.version,
+                    ProcessingError(code="transport", summary="Known failure"),
+                    retry_time,
+                    retry_time + timedelta(minutes=1),
+                )
+            )
+
+        claimed = run_async(
+            repository.claim_pending(
+                NOW + timedelta(minutes=20),
+                "worker-final",
+                NOW + timedelta(minutes=21),
+                10,
+                channel="telegram",
+                maximum_attempts=5,
+            )
+        )
+        stored_email = run_async(repository.get_by_id(email.id))
+
+        assert tuple(item.publication.id for item in claimed) == (exhausted.id,)
+        assert stored_email is not None
+        assert stored_email.status is PublicationStatus.PENDING
+
     def test_publication_claim_is_exclusive_and_expiry_becomes_ambiguous(self) -> None:
         repository = self.make_repository()
         command = make_publication_command()

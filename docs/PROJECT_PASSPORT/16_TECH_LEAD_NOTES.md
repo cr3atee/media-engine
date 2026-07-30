@@ -46,6 +46,16 @@ This document captures architecture notes that are important for future reviews.
 - Failed generation retries create new immutable attempts. Expired content claims
   become abandoned; expired publication claims become ambiguous and cannot be
   automatically resent.
+- Publication delivery uses three boundaries: short channel-scoped claim
+  transaction, Telegram adapter call with no open repository scope, and short
+  guarded completion transaction.
+- Retry/backoff policy lives in `PublicationDeliveryService`, not in Telegram
+  adapter, Scheduler, or repositories.
+- Telegram `429` stops the current delivery batch after persisting a durable
+  retry timestamp. Ambiguous delivery outcomes are terminal for automatic
+  processing and require future manual resolution.
+- Dry-run is a separate read-only operation and must not be routed through the
+  normal claim path.
 - `RepositoryProvider` exposes generated-content and publication repositories for
   both memory and PostgreSQL scopes; PostgreSQL repositories share the
   caller-owned session and never commit.
@@ -57,8 +67,8 @@ This document captures architecture notes that are important for future reviews.
 - Final EPIC 13 production-shaped verification passed 83 live PostgreSQL checks
   across ingestion, scoring, content, publication intent, restart, concurrency,
   rollback, Scheduler delegation, and audit linkage.
-- The exact next implementation task is **Telegram Publication Adapter and
-  Delivery Workflow**. It must preserve publication idempotency and
+- The exact next implementation task is **guarded Telegram live test-chat
+  verification**. It must preserve publication idempotency, token secrecy, and
   ambiguous-state protection.
 - GGSEL-specific price fields are not fully normalized into `ParsedOffer.price` and `ParsedOffer.currency` yet.
 

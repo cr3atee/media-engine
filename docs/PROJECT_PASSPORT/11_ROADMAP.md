@@ -59,21 +59,30 @@ This document tracks only work that is reflected by the current repository state
 - An 18-check live PostgreSQL content/publication verification.
 - Final 83-check production-shaped EPIC 13 PostgreSQL verification covering the
   complete ingestion-to-publication-intent lifecycle.
+- Telegram delivery contracts, plain-text formatter, direct Bot API client, and
+  offline adapter verification.
+- Channel-scoped publication claims for memory and PostgreSQL repositories.
+- Durable `PublicationDeliveryService` with short claim/read/completion scopes,
+  retry/backoff policy, permanent failure handling, ambiguous-state persistence,
+  and read-only dry-run.
+- `PendingPublicationDeliveryJob` that delegates bounded delivery processing
+  without owning repositories or Telegram HTTP calls.
 
 ## Current Status
 
 MediaEngine has a live-verified PostgreSQL runtime foundation for repository-backed
-offers, price history, and deterministic market events; bounded transactions;
-durable post-commit scoring and content generation with recovery; persisted
-publication intent; and Scheduler orchestration.
+offers, price history, deterministic market events, bounded transactions,
+durable post-commit scoring and content generation with recovery, persisted
+publication intent, offline-verified Telegram delivery orchestration, and
+Scheduler delegation.
 
 ## Not Present Yet
 
 - Full price normalization for GGSEL extracted fields.
 - Scheduler overlap and multi-process coordination.
-- Actual Telegram delivery implementation.
+- Guarded live Telegram test-chat verification.
 - Production AI provider integration in the pipeline.
 
 ## Recommended Next EPIC
 
-**Telegram Publication Adapter and Delivery Workflow**.
+**Telegram guarded live test-chat verification**.

@@ -55,6 +55,8 @@ class PublicationRepository(BaseRepository):
         worker_id: str,
         lease_until: datetime,
         limit: int,
+        channel: str | None = None,
+        maximum_attempts: int | None = None,
     ) -> Sequence[ClaimedPublication]:
         """Claim publications eligible for channel delivery."""
 

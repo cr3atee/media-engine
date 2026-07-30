@@ -71,3 +71,17 @@ The sequence completes with durable event, content, and publication state. Sourc
 inspection confirms that these jobs remain orchestration-only. Five existing
 Scheduler demos exit normally; restricted live marketplace access is surfaced as
 failed job status without stopping Scheduler.
+
+## EPIC 14 Task 2 Update
+
+`PendingPublicationDeliveryJob` has been added as an orchestration-only Scheduler
+job. It receives a configured `PublicationDeliveryService`, worker ID, batch
+size, and clock, then delegates one bounded `process_batch()` call. The job does
+not open sessions, access repositories, format Telegram messages, call the Bot
+API directly, calculate retry delays, or mutate publication lifecycle state.
+
+Stale publication recovery remains handled by the existing
+`StalePublicationClaimRecoveryJob`. Delivery retries are represented through the
+durable publication state and are selected by the same channel-scoped claim path.
+Live Telegram delivery remains disabled by default and is reserved for the
+guarded Task 3 test-chat verification.

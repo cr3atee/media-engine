@@ -7,14 +7,15 @@ verification.
 
 ## Immediate
 
-- Implement **Telegram Publication Adapter and Delivery Workflow** over the
-  existing durable publication repository.
+- Run **Telegram guarded live test-chat verification** over the existing durable
+  delivery workflow.
 
 ## Delivery
 
-- Implement a Telegram delivery adapter that claims durable publications, maps
-  confirmed/failed/ambiguous outcomes, and never automatically resends ambiguous
-  deliveries.
+- Add an explicitly gated live verification path for one allowlisted Telegram
+  test chat.
+- Keep production Telegram delivery disabled until live verification, monitoring,
+  and operational reconciliation are approved.
 
 ## Operational
 

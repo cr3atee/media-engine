@@ -136,6 +136,8 @@ class PostgresPublicationRepository(PublicationRepository):
         worker_id: str,
         lease_until: datetime,
         limit: int,
+        channel: str | None = None,
+        maximum_attempts: int | None = None,
     ) -> Sequence[ClaimedPublication]:
         """Claim due delivery intents with ``FOR UPDATE SKIP LOCKED``."""
         now, lease_until, worker_id = _validate_claim_request(
@@ -143,17 +145,22 @@ class PostgresPublicationRepository(PublicationRepository):
             lease_until,
             worker_id,
         )
+        channel = _normalize_optional_channel(channel)
+        _validate_maximum_attempts(maximum_attempts)
         _validate_limit(limit)
         await self._mark_expired_claims_ambiguous(now)
         if limit == 0:
             return ()
-        result = await self._session.execute(
+        statement = (
             select(PublicationRecord)
-            .where(_claimable(now))
+            .where(_claimable(now, maximum_attempts))
             .order_by(*_publication_order())
             .limit(limit)
             .with_for_update(skip_locked=True)
         )
+        if channel is not None:
+            statement = statement.where(_channel_filter(channel))
+        result = await self._session.execute(statement)
         claimed: list[ClaimedPublication] = []
         for record in result.scalars():
             status = PublicationStatus(record.publication_status)
@@ -483,12 +490,15 @@ def _claim(record: PublicationRecord) -> WorkClaim:
     )
 
 
-def _claimable(now: datetime) -> ColumnElement[bool]:
+def _claimable(
+    now: datetime,
+    maximum_attempts: int | None = None,
+) -> ColumnElement[bool]:
     scheduled = or_(
         PublicationRecord.scheduled_at.is_(None),
         PublicationRecord.scheduled_at <= now,
     )
-    return scheduled & or_(
+    claimable = scheduled & or_(
         (
             (PublicationRecord.publication_status == PublicationStatus.PENDING.value)
             & or_(
@@ -502,6 +512,24 @@ def _claimable(now: datetime) -> ColumnElement[bool]:
             & (PublicationRecord.next_retry_at <= now)
         ),
     )
+    if maximum_attempts is not None:
+        claimable = claimable & (PublicationRecord.attempt_count < maximum_attempts)
+    return claimable
+
+
+def _channel_filter(channel: str | None) -> ColumnElement[bool]:
+    assert channel is not None
+    return PublicationRecord.channel == channel
+
+
+def _normalize_optional_channel(channel: str | None) -> str | None:
+    if channel is None:
+        return None
+    channel = channel.strip().lower()
+    if not channel:
+        msg = "Publication channel filter must not be empty."
+        raise ValueError(msg)
+    return channel
 
 
 def _publication_order() -> tuple[Any, ...]:
@@ -593,6 +621,12 @@ def _validate_claim_request(
 def _validate_limit(limit: int) -> None:
     if limit < 0:
         msg = "Repository limit must not be negative."
+        raise ValueError(msg)
+
+
+def _validate_maximum_attempts(maximum_attempts: int | None) -> None:
+    if maximum_attempts is not None and maximum_attempts < 1:
+        msg = "Maximum publication attempts must be positive."
         raise ValueError(msg)
 
 

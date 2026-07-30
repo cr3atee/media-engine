@@ -25,20 +25,31 @@ Bot API client, typed Telegram response/error classification, and token-safe
 logging. All verification uses `httpx.MockTransport`. No repository or Scheduler
 runtime path invokes the adapter yet.
 
+EPIC 14 Task 2 connects that adapter boundary to durable publication state
+without live sending. `PublicationDeliveryService` claims due Telegram
+publications through the generic publication repository channel filter, loads
+generated content and event data, formats a plain-text message, calls the adapter
+outside repository transactions, and records success, retryable failure,
+permanent failure, or ambiguous state through guarded publication transitions.
+`PendingPublicationDeliveryJob` delegates bounded batches to the service only.
+Dry-run renders an explicit publication without mutation or adapter calls.
+
 ## Safety
 
-- No Telegram message is sent by the current application.
-- A known failed delivery may be retried by a future delivery service.
+- No live Telegram message is sent by the current application.
+- A known retryable delivery failure is retried through durable publication
+  state by `PublicationDeliveryService`.
 - An expired/unknown delivery outcome becomes `ambiguous` and is never
   automatically returned to pending.
-- Provider response and transport error mapping are implemented at the adapter
-  boundary. Durable retry, rate limiting, claiming, and reconciliation remain
-  application-service work.
+- Provider response and transport error mapping remain implemented at the
+  adapter boundary. Durable retry, rate limiting, claiming, dry-run, and
+  ambiguous persistence are application-service work.
 
 ## Verification Status
 
 Publication intent, claim contention, idempotency, cancellation, terminal
 published state, and protected ambiguous recovery are verified against live
-PostgreSQL. The Telegram formatter/client/adapter foundation is verified offline;
-no external message was sent. The next task is **EPIC 14 Task 2 - Durable delivery
-orchestration**.
+PostgreSQL. The Telegram formatter/client/adapter foundation is verified offline,
+and Task 2 delivery orchestration is covered by focused offline tests. The Task 2
+PostgreSQL verifier requires an isolated `EPIC14_DATABASE_URL`. The next task is
+**EPIC 14 Task 3 - guarded live test-chat verification**.

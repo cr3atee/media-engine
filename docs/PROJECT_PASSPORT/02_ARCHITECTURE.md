@@ -48,6 +48,13 @@ Current marketplace flow:
     publication intent atomically.
 19. Separate recovery services abandon expired generation claims and protect
     expired publication claims as ambiguous.
+20. `PublicationDeliveryService` claims due Telegram publications by generic
+    channel filter, prepares durable content/event DTOs, calls the delivery
+    adapter outside repository transactions, and persists guarded success,
+    retryable failure, permanent failure, or ambiguous state.
+21. `PendingPublicationDeliveryJob` delegates bounded publication delivery to
+    the service without owning repositories, formatting, retry policy, or
+    Telegram HTTP calls.
 
 ## Matching Flow
 
@@ -99,10 +106,13 @@ run inside ingestion or scoring transactions.
 - Scoring never runs while a claim repository scope or row lock remains open.
 - AI/content providers are called only after the generation-claim transaction has
   committed.
-- Publication persistence is channel independent; external delivery adapters are
-  outside the current runtime.
+- Publication persistence is channel independent; Telegram delivery is connected
+  through a channel-aware application service and adapter composition, not
+  Telegram-specific repository APIs.
 - Generated content and publication intent share one completion transaction when
   an explicit destination is configured.
+- Telegram network calls occur outside database transactions. Ambiguous outcomes
+  are never retried automatically.
 
 ## EPIC 13 Verification
 

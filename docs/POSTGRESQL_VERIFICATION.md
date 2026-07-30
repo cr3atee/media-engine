@@ -141,3 +141,26 @@ Final evidence is recorded in `EPIC_13_FINAL_VERIFICATION.md` and implemented by
 schema constraints, fresh-session restart, idempotency, rollback, concurrency,
 audit linkage, and complete Scheduler orchestration all pass. External delivery
 remains intentionally unimplemented.
+
+## EPIC 14 Task 2 Update
+
+Telegram publication delivery orchestration is implemented on top of the
+existing PostgreSQL publication repository without adding a migration. The
+existing `publications` schema already stores channel, destination, claim token,
+lease, attempt count, retry timestamp, external message ID, published timestamp,
+safe processing error, and optimistic version.
+
+The repository contract now supports generic channel-scoped claiming and an
+optional attempt budget. PostgreSQL applies the channel predicate before
+`FOR UPDATE SKIP LOCKED`, so a Telegram worker does not temporarily claim
+non-Telegram publications.
+
+`PublicationDeliveryService` uses short claim/read/completion repository scopes
+and calls Telegram adapters outside database transactions. Confirmed success,
+retryable failure, permanent failure, and ambiguous outcomes are persisted
+through existing guarded publication transitions. Dry-run is read-only.
+
+`scripts/verify_epic14_delivery_service_postgres.py` is the offline PostgreSQL
+verification entry point for this task. In environments without an isolated
+`EPIC14_DATABASE_URL`, it reports the missing prerequisite instead of fabricating
+success. No live Telegram message is sent by this verification path.
