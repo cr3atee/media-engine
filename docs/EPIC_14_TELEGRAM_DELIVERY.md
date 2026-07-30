@@ -7,8 +7,10 @@ durable `Publication` prepared by EPIC 13, sends its immutable generated content
 to Telegram, and records a durable delivery outcome without moving business
 logic into Telegram-specific code.
 
-This document is an implementation design. It does not introduce application
-code, database migrations, credentials, dependencies, or live messages.
+This document records the implemented Task 1 adapter foundation and the design
+for the remaining durable delivery work. Task 1 introduces no database
+migrations, credentials, new dependencies, runtime publication processing, or
+live messages.
 
 ## Scope
 
@@ -55,6 +57,69 @@ publication recovery were not implemented. The current code and final EPIC 13
 verification show that `StaleContentClaimRecoveryJob` and
 `StalePublicationClaimRecoveryJob` exist. Current implementation is the source
 of truth for EPIC 14.
+
+## Task 1 Implementation Status
+
+**Status: completed.**
+
+Implemented boundaries:
+
+- `app.delivery` defines immutable channel-independent `DeliveryMessage`,
+  `DeliveryResult`, typed outcome/error enums, and the async
+  `PublicationDeliveryAdapter` protocol;
+- `TelegramPlainTextFormatter` consumes approved final generated text plus
+  explicit safe metadata, normalizes only line endings/control whitespace, and
+  returns one plain-text `DeliveryMessage`;
+- optional source URL and fixed footer are appended only from explicit structured
+  input; title, marketplace, prices, and discount are not recomputed from prose;
+- empty content, unsupported channel, invalid numeric destination, invalid source
+  URL, empty explicit footer, and messages above 4096 characters are rejected;
+- no truncation, splitting, HTML, Markdown, parse mode, destination inference,
+  invisible correlation marker, or hidden dry-run behavior exists;
+- `TelegramBotApiClient` owns or borrows one reusable `httpx.AsyncClient`, sends
+  one direct `sendMessage` JSON request, and never retries or sleeps;
+- current Bot API request uses `chat_id`, `text`, and
+  `link_preview_options.is_disabled`; it sends no `parse_mode`;
+- typed narrow response parsing keeps only status, acceptance flag, message/chat
+  IDs, provider error code, safe description, retry-after seconds, and malformed
+  category;
+- `TelegramDeliveryClassifier` distinguishes confirmed success, retryable
+  pre-send/rate/server failure, permanent rejection, invalid local request, and
+  ambiguous potentially delivered outcomes;
+- connect/pool failures are retryable; write/read/remote-response uncertainty is
+  ambiguous; `400`/`401`/`403`/`404` are permanent; `429` preserves non-negative
+  `retry_after`; `5xx` is retryable;
+- destination mismatch and malformed successful responses are ambiguous;
+- the bot token is held as `SecretStr`, omitted from object representations,
+  removed from provider descriptions, and never exposed through adapter results
+  or logs;
+- logs contain only publication/correlation IDs, a destination hash, typed
+  outcome, safe provider codes, confirmed external message ID, and duration;
+- tests and `verify_epic14_telegram_adapter.py` use only `httpx.MockTransport`;
+- no repository, Scheduler, publication lifecycle, migration, or active runtime
+  path was connected to Telegram.
+
+Verification evidence:
+
+- focused Telegram suite: 78 tests passed, covering formatter, client, adapter,
+  settings secrecy, and import boundaries;
+- offline verifier: 16/16 named checks passed and cannot perform an external
+  request because every client receives a mock transport;
+- formatter and adapter reject invalid input before transport invocation;
+- internal and external HTTP client ownership, reuse, explicit close, and
+  post-close failure are covered;
+- Ruff passed for all 14 touched Python files;
+- Ruff format check confirmed all 14 touched Python files are formatted;
+- full MyPy with explicit package bases passed for 222 source files;
+- full Pytest passed with 257 tests and 52 environment/integration skips.
+
+Pre-existing quality-tool note: the Makefile command `uv run mypy app` does not
+set explicit package bases and reports duplicate module names for existing
+namespace-package files such as `app/analytics/models.py` and
+`app/comparator/models.py`. Task 1 did not introduce that layout or modify the
+Makefile. The full verification therefore used
+`uv run mypy --explicit-package-bases app scripts tests` and did not perform an
+unrelated packaging cleanup.
 
 ## Design Principles
 
@@ -825,41 +890,45 @@ must never fall back to a production destination.
 
 ## 25. Acceptance Checklist
 
-- [ ] No Telegram framework dependency was added.
-- [ ] One long-lived async HTTP client is reused per adapter instance.
-- [ ] Existing retrying `HttpClient` is not used for `sendMessage`.
-- [ ] Adapter performs one request and no retries.
+- [x] No Telegram framework dependency was added.
+- [x] One long-lived async HTTP client is reused per adapter instance.
+- [x] Existing retrying `HttpClient` is not used for `sendMessage`.
+- [x] Adapter performs one request and no retries.
 - [ ] Delivery service owns lifecycle and retry decisions.
 - [ ] Network calls occur outside database transactions.
 - [ ] Pending claims are filtered by channel before locking.
 - [ ] Memory and PostgreSQL repository behavior remains equivalent.
-- [ ] Plain text is the default and rich markup is disabled.
-- [ ] Empty and oversized messages are rejected before network access.
-- [ ] Successful responses verify destination and message ID.
+- [x] Plain text is the default and rich markup is disabled.
+- [x] Empty and oversized messages are rejected before network access.
+- [x] Successful responses verify destination and message ID.
 - [ ] Success persists `external_message_id` and `published_at`.
-- [ ] Retryable, permanent, and ambiguous outcomes are distinct.
-- [ ] `429 retry_after` is honored as a minimum delay.
-- [ ] Ambiguous outcomes are never automatically retried.
+- [x] Adapter returns the confirmed external message ID without persisting it.
+- [x] Retryable, permanent, and ambiguous outcomes are distinct.
+- [x] Adapter parses and returns `429 retry_after` without calculating policy.
+- [x] Adapter never retries ambiguous outcomes or any other outcome.
 - [ ] Stale delivery claims recover conservatively to `ambiguous`.
 - [ ] Active claim and version protections remain enforced.
 - [ ] Dry-run is read-only and does not claim publications.
 - [ ] Live delivery is disabled by default.
 - [ ] Live test mode requires an allowlisted exact test chat and CLI confirmation.
-- [ ] Tokens, token-bearing URLs, and raw responses are absent from logs/errors.
+- [x] Tokens, token-bearing URLs, and raw responses are absent from logs/errors.
 - [ ] Scheduler job contains orchestration only.
-- [ ] Offline verification performs no external network request.
+- [x] Offline verification performs no external network request.
 - [ ] Optional live verification sends exactly one marked test message.
-- [ ] No content-generation, event, matching, or comparator behavior changed.
-- [ ] No schema migration is introduced without a demonstrated need.
+- [x] No content-generation, event, matching, or comparator behavior changed.
+- [x] Task 1 introduced no schema migration.
 
-## 26. Recommended First Implementation Task
+## 26. Recommended Next Implementation Task
 
-Implement **Task 1 - Delivery contracts, deterministic plain-text formatter, and
-the direct Telegram Bot API adapter with offline mock-transport tests**.
+Implement **Task 2 - Durable delivery orchestration**.
 
-This is the smallest independently verifiable boundary. It establishes safe HTTP
-semantics and, most importantly, distinguishes retryable from ambiguous transport
-outcomes before durable publication state is connected to a real external send.
+Add optional generic channel filtering to publication claims in the repository
+contract plus memory/PostgreSQL implementations. Then implement
+`PublicationDeliveryService` with short claim/read/completion scopes, eligibility
+checks, durable retry and ambiguity transitions, and typed batch results. Add
+`PendingPublicationDeliveryJob`, reuse existing stale-publication recovery, and
+extend offline verification through the durable lifecycle. Do not add live
+test-chat delivery in Task 2.
 
 ## References
 
@@ -868,4 +937,3 @@ outcomes before durable publication state is connected to a real external send.
 - [HTTPX exception hierarchy](https://www.python-httpx.org/exceptions/)
 - [aiogram documentation](https://docs.aiogram.dev/en/dev-3.x/)
 - [python-telegram-bot Bot API documentation](https://docs.python-telegram-bot.org/en/latest/telegram.bot.html)
-
