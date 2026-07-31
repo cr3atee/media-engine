@@ -7,15 +7,15 @@ verification.
 
 ## Immediate
 
-- Run **Telegram guarded live test-chat verification** over the existing durable
-  delivery workflow.
+- Run final EPIC 14 PostgreSQL verification in an isolated `epic14_*` database.
+- If explicitly approved credentials and a test chat are available, run exactly
+  one guarded live Telegram test-chat verification.
 
 ## Delivery
 
-- Add an explicitly gated live verification path for one allowlisted Telegram
-  test chat.
-- Keep production Telegram delivery disabled until live verification, monitoring,
-  and operational reconciliation are approved.
+- Keep production Telegram delivery disabled until PostgreSQL verification,
+  optional live test-chat verification, monitoring, and operational
+  reconciliation are approved.
 
 ## Operational
 

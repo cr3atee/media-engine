@@ -34,9 +34,14 @@ permanent failure, or ambiguous state through guarded publication transitions.
 `PendingPublicationDeliveryJob` delegates bounded batches to the service only.
 Dry-run renders an explicit publication without mutation or adapter calls.
 
+EPIC 14 Task 3 adds the guarded live verification script and expands the
+PostgreSQL verifier with restart, retry-resumption, stale-claim, concurrency, and
+token-redaction checks. The script performs no Telegram network call unless all
+live guards and the exact test-chat confirmation are supplied.
+
 ## Safety
 
-- No live Telegram message is sent by the current application.
+- No live Telegram message is sent by default.
 - A known retryable delivery failure is retried through durable publication
   state by `PublicationDeliveryService`.
 - An expired/unknown delivery outcome becomes `ambiguous` and is never
@@ -50,6 +55,8 @@ Dry-run renders an explicit publication without mutation or adapter calls.
 Publication intent, claim contention, idempotency, cancellation, terminal
 published state, and protected ambiguous recovery are verified against live
 PostgreSQL. The Telegram formatter/client/adapter foundation is verified offline,
-and Task 2 delivery orchestration is covered by focused offline tests. The Task 2
-PostgreSQL verifier requires an isolated `EPIC14_DATABASE_URL`. The next task is
-**EPIC 14 Task 3 - guarded live test-chat verification**.
+and Task 2 delivery orchestration is covered by focused offline tests. The Task 3
+PostgreSQL verifier now contains final delivery checks, but it was not executed
+in the current environment because no isolated PostgreSQL runtime was available.
+Live Telegram test-chat verification was not performed because credentials,
+test-chat confirmation, live flags, and PostgreSQL database were not supplied.

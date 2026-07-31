@@ -165,16 +165,32 @@ Verification evidence in this environment:
 - full Pytest passed with 264 tests and 54 environment/integration skips;
 - Ruff check and Ruff format check passed for all touched Python files.
 
-Remaining Task 3 scope:
+## Task 3 Verification Status
 
-- run the guarded live test-chat verification with explicit
-  `TELEGRAM_DELIVERY_ENABLED`, `TELEGRAM_ALLOW_LIVE_DELIVERY`,
-  allowlisted test chat, non-empty token, `--live`, and exact chat confirmation;
-- send exactly one marked test message to the allowlisted test chat;
-- verify Telegram's real Bot API response, stored message ID, and durable
-  publication state;
-- keep production delivery disabled by default and do not introduce inbound bot
-  update handling.
+**Status: not complete in this environment.**
+
+Implemented verification artifacts:
+
+- `scripts/verify_epic14_delivery_service_postgres.py` now includes additional
+  checks for due retry resumption, completion rollback after successful adapter
+  response, stale-claim recovery, one-publication/two-worker claim exclusivity,
+  and token redaction;
+- `scripts/verify_epic14_live_telegram.py` provides the guarded live test-chat
+  verification path and performs no Telegram network call by default;
+- live mode requires explicit flags, a configured test chat, exact CLI
+  confirmation, allowlist membership, an isolated `EPIC14_DATABASE_URL`, a bot
+  token, and disabled dry-run mode.
+
+Execution status:
+
+- Task 1 offline adapter verifier passed `16/16` checks;
+- the PostgreSQL verifier could not run because Docker/PostgreSQL is unavailable
+  in this environment and `EPIC14_DATABASE_URL` is not configured;
+- live Telegram verification was not performed because credentials, test chat,
+  confirmation, live flags, and PostgreSQL verification database were not
+  supplied;
+- production delivery remains disabled by default and inbound bot functionality
+  remains out of scope.
 
 ## Design Principles
 
@@ -965,7 +981,7 @@ must never fall back to a production destination.
 - [x] Active claim and version protections remain enforced.
 - [x] Dry-run is read-only and does not claim publications.
 - [x] Live delivery is disabled by default.
-- [ ] Live test mode requires an allowlisted exact test chat and CLI confirmation.
+- [x] Live test mode requires an allowlisted exact test chat and CLI confirmation.
 - [x] Tokens, token-bearing URLs, and raw responses are absent from logs/errors.
 - [x] Scheduler job contains orchestration only.
 - [x] Offline verification performs no external network request.
@@ -975,14 +991,11 @@ must never fall back to a production destination.
 
 ## 26. Recommended Next Implementation Task
 
-Implement **Task 3 - Guarded live test-chat verification**.
-
-Use the durable `PublicationDeliveryService` and `PendingPublicationDeliveryJob`
-without changing their business behavior. Add only the explicitly gated live
-verification path for one allowlisted test chat, require all live-send safety
-flags and exact chat confirmation, persist the returned Telegram message ID, and
-document real Bot API observations. Production delivery must remain disabled by
-default.
+Complete **EPIC 14 final verification** in an environment with an isolated
+PostgreSQL database. If approved Telegram test-chat credentials are available,
+run the guarded live verification script exactly once with the required live
+flags and exact chat confirmation. Do not proceed to production broadcast until
+PostgreSQL verification and the live-test decision are explicitly resolved.
 
 ## References
 

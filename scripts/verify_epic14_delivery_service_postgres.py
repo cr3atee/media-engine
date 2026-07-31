@@ -6,7 +6,7 @@ import os
 import sys
 from collections.abc import AsyncIterator, Callable
 from contextlib import asynccontextmanager
-from datetime import timedelta
+from datetime import datetime, timedelta
 from pathlib import Path
 from uuid import UUID
 
@@ -30,6 +30,7 @@ if str(ROOT) not in sys.path:
 
 from app.config.settings import TelegramSettings
 from app.database.metadata import get_metadata
+from app.delivery.contracts import DeliveryMessage, DeliveryOutcome, DeliveryResult
 from app.domain.generated_content import (
     CreateContentAttempt,
     calculate_content_checksum,
@@ -37,8 +38,9 @@ from app.domain.generated_content import (
 from app.domain.lifecycle import ContentReviewStatus, PublicationStatus
 from app.domain.market_events import MarketEventCandidate, SnapshotIdentity
 from app.domain.price_snapshot import PriceSnapshot
-from app.domain.processing import StateTransitionOutcome
+from app.domain.processing import StateTransitionOutcome, StateTransitionResult
 from app.domain.publications import ClaimedPublication, CreatePublication
+from app.repositories.postgres import PostgresPublicationRepository
 from app.repositories.provider import RepositoryProvider, create_postgres_provider
 from app.scheduler import PendingPublicationDeliveryJob
 from app.services.publication_delivery import (
@@ -51,6 +53,7 @@ from app.services.publication_intents import PublicationIntentService
 from app.services.repository_scope import RepositoryScopeFactory
 from app.telegram.adapter import TelegramPublicationAdapter
 from app.telegram.client import TelegramBotApiClient
+from app.telegram.security import sanitize_provider_message
 from tests.repositories.contracts.factories import NOW, make_event, uuid_for
 
 DATABASE_URL_ENV = "EPIC14_DATABASE_URL"
@@ -194,6 +197,8 @@ def make_service(
     session_factory: async_sessionmaker[AsyncSession],
     scopes: TrackedScopes,
     handler: Handler,
+    *,
+    repository_scope_factory: RepositoryScopeFactory | None = None,
 ) -> tuple[PublicationDeliveryService, TelegramBotApiClient]:
     """Compose the real delivery service with a mock Telegram transport."""
     client = TelegramBotApiClient(
@@ -204,7 +209,11 @@ def make_service(
     adapter = TelegramPublicationAdapter(client)
     return (
         PublicationDeliveryService(
-            repository_scope_factory=scopes.factory(),
+            repository_scope_factory=(
+                repository_scope_factory
+                if repository_scope_factory is not None
+                else scopes.factory()
+            ),
             adapter=adapter,
             policy=PublicationDeliveryPolicy(
                 retry_policy=PublicationDeliveryRetryPolicy(
@@ -220,6 +229,42 @@ def make_service(
         ),
         client,
     )
+
+
+def completion_failure_scope_factory(
+    session_factory: async_sessionmaker[AsyncSession],
+) -> RepositoryScopeFactory:
+    """Return a PostgreSQL scope that fails after successful publication state."""
+
+    class FailingPublicationRepository(PostgresPublicationRepository):
+        """Persist a publication and then force the outer transaction to roll back."""
+
+        async def mark_published(
+            self,
+            publication_id: UUID,
+            claim_token: UUID,
+            expected_version: int,
+            external_message_id: str,
+            published_at: datetime,
+        ) -> StateTransitionResult:
+            await super().mark_published(
+                publication_id,
+                claim_token,
+                expected_version,
+                external_message_id,
+                published_at,
+            )
+            msg = "controlled publication completion failure"
+            raise RuntimeError(msg)
+
+    @asynccontextmanager
+    async def scope() -> AsyncIterator[RepositoryProvider]:
+        async with session_factory() as session, session.begin():
+            provider = create_postgres_provider(session)
+            provider.publications = FailingPublicationRepository(session)
+            yield provider
+
+    return scope
 
 
 async def load_publication(
@@ -419,6 +464,197 @@ async def verify_retry_and_failures(
         is PublicationStatus.AMBIGUOUS,
     )
 
+    resume_scopes = TrackedScopes(session_factory)
+    resume_time = NOW + timedelta(minutes=21, seconds=30)
+
+    def resume_success(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(
+            200,
+            json={
+                "ok": True,
+                "result": {
+                    "message_id": 1404,
+                    "chat": {"id": int(DESTINATION_ID)},
+                },
+            },
+            request=request,
+        )
+
+    resumed_service, client = make_service(
+        session_factory,
+        resume_scopes,
+        resume_success,
+    )
+    try:
+        resumed_result = await resumed_service.process_batch(
+            worker_id="resume-worker",
+            limit=1,
+            now=resume_time,
+        )
+    finally:
+        await client.aclose()
+    resumed_publication = await load_publication(session_factory, rate_id)
+    checks.check(
+        "retryable publication resumes when due",
+        resumed_result.published == 1,
+    )
+    checks.check(
+        "fresh session observes resumed publication",
+        getattr(resumed_publication, "status", None) is PublicationStatus.PUBLISHED,
+    )
+
+
+async def verify_restart_and_redaction(
+    checks: Verification,
+    engine: AsyncEngine,
+    session_factory: async_sessionmaker[AsyncSession],
+) -> None:
+    """Verify restart safety after a successful send and token redaction."""
+    await reset_data(engine)
+    publication_id = await seed_publication(session_factory, number=10)
+    scopes = TrackedScopes(session_factory)
+
+    def success(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(
+            200,
+            json={
+                "ok": True,
+                "result": {
+                    "message_id": 1410,
+                    "chat": {"id": int(DESTINATION_ID)},
+                },
+            },
+            request=request,
+        )
+
+    service, client = make_service(
+        session_factory,
+        scopes,
+        success,
+        repository_scope_factory=completion_failure_scope_factory(session_factory),
+    )
+    try:
+        try:
+            await service.process_batch(worker_id="restart-worker", limit=1)
+        except RuntimeError as error:
+            checks.check(
+                "completion failure is exposed",
+                "controlled publication completion failure" in str(error),
+            )
+    finally:
+        await client.aclose()
+
+    stored = await load_publication(session_factory, publication_id)
+    checks.check(
+        "successful adapter response survives until completion failure",
+        getattr(stored, "status", None) is PublicationStatus.IN_PROGRESS,
+    )
+    checks.check(
+        "attempt count survives completion rollback",
+        getattr(stored, "attempt_count", None) == 1,
+    )
+
+    intent_service = PublicationIntentService(
+        repository_scope_factory=TrackedScopes(session_factory).factory()
+    )
+    recovery = await intent_service.recover_stale_publication_claims(
+        limit=10,
+        now=NOW + timedelta(minutes=22),
+    )
+    recovered = await load_publication(session_factory, publication_id)
+    checks.check(
+        "stale claim after completion rollback becomes ambiguous",
+        recovery.ambiguous == 1,
+    )
+    checks.check(
+        "fresh session observes ambiguous recovery after restart",
+        getattr(recovered, "status", None) is PublicationStatus.AMBIGUOUS,
+    )
+
+    safe_message = sanitize_provider_message(
+        f"token {TOKEN} must be hidden",
+        token=TOKEN,
+    )
+    checks.check(
+        "token redaction sanitizes provider messages",
+        safe_message is not None
+        and TOKEN not in safe_message
+        and "[REDACTED]" in safe_message,
+    )
+    telegram_client = TelegramBotApiClient(
+        token=SecretStr(TOKEN),
+        api_base_url="https://offline.telegram.test",
+        transport=httpx.MockTransport(
+            lambda request: httpx.Response(
+                200,
+                json={"ok": True, "result": {"message_id": 1, "chat": {"id": 1}}},
+                request=request,
+            )
+        ),
+    )
+    checks.check("telegram client repr hides token", TOKEN not in repr(telegram_client))
+    await telegram_client.aclose()
+
+
+async def verify_two_worker_claim_behavior(
+    checks: Verification,
+    engine: AsyncEngine,
+    session_factory: async_sessionmaker[AsyncSession],
+) -> None:
+    """Verify one Telegram publication is claimed by only one worker."""
+    await reset_data(engine)
+    await seed_publication(session_factory, number=11)
+
+    class BlockingSuccessAdapter:
+        def __init__(self) -> None:
+            self.calls = 0
+            self.messages: list[DeliveryMessage] = []
+            self.entered = asyncio.Event()
+            self.release = asyncio.Event()
+
+        async def send(self, message: DeliveryMessage) -> DeliveryResult:
+            self.calls += 1
+            self.messages.append(message)
+            self.entered.set()
+            if self.calls == 1:
+                await self.release.wait()
+            return DeliveryResult(
+                outcome=DeliveryOutcome.SUCCESS,
+                destination_id=message.destination_id,
+                external_message_id=f"blocking-{self.calls}",
+            )
+
+    scopes = TrackedScopes(session_factory)
+    adapter = BlockingSuccessAdapter()
+    service = PublicationDeliveryService(
+        repository_scope_factory=scopes.factory(),
+        adapter=adapter,
+        policy=PublicationDeliveryPolicy(
+            retry_policy=PublicationDeliveryRetryPolicy(
+                maximum_attempts=5,
+                initial_delay=timedelta(seconds=30),
+                maximum_delay=timedelta(minutes=30),
+            ),
+            allowed_destination_ids=frozenset({DESTINATION_ID, SECOND_DESTINATION_ID}),
+        ),
+        clock=lambda: NOW + timedelta(minutes=20),
+    )
+
+    first = asyncio.create_task(
+        service.process_batch(worker_id="worker-one", limit=1),
+    )
+    await adapter.entered.wait()
+    second_task = asyncio.create_task(
+        service.process_batch(worker_id="worker-two", limit=1),
+    )
+    second = await asyncio.wait_for(second_task, timeout=10)
+    adapter.release.set()
+    first_result = await asyncio.wait_for(first, timeout=10)
+
+    checks.check("one worker claims the publication", first_result.claimed == 1)
+    checks.check("second worker receives no publication", second.claimed == 0)
+    checks.check("one adapter call occurs", adapter.calls == 1)
+
 
 async def verify_claims_and_dry_run(
     checks: Verification,
@@ -584,10 +820,11 @@ async def run_verification(database_url: str) -> None:
         await verify_success(checks, engine, session_factory)
         await verify_retry_and_failures(checks, engine, session_factory)
         await verify_claims_and_dry_run(checks, engine, session_factory)
+        await verify_restart_and_redaction(checks, engine, session_factory)
+        await verify_two_worker_claim_behavior(checks, engine, session_factory)
         await verify_scheduler_job(checks, engine, session_factory)
-        print(
-            f"\nEPIC 14 Task 2: {len(checks.passed)}/{len(checks.passed)} checks passed"
-        )
+        total = len(checks.passed)
+        print(f"\nEPIC 14 offline verification: {total}/{total} checks passed")
     finally:
         await engine.dispose()
 

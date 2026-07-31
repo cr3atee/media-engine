@@ -6,6 +6,15 @@ This document records notable Project Passport updates.
 
 ## Unreleased
 
+- Added EPIC 14 Task 3 guarded live Telegram verification script with safe
+  offline default mode, exact test-chat confirmation, allowlist checks, and no
+  default network call.
+- Expanded EPIC 14 PostgreSQL verifier with due-retry resumption,
+  completion-rollback recovery, stale-claim recovery, one-publication/two-worker
+  claim exclusivity, and token-redaction checks.
+- Recorded that final EPIC 14 PostgreSQL/live verification is not complete in
+  the current environment because no isolated PostgreSQL runtime or live
+  Telegram credentials/test chat were available.
 - Implemented EPIC 14 Task 2 durable Telegram publication delivery
   orchestration without live sending.
 - Added generic channel-scoped publication claims and attempt-budget filtering

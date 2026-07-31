@@ -164,3 +164,18 @@ through existing guarded publication transitions. Dry-run is read-only.
 verification entry point for this task. In environments without an isolated
 `EPIC14_DATABASE_URL`, it reports the missing prerequisite instead of fabricating
 success. No live Telegram message is sent by this verification path.
+
+## EPIC 14 Task 3 Update
+
+The PostgreSQL verifier now includes additional final-verification checks for:
+
+- due retry resumption;
+- completion rollback after a successful adapter response;
+- stale-claim recovery to `ambiguous` after that rollback;
+- one-publication/two-worker claim exclusivity;
+- token redaction of provider messages and client representations.
+
+Task 3 PostgreSQL execution was not completed in the current environment because
+Docker daemon access was unavailable, no local PostgreSQL binaries were present,
+and `EPIC14_DATABASE_URL` was not configured. The verifier therefore remains
+ready but unexecuted for the final Task 3 PostgreSQL proof.

@@ -121,3 +121,15 @@ fresh services at every durable boundary. Ingestion, scoring, AI generation, and
 publication-intent persistence retain their existing layer direction: external
 work is outside transactions, repositories own no policy, and Scheduler jobs only
 delegate. No alternate active event or content-processing path remains.
+
+## EPIC 14 Verification
+
+Telegram delivery architecture remains channel-boundary oriented: repositories
+stay channel independent, `PublicationDeliveryService` owns durable lifecycle
+orchestration, and `TelegramPublicationAdapter` owns only outbound provider I/O.
+
+The guarded live verifier and expanded PostgreSQL verifier exist, but final
+PostgreSQL execution was not completed in the current environment. No production
+delivery path is enabled by default, and live Telegram delivery must not be
+claimed verified until one approved test-chat message is sent through the normal
+service path and its external message ID is persisted.

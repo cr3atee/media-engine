@@ -67,22 +67,28 @@ This document tracks only work that is reflected by the current repository state
   and read-only dry-run.
 - `PendingPublicationDeliveryJob` that delegates bounded delivery processing
   without owning repositories or Telegram HTTP calls.
+- Guarded live Telegram verification script with exact test-chat confirmation
+  and safe offline default mode.
+- Expanded EPIC 14 PostgreSQL verifier checks for retry resumption,
+  completion-rollback recovery, one-publication/two-worker claim exclusivity,
+  and token redaction.
 
 ## Current Status
 
 MediaEngine has a live-verified PostgreSQL runtime foundation for repository-backed
 offers, price history, deterministic market events, bounded transactions,
 durable post-commit scoring and content generation with recovery, persisted
-publication intent, offline-verified Telegram delivery orchestration, and
-Scheduler delegation.
+publication intent, offline-verified Telegram delivery orchestration, guarded
+live-test tooling, and Scheduler delegation.
 
 ## Not Present Yet
 
 - Full price normalization for GGSEL extracted fields.
 - Scheduler overlap and multi-process coordination.
-- Guarded live Telegram test-chat verification.
+- Final EPIC 14 PostgreSQL verification execution in an isolated database.
+- Optional guarded live Telegram test-chat message.
 - Production AI provider integration in the pipeline.
 
 ## Recommended Next EPIC
 
-**Telegram guarded live test-chat verification**.
+**Complete EPIC 14 final verification with isolated PostgreSQL.**

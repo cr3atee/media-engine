@@ -20,8 +20,10 @@ content attempts plus idempotent channel-independent publication intents. The
 complete lifecycle passed 83 named checks on PostgreSQL 17.10.
 EPIC 14 Task 2 is implemented: Telegram publication claims are channel-scoped,
 delivery orchestration is durable, dry-run is read-only, Scheduler delegation is
-available, and live Telegram sending remains disabled until guarded Task 3
-verification.
+available, and live Telegram sending remains disabled by default.
+EPIC 14 Task 3 verification artifacts are implemented, including the guarded
+live Telegram script and expanded PostgreSQL verifier, but final PostgreSQL/live
+execution is not complete in this environment.
 
 ## Active Capabilities
 
@@ -93,6 +95,9 @@ verification.
   Telegram.
 - `PendingPublicationDeliveryJob` delegates bounded publication delivery to the
   service and contains no repository, formatting, adapter, or retry logic.
+- The guarded live Telegram verifier exits safely without network calls unless
+  all explicit live-test flags, the exact test-chat confirmation, an allowlisted
+  destination, a bot token, and an isolated `EPIC14_DATABASE_URL` are supplied.
 - Revision `0008_content_publications` upgrades, downgrades to `0007`, re-applies,
   and matches SQLAlchemy metadata.
 - An 18-check live isolated PostgreSQL verification confirms committed claims,
@@ -112,8 +117,11 @@ verification.
 - Ingestion, scoring, and durable content processing are separate services and
   still require production process/bootstrap configuration.
 - Scheduler has no explicit overlap or multi-process coordination policy.
-- Live Telegram delivery is not yet verified; Task 2 uses offline mock transport
-  and leaves production sending disabled by default.
+- Final EPIC 14 PostgreSQL verification was not executed in this environment
+  because Docker/PostgreSQL is unavailable and `EPIC14_DATABASE_URL` is not set.
+- Live Telegram delivery is not yet verified; credentials, exact test-chat
+  confirmation, live flags, and PostgreSQL verification database were not
+  supplied.
 - No production AI provider is wired into the marketplace pipeline.
 
 ## Architecture Review
@@ -129,5 +137,7 @@ Current architecture separates:
 EPIC 13 final verification adds one production-shaped 83-check PostgreSQL path
 across ingestion, scoring, content, publication intent, restart, overlap,
 rollback, Scheduler delegation, and audit evidence. EPIC 14 Task 2 connects the
-Telegram adapter to durable publication state offline. The remaining delivery
-step is guarded live test-chat verification, not production broadcast.
+Telegram adapter to durable publication state offline. EPIC 14 Task 3 added the
+guarded live-test path and stronger offline verifier checks, but the remaining
+delivery step is executing the final PostgreSQL verification and deciding whether
+to run exactly one guarded live test-chat message.

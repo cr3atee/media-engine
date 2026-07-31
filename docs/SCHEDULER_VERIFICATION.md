@@ -85,3 +85,15 @@ Stale publication recovery remains handled by the existing
 durable publication state and are selected by the same channel-scoped claim path.
 Live Telegram delivery remains disabled by default and is reserved for the
 guarded Task 3 test-chat verification.
+
+## EPIC 14 Task 3 Update
+
+The final PostgreSQL-backed `PendingPublicationDeliveryJob` verification remains
+blocked in this environment because no isolated PostgreSQL runtime is available.
+The job implementation and focused offline tests still confirm that Scheduler
+delegates only to `PublicationDeliveryService` and does not own repositories,
+Telegram HTTP calls, formatting, or retry policy.
+
+The guarded live Telegram verifier does not route live sends through Scheduler;
+it verifies exactly one durable publication through `PublicationDeliveryService`
+when all live-test guards are explicitly satisfied.
