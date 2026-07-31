@@ -159,15 +159,16 @@ Verification evidence in this environment:
 
 - focused repository, service, scheduler, and Telegram tests passed;
 - Task 1 offline adapter verifier still passed `16/16` checks;
-- Task 2 PostgreSQL verifier guard ran and reported that
-  `EPIC14_DATABASE_URL` is required for live isolated PostgreSQL verification;
-- full MyPy passed with explicit package bases for 226 source files;
-- full Pytest passed with 264 tests and 54 environment/integration skips;
+- Task 2 PostgreSQL verifier passed `39/39` checks against an isolated
+  `epic14_verify` database at revision `0008_content_publications`;
+- full MyPy passed with explicit package bases for 227 source files;
+- full Pytest passed with 265 tests and 53 separate EPIC 13 PostgreSQL skips;
 - Ruff check and Ruff format check passed for all touched Python files.
 
 ## Task 3 Verification Status
 
-**Status: not complete in this environment.**
+**Status: functionally complete; guarded live Telegram test-chat verification
+not performed.**
 
 Implemented verification artifacts:
 
@@ -184,11 +185,13 @@ Implemented verification artifacts:
 Execution status:
 
 - Task 1 offline adapter verifier passed `16/16` checks;
-- the PostgreSQL verifier could not run because Docker/PostgreSQL is unavailable
-  in this environment and `EPIC14_DATABASE_URL` is not configured;
+- the PostgreSQL verifier passed `39/39` checks, including claims, success,
+  retry, 429, permanent and ambiguous outcomes, restart, concurrency, dry-run,
+  transaction boundaries, token redaction, and Scheduler delegation;
+- Alembic `current` reports `0008_content_publications (head)` and `alembic
+  check` reports no pending upgrade operations;
 - live Telegram verification was not performed because credentials, test chat,
-  confirmation, live flags, and PostgreSQL verification database were not
-  supplied;
+  confirmation, and live flags were not supplied;
 - production delivery remains disabled by default and inbound bot functionality
   remains out of scope.
 
@@ -991,19 +994,20 @@ must never fall back to a production destination.
 
 ## 27. Retry Result (2026-07-31)
 
-The verification retry did not reach a live PostgreSQL-backed delivery run.
-Docker Desktop was present but could not be started in this session, and no
-isolated `EPIC14_DATABASE_URL` was supplied. The guarded live verifier therefore
-remained in offline mode and the PostgreSQL delivery verifier continued to skip
-instead of fabricating success.
+Docker Desktop was started and an isolated PostgreSQL 17 database was used for
+the final retry. The PostgreSQL delivery verifier passed `39/39`; Task 1 passed
+`16/16`; Ruff, format, MyPy, Pytest, Alembic current/check, and offline migration
+SQL all passed.
+
+**EPIC 14 functionally complete; guarded live Telegram test-chat verification
+not performed.**
 
 ## 26. Recommended Next Implementation Task
 
-Complete **EPIC 14 final verification** in an environment with an isolated
-PostgreSQL database. If approved Telegram test-chat credentials are available,
-run the guarded live verification script exactly once with the required live
-flags and exact chat confirmation. Do not proceed to production broadcast until
-PostgreSQL verification and the live-test decision are explicitly resolved.
+If approved Telegram test-chat credentials become available, run the guarded
+live verification script exactly once with the required live flags and exact
+chat confirmation. PostgreSQL-backed offline verification is complete; do not
+proceed to production broadcast without the separate operational approval.
 
 ## References
 

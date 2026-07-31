@@ -6,7 +6,9 @@ PostgreSQL persistence, the EPIC 12 runtime, EPIC 13 transactional market-event
 ingestion, durable scoring, generated content, and publication-intent state are
 live-verified. Final EPIC 13 verification passed 83 checks against isolated
 PostgreSQL 17.10 at revision `0008_content_publications` without using a project
-or production database.
+or production database. EPIC 14 delivery verification additionally passed
+`39/39` checks against a separate isolated PostgreSQL 17 container at the same
+revision.
 
 ## Verified Schema
 
@@ -114,8 +116,8 @@ or production database.
 
 - Durable ingestion, scoring, and content processing are implemented as separate
   production-shaped services but are not yet composed in one process bootstrap.
-- External publication delivery is not implemented; publication rows are durable
-  delivery intents only.
+- Telegram publication delivery is implemented and verified with mocked transport;
+  guarded live test-chat delivery has not been performed.
 - Scheduler overlap and multi-process coordination are not implemented.
 - Null external IDs remain intentionally append-only.
 - Legacy foundation tables remain present and inactive.
@@ -175,17 +177,20 @@ The PostgreSQL verifier now includes additional final-verification checks for:
 - one-publication/two-worker claim exclusivity;
 - token redaction of provider messages and client representations.
 
-Task 3 PostgreSQL execution was not completed in the current environment because
-Docker daemon access was unavailable, no local PostgreSQL binaries were present,
-and `EPIC14_DATABASE_URL` was not configured. The verifier therefore remains
-ready but unexecuted for the final Task 3 PostgreSQL proof.
+Task 3 PostgreSQL execution passed `39/39` checks against an isolated
+`epic14_verify` database. The checks cover due retry resumption, completion
+rollback, stale recovery, channel isolation, two-worker exclusivity, dry-run,
+fresh-session persistence, transaction-free Telegram calls, Scheduler
+delegation, and token redaction.
 
 ## EPIC 14 Task 3 Retry (2026-07-31)
 
-The retry confirmed the same blocker. The Docker Desktop service was present but
-could not be started in this session, so no isolated PostgreSQL container could
-be launched. `scripts/verify_epic14_delivery_service_postgres.py` still exits
-with the missing-database prerequisite, while `alembic upgrade head --sql`
-continues to work as an offline smoke test. `alembic current` and `alembic check`
-still fail without a reachable PostgreSQL service or explicit
-`EPIC14_DATABASE_URL`.
+Docker Desktop was started successfully and a temporary `postgres:17-alpine`
+container exposed only `127.0.0.1:55432` for the isolated `epic14_verify`
+database. `scripts/verify_epic14_delivery_service_postgres.py` passed `39/39`.
+`alembic current` reported `0008_content_publications (head)`, `alembic check`
+reported no new upgrade operations, and offline upgrade SQL generated all eight
+migrations in `342` lines.
+
+**EPIC 14 functionally complete; guarded live Telegram test-chat verification
+not performed.**

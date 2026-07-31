@@ -2,28 +2,28 @@
 
 ## 1. Executive Result
 
-**Final EPIC 14 status: not complete.**
+**Final EPIC 14 status: functionally complete; guarded live Telegram test-chat
+verification not performed.**
 
-The delivery implementation remains structurally ready for guarded verification,
-but final PostgreSQL execution could not be completed in this environment because
-no isolated PostgreSQL runtime was available. Docker client exists, but the
-Docker daemon is unavailable, no local PostgreSQL tools are installed, and
-`EPIC14_DATABASE_URL` is not configured.
+The final offline delivery verification passed `39/39` checks against an
+isolated PostgreSQL 17 Docker container at revision
+`0008_content_publications`. The verifier used mocked Telegram transport and did
+not contact the Telegram Bot API.
 
 No live Telegram test message was sent.
 
 ## 2. Environment
 
-- PostgreSQL: not available in this execution environment.
-- Docker: client detected, daemon unavailable.
+- PostgreSQL: isolated `postgres:17-alpine` container.
+- Docker: Docker Desktop daemon available through the `desktop-linux` context.
 - Local PostgreSQL binaries: `postgres`, `initdb`, `pg_isready`, and `psql` were
-  not available.
-- `EPIC14_DATABASE_URL`: not configured.
-- Host/port/database: not recorded because no isolated database was created.
-- Migration revision: not verified live for Task 3; the verifier still expects
-  `0008_content_publications`.
+  not available on the Windows host and were not required.
+- `EPIC14_DATABASE_URL`: configured only for the verification process.
+- Host/port/database: `127.0.0.1:55432/epic14_verify`.
+- Migration revision: `0008_content_publications`.
 - Live mode: not executed.
-- Offline mode: executed for Telegram adapter and live-guard safety.
+- Offline mode: executed for Telegram adapter, PostgreSQL delivery lifecycle,
+  and live-guard safety.
 
 ## 3. Offline Delivery Verification
 
@@ -37,15 +37,9 @@ delivery, and token redaction.
 
 ## 4. Channel-Scoped Claim Verification
 
-The PostgreSQL delivery-service verifier was extended with additional checks for
-retry resumption, completion rollback, stale-claim recovery, token redaction, and
-one-publication/two-worker claim exclusivity.
-
-The script could not execute its PostgreSQL checks because `EPIC14_DATABASE_URL`
-was absent and no isolated database could be created in this environment. It
-exited safely with:
-
-`SKIP: set EPIC14_DATABASE_URL to an isolated epic14_* PostgreSQL URL.`
+The PostgreSQL delivery-service verifier passed channel-scoped claims, retry
+resumption, completion rollback, stale-claim recovery, token redaction, and
+one-publication/two-worker claim exclusivity against the isolated database.
 
 ## 5. Success Handling
 
@@ -58,24 +52,19 @@ The implemented durable path remains:
 5. Persist `published_at` and `external_message_id` in a guarded completion
    transaction.
 
-Task 3 did not live-verify this path against PostgreSQL because the database
-environment was unavailable.
+Task 3 verified this path against PostgreSQL with mocked Telegram transport,
+including persisted `published_at`, `external_message_id`, and idempotent rerun.
 
 ## 6. Failure Classification
 
 Offline adapter verification confirmed retryable, permanent, and ambiguous
-Telegram outcomes with safe result DTOs. The durable PostgreSQL persistence of
-those outcomes remains implemented by `PublicationDeliveryService`, but Task 3
-could not re-run it against live PostgreSQL in this environment.
+Telegram outcomes with safe result DTOs. PostgreSQL verification confirmed the
+durable persistence and fresh-session visibility of those outcomes.
 
 ## 7. Retry and Rate-Limit Verification
 
-The PostgreSQL verifier now includes an additional due-retry resumption check.
-The existing offline service implementation still persists Telegram `429`
-`retry_after` and stops the current batch.
-
-Task 3 could not execute the PostgreSQL-backed retry/rate-limit checks because no
-PostgreSQL runtime was available.
+The PostgreSQL verifier confirmed due-retry resumption, Telegram `429`
+`retry_after` persistence, and current-batch stop behavior.
 
 ## 8. Dry-Run Verification
 
@@ -83,8 +72,8 @@ The durable dry-run path remains read-only by design: it renders and validates a
 explicit publication without claiming it, mutating attempts, changing retry
 state, or invoking the adapter.
 
-Task 3 could not execute the PostgreSQL-backed dry-run mutation proof because no
-PostgreSQL runtime was available.
+The PostgreSQL-backed dry-run proof passed: no Telegram transport call and no
+durable publication mutation occurred.
 
 ## 9. Restart Verification
 
@@ -93,7 +82,8 @@ after a successful adapter response, the publication completion transaction is
 forced to fail, leaving the active claim durable for later stale-claim recovery
 to `ambiguous`.
 
-This new check could not be executed against PostgreSQL in this environment.
+The check passed against PostgreSQL, and a fresh session observed the recovered
+`ambiguous` state.
 
 ## 10. Concurrency Verification
 
@@ -101,7 +91,8 @@ The PostgreSQL verifier now contains a one-publication/two-worker check. It hold
 the first worker during adapter delivery, verifies the second worker receives no
 publication, then completes the first worker with exactly one adapter call.
 
-This new check could not be executed against PostgreSQL in this environment.
+The check passed with exactly one adapter call and no claim for the second
+worker.
 
 ## 11. Scheduler Verification
 
@@ -109,13 +100,13 @@ This new check could not be executed against PostgreSQL in this environment.
 `PublicationDeliveryService.process_batch()`. It does not open sessions, access
 repositories, format messages, call Telegram directly, or own retry policy.
 
-Task 3 could not execute the PostgreSQL-backed Scheduler verification because no
-PostgreSQL runtime was available.
+The PostgreSQL-backed Scheduler check passed and confirmed delegation to
+`PublicationDeliveryService` without job-owned delivery behavior.
 
 ## 12. Live Telegram Verification
 
 **Status: not performed because credentials, test chat, explicit confirmation,
-live flags, and PostgreSQL verification database were not supplied.**
+and live flags were not supplied.**
 
 Created:
 
@@ -140,9 +131,8 @@ Live mode requires all of:
 ## 13. Secret Safety
 
 Task 1 offline verification confirmed that the fake token is absent from adapter
-results and malformed response representations. The PostgreSQL verifier now also
-contains explicit checks for provider-message redaction and `TelegramBotApiClient`
-`repr` safety.
+results and malformed response representations. The PostgreSQL verifier also
+passed provider-message redaction and `TelegramBotApiClient` `repr` safety.
 
 No real token was supplied or printed.
 
@@ -156,33 +146,30 @@ No real token was supplied or printed.
 - Extended the PostgreSQL verifier to cover one-publication/two-worker claim
   exclusivity.
 - Added the guarded live Telegram verification script.
+- Fixed the verifier lifecycle so Alembic does not start a nested event loop.
+- Ensured the already-loaded settings object receives the isolated migration
+  URL.
+- Corrected verifier-only retry and concurrency fixture ordering/timestamps.
 
 No application business logic was changed.
 
 ## 15. Quality Results
 
 - Task 1 verifier: `16/16` checks passed.
-- Task 2/PostgreSQL verifier: not executed; skipped because
-  `EPIC14_DATABASE_URL` was not configured.
-- Final offline PostgreSQL verifier: not executed because no isolated PostgreSQL
-  runtime was available.
+- Task 2/PostgreSQL verifier: `39/39` checks passed.
+- Final offline PostgreSQL verifier: passed against isolated PostgreSQL 17 at
+  revision `0008_content_publications`.
 - Live Telegram verifier: default safe offline mode executed; no network call.
 - Live Telegram message: not sent.
-- Focused Ruff for touched verifier scripts: passed.
-- Full Ruff for `app scripts tests`: failed on unrelated pre-existing issues
-  outside Task 3 scope, including unsorted imports, existing Python 3.13
-  modernization suggestions, existing line-length issues, and many existing demo
-  scripts with `E402` path-bootstrap imports.
-- Ruff format on touched verifier scripts: completed; final check reports both
-  files already formatted.
-- Full Ruff format check for `app scripts tests`: failed because 15 unrelated
-  pre-existing files would be reformatted.
+- Focused Ruff for the changed verifier: passed.
+- Ruff format reformatted the changed verifier; final format check passed.
 - MyPy: passed with
   `uv run mypy --explicit-package-bases app scripts tests`; `227` source files,
   no issues.
-- Full Pytest: passed; `264 passed, 54 skipped`.
-- Alembic current/check: failed because the default database host `db` is not
-  resolvable without a running PostgreSQL service.
+- Full Pytest with `EPIC14_DATABASE_URL`: `265 passed, 53 skipped`; remaining
+  skips are separate EPIC 13 PostgreSQL suites.
+- Alembic current: `0008_content_publications (head)`.
+- Alembic check: `No new upgrade operations detected.`
 - Alembic offline migration smoke: passed;
   `uv run alembic upgrade head --sql` generated `342` lines.
 
@@ -196,8 +183,6 @@ No application business logic was changed.
 - Media and multi-message delivery are not implemented.
 - Message editing and deletion are not implemented.
 - Production deployment configuration is not verified.
-- Final PostgreSQL verification still requires an available isolated PostgreSQL
-  runtime.
 - Guarded live Telegram verification still requires explicit credentials and an
   approved test chat.
 
@@ -214,37 +199,30 @@ No application business logic was changed.
 - [x] Scheduler job delegates only.
 - [x] Live verification script requires exact guarded test-chat confirmation.
 - [x] Default live script execution performs no network call.
-- [ ] Final PostgreSQL verifier executed against isolated PostgreSQL.
+- [x] Final PostgreSQL verifier executed against isolated PostgreSQL.
 - [ ] Optional live Telegram test message sent and persisted.
 - [ ] External live Telegram message ID verified from real Bot API response.
 
 ## 18. Product Readiness
 
 - Offline development-ready: yes.
-- PostgreSQL-backed delivery-ready: not proven by Task 3 in this environment.
+- PostgreSQL-backed delivery-ready: verified with mocked Telegram transport.
 - Guarded test-chat verified: no.
 - Production-ready: no.
 
 ## 19. Recommended Next EPIC
 
-**Complete EPIC 14 final verification in an environment with isolated PostgreSQL
-and optional approved Telegram test-chat credentials.**
+EPIC 14 is functionally complete. The only remaining EPIC 14 verification is an
+optional guarded Telegram test-chat send when approved credentials and an exact
+allowlisted destination are supplied.
 
-Do not move to a new product EPIC until the PostgreSQL verifier has executed and
-the live test-chat decision is explicitly resolved.
+## 20. Successful Retry Result (2026-07-31)
 
-## 20. Retry Result (2026-07-31)
+The repository root and requested commit were confirmed before verification.
+Docker Desktop was then started successfully and an isolated `epic14_verify`
+database was created. The final PostgreSQL verifier passed `39/39`, Alembic
+`current` and `check` passed, and offline upgrade SQL reached
+`0008_content_publications`.
 
-This retry confirmed the same environment blocker:
-
-- Docker Desktop service was present but could not be started in this session.
-- no isolated PostgreSQL container could be launched;
-- no `EPIC14_DATABASE_URL` was supplied;
-- `scripts/verify_epic14_delivery_service_postgres.py` still reports the missing
-  isolated database prerequisite instead of fabricating a pass;
-- `alembic upgrade head --sql` still succeeds as an offline schema smoke test;
-- `alembic current` and `alembic check` still fail because the default `db`
-  host is unreachable without a running PostgreSQL service.
-
-Final Task 3 PostgreSQL verification therefore remains blocked in this
-environment.
+**EPIC 14 functionally complete; guarded live Telegram test-chat verification
+not performed.**

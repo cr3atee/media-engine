@@ -4,7 +4,8 @@
 
 Scheduler orchestration is verified for PostgreSQL-backed marketplace ingestion,
 durable market-event scoring/recovery, content generation, and content/publication
-stale-claim recovery.
+stale-claim recovery. EPIC 14 additionally verifies PostgreSQL-backed pending
+Telegram publication delivery through the orchestration-only Scheduler job.
 
 ## Verified Flow
 
@@ -55,8 +56,9 @@ stale-claim recovery.
 
 - There is no explicit same-job overlap guard.
 - Multiple Scheduler processes are not coordinated.
-- Generated content and publication intent are durable; actual publication
-  delivery and its Scheduler job are not implemented.
+- Telegram publication delivery and its Scheduler job are implemented and
+  verified with mocked transport; guarded live test-chat delivery is not
+  verified.
 - Production intervals, monitoring, and alerting are not verified.
 
 Marketplace live evidence is recorded in `EPIC_12_FINAL_VERIFICATION.md`.
@@ -88,11 +90,10 @@ guarded Task 3 test-chat verification.
 
 ## EPIC 14 Task 3 Update
 
-The final PostgreSQL-backed `PendingPublicationDeliveryJob` verification remains
-blocked in this environment because no isolated PostgreSQL runtime is available.
-The job implementation and focused offline tests still confirm that Scheduler
-delegates only to `PublicationDeliveryService` and does not own repositories,
-Telegram HTTP calls, formatting, or retry policy.
+The final PostgreSQL-backed `PendingPublicationDeliveryJob` verification passed
+against an isolated PostgreSQL 17 database. It confirms that Scheduler delegates
+only to `PublicationDeliveryService` and does not own repositories, Telegram
+HTTP calls, formatting, or retry policy.
 
 The guarded live Telegram verifier does not route live sends through Scheduler;
 it verifies exactly one durable publication through `PublicationDeliveryService`
@@ -100,7 +101,10 @@ when all live-test guards are explicitly satisfied.
 
 ## EPIC 14 Task 3 Retry (2026-07-31)
 
-The retry did not change Scheduler status. Docker Desktop could not be started,
-so the PostgreSQL-backed scheduler verification still cannot run in this
-environment. No Scheduler code changes were required; the remaining blocker is
-still the missing isolated PostgreSQL runtime and `EPIC14_DATABASE_URL`.
+The isolated PostgreSQL retry passed the Scheduler delivery check as part of the
+`39/39` EPIC 14 verifier result. The job successfully delegated one bounded
+delivery batch, persisted the result through fresh sessions, and reported no
+failure. No Scheduler code changes were required.
+
+**EPIC 14 functionally complete; guarded live Telegram test-chat verification
+not performed.**

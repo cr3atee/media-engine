@@ -28,7 +28,7 @@ ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from app.config.settings import TelegramSettings
+from app.config.settings import TelegramSettings, settings
 from app.database.metadata import get_metadata
 from app.delivery.contracts import DeliveryMessage, DeliveryOutcome, DeliveryResult
 from app.domain.generated_content import (
@@ -114,6 +114,7 @@ async def recreate_schema(database_url: str) -> None:
 def apply_migrations(database_url: str) -> None:
     """Apply Alembic migrations through the current project head."""
     os.environ["DATABASE_URL"] = database_url
+    settings.database.url = database_url
     command.upgrade(Config(str(ROOT / "alembic.ini")), "head")
 
 
@@ -410,6 +411,45 @@ async def verify_retry_and_failures(
         == NOW + timedelta(minutes=21, seconds=30),
     )
 
+    resume_scopes = TrackedScopes(session_factory)
+    resume_time = NOW + timedelta(minutes=21, seconds=30)
+
+    def resume_success(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(
+            200,
+            json={
+                "ok": True,
+                "result": {
+                    "message_id": 1404,
+                    "chat": {"id": int(DESTINATION_ID)},
+                },
+            },
+            request=request,
+        )
+
+    resumed_service, client = make_service(
+        session_factory,
+        resume_scopes,
+        resume_success,
+    )
+    try:
+        resumed_result = await resumed_service.process_batch(
+            worker_id="resume-worker",
+            limit=1,
+            now=resume_time,
+        )
+    finally:
+        await client.aclose()
+    resumed_publication = await load_publication(session_factory, rate_id)
+    checks.check(
+        "retryable publication resumes when due",
+        resumed_result.published == 1,
+    )
+    checks.check(
+        "fresh session observes resumed publication",
+        getattr(resumed_publication, "status", None) is PublicationStatus.PUBLISHED,
+    )
+
     await reset_data(engine)
     permanent_id = await seed_publication(session_factory, number=5)
     scopes = TrackedScopes(session_factory)
@@ -462,45 +502,6 @@ async def verify_retry_and_failures(
         repeated.claimed == 0
         and getattr(ambiguous_publication, "status", None)
         is PublicationStatus.AMBIGUOUS,
-    )
-
-    resume_scopes = TrackedScopes(session_factory)
-    resume_time = NOW + timedelta(minutes=21, seconds=30)
-
-    def resume_success(request: httpx.Request) -> httpx.Response:
-        return httpx.Response(
-            200,
-            json={
-                "ok": True,
-                "result": {
-                    "message_id": 1404,
-                    "chat": {"id": int(DESTINATION_ID)},
-                },
-            },
-            request=request,
-        )
-
-    resumed_service, client = make_service(
-        session_factory,
-        resume_scopes,
-        resume_success,
-    )
-    try:
-        resumed_result = await resumed_service.process_batch(
-            worker_id="resume-worker",
-            limit=1,
-            now=resume_time,
-        )
-    finally:
-        await client.aclose()
-    resumed_publication = await load_publication(session_factory, rate_id)
-    checks.check(
-        "retryable publication resumes when due",
-        resumed_result.published == 1,
-    )
-    checks.check(
-        "fresh session observes resumed publication",
-        getattr(resumed_publication, "status", None) is PublicationStatus.PUBLISHED,
     )
 
 
@@ -603,7 +604,7 @@ async def verify_two_worker_claim_behavior(
 ) -> None:
     """Verify one Telegram publication is claimed by only one worker."""
     await reset_data(engine)
-    await seed_publication(session_factory, number=11)
+    await seed_publication(session_factory, number=1)
 
     class BlockingSuccessAdapter:
         def __init__(self) -> None:
@@ -848,11 +849,11 @@ def _snapshot(identity: SnapshotIdentity) -> PriceSnapshot:
     )
 
 
-async def verify(database_url: str) -> None:
+def verify(database_url: str) -> None:
     """Recreate the isolated schema, migrate, and run verification."""
-    await recreate_schema(database_url)
+    asyncio.run(recreate_schema(database_url))
     apply_migrations(database_url)
-    await run_verification(database_url)
+    asyncio.run(run_verification(database_url))
 
 
 def main() -> None:
@@ -868,7 +869,7 @@ def main() -> None:
         raise SystemExit(
             f"{DATABASE_URL_ENV} must target an isolated epic14_* PostgreSQL database."
         )
-    asyncio.run(verify(database_url))
+    verify(database_url)
 
 
 if __name__ == "__main__":
