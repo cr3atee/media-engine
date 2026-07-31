@@ -989,6 +989,14 @@ must never fall back to a production destination.
 - [x] No content-generation, event, matching, or comparator behavior changed.
 - [x] Task 1 introduced no schema migration.
 
+## 27. Retry Result (2026-07-31)
+
+The verification retry did not reach a live PostgreSQL-backed delivery run.
+Docker Desktop was present but could not be started in this session, and no
+isolated `EPIC14_DATABASE_URL` was supplied. The guarded live verifier therefore
+remained in offline mode and the PostgreSQL delivery verifier continued to skip
+instead of fabricating success.
+
 ## 26. Recommended Next Implementation Task
 
 Complete **EPIC 14 final verification** in an environment with an isolated

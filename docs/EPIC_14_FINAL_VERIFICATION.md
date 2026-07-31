@@ -232,3 +232,19 @@ and optional approved Telegram test-chat credentials.**
 
 Do not move to a new product EPIC until the PostgreSQL verifier has executed and
 the live test-chat decision is explicitly resolved.
+
+## 20. Retry Result (2026-07-31)
+
+This retry confirmed the same environment blocker:
+
+- Docker Desktop service was present but could not be started in this session.
+- no isolated PostgreSQL container could be launched;
+- no `EPIC14_DATABASE_URL` was supplied;
+- `scripts/verify_epic14_delivery_service_postgres.py` still reports the missing
+  isolated database prerequisite instead of fabricating a pass;
+- `alembic upgrade head --sql` still succeeds as an offline schema smoke test;
+- `alembic current` and `alembic check` still fail because the default `db`
+  host is unreachable without a running PostgreSQL service.
+
+Final Task 3 PostgreSQL verification therefore remains blocked in this
+environment.

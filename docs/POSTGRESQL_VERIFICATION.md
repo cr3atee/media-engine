@@ -179,3 +179,13 @@ Task 3 PostgreSQL execution was not completed in the current environment because
 Docker daemon access was unavailable, no local PostgreSQL binaries were present,
 and `EPIC14_DATABASE_URL` was not configured. The verifier therefore remains
 ready but unexecuted for the final Task 3 PostgreSQL proof.
+
+## EPIC 14 Task 3 Retry (2026-07-31)
+
+The retry confirmed the same blocker. The Docker Desktop service was present but
+could not be started in this session, so no isolated PostgreSQL container could
+be launched. `scripts/verify_epic14_delivery_service_postgres.py` still exits
+with the missing-database prerequisite, while `alembic upgrade head --sql`
+continues to work as an offline smoke test. `alembic current` and `alembic check`
+still fail without a reachable PostgreSQL service or explicit
+`EPIC14_DATABASE_URL`.

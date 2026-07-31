@@ -97,3 +97,10 @@ Telegram HTTP calls, formatting, or retry policy.
 The guarded live Telegram verifier does not route live sends through Scheduler;
 it verifies exactly one durable publication through `PublicationDeliveryService`
 when all live-test guards are explicitly satisfied.
+
+## EPIC 14 Task 3 Retry (2026-07-31)
+
+The retry did not change Scheduler status. Docker Desktop could not be started,
+so the PostgreSQL-backed scheduler verification still cannot run in this
+environment. No Scheduler code changes were required; the remaining blocker is
+still the missing isolated PostgreSQL runtime and `EPIC14_DATABASE_URL`.
