@@ -142,7 +142,7 @@ class LoggingSettings(BaseSettings):
 
 
 class AdminApiSettings(BaseSettings):
-    """Configuration for the read-only administration API."""
+    """Configuration for the authenticated administration API."""
 
     model_config = SettingsConfigDict(
         env_file=".env",

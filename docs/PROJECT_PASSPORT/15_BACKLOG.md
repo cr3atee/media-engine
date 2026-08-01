@@ -2,14 +2,12 @@
 
 ## Purpose
 
-This document lists only confirmed work remaining after EPIC 15 Task 1.
+This document lists only confirmed work remaining after EPIC 15 Task 2.
 
 ## Immediate
 
-- Implement EPIC 15 Task 2 guarded content review and publication administration
-  commands through application services.
-- Add immutable `admin_actions` persistence and commit each audit row atomically
-  with its guarded state transition.
+- Run the isolated PostgreSQL verification for EPIC 15 Task 2 once a safe
+  `EPIC15_DATABASE_URL` or Docker-backed PostgreSQL environment is available.
 - If explicitly approved credentials and a test chat are available, run exactly
   one guarded live Telegram test-chat verification.
 

@@ -72,6 +72,8 @@ def test_repository_contracts_expose_lifecycle_specific_operations() -> None:
             "mark_failed",
             "mark_ambiguous",
             "cancel",
+            "retry_failed",
+            "resolve_ambiguous",
         },
     )
 

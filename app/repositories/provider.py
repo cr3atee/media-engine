@@ -1,14 +1,16 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Literal, overload
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.repositories.admin_actions import AdminActionRepository
 from app.repositories.canonical_products import CanonicalProductRepository
 from app.repositories.events import MarketEventRepository
 from app.repositories.generated_contents import GeneratedContentRepository
 from app.repositories.memory import (
+    MemoryAdminActionRepository,
     MemoryCanonicalProductRepository,
     MemoryGeneratedContentRepository,
     MemoryMarketEventRepository,
@@ -18,6 +20,7 @@ from app.repositories.memory import (
 )
 from app.repositories.offers import OfferRepository
 from app.repositories.postgres import (
+    PostgresAdminActionRepository,
     PostgresCanonicalProductRepository,
     PostgresGeneratedContentRepository,
     PostgresMarketEventRepository,
@@ -41,11 +44,15 @@ class RepositoryProvider:
     events: MarketEventRepository
     generated_contents: GeneratedContentRepository
     publications: PublicationRepository
+    admin_actions: AdminActionRepository = field(
+        default_factory=MemoryAdminActionRepository,
+    )
 
 
 def create_memory_provider() -> RepositoryProvider:
     """Create a repository provider backed by in-memory implementations."""
     return RepositoryProvider(
+        admin_actions=MemoryAdminActionRepository(),
         canonical_products=MemoryCanonicalProductRepository(),
         offers=MemoryOfferRepository(),
         price_history=MemoryPriceHistoryRepository(),
@@ -58,6 +65,7 @@ def create_memory_provider() -> RepositoryProvider:
 def create_postgres_provider(session: AsyncSession) -> RepositoryProvider:
     """Create a repository provider backed by PostgreSQL implementations."""
     return RepositoryProvider(
+        admin_actions=PostgresAdminActionRepository(session),
         canonical_products=PostgresCanonicalProductRepository(session),
         offers=PostgresOfferRepository(session),
         price_history=PostgresPriceHistoryRepository(session),

@@ -391,6 +391,84 @@ class MemoryPublicationRepository(PublicationRepository):
         self._store(updated)
         return _applied(updated.id, updated.version)
 
+    async def retry_failed(
+        self,
+        publication_id: UUID,
+        changed_at: datetime,
+        expected_version: int,
+    ) -> StateTransitionResult:
+        """Return a known retryable failure to pending processing."""
+        changed_at = normalize_utc(changed_at, field_name="changed_at")
+        publication = self._publications_by_id.get(publication_id)
+        guarded = _guard_version(publication_id, publication, expected_version)
+        if guarded is not None:
+            return guarded
+        assert publication is not None
+        if (
+            publication.status is not PublicationStatus.FAILED
+            or publication.next_retry_at is None
+        ):
+            return _transition_result(
+                publication.id,
+                StateTransitionOutcome.INVALID_STATE,
+                publication.version,
+            )
+        validate_publication_status_transition(
+            publication.status,
+            PublicationStatus.PENDING,
+        )
+        updated = replace(
+            publication,
+            status=PublicationStatus.PENDING,
+            updated_at=changed_at,
+            next_retry_at=None,
+            claim=None,
+            version=publication.version + 1,
+        )
+        self._store(updated)
+        return _applied(updated.id, updated.version)
+
+    async def resolve_ambiguous(
+        self,
+        publication_id: UUID,
+        resolution_status: PublicationStatus,
+        changed_at: datetime,
+        expected_version: int,
+        external_message_id: str | None = None,
+    ) -> StateTransitionResult:
+        """Apply an explicit delivered, not-delivered, or cancelled decision."""
+        changed_at = normalize_utc(changed_at, field_name="changed_at")
+        _validate_ambiguous_resolution(resolution_status, external_message_id)
+        publication = self._publications_by_id.get(publication_id)
+        guarded = _guard_version(publication_id, publication, expected_version)
+        if guarded is not None:
+            return guarded
+        assert publication is not None
+        if publication.status is not PublicationStatus.AMBIGUOUS:
+            return _transition_result(
+                publication.id,
+                StateTransitionOutcome.INVALID_STATE,
+                publication.version,
+            )
+        validate_publication_status_transition(
+            publication.status,
+            resolution_status,
+        )
+        published = resolution_status is PublicationStatus.PUBLISHED
+        updated = replace(
+            publication,
+            status=resolution_status,
+            external_message_id=external_message_id if published else None,
+            published_at=changed_at if published else None,
+            updated_at=changed_at,
+            next_retry_at=None,
+            claim=None,
+            last_error=None if published else publication.last_error,
+            version=publication.version + 1,
+        )
+        self._store(updated)
+        return _applied(updated.id, updated.version)
+
     def _mark_expired_claims_ambiguous(self, now: datetime) -> None:
         expired = (
             publication
@@ -543,6 +621,27 @@ def _validate_limit(limit: int) -> None:
 def _validate_maximum_attempts(maximum_attempts: int | None) -> None:
     if maximum_attempts is not None and maximum_attempts < 1:
         msg = "Maximum publication attempts must be positive."
+        raise ValueError(msg)
+
+
+def _validate_ambiguous_resolution(
+    resolution_status: PublicationStatus,
+    external_message_id: str | None,
+) -> None:
+    allowed = {
+        PublicationStatus.PENDING,
+        PublicationStatus.PUBLISHED,
+        PublicationStatus.CANCELLED,
+    }
+    if resolution_status not in allowed:
+        msg = "Ambiguous publication resolution status is not supported."
+        raise ValueError(msg)
+    if resolution_status is PublicationStatus.PUBLISHED:
+        if external_message_id is None or not external_message_id.strip():
+            msg = "Delivered resolution requires an external message ID."
+            raise ValueError(msg)
+    elif external_message_id is not None:
+        msg = "External message ID is valid only for delivered resolution."
         raise ValueError(msg)
 
 

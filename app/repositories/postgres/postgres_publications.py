@@ -359,6 +359,72 @@ class PostgresPublicationRepository(PublicationRepository):
         _clear_claim(record)
         return await self._finish_update(record, changed_at)
 
+    async def retry_failed(
+        self,
+        publication_id: UUID,
+        changed_at: datetime,
+        expected_version: int,
+    ) -> StateTransitionResult:
+        """Return a known retryable failure to pending processing."""
+        changed_at = normalize_utc(changed_at, field_name="changed_at")
+        record = await self._get_record_for_update(publication_id)
+        guarded = _guard_version(record, publication_id, expected_version)
+        if guarded is not None:
+            return guarded
+        assert record is not None
+        if (
+            record.publication_status != PublicationStatus.FAILED.value
+            or record.next_retry_at is None
+        ):
+            return _transition_result(
+                publication_id,
+                StateTransitionOutcome.INVALID_STATE,
+                record.version,
+            )
+        validate_publication_status_transition(
+            PublicationStatus.FAILED,
+            PublicationStatus.PENDING,
+        )
+        record.publication_status = PublicationStatus.PENDING.value
+        record.next_retry_at = None
+        _clear_claim(record)
+        return await self._finish_update(record, changed_at)
+
+    async def resolve_ambiguous(
+        self,
+        publication_id: UUID,
+        resolution_status: PublicationStatus,
+        changed_at: datetime,
+        expected_version: int,
+        external_message_id: str | None = None,
+    ) -> StateTransitionResult:
+        """Apply an explicit delivered, not-delivered, or cancelled decision."""
+        changed_at = normalize_utc(changed_at, field_name="changed_at")
+        _validate_ambiguous_resolution(resolution_status, external_message_id)
+        record = await self._get_record_for_update(publication_id)
+        guarded = _guard_version(record, publication_id, expected_version)
+        if guarded is not None:
+            return guarded
+        assert record is not None
+        if record.publication_status != PublicationStatus.AMBIGUOUS.value:
+            return _transition_result(
+                publication_id,
+                StateTransitionOutcome.INVALID_STATE,
+                record.version,
+            )
+        validate_publication_status_transition(
+            PublicationStatus.AMBIGUOUS,
+            resolution_status,
+        )
+        record.publication_status = resolution_status.value
+        record.next_retry_at = None
+        _clear_claim(record)
+        if resolution_status is PublicationStatus.PUBLISHED:
+            record.external_message_id = external_message_id
+            record.published_at = changed_at
+            _clear_error(record)
+        return await self._finish_update(record, changed_at)
+
     async def _find_identity_conflict(
         self,
         command: CreatePublication,
@@ -627,6 +693,27 @@ def _validate_limit(limit: int) -> None:
 def _validate_maximum_attempts(maximum_attempts: int | None) -> None:
     if maximum_attempts is not None and maximum_attempts < 1:
         msg = "Maximum publication attempts must be positive."
+        raise ValueError(msg)
+
+
+def _validate_ambiguous_resolution(
+    resolution_status: PublicationStatus,
+    external_message_id: str | None,
+) -> None:
+    allowed = {
+        PublicationStatus.PENDING,
+        PublicationStatus.PUBLISHED,
+        PublicationStatus.CANCELLED,
+    }
+    if resolution_status not in allowed:
+        msg = "Ambiguous publication resolution status is not supported."
+        raise ValueError(msg)
+    if resolution_status is PublicationStatus.PUBLISHED:
+        if external_message_id is None or not external_message_id.strip():
+            msg = "Delivered resolution requires an external message ID."
+            raise ValueError(msg)
+    elif external_message_id is not None:
+        msg = "External message ID is valid only for delivered resolution."
         raise ValueError(msg)
 
 

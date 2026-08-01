@@ -5,6 +5,7 @@ from collections.abc import Sequence
 from datetime import datetime
 from uuid import UUID
 
+from app.domain.lifecycle import PublicationStatus
 from app.domain.processing import ProcessingError, StateTransitionResult
 from app.domain.publications import (
     ClaimedPublication,
@@ -110,3 +111,23 @@ class PublicationRepository(BaseRepository):
         expected_version: int,
     ) -> StateTransitionResult:
         """Cancel an eligible unpublished delivery."""
+
+    @abstractmethod
+    async def retry_failed(
+        self,
+        publication_id: UUID,
+        changed_at: datetime,
+        expected_version: int,
+    ) -> StateTransitionResult:
+        """Return one explicitly retryable failed publication to pending."""
+
+    @abstractmethod
+    async def resolve_ambiguous(
+        self,
+        publication_id: UUID,
+        resolution_status: PublicationStatus,
+        changed_at: datetime,
+        expected_version: int,
+        external_message_id: str | None = None,
+    ) -> StateTransitionResult:
+        """Apply an explicit operator decision to an ambiguous publication."""

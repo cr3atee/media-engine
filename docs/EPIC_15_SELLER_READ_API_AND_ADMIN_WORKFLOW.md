@@ -1,6 +1,6 @@
 # EPIC 15 - Seller Read API and Administration Workflow
 
-Status: Task 1 implemented and verified; administration mutations are not started
+Status: Task 1 implemented and verified; administration mutations are implemented and locally verified, while isolated PostgreSQL verification is blocked by the current environment
 
 Baseline commit: c48b06c11f10cd41981d6809c36ea30c94ee66ef
 
@@ -28,16 +28,21 @@ EPIC 14 is functionally complete at the durable delivery boundary:
 - Full Pytest passed 265 tests with 53 skipped.
 - MyPy, Ruff, Ruff format, and Alembic verification passed for the recorded run.
 - Guarded live Telegram test-chat delivery was not performed.
+- EPIC 15 Task 2 guarded content review and publication administration commands
+  are implemented with immutable `admin_actions` persistence, guarded
+  transitions, idempotent replay, and sanitized admin errors.
+- Focused Task 2 API, service, and repository tests pass locally; isolated
+  PostgreSQL verification is currently blocked because no safe
+  `EPIC15_DATABASE_URL` or Docker-backed database is available.
 
 The database already stores durable marketplace offers, price snapshots, market
 events, scoring state, generated-content attempts, content review state,
 publication intents, and publication delivery state.
 
-There is no seller-facing or administration HTTP API today. The current FastAPI
-application exposes only the root status endpoint in app/main.py and does not yet
-register API routers, authentication dependencies, API DTOs, command handlers, or
-request middleware. EPIC 15 is therefore an API boundary design, not a claim that
-these routes already exist.
+The current FastAPI application now exposes both the read boundary and guarded
+administration mutation routes. The administration API remains an internal
+boundary rather than a seller-facing feature because seller identity and tenant
+scoping still do not exist.
 
 Some Project Passport pages still contain historical EPIC 14 wording that predates
 the final verification commit. For implementation decisions, the current code and

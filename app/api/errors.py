@@ -9,6 +9,8 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
+from app.services.admin_mutations import AdminCommandError
+
 logger = structlog.get_logger(__name__)
 
 
@@ -36,6 +38,22 @@ async def api_error_handler(request: Request, exc: Exception) -> JSONResponse:
     return _response(
         request,
         status_code=error.status_code,
+        code=error.code,
+        message=error.message,
+        details=error.details,
+    )
+
+
+async def admin_command_error_handler(
+    request: Request,
+    exc: Exception,
+) -> JSONResponse:
+    """Map stable application command failures to sanitized HTTP conflicts."""
+    error = cast(AdminCommandError, exc)
+    status_code = 404 if error.code == "resource_not_found" else 409
+    return _response(
+        request,
+        status_code=status_code,
         code=error.code,
         message=error.message,
         details=error.details,

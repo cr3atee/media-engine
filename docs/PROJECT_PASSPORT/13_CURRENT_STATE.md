@@ -26,6 +26,11 @@ verification was not performed.
 EPIC 15 Task 1 is implemented and verified: authenticated read-only administration
 routes expose durable events, generated content, publications, and related state
 through dedicated query contracts without changing lifecycle behavior.
+EPIC 15 Task 2 is implemented in code and covered by focused tests: guarded
+content review and publication commands now persist immutable `admin_actions`
+records atomically with state changes. Isolated PostgreSQL verification is still
+blocked in the current environment because no safe `EPIC15_DATABASE_URL` or
+Docker-backed database is available.
 
 ## Active Capabilities
 
@@ -134,9 +139,9 @@ through dedicated query contracts without changing lifecycle behavior.
   confirmation, live flags, and PostgreSQL verification database were not
   supplied.
 - No production AI provider is wired into the marketplace pipeline.
-- Administration mutations and immutable audit persistence are intentionally not
-  implemented; approve/reject, retry/cancel, and ambiguous resolution remain
-  EPIC 15 Task 2.
+- Administration mutations and immutable audit persistence are implemented, but
+  isolated PostgreSQL verification for EPIC 15 Task 2 remains blocked by the
+  current environment.
 
 ## Architecture Review
 

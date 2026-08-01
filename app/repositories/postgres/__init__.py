@@ -1,5 +1,8 @@
 from __future__ import annotations
 
+from app.repositories.postgres.postgres_admin_actions import (
+    PostgresAdminActionRepository,
+)
 from app.repositories.postgres.postgres_canonical_products import (
     PostgresCanonicalProductRepository,
 )
@@ -16,6 +19,7 @@ from app.repositories.postgres.postgres_publications import (
 )
 
 __all__ = [
+    "PostgresAdminActionRepository",
     "PostgresCanonicalProductRepository",
     "PostgresGeneratedContentRepository",
     "PostgresMarketEventRepository",

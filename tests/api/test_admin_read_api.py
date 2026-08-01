@@ -279,14 +279,24 @@ def test_invalid_cursor_and_date_range_use_stable_errors() -> None:
     assert invalid_range.json()["error"]["code"] == "validation_error"
 
 
-def test_only_read_routes_are_registered() -> None:
+def test_admin_routes_are_registered_with_expected_methods() -> None:
     client, _ = _client()
     methods_by_path = {
         path: set(route)
         for path, route in client.get("/openapi.json").json()["paths"].items()
     }
+    mutation_paths = {
+        "/api/v1/admin/content/{content_id}/approve",
+        "/api/v1/admin/content/{content_id}/reject",
+        "/api/v1/admin/publications/{publication_id}/retry",
+        "/api/v1/admin/publications/{publication_id}/cancel",
+        "/api/v1/admin/publications/{publication_id}/resolve-ambiguous",
+    }
+
+    for path in mutation_paths:
+        assert methods_by_path[path] == {"post"}
     assert all(
-        method.upper() in {"GET", "HEAD"}
+        method.upper() in {"GET", "HEAD", "POST"}
         for methods in methods_by_path.values()
         for method in methods
     )

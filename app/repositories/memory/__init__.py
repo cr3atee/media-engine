@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from app.repositories.memory.memory_admin_actions import MemoryAdminActionRepository
 from app.repositories.memory.memory_canonical_products import (
     MemoryCanonicalProductRepository,
 )
@@ -12,6 +13,7 @@ from app.repositories.memory.memory_price_history import MemoryPriceHistoryRepos
 from app.repositories.memory.memory_publications import MemoryPublicationRepository
 
 __all__ = (
+    "MemoryAdminActionRepository",
     "MemoryCanonicalProductRepository",
     "MemoryGeneratedContentRepository",
     "MemoryMarketEventRepository",

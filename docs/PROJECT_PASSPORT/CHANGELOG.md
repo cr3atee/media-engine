@@ -6,6 +6,15 @@ This document records notable Project Passport updates.
 
 ## Unreleased
 
+- Implemented EPIC 15 Task 2 guarded administration commands for content
+  approval/rejection, publication retry/cancel, and ambiguous publication
+  resolution, with immutable `admin_actions` audit persistence and replay-safe
+  idempotency.
+- Added focused Task 2 service, API, repository, and PostgreSQL-guarded verifier
+  coverage; local focused tests, full Pytest, strict MyPy on the touched files,
+  Ruff, Ruff format, Alembic heads, and offline SQL all pass, while live
+  PostgreSQL verification remains blocked by the unavailable isolated database
+  environment.
 - Implemented EPIC 15 Task 1 read-only administration API for durable events,
   generated content, publications, related-resource reads, and health probes.
 - Added fail-closed `X-Admin-API-Key` authentication, OpenAPI security metadata,
