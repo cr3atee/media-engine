@@ -1,13 +1,13 @@
 # EPIC 15 - Seller Read API and Administration Workflow
 
-Status: design and implementation plan only
+Status: Task 1 implemented and verified; administration mutations are not started
 
 Baseline commit: c48b06c11f10cd41981d6809c36ea30c94ee66ef
 
-This document does not implement an API, a migration, frontend code, authentication
-runtime, or any Telegram operation. It defines the smallest safe boundary for the
-next implementation stage and is based on the code and verification artifacts that
-exist at the baseline commit.
+The original sections retain the approved EPIC design. The implementation record
+at the end of this document describes the completed read-only Task 1 boundary.
+No frontend, administration mutation, audit migration, or Telegram operation was
+introduced by Task 1.
 
 ## Current Evidence
 
@@ -1199,48 +1199,100 @@ Do not begin Task 2 in the same change.
 - Keep external calls outside database transactions.
 - Preserve the current EPIC 13 and EPIC 14 verification artifacts.
 
-## Delivery Report
-
-### Changed files
-
-- docs/EPIC_15_SELLER_READ_API_AND_ADMIN_WORKFLOW.md
+## Task 1 Implementation Record
 
 ### API route structure
 
-The proposed initial surface is /api/v1/admin for authenticated event, content,
-publication, and dashboard reads, with explicit action routes for guarded
-commands. /health/live and /health/ready remain operational endpoints. No route
-has been implemented by this document.
+The implemented read-only surface is:
+
+- `GET /api/v1/admin/events`
+- `GET /api/v1/admin/events/{event_id}`
+- `GET /api/v1/admin/events/{event_id}/content`
+- `GET /api/v1/admin/events/{event_id}/publications`
+- `GET /api/v1/admin/content`
+- `GET /api/v1/admin/content/{content_id}`
+- `GET /api/v1/admin/publications`
+- `GET /api/v1/admin/publications/{publication_id}`
+- `GET /api/v1/admin/health`
+- `GET /api/v1/admin/readiness`
+- `GET /health/live`
+- `GET /health/ready`
+
+No POST, PUT, PATCH, or DELETE route is registered.
 
 ### Authentication approach
 
-An environment-provided administration API key, SecretStr-backed settings,
-constant-time comparison, fail-closed unsafe configuration, and future role
-separation.
+`X-Admin-API-Key` is represented by an OpenAPI API-key security scheme. The
+configured value is `SecretStr`-backed and compared with `hmac.compare_digest`.
+Disabled or missing-key configurations fail closed. Authentication bypass needs
+both an explicit configuration flag and explicit application test mode.
 
 ### Seller/admin boundary
 
-The first API is internal administration only. Seller-facing routes remain
-reserved until seller identity and tenant ownership exist.
+The API remains internal administration only. Seller identity, tenant ownership,
+user registration, passwords, JWT, OAuth, and role persistence do not exist.
 
 ### Event, content, and publication APIs
 
-The design defines typed list/detail projections, related-resource reads,
-versioned event payloads, safe publication fields, deterministic filters, and
-keyset pagination. It does not expose ORM or claim data.
+Dedicated SQLAlchemy-independent query contracts return immutable read DTOs.
+PostgreSQL implementations perform deterministic joined/existence queries and
+return no ORM rows. Price-drop payloads are explicitly mapped to a stable
+`type=price_drop`, `version=1` DTO. Content remains plain text. Publication
+destinations are exposed only as short non-reversible references; claim tokens,
+provider secrets, raw provider responses, and Telegram credentials are absent.
+
+All three list APIs use allow-listed sorting and deterministic timestamp/UUID
+keysets. Opaque cursors contain versioned JSON, are HMAC signed, and are bound to
+resource, sort direction, and normalized filters. Page defaults and maxima are
+configuration-backed. Date inputs must be timezone-aware and are normalized to
+UTC. Supported bounded search uses external ID/title/source URL for events and
+generated text for content.
+
+The common error envelope includes a stable code, safe message, bounded details,
+and request ID. Correlation middleware accepts only bounded safe request IDs,
+otherwise generates one, returns it in `X-Request-ID`, and binds it to structlog
+context. Internal exception text is not returned.
 
 ### Workflow commands
 
-Content approval/rejection is a guarded review transition. Publication retry and
-cancel are scheduler-oriented state changes. Ambiguous resolution explicitly
-marks delivered, marks not delivered, or cancels; none calls Telegram.
+No content review, publication retry/cancel, or ambiguous-resolution command is
+implemented. Existing lifecycle behavior and Scheduler/Telegram paths are
+unchanged.
 
 ### Audit and query strategy
 
-Use dedicated SQLAlchemy-independent read-side query contracts and one immutable
-admin_actions table for actor, reason, state, version, and request correlation.
+Task 1 implements dedicated read-side query contracts and PostgreSQL/memory query
+adapters. It adds no migration and creates no audit rows.
+
+### Verification
+
+- Focused API/query/security suite: `27 passed`.
+- Full Pytest: `291 passed, 54 skipped`.
+- Strict MyPy: `258` source files, no issues.
+- Ruff: all `33` touched Python files passed.
+- Ruff format: all `33` touched Python files formatted.
+- Isolated PostgreSQL 16 verifier: `28/28` named checks passed with no Telegram
+  network call.
+- Alembic current: `0008_content_publications (head)`.
+- Alembic check: no new upgrade operations.
+- Alembic offline SQL: generated successfully through current head.
+
+### Exact Recommended Task 2
+
+Implement administration commands and immutable audit persistence only:
+
+- add guarded application services for content approve/reject;
+- add guarded publication retry/cancel commands;
+- add explicit ambiguous-delivery resolution commands;
+- add the planned immutable `admin_actions` table and repository contract;
+- require actor, bounded reason, expected optimistic version, and request ID;
+- commit each state change and audit row atomically;
+- keep routes thin and never call Telegram from an administration command.
+
+Dashboard expansion, seller identity, frontend work, and live Telegram delivery
+are not part of Task 2.
 
 ### Commit and push status
 
-This task is documentation-only. A focused commit is required. Push is
-intentionally not performed.
+Task 1 is delivered as one focused implementation commit. Push is intentionally
+not performed.

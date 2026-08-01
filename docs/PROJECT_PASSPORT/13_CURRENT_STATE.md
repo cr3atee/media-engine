@@ -21,9 +21,11 @@ complete lifecycle passed 83 named checks on PostgreSQL 17.10.
 EPIC 14 Task 2 is implemented: Telegram publication claims are channel-scoped,
 delivery orchestration is durable, dry-run is read-only, Scheduler delegation is
 available, and live Telegram sending remains disabled by default.
-EPIC 14 Task 3 verification artifacts are implemented, including the guarded
-live Telegram script and expanded PostgreSQL verifier, but final PostgreSQL/live
-execution is not complete in this environment.
+EPIC 14 PostgreSQL verification passed `39/39`; guarded live Telegram test-chat
+verification was not performed.
+EPIC 15 Task 1 is implemented and verified: authenticated read-only administration
+routes expose durable events, generated content, publications, and related state
+through dedicated query contracts without changing lifecycle behavior.
 
 ## Active Capabilities
 
@@ -109,6 +111,17 @@ execution is not complete in this environment.
   removed; production content has one durable claim-based processing path.
 - Final verification confirms restart-safe ingestion, scoring, content, and
   publication-intent stages with fresh repositories and services.
+- `/api/v1/admin` provides authenticated event, content, and publication list,
+  detail, and related-resource reads with typed filters and sorting.
+- Stable API errors and request correlation IDs are returned consistently;
+  API-key comparison is constant-time and unsafe configurations fail closed.
+- Event payloads are explicitly versioned, generated content remains plain text,
+  publication destinations are hashed, and claim tokens/secrets are not exposed.
+- List APIs use signed, filter-bound timestamp/UUID keyset cursors.
+- Liveness is process-only; readiness performs a sanitized database probe and no
+  Telegram call.
+- EPIC 15 Task 1 passed 27 focused tests and 28 isolated PostgreSQL checks;
+  full Pytest passed 291 tests with 54 expected skips.
 
 ## Known Gaps
 
@@ -117,12 +130,13 @@ execution is not complete in this environment.
 - Ingestion, scoring, and durable content processing are separate services and
   still require production process/bootstrap configuration.
 - Scheduler has no explicit overlap or multi-process coordination policy.
-- Final EPIC 14 PostgreSQL verification was not executed in this environment
-  because Docker/PostgreSQL is unavailable and `EPIC14_DATABASE_URL` is not set.
 - Live Telegram delivery is not yet verified; credentials, exact test-chat
   confirmation, live flags, and PostgreSQL verification database were not
   supplied.
 - No production AI provider is wired into the marketplace pipeline.
+- Administration mutations and immutable audit persistence are intentionally not
+  implemented; approve/reject, retry/cancel, and ambiguous resolution remain
+  EPIC 15 Task 2.
 
 ## Architecture Review
 
@@ -136,8 +150,9 @@ Current architecture separates:
 
 EPIC 13 final verification adds one production-shaped 83-check PostgreSQL path
 across ingestion, scoring, content, publication intent, restart, overlap,
-rollback, Scheduler delegation, and audit evidence. EPIC 14 Task 2 connects the
-Telegram adapter to durable publication state offline. EPIC 14 Task 3 added the
-guarded live-test path and stronger offline verifier checks, but the remaining
-delivery step is executing the final PostgreSQL verification and deciding whether
-to run exactly one guarded live test-chat message.
+rollback, Scheduler delegation, and audit evidence. EPIC 14 connects the Telegram
+adapter to durable publication state and passed isolated PostgreSQL verification;
+the optional guarded live test-chat message remains unperformed. EPIC 15 Task 1
+adds a separate read model and API boundary without coupling HTTP transport to ORM
+or lifecycle repositories. The next administration work must remain in guarded
+application commands with atomic immutable audit rows.

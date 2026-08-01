@@ -6,6 +6,16 @@ This document records notable Project Passport updates.
 
 ## Unreleased
 
+- Implemented EPIC 15 Task 1 read-only administration API for durable events,
+  generated content, publications, related-resource reads, and health probes.
+- Added fail-closed `X-Admin-API-Key` authentication, OpenAPI security metadata,
+  bounded request correlation, stable sanitized errors, typed UTC filters, and
+  signed deterministic keyset cursors.
+- Added SQLAlchemy-independent query contracts with memory and PostgreSQL
+  implementations returning immutable safe projections rather than ORM rows.
+- Verified EPIC 15 Task 1 with 27 focused tests, 28 isolated PostgreSQL checks,
+  full Pytest, strict MyPy, Ruff, Ruff format, and Alembic current/check/offline
+  SQL.
 - Added EPIC 14 Task 3 guarded live Telegram verification script with safe
   offline default mode, exact test-chat confirmation, allowlist checks, and no
   default network call.

@@ -15,6 +15,10 @@ This document describes the current high-level architecture of MediaEngine as it
 - `app/analytics`: price change detection and related analytics models.
 - `app/insights`: event scoring.
 - `app/ai`: AI provider abstractions, fake provider, and prompt builders.
+- `app/api`: FastAPI transport schemas, authentication, correlation, stable error
+  handling, health probes, and read-only administration routes.
+- `app/repositories/queries`: SQLAlchemy-independent read contracts, immutable
+  projections, and memory/PostgreSQL query adapters.
 
 ## Current Data Flow
 
@@ -77,6 +81,9 @@ Current repository layer includes:
 - `MarketEventRepository`
 - `GeneratedContentRepository`
 - `PublicationRepository`
+- `MarketEventQueryRepository`
+- `GeneratedContentQueryRepository`
+- `PublicationQueryRepository`
 - in-memory implementations under `app/repositories/memory`
 - PostgreSQL implementations under `app/repositories/postgres`
 - `RepositoryProvider`
@@ -113,6 +120,29 @@ run inside ingestion or scoring transactions.
   an explicit destination is configured.
 - Telegram network calls occur outside database transactions. Ambiguous outcomes
   are never retried automatically.
+- Administration routes depend on application query services and immutable read
+  projections, never ORM rows, sessions, lifecycle repositories, or Telegram
+  adapters.
+- Read requests open caller-owned short repository scopes and never commit,
+  claim, or change lifecycle state.
+
+## Read Administration Flow
+
+The EPIC 15 Task 1 flow is:
+
+1. Correlation middleware validates or creates a bounded request ID.
+2. `X-Admin-API-Key` authentication fails closed and uses constant-time
+   comparison.
+3. FastAPI validates typed filters, UTC ranges, allow-listed sorting, and page
+   bounds.
+4. Application query services call SQLAlchemy-independent read contracts.
+5. PostgreSQL query adapters perform deterministic keyset queries and map ORM
+   records to immutable safe projections.
+6. API mappers return versioned payloads, plain generated text, hashed
+   destination references, and sanitized errors.
+
+The read API introduces no lifecycle mutation, migration, Telegram call, or AI
+call.
 
 ## EPIC 13 Verification
 
@@ -128,8 +158,7 @@ Telegram delivery architecture remains channel-boundary oriented: repositories
 stay channel independent, `PublicationDeliveryService` owns durable lifecycle
 orchestration, and `TelegramPublicationAdapter` owns only outbound provider I/O.
 
-The guarded live verifier and expanded PostgreSQL verifier exist, but final
-PostgreSQL execution was not completed in the current environment. No production
-delivery path is enabled by default, and live Telegram delivery must not be
-claimed verified until one approved test-chat message is sent through the normal
-service path and its external message ID is persisted.
+The expanded PostgreSQL verifier passed `39/39` checks against an isolated
+database. No production delivery path is enabled by default, and live Telegram
+delivery must not be claimed verified until one approved test-chat message is
+sent through the normal service path and its external message ID is persisted.

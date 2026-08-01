@@ -194,3 +194,22 @@ migrations in `342` lines.
 
 **EPIC 14 functionally complete; guarded live Telegram test-chat verification
 not performed.**
+
+## EPIC 15 Task 1 Read API
+
+`scripts/verify_epic15_read_api_postgres.py` was executed against a temporary
+isolated PostgreSQL 16 container and database named `epic15_verify`. It rebuilt
+the isolated public schema, applied all migrations through
+`0008_content_publications`, seeded durable records through existing repository
+contracts, and exercised the real FastAPI ASGI application.
+
+All `28/28` named checks passed: liveness, readiness, missing/invalid/valid API
+key authentication, event/content/publication lists and details, typed
+price-drop payloads, filters, deterministic pagination, safe destinations,
+claim-token absence, sanitized errors, invalid cursors, UTC range validation,
+request correlation, absence of mutation routes, absence of Telegram calls, and
+fresh-session restart reads.
+
+`alembic current` reported `0008_content_publications (head)`, `alembic check`
+reported no new upgrade operations, and offline upgrade SQL generated
+successfully through current head. Task 1 required no migration.

@@ -2,12 +2,14 @@
 
 ## Purpose
 
-This document lists only confirmed work remaining after final EPIC 13
-verification.
+This document lists only confirmed work remaining after EPIC 15 Task 1.
 
 ## Immediate
 
-- Run final EPIC 14 PostgreSQL verification in an isolated `epic14_*` database.
+- Implement EPIC 15 Task 2 guarded content review and publication administration
+  commands through application services.
+- Add immutable `admin_actions` persistence and commit each audit row atomically
+  with its guarded state transition.
 - If explicitly approved credentials and a test chat are available, run exactly
   one guarded live Telegram test-chat verification.
 

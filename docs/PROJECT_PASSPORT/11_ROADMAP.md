@@ -72,23 +72,34 @@ This document tracks only work that is reflected by the current repository state
 - Expanded EPIC 14 PostgreSQL verifier checks for retry resumption,
   completion-rollback recovery, one-publication/two-worker claim exclusivity,
   and token redaction.
+- EPIC 14 final PostgreSQL verification: `39/39` checks at revision `0008`.
+- EPIC 15 Task 1 authenticated read-only administration API for events,
+  generated content, and publications.
+- SQLAlchemy-independent administration query contracts and PostgreSQL query
+  implementations with typed filters and deterministic keyset pagination.
+- Stable API errors, request correlation IDs, API-key OpenAPI security, and
+  liveness/readiness endpoints.
+- EPIC 15 PostgreSQL read verification: `28/28` checks with no Telegram calls.
 
 ## Current Status
 
 MediaEngine has a live-verified PostgreSQL runtime foundation for repository-backed
 offers, price history, deterministic market events, bounded transactions,
 durable post-commit scoring and content generation with recovery, persisted
-publication intent, offline-verified Telegram delivery orchestration, guarded
-live-test tooling, and Scheduler delegation.
+publication intent, PostgreSQL-verified Telegram delivery orchestration, guarded
+live-test tooling, Scheduler delegation, and a PostgreSQL-verified read-only
+administration API.
 
 ## Not Present Yet
 
 - Full price normalization for GGSEL extracted fields.
 - Scheduler overlap and multi-process coordination.
-- Final EPIC 14 PostgreSQL verification execution in an isolated database.
 - Optional guarded live Telegram test-chat message.
 - Production AI provider integration in the pipeline.
+- Administration approve/reject, retry/cancel, ambiguous-resolution, and audit
+  commands.
 
 ## Recommended Next EPIC
 
-**Complete EPIC 14 final verification with isolated PostgreSQL.**
+**EPIC 15 Task 2: guarded administration commands with immutable, atomic audit
+persistence.**

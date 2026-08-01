@@ -141,6 +141,33 @@ class LoggingSettings(BaseSettings):
     level: str = "INFO"
 
 
+class AdminApiSettings(BaseSettings):
+    """Configuration for the read-only administration API."""
+
+    model_config = SettingsConfigDict(
+        env_file=".env",
+        env_file_encoding="utf-8",
+        env_prefix="ADMIN_",
+        extra="ignore",
+    )
+
+    api_enabled: bool = False
+    api_key: SecretStr = SecretStr("")
+    test_bypass_enabled: bool = False
+    api_docs_enabled: bool = True
+    default_page_size: int = Field(default=50, ge=1, le=100)
+    maximum_page_size: int = Field(default=100, ge=1, le=500)
+    request_id_max_length: int = Field(default=128, ge=16, le=256)
+    cursor_signing_key: SecretStr = SecretStr("")
+
+    @model_validator(mode="after")
+    def validate_page_sizes(self) -> "AdminApiSettings":
+        if self.maximum_page_size < self.default_page_size:
+            msg = "Admin API maximum page size must not be below the default."
+            raise ValueError(msg)
+        return self
+
+
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(
         env_file=".env",
@@ -158,6 +185,7 @@ class Settings(BaseSettings):
     content_processing: ContentProcessingSettings = Field(
         default_factory=ContentProcessingSettings
     )
+    admin_api: AdminApiSettings = Field(default_factory=AdminApiSettings)
     logging: LoggingSettings = Field(default_factory=LoggingSettings)
 
 
