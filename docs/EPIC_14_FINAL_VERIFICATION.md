@@ -226,3 +226,10 @@ database was created. The final PostgreSQL verifier passed `39/39`, Alembic
 
 **EPIC 14 functionally complete; guarded live Telegram test-chat verification
 not performed.**
+
+## 21. EPIC 15 Compatibility Rerun
+
+During EPIC 15 final verification, the EPIC 14 offline PostgreSQL verifier was
+rerun against an isolated PostgreSQL 17 database at current migration head
+`0009_admin_actions`. The verifier passed `39/39`; live Telegram test-chat
+delivery was still not performed.

@@ -2,13 +2,12 @@
 
 ## Purpose
 
-This document lists only confirmed work remaining after EPIC 15 Task 2.
+This document lists only confirmed work remaining after EPIC 15 completion.
 
 ## Immediate
 
-- Implement EPIC 15 Task 3 operational completion: dashboard summary,
-  final health/readiness polish, OpenAPI/admin docs protection review, and final
-  API verification.
+- Design seller identity, tenant ownership, and authorization before exposing a
+  public seller dashboard or seller API routes.
 - If explicitly approved credentials and a test chat are available, run exactly
   one guarded live Telegram test-chat verification.
 

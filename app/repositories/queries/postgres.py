@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from collections.abc import Sequence
+from datetime import datetime
 from typing import Any
 from uuid import UUID
 
@@ -14,6 +15,7 @@ from app.models.market_event_record import MarketEventRecord
 from app.models.price_snapshot_record import PriceSnapshotRecord
 from app.models.publication_record import PublicationRecord
 from app.repositories.queries.contracts import (
+    DashboardQueryRepository,
     GeneratedContentQueryRepository,
     MarketEventQueryRepository,
     PublicationQueryRepository,
@@ -27,6 +29,8 @@ from app.repositories.queries.models import (
     ContentQuery,
     ContentRead,
     CursorPosition,
+    DashboardSummaryRead,
+    DashboardWindow,
     EventQuery,
     EventRead,
     PageRequest,
@@ -259,6 +263,124 @@ class PostgresPublicationQueryRepository(PublicationQueryRepository):
             else (asc(timestamp_column), asc(PublicationRecord.id))
         )
         return statement.order_by(*order)
+
+
+class PostgresDashboardQueryRepository(DashboardQueryRepository):
+    """PostgreSQL bounded aggregate queries for the admin dashboard."""
+
+    def __init__(self, session: AsyncSession) -> None:
+        """Bind the dashboard repository to a caller-owned read session."""
+        self._session = session
+
+    async def get_summary(self, window: DashboardWindow) -> DashboardSummaryRead:
+        """Return one bounded operational dashboard summary."""
+        return DashboardSummaryRead(
+            window=window,
+            total_new_market_events=await self._count(
+                select(func.count(MarketEventRecord.id)).where(
+                    _window_filter(MarketEventRecord.created_at, window)
+                )
+            ),
+            events_awaiting_scoring=await self._count(
+                select(func.count(MarketEventRecord.id)).where(
+                    _window_filter(MarketEventRecord.created_at, window),
+                    MarketEventRecord.scoring_status == "pending",
+                )
+            ),
+            scoring_failures=await self._count(
+                select(func.count(MarketEventRecord.id)).where(
+                    _window_filter(MarketEventRecord.created_at, window),
+                    MarketEventRecord.scoring_status == "failed",
+                )
+            ),
+            generated_content_pending=await self._count(
+                select(func.count(GeneratedContentRecord.id)).where(
+                    _window_filter(GeneratedContentRecord.created_at, window),
+                    GeneratedContentRecord.generation_status == "pending",
+                )
+            ),
+            generated_content_failed=await self._count(
+                select(func.count(GeneratedContentRecord.id)).where(
+                    _window_filter(GeneratedContentRecord.created_at, window),
+                    GeneratedContentRecord.generation_status == "failed",
+                )
+            ),
+            generated_content_awaiting_review=await self._count(
+                select(func.count(GeneratedContentRecord.id)).where(
+                    _window_filter(GeneratedContentRecord.created_at, window),
+                    GeneratedContentRecord.generation_status == "generated",
+                    GeneratedContentRecord.review_status == "pending",
+                )
+            ),
+            approved_content_awaiting_publication=await self._count(
+                select(func.count(GeneratedContentRecord.id)).where(
+                    _window_filter(GeneratedContentRecord.created_at, window),
+                    GeneratedContentRecord.generation_status == "generated",
+                    GeneratedContentRecord.review_status == "approved",
+                    exists(
+                        select(1).where(
+                            PublicationRecord.content_id == GeneratedContentRecord.id,
+                            PublicationRecord.publication_status.in_(
+                                ("pending", "in_progress", "failed", "ambiguous")
+                            ),
+                        )
+                    ),
+                )
+            ),
+            publications_pending=await self._count_publications(
+                window,
+                PublicationRecord.publication_status == "pending",
+            ),
+            publications_retryable=await self._count_publications(
+                window,
+                PublicationRecord.publication_status == "failed",
+                PublicationRecord.next_retry_at.is_not(None),
+            ),
+            publications_permanently_failed=await self._count_publications(
+                window,
+                PublicationRecord.publication_status == "failed",
+                PublicationRecord.next_retry_at.is_(None),
+            ),
+            publications_ambiguous=await self._count_publications(
+                window,
+                PublicationRecord.publication_status == "ambiguous",
+            ),
+            publications_published=await self._count_publications(
+                window,
+                PublicationRecord.publication_status == "published",
+            ),
+            latest_event_activity_at=await self._max_timestamp(
+                select(func.max(MarketEventRecord.created_at)).where(
+                    _window_filter(MarketEventRecord.created_at, window)
+                )
+            ),
+            latest_publication_at=await self._max_timestamp(
+                select(func.max(PublicationRecord.published_at)).where(
+                    PublicationRecord.published_at.is_not(None),
+                    _window_filter(PublicationRecord.published_at, window),
+                )
+            ),
+        )
+
+    async def _count(self, statement: Any) -> int:
+        result = await self._session.execute(statement)
+        return int(result.scalar_one() or 0)
+
+    async def _count_publications(
+        self,
+        window: DashboardWindow,
+        *filters: ColumnElement[bool],
+    ) -> int:
+        return await self._count(
+            select(func.count(PublicationRecord.id)).where(
+                _window_filter(PublicationRecord.created_at, window),
+                *filters,
+            )
+        )
+
+    async def _max_timestamp(self, statement: Any) -> datetime | None:
+        result = await self._session.execute(statement)
+        return result.scalar_one_or_none()
 
 
 def _event_filters(query: EventQuery) -> tuple[ColumnElement[bool], ...]:
@@ -533,6 +655,10 @@ def _keyset_after(
             id_column < cursor.item_id,
         ),
     )
+
+
+def _window_filter(column: Any, window: DashboardWindow) -> ColumnElement[bool]:
+    return and_(column >= window.starts_at, column < window.ends_at)
 
 
 def _event_from_row(row: Any) -> EventRead:

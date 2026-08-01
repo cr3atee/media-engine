@@ -7,6 +7,7 @@ from dataclasses import replace
 from datetime import UTC, datetime, timedelta
 from decimal import Decimal
 from pathlib import Path
+from typing import Any, cast
 from uuid import UUID, uuid4
 
 import pytest
@@ -283,7 +284,12 @@ def test_admin_routes_are_registered_with_expected_methods() -> None:
     client, _ = _client()
     methods_by_path = {
         path: set(route)
-        for path, route in client.get("/openapi.json").json()["paths"].items()
+        for path, route in client.get(
+            "/openapi.json",
+            headers={"X-Admin-API-Key": "test-secret"},
+        )
+        .json()["paths"]
+        .items()
     }
     mutation_paths = {
         "/api/v1/admin/content/{content_id}/approve",
@@ -295,6 +301,7 @@ def test_admin_routes_are_registered_with_expected_methods() -> None:
 
     for path in mutation_paths:
         assert methods_by_path[path] == {"post"}
+    assert methods_by_path["/api/v1/admin/dashboard/summary"] == {"get"}
     assert all(
         method.upper() in {"GET", "HEAD", "POST"}
         for methods in methods_by_path.values()
@@ -377,9 +384,14 @@ def test_authentication_bypass_requires_both_explicit_guards() -> None:
 
 def test_openapi_declares_api_key_security_and_can_be_disabled() -> None:
     client, _ = _client()
-    schema = client.get("/openapi.json").json()
+    unauthenticated = client.get("/openapi.json")
+    schema = client.get(
+        "/openapi.json",
+        headers={"X-Admin-API-Key": "test-secret"},
+    ).json()
     security_scheme = schema["components"]["securitySchemes"]["AdminApiKey"]
 
+    assert unauthenticated.status_code == 401
     assert security_scheme["type"] == "apiKey"
     assert security_scheme["in"] == "header"
     assert security_scheme["name"] == "X-Admin-API-Key"
@@ -421,15 +433,63 @@ def test_health_exposure_and_readiness_are_sanitized() -> None:
     admin_health = client.get("/api/v1/admin/health")
 
     assert live.status_code == 200
-    assert live.json() == {
-        "status": "ok",
-        "service": "mediaengine",
-        "database": "not_checked",
-        "admin_api": "configured",
-    }
+    body = live.json()
+    assert body["status"] == "ok"
+    assert body["service"] == "mediaengine"
+    assert body["database"] == "not_checked"
+    assert body["admin_api"] == "configured"
+    assert body["migration"] == "not_checked"
+    assert body["telegram"] == "disabled"
     assert admin_health.status_code == 401
     assert "postgresql" not in live.text.lower()
     assert "test-secret" not in live.text
+
+
+def test_dashboard_summary_is_bounded_and_sanitized() -> None:
+    event = replace(_event(1), scoring_status="pending")
+    content = replace(
+        _content(event.id),
+        generation_status="generated",
+        review_status="approved",
+    )
+    publication = replace(
+        _publication(event.id, content.id),
+        status="failed",
+        next_retry_at=NOW + timedelta(minutes=10),
+    )
+    client = _client_for(
+        create_memory_read_provider(
+            events=(event,),
+            content=(content,),
+            publications=(publication,),
+        )
+    )
+    cast(Any, client.app).state.dashboard_clock = lambda: NOW + timedelta(hours=1)
+    headers = {"X-Admin-API-Key": "test-secret"}
+
+    response = client.get(
+        "/api/v1/admin/dashboard/summary",
+        headers=headers,
+    )
+    wide_range = client.get(
+        "/api/v1/admin/dashboard/summary",
+        params={
+            "from": "2026-01-01T00:00:00Z",
+            "to": "2026-03-01T00:00:00Z",
+        },
+        headers=headers,
+    )
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["window"]["boundary"] == "from_inclusive_to_exclusive"
+    assert body["total_new_market_events"] == 1
+    assert body["events_awaiting_scoring"] == 1
+    assert body["approved_content_awaiting_publication"] == 1
+    assert body["publications_retryable"] == 1
+    assert "test-secret" not in response.text
+    assert wide_range.status_code == 422
+    assert wide_range.json()["error"]["code"] == "invalid_dashboard_window"
 
 
 def test_configured_default_and_maximum_page_sizes_are_enforced() -> None:
@@ -696,6 +756,7 @@ def test_unexpected_repository_failure_is_sanitized() -> None:
         events=_FailingEventRepository(),
         content=empty.content,
         publications=empty.publications,
+        dashboard=empty.dashboard,
     )
     client = _client_for(provider, raise_server_exceptions=False)
 
@@ -715,6 +776,7 @@ def test_read_side_layering_has_no_orm_or_delivery_dependencies() -> None:
         Path("app/api/routes/admin_events.py"),
         Path("app/api/routes/admin_content.py"),
         Path("app/api/routes/admin_publications.py"),
+        Path("app/api/routes/admin_dashboard.py"),
         Path("app/services/admin_queries.py"),
         Path("app/repositories/queries/contracts.py"),
         Path("app/repositories/queries/models.py"),

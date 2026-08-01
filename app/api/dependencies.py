@@ -16,6 +16,7 @@ from app.repositories.queries.provider import (
 from app.services.admin_mutations import AdminMutationService
 from app.services.admin_queries import (
     AdminContentQueryService,
+    AdminDashboardQueryService,
     AdminEventQueryService,
     AdminPublicationQueryService,
 )
@@ -69,6 +70,16 @@ async def get_publication_query_service(
 ) -> AdminPublicationQueryService:
     """Build a publication query service from a request-scoped provider."""
     return AdminPublicationQueryService(repositories.publications)
+
+
+async def get_dashboard_query_service(
+    repositories: Annotated[
+        ReadRepositoryProvider,
+        Depends(get_read_repositories),
+    ],
+) -> AdminDashboardQueryService:
+    """Build a dashboard query service from a request-scoped provider."""
+    return AdminDashboardQueryService(repositories.dashboard)
 
 
 async def get_admin_mutation_service(request: Request) -> AdminMutationService:

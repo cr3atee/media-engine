@@ -4,6 +4,7 @@ from typing import Literal, cast
 
 from app.api.schemas.common import RelatedSummaryResponse
 from app.api.schemas.content import ContentResponse
+from app.api.schemas.dashboard import DashboardSummaryResponse, DashboardWindowResponse
 from app.api.schemas.events import (
     EventResponse,
     PriceDropPayloadResponse,
@@ -12,6 +13,7 @@ from app.api.schemas.events import (
 from app.api.schemas.publications import PublicationResponse
 from app.repositories.queries.models import (
     ContentRead,
+    DashboardSummaryRead,
     EventRead,
     PublicationRead,
     RelatedSummary,
@@ -117,6 +119,37 @@ def publication_response(publication: PublicationRead) -> PublicationResponse:
         created_at=publication.created_at,
         updated_at=publication.updated_at,
         version=publication.version,
+    )
+
+
+def dashboard_summary_response(
+    summary: DashboardSummaryRead,
+) -> DashboardSummaryResponse:
+    """Map dashboard aggregates to the public response DTO."""
+    return DashboardSummaryResponse(
+        window=DashboardWindowResponse.model_validate(
+            {
+                "from": summary.window.starts_at,
+                "to": summary.window.ends_at,
+                "boundary": "from_inclusive_to_exclusive",
+            }
+        ),
+        total_new_market_events=summary.total_new_market_events,
+        events_awaiting_scoring=summary.events_awaiting_scoring,
+        scoring_failures=summary.scoring_failures,
+        generated_content_pending=summary.generated_content_pending,
+        generated_content_failed=summary.generated_content_failed,
+        generated_content_awaiting_review=summary.generated_content_awaiting_review,
+        approved_content_awaiting_publication=(
+            summary.approved_content_awaiting_publication
+        ),
+        publications_pending=summary.publications_pending,
+        publications_retryable=summary.publications_retryable,
+        publications_permanently_failed=summary.publications_permanently_failed,
+        publications_ambiguous=summary.publications_ambiguous,
+        publications_published=summary.publications_published,
+        latest_event_activity_at=summary.latest_event_activity_at,
+        latest_publication_at=summary.latest_publication_at,
     )
 
 

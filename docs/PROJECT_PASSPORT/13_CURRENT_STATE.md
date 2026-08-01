@@ -30,6 +30,10 @@ EPIC 15 Task 2 is implemented and verified: guarded content review and
 publication commands persist immutable `admin_actions` records atomically with
 state changes, and isolated PostgreSQL 17.10 verification passed `26/26` checks
 at revision `0009_admin_actions`.
+EPIC 15 Task 3 is implemented and verified: dashboard summary, protected
+OpenAPI/Swagger/ReDoc, expanded sanitized readiness, final PostgreSQL admin API
+verification, and compatibility verifiers passed against isolated PostgreSQL 17.
+EPIC 15 is functionally complete for the internal administration API boundary.
 
 ## Active Capabilities
 
@@ -129,6 +133,15 @@ at revision `0009_admin_actions`.
 - EPIC 15 Task 2 passed 26 isolated PostgreSQL admin-mutation checks, focused
   Task 2/repository contract tests, full Pytest, Ruff, Ruff format, MyPy, and
   Alembic upgrade/check/downgrade/offline SQL verification.
+- `/api/v1/admin/dashboard/summary` returns bounded operational counters through
+  a dedicated dashboard query repository.
+- `/openapi.json`, `/docs`, and `/redoc` are protected by admin authentication
+  when enabled.
+- Readiness checks PostgreSQL connectivity and Alembic head without exposing
+  secrets or contacting Telegram.
+- EPIC 15 final verification passed: Task3 `23/23`, Task1 `29/29`, Task2
+  `26/26`, EPIC14 compatibility `39/39`, full Pytest `304 passed, 58 skipped`,
+  full MyPy `274` source files, Ruff, Ruff format, and Alembic lifecycle.
 
 ## Known Gaps
 
@@ -141,7 +154,7 @@ at revision `0009_admin_actions`.
   confirmation, live flags, and PostgreSQL verification database were not
   supplied.
 - No production AI provider is wired into the marketplace pipeline.
-- EPIC 15 Task 3 operational completion is not implemented yet.
+- Seller identity, tenant isolation, and public seller routes do not exist yet.
 
 ## Architecture Review
 
@@ -160,5 +173,7 @@ adapter to durable publication state and passed isolated PostgreSQL verification
 the optional guarded live test-chat message remains unperformed. EPIC 15 Task 1
 adds a separate read model and API boundary without coupling HTTP transport to ORM
 or lifecycle repositories. EPIC 15 Task 2 adds guarded application commands with
-atomic immutable audit rows; the next work should stay limited to Task 3
-operational completion.
+atomic immutable audit rows. EPIC 15 Task 3 completes the operational admin
+boundary with dashboard/readiness/OpenAPI hardening; the next architectural work
+should focus on seller identity and tenant-scoped authorization before any public
+seller dashboard.

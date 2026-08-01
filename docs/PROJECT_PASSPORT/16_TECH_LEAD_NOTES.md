@@ -76,6 +76,17 @@ This document captures architecture notes that are important for future reviews.
 - EPIC 15 Task 2 administration commands are verified against PostgreSQL 17.10.
   Routes remain thin, commands write immutable `admin_actions` atomically with
   state changes, and no Telegram call is made from the administration workflow.
+- EPIC 15 Task 3 completes the internal admin API boundary. Dashboard aggregates
+  use a dedicated query repository; routes still contain no SQL or lifecycle
+  transitions.
+- OpenAPI, Swagger UI, and ReDoc are protected by the same admin API key when
+  enabled. They should stay disabled or protected in production.
+- Readiness can report database and Alembic head status, repository composition,
+  Scheduler configuration, and Telegram configuration without exposing secrets
+  or contacting Telegram.
+- The next major architecture risk is seller identity and tenant isolation; do
+  not expose seller-facing routes or frontend claims until those boundaries
+  exist.
 - GGSEL-specific price fields are not fully normalized into `ParsedOffer.price` and `ParsedOffer.currency` yet.
 
 ## Review Notes

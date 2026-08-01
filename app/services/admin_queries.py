@@ -3,6 +3,7 @@ from __future__ import annotations
 from uuid import UUID
 
 from app.repositories.queries.contracts import (
+    DashboardQueryRepository,
     GeneratedContentQueryRepository,
     MarketEventQueryRepository,
     PublicationQueryRepository,
@@ -10,6 +11,8 @@ from app.repositories.queries.contracts import (
 from app.repositories.queries.models import (
     ContentQuery,
     ContentRead,
+    DashboardSummaryRead,
+    DashboardWindow,
     EventQuery,
     EventRead,
     PageRequest,
@@ -77,3 +80,15 @@ class AdminPublicationQueryService:
     async def get_publication(self, publication_id: UUID) -> PublicationRead | None:
         """Return one publication projection."""
         return await self._repository.get_publication(publication_id)
+
+
+class AdminDashboardQueryService:
+    """Application read service for operational administration summaries."""
+
+    def __init__(self, repository: DashboardQueryRepository) -> None:
+        """Bind the service to a caller-owned dashboard query contract."""
+        self._repository = repository
+
+    async def get_summary(self, window: DashboardWindow) -> DashboardSummaryRead:
+        """Return a bounded operational dashboard summary."""
+        return await self._repository.get_summary(window)

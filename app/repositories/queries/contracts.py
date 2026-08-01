@@ -6,6 +6,8 @@ from uuid import UUID
 from app.repositories.queries.models import (
     ContentQuery,
     ContentRead,
+    DashboardSummaryRead,
+    DashboardWindow,
     EventQuery,
     EventRead,
     PageRequest,
@@ -61,3 +63,11 @@ class PublicationQueryRepository(ABC):
     @abstractmethod
     async def get_publication(self, publication_id: UUID) -> PublicationRead | None:
         """Return one publication read projection by technical identifier."""
+
+
+class DashboardQueryRepository(ABC):
+    """Database-independent read contract for operational dashboard summaries."""
+
+    @abstractmethod
+    async def get_summary(self, window: DashboardWindow) -> DashboardSummaryRead:
+        """Return bounded aggregate counters for one UTC time window."""

@@ -87,6 +87,12 @@ This document tracks only work that is reflected by the current repository state
   concurrency, and transaction rollback verification.
 - EPIC 15 Task 2 PostgreSQL verification: `26/26` checks on PostgreSQL 17.10 at
   revision `0009_admin_actions`.
+- EPIC 15 Task 3 operational completion: bounded admin dashboard summary,
+  protected OpenAPI/Swagger/ReDoc, expanded sanitized readiness, and final
+  PostgreSQL admin API verification.
+- EPIC 15 final verification: Task3 `23/23`, Task1 `29/29`, Task2 `26/26`,
+  EPIC14 compatibility `39/39`, full Pytest `304 passed, 58 skipped`, MyPy
+  `274` source files, Ruff, Ruff format, and Alembic lifecycle.
 
 ## Current Status
 
@@ -95,8 +101,9 @@ offers, price history, deterministic market events, bounded transactions,
 durable post-commit scoring and content generation with recovery, persisted
 publication intent, PostgreSQL-verified Telegram delivery orchestration, guarded
 live-test tooling, Scheduler delegation, a PostgreSQL-verified read-only
-administration API, and PostgreSQL-verified guarded administration commands with
-immutable audit history.
+  administration API, PostgreSQL-verified guarded administration commands with
+immutable audit history, and PostgreSQL-verified operational dashboard/readiness
+hardening.
 
 ## Not Present Yet
 
@@ -104,8 +111,8 @@ immutable audit history.
 - Scheduler overlap and multi-process coordination.
 - Optional guarded live Telegram test-chat message.
 - Production AI provider integration in the pipeline.
-- EPIC 15 Task 3 dashboard summary and operational completion.
+- Seller identity, tenant isolation, and public seller route authorization.
 
 ## Recommended Next EPIC
 
-**EPIC 15 Task 3: operational completion for the administration API.**
+**Seller identity and tenant-scoped authorization before public dashboard/UI.**

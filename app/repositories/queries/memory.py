@@ -1,9 +1,11 @@
 from __future__ import annotations
 
 from collections.abc import Iterable
+from datetime import datetime
 from uuid import UUID
 
 from app.repositories.queries.contracts import (
+    DashboardQueryRepository,
     GeneratedContentQueryRepository,
     MarketEventQueryRepository,
     PublicationQueryRepository,
@@ -16,6 +18,8 @@ from app.repositories.queries.cursors import (
 from app.repositories.queries.models import (
     ContentQuery,
     ContentRead,
+    DashboardSummaryRead,
+    DashboardWindow,
     EventQuery,
     EventRead,
     PageRequest,
@@ -137,6 +141,85 @@ class MemoryPublicationQueryRepository(PublicationQueryRepository):
                 if publication.id == publication_id
             ),
             None,
+        )
+
+
+class MemoryDashboardQueryRepository(DashboardQueryRepository):
+    """Deterministic in-memory dashboard aggregates for API tests."""
+
+    def __init__(
+        self,
+        *,
+        events: Iterable[EventRead] = (),
+        content: Iterable[ContentRead] = (),
+        publications: Iterable[PublicationRead] = (),
+    ) -> None:
+        """Store isolated immutable snapshots of the supplied projections."""
+        self._events = tuple(events)
+        self._content = tuple(content)
+        self._publications = tuple(publications)
+
+    async def get_summary(self, window: DashboardWindow) -> DashboardSummaryRead:
+        """Return aggregate counters over the configured in-memory rows."""
+        events = [
+            event for event in self._events if _inside_window(event.created_at, window)
+        ]
+        content = [
+            item for item in self._content if _inside_window(item.created_at, window)
+        ]
+        publications = [
+            item
+            for item in self._publications
+            if _inside_window(item.created_at, window)
+        ]
+        return DashboardSummaryRead(
+            window=window,
+            total_new_market_events=len(events),
+            events_awaiting_scoring=sum(
+                event.scoring_status == "pending" for event in events
+            ),
+            scoring_failures=sum(event.scoring_status == "failed" for event in events),
+            generated_content_pending=sum(
+                item.generation_status == "pending" for item in content
+            ),
+            generated_content_failed=sum(
+                item.generation_status == "failed" for item in content
+            ),
+            generated_content_awaiting_review=sum(
+                item.generation_status == "generated"
+                and item.review_status == "pending"
+                for item in content
+            ),
+            approved_content_awaiting_publication=sum(
+                _content_awaits_publication(item, publications) for item in content
+            ),
+            publications_pending=sum(item.status == "pending" for item in publications),
+            publications_retryable=sum(
+                item.status == "failed" and item.next_retry_at is not None
+                for item in publications
+            ),
+            publications_permanently_failed=sum(
+                item.status == "failed" and item.next_retry_at is None
+                for item in publications
+            ),
+            publications_ambiguous=sum(
+                item.status == "ambiguous" for item in publications
+            ),
+            publications_published=sum(
+                item.status == "published" for item in publications
+            ),
+            latest_event_activity_at=max(
+                (event.created_at for event in events),
+                default=None,
+            ),
+            latest_publication_at=max(
+                (
+                    item.published_at
+                    for item in publications
+                    if item.published_at is not None
+                ),
+                default=None,
+            ),
         )
 
 
@@ -332,3 +415,22 @@ def _item_position[TRead](item: TRead, sort: str) -> tuple[object, UUID]:
     if isinstance(item, PublicationRead):
         return item.created_at, item.id
     raise TypeError(f"Unsupported read projection: {type(item)!r}.")
+
+
+def _inside_window(value: datetime, window: DashboardWindow) -> bool:
+    return window.starts_at <= value < window.ends_at
+
+
+def _content_awaits_publication(
+    content: ContentRead,
+    publications: list[PublicationRead],
+) -> bool:
+    return (
+        content.generation_status == "generated"
+        and content.review_status == "approved"
+        and any(
+            publication.content_id == content.id
+            and publication.status in {"pending", "in_progress", "failed", "ambiguous"}
+            for publication in publications
+        )
+    )

@@ -6,6 +6,18 @@ This document records notable Project Passport updates.
 
 ## Unreleased
 
+- Completed EPIC 15 Task 3 operational administration API completion with a
+  bounded dashboard summary, dedicated dashboard query repository, protected
+  OpenAPI/Swagger/ReDoc routes, and expanded sanitized readiness.
+- Added final EPIC 15 PostgreSQL admin API verification:
+  `scripts/verify_epic15_admin_api_postgres.py` passed `23/23`.
+- Updated Task 1 read API verifier for the final admin API surface and protected
+  docs; it passed `29/29`.
+- Confirmed Task 2 verifier `26/26` and EPIC 14 compatibility verifier `39/39`
+  against isolated PostgreSQL 17 databases at current migration head.
+- Verified EPIC 15 final quality: full Pytest `304 passed, 58 skipped`, MyPy
+  `274` source files, Ruff, Ruff format, Alembic current/check,
+  downgrade/upgrade, offline SQL, and `admin_actions` catalog checks.
 - Implemented EPIC 15 Task 2 guarded administration commands for content
   approval/rejection, publication retry/cancel, and ambiguous publication
   resolution, with immutable `admin_actions` audit persistence and replay-safe

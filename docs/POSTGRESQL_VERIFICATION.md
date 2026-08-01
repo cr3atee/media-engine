@@ -3,12 +3,10 @@
 ## Status
 
 PostgreSQL persistence, the EPIC 12 runtime, EPIC 13 transactional market-event
-ingestion, durable scoring, generated content, and publication-intent state are
-live-verified. Final EPIC 13 verification passed 83 checks against isolated
-PostgreSQL 17.10 at revision `0008_content_publications` without using a project
-or production database. EPIC 14 delivery verification additionally passed
-`39/39` checks against a separate isolated PostgreSQL 17 container at the same
-revision.
+ingestion, durable scoring, generated content, publication-intent state, EPIC 14
+delivery orchestration, and EPIC 15 administration API are live-verified. Final
+EPIC 15 verification used isolated PostgreSQL 17 databases and current revision
+`0009_admin_actions` without using a project or production database.
 
 ## Verified Schema
 
@@ -243,3 +241,30 @@ Alembic verification also passed:
 Focused Task 2 and repository contract tests passed `20/20`. Full Pytest passed
 `307` tests with `54` expected skips. Ruff, Ruff format, and MyPy with
 `--explicit-package-bases` passed.
+
+## EPIC 15 Task 3 Operational Completion
+
+Task 3 completed the operational administration API boundary:
+
+- dashboard summary via a dedicated query repository;
+- protected `/openapi.json`, `/docs`, and `/redoc`;
+- public liveness and sanitized readiness with database and Alembic head checks;
+- final PostgreSQL admin API verification.
+
+The final verification used a temporary isolated PostgreSQL 17 container.
+`scripts/verify_epic15_admin_api_postgres.py` passed `23/23` checks against
+database `epic15_task3_verification` at revision `0009_admin_actions`.
+
+Compatibility verifiers also passed:
+
+- Task 1 read API verifier: `29/29`;
+- Task 2 admin mutation verifier: `26/26`;
+- EPIC 14 delivery verifier at current head: `39/39`.
+
+Alembic current/check, downgrade to `0008_content_publications`, upgrade back to
+head, offline upgrade SQL generation, and PostgreSQL catalog checks for
+`admin_actions` constraints/indexes all passed.
+
+Full Pytest passed `304` tests with `58` expected skips. MyPy checked `274`
+source files with no issues. Ruff and Ruff format checks passed for touched
+files.

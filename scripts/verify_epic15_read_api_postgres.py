@@ -243,18 +243,28 @@ async def _verify_http(
         and invalid_cursor.json()["error"]["request_id"]
         == invalid_cursor.headers["X-Request-ID"],
     )
-    openapi = await client.get("/openapi.json")
+    unauthenticated_openapi = await client.get("/openapi.json")
     verifier.check(
-        "no mutation routes",
-        all(
-            method.upper() in {"GET", "HEAD"}
-            for path in openapi.json()["paths"].values()
+        "protected OpenAPI",
+        unauthenticated_openapi.status_code == 401,
+    )
+    openapi = await client.get("/openapi.json", headers=headers)
+    paths = openapi.json()["paths"]
+    verifier.check(
+        "admin read mutation and dashboard routes registered",
+        paths["/api/v1/admin/events"].keys() == {"get"}
+        and paths["/api/v1/admin/dashboard/summary"].keys() == {"get"}
+        and paths["/api/v1/admin/content/{content_id}/approve"].keys() == {"post"}
+        and all(
+            method.upper() in {"GET", "HEAD", "POST"}
+            for path in paths.values()
             for method in path
         ),
     )
     verifier.check(
         "no Telegram calls",
-        "telegram" not in live.text.lower()
+        TOKEN not in live.text
+        and TOKEN not in publication_detail.text
         and "bot_token" not in publication_detail.text.lower(),
     )
 

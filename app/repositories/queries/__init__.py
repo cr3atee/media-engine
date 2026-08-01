@@ -1,12 +1,15 @@
 """Database-independent read-side query contracts and implementations."""
 
 from app.repositories.queries.contracts import (
+    DashboardQueryRepository,
     GeneratedContentQueryRepository,
     MarketEventQueryRepository,
     PublicationQueryRepository,
 )
 from app.repositories.queries.models import (
     ContentQuery,
+    DashboardSummaryRead,
+    DashboardWindow,
     EventQuery,
     PageRequest,
     PublicationQuery,
@@ -20,6 +23,9 @@ from app.repositories.queries.provider import (
 
 __all__ = [
     "ContentQuery",
+    "DashboardQueryRepository",
+    "DashboardSummaryRead",
+    "DashboardWindow",
     "EventQuery",
     "GeneratedContentQueryRepository",
     "MarketEventQueryRepository",

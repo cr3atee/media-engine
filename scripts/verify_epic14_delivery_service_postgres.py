@@ -814,9 +814,10 @@ async def run_verification(database_url: str) -> None:
     engine = create_async_engine(database_url)
     session_factory = async_sessionmaker(engine, expire_on_commit=False)
     try:
+        revision = await _migration_revision(session_factory)
         checks.check(
-            "migrations reached 0008",
-            await _migration_revision(session_factory) == "0008_content_publications",
+            "migrations include content publications",
+            revision in {"0008_content_publications", "0009_admin_actions"},
         )
         await verify_success(checks, engine, session_factory)
         await verify_retry_and_failures(checks, engine, session_factory)

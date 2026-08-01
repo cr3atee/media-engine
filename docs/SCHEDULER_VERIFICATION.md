@@ -108,3 +108,10 @@ failure. No Scheduler code changes were required.
 
 **EPIC 14 functionally complete; guarded live Telegram test-chat verification
 not performed.**
+
+## EPIC 15 Final Verification Note
+
+EPIC 15 Task 3 did not change Scheduler behavior. The final verification
+re-ran `scripts/verify_epic14_delivery_service_postgres.py` against an isolated
+PostgreSQL 17 database at current migration head `0009_admin_actions`; the
+delivery Scheduler check remained green as part of the `39/39` verifier result.

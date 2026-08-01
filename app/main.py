@@ -1,8 +1,13 @@
-from fastapi import FastAPI
+from typing import Any
+
+from fastapi import Depends, FastAPI
 from fastapi.exceptions import RequestValidationError
+from fastapi.openapi.docs import get_redoc_html, get_swagger_ui_html
+from fastapi.responses import HTMLResponse
 from pydantic import ValidationError
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
+from app.api.auth import require_admin
 from app.api.correlation import RequestCorrelationMiddleware
 from app.api.errors import (
     ApiError,
@@ -18,6 +23,7 @@ from app.api.routes.admin_content import (
 from app.api.routes.admin_content import (
     router as admin_content_router,
 )
+from app.api.routes.admin_dashboard import router as admin_dashboard_router
 from app.api.routes.admin_events import router as admin_events_router
 from app.api.routes.admin_mutations import router as admin_mutations_router
 from app.api.routes.admin_publications import (
@@ -48,9 +54,9 @@ def create_app(
     """Create the application with explicit read and command composition roots."""
     configuration = admin_api_settings or settings.admin_api
     application = FastAPI(
-        openapi_url="/openapi.json" if configuration.api_docs_enabled else None,
-        docs_url="/docs" if configuration.api_docs_enabled else None,
-        redoc_url="/redoc" if configuration.api_docs_enabled else None,
+        openapi_url=None,
+        docs_url=None,
+        redoc_url=None,
     )
     application.state.admin_api_settings = configuration
     application.state.read_repository_scope_factory = (
@@ -77,12 +83,49 @@ def create_app(
     application.add_exception_handler(Exception, unexpected_error_handler)
     application.include_router(health_router)
     application.include_router(admin_mutations_router)
+    application.include_router(admin_dashboard_router)
     application.include_router(admin_events_router)
     application.include_router(admin_content_router)
     application.include_router(admin_publications_router)
     application.include_router(event_content_router)
     application.include_router(event_publication_router)
+    if configuration.api_docs_enabled:
+        _mount_protected_api_docs(application)
     return application
+
+
+def _mount_protected_api_docs(application: FastAPI) -> None:
+    """Expose OpenAPI assets only to authenticated admin API clients."""
+
+    @application.get(
+        "/openapi.json",
+        include_in_schema=False,
+        dependencies=[Depends(require_admin)],
+    )
+    async def protected_openapi() -> dict[str, Any]:
+        return application.openapi()
+
+    @application.get(
+        "/docs",
+        include_in_schema=False,
+        dependencies=[Depends(require_admin)],
+    )
+    async def protected_swagger_ui() -> HTMLResponse:
+        return get_swagger_ui_html(
+            openapi_url="/openapi.json",
+            title=f"{application.title} - Swagger UI",
+        )
+
+    @application.get(
+        "/redoc",
+        include_in_schema=False,
+        dependencies=[Depends(require_admin)],
+    )
+    async def protected_redoc() -> HTMLResponse:
+        return get_redoc_html(
+            openapi_url="/openapi.json",
+            title=f"{application.title} - ReDoc",
+        )
 
 
 app = create_app()

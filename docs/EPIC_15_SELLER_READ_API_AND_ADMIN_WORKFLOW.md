@@ -1,6 +1,8 @@
 # EPIC 15 - Seller Read API and Administration Workflow
 
-Status: Task 1 implemented and verified; Task 2 administration mutations and immutable audit persistence are implemented and verified against isolated PostgreSQL 17.10
+Status: complete. Task 1 read API, Task 2 administration mutations/audit, and
+Task 3 operational dashboard/readiness/OpenAPI hardening are implemented and
+verified against isolated PostgreSQL 17.
 
 Baseline commit: c48b06c11f10cd41981d6809c36ea30c94ee66ef
 
@@ -34,6 +36,13 @@ EPIC 14 is functionally complete at the durable delivery boundary:
   PostgreSQL verification.
 - Task 2 PostgreSQL verification passed `26/26` checks on PostgreSQL 17.10 at
   revision `0009_admin_actions`.
+- Task 3 operational completion is implemented: dashboard summary, protected
+  OpenAPI/Swagger/ReDoc, expanded sanitized readiness, and final PostgreSQL
+  admin API verification.
+- Task 3 final admin API verifier passed `23/23` checks on PostgreSQL 17 at
+  revision `0009_admin_actions`.
+- Updated Task 1 PostgreSQL verifier passed `29/29`; Task 2 verifier passed
+  `26/26`; EPIC 14 delivery verifier passed `39/39` against current head.
 
 The database already stores durable marketplace offers, price snapshots, market
 events, scoring state, generated-content attempts, content review state,
@@ -1369,3 +1378,74 @@ Proceed with operational completion only: dashboard summary, final health/readin
 polish, OpenAPI/admin docs protection review, and final API verification. Do not
 add seller identity, frontend work, Telegram live sending, or new marketplace
 logic as part of Task 3.
+
+## Task 3 Implementation Record
+
+### Dashboard summary
+
+The implemented operational dashboard route is:
+
+- `GET /api/v1/admin/dashboard/summary`
+
+The route is authenticated with `X-Admin-API-Key`, accepts an aware UTC
+`from`/`to` window, defaults to the last 24 hours, rejects reversed ranges, and
+limits explicit ranges to 31 days. The response includes bounded aggregate
+counters for market events, scoring failures, generated content states,
+publication states, and latest activity timestamps. Routes delegate to
+`AdminDashboardQueryService` and a dedicated `DashboardQueryRepository`; no SQL
+is embedded in route handlers.
+
+### Health and readiness
+
+`GET /health/live` remains public process liveness and does not touch external
+infrastructure. `GET /health/ready` performs a sanitized PostgreSQL connectivity
+and Alembic head check. Authenticated aliases remain available under:
+
+- `GET /api/v1/admin/health`
+- `GET /api/v1/admin/readiness`
+
+Readiness reports database, migration, repository, scheduler, Telegram, and
+component statuses without returning connection strings, tokens, claim tokens,
+or raw exceptions. Telegram status is configuration-only and performs no network
+call.
+
+### OpenAPI protection
+
+When API docs are enabled, `/openapi.json`, `/docs`, and `/redoc` are mounted
+behind the same admin authentication boundary. When docs are disabled, these
+routes remain unavailable. OpenAPI exposes the admin API key security scheme and
+the final read, dashboard, and mutation surface without ORM schemas.
+
+### Verification
+
+The final verification used a temporary isolated PostgreSQL 17 container and
+database `epic15_task3_verification`.
+
+- `scripts/verify_epic15_admin_api_postgres.py`: `23/23` checks passed.
+- `scripts/verify_epic15_read_api_postgres.py`: `29/29` checks passed.
+- `scripts/verify_epic15_admin_mutations_postgres.py`: `26/26` checks passed.
+- `scripts/verify_epic14_delivery_service_postgres.py`: `39/39` checks passed
+  against a separate isolated `epic14_task3_verification` database.
+- `alembic current`: `0009_admin_actions (head)`.
+- `alembic check`: no new upgrade operations.
+- Downgrade to `0008_content_publications` and upgrade back to head: passed.
+- Offline `upgrade head --sql`: generated successfully.
+- `admin_actions` constraints and indexes were verified from PostgreSQL
+  catalogs.
+- Full Pytest: `304 passed, 58 skipped`.
+- MyPy with `--explicit-package-bases`: `274` source files, no issues.
+- Ruff on touched files: passed.
+- Ruff format check on touched files: `18 files already formatted`.
+
+No live Telegram message was sent.
+
+### EPIC 15 closure
+
+EPIC 15 is functionally complete for the internal administration API boundary.
+It does not add seller identity, tenant isolation, frontend UI, live Telegram
+sending, OAuth/JWT, or public seller routes.
+
+### Recommended next EPIC
+
+Introduce seller identity, authorization, and tenant-scoped read boundaries
+before any public seller dashboard or frontend is launched.

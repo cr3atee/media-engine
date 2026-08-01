@@ -9,11 +9,13 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from app.database.session import SessionLocal
 from app.repositories.queries.contracts import (
+    DashboardQueryRepository,
     GeneratedContentQueryRepository,
     MarketEventQueryRepository,
     PublicationQueryRepository,
 )
 from app.repositories.queries.memory import (
+    MemoryDashboardQueryRepository,
     MemoryGeneratedContentQueryRepository,
     MemoryMarketEventQueryRepository,
     MemoryPublicationQueryRepository,
@@ -24,6 +26,7 @@ from app.repositories.queries.models import (
     PublicationRead,
 )
 from app.repositories.queries.postgres import (
+    PostgresDashboardQueryRepository,
     PostgresGeneratedContentQueryRepository,
     PostgresMarketEventQueryRepository,
     PostgresPublicationQueryRepository,
@@ -37,6 +40,7 @@ class ReadRepositoryProvider:
     events: MarketEventQueryRepository
     content: GeneratedContentQueryRepository
     publications: PublicationQueryRepository
+    dashboard: DashboardQueryRepository
 
 
 class ReadRepositoryScopeFactory(Protocol):
@@ -58,6 +62,11 @@ def create_memory_read_provider(
         events=MemoryMarketEventQueryRepository(events),
         content=MemoryGeneratedContentQueryRepository(content),
         publications=MemoryPublicationQueryRepository(publications),
+        dashboard=MemoryDashboardQueryRepository(
+            events=events,
+            content=content,
+            publications=publications,
+        ),
     )
 
 
@@ -74,6 +83,7 @@ def create_postgres_read_repository_scope(
                     events=PostgresMarketEventQueryRepository(session),
                     content=PostgresGeneratedContentQueryRepository(session),
                     publications=PostgresPublicationQueryRepository(session),
+                    dashboard=PostgresDashboardQueryRepository(session),
                 )
 
     return scope

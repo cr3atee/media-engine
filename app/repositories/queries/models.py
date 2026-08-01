@@ -151,6 +151,35 @@ class PublicationRead:
 
 
 @dataclass(slots=True, frozen=True)
+class DashboardWindow:
+    """UTC time window for bounded operational dashboard aggregates."""
+
+    starts_at: datetime
+    ends_at: datetime
+
+
+@dataclass(slots=True, frozen=True)
+class DashboardSummaryRead:
+    """Immutable read projection for administration dashboard counters."""
+
+    window: DashboardWindow
+    total_new_market_events: int
+    events_awaiting_scoring: int
+    scoring_failures: int
+    generated_content_pending: int
+    generated_content_failed: int
+    generated_content_awaiting_review: int
+    approved_content_awaiting_publication: int
+    publications_pending: int
+    publications_retryable: int
+    publications_permanently_failed: int
+    publications_ambiguous: int
+    publications_published: int
+    latest_event_activity_at: datetime | None
+    latest_publication_at: datetime | None
+
+
+@dataclass(slots=True, frozen=True)
 class EventQuery:
     """Typed filters supported by the event read API."""
 
