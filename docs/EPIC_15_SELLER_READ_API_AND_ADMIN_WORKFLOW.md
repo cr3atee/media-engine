@@ -1,6 +1,6 @@
 # EPIC 15 - Seller Read API and Administration Workflow
 
-Status: Task 1 implemented and verified; administration mutations are implemented and locally verified, while isolated PostgreSQL verification is blocked by the current environment
+Status: Task 1 implemented and verified; Task 2 administration mutations and immutable audit persistence are implemented and verified against isolated PostgreSQL 17.10
 
 Baseline commit: c48b06c11f10cd41981d6809c36ea30c94ee66ef
 
@@ -30,10 +30,10 @@ EPIC 14 is functionally complete at the durable delivery boundary:
 - Guarded live Telegram test-chat delivery was not performed.
 - EPIC 15 Task 2 guarded content review and publication administration commands
   are implemented with immutable `admin_actions` persistence, guarded
-  transitions, idempotent replay, and sanitized admin errors.
-- Focused Task 2 API, service, and repository tests pass locally; isolated
-  PostgreSQL verification is currently blocked because no safe
-  `EPIC15_DATABASE_URL` or Docker-backed database is available.
+  transitions, idempotent replay, sanitized admin errors, and isolated
+  PostgreSQL verification.
+- Task 2 PostgreSQL verification passed `26/26` checks on PostgreSQL 17.10 at
+  revision `0009_admin_actions`.
 
 The database already stores durable marketplace offers, price snapshots, market
 events, scoring state, generated-content attempts, content review state,
@@ -1301,3 +1301,71 @@ are not part of Task 2.
 
 Task 1 is delivered as one focused implementation commit. Push is intentionally
 not performed.
+
+## Task 2 Implementation Record
+
+### Administration commands
+
+The implemented guarded mutation surface is:
+
+- `POST /api/v1/admin/content/{content_id}/approve`
+- `POST /api/v1/admin/content/{content_id}/reject`
+- `POST /api/v1/admin/publications/{publication_id}/retry`
+- `POST /api/v1/admin/publications/{publication_id}/cancel`
+- `POST /api/v1/admin/publications/{publication_id}/resolve-ambiguous`
+
+All commands require authentication, an idempotency key, request correlation, and
+an expected optimistic version. Routes delegate to `AdminMutationService` and do
+not call Telegram, AI, Scheduler, or ORM mappings directly.
+
+### Audit persistence
+
+Revision `0009_admin_actions` creates immutable `admin_actions` records with
+action/resource allowlists, version checks, a unique idempotency key, and indexes
+for resource, actor, request, and created-time lookups. State changes and audit
+records commit atomically through the existing repository scope.
+
+### PostgreSQL verification
+
+`scripts/verify_epic15_admin_mutations_postgres.py` passed `26/26` checks against
+a temporary isolated PostgreSQL 17.10 database named `epic15_verification`.
+
+Verified scenarios:
+
+- authentication failure and stable sanitized API errors;
+- content approval and rejection;
+- publication retry and cancellation;
+- ambiguous resolution as delivered, not delivered, and cancelled;
+- immutable audit rows, request correlation, idempotency replay, and fingerprint
+  conflicts;
+- optimistic version conflicts and failed-transition audit suppression;
+- rollback atomicity when audit insertion fails;
+- fresh-session persistence;
+- concurrent duplicate idempotency and conflicting commands;
+- no Telegram network calls from administration commands.
+
+### Alembic verification
+
+- Clean upgrade through `0009_admin_actions`: passed.
+- `alembic current`: `0009_admin_actions (head)`.
+- `alembic check`: no new upgrade operations.
+- Downgrade to `0008_content_publications` and upgrade back to head: passed.
+- Offline `upgrade head --sql`: generated successfully and includes
+  `admin_actions`.
+- `admin_actions` constraints, indexes, and idempotency uniqueness were verified
+  from PostgreSQL catalogs.
+
+### Quality verification
+
+- Focused Task 2 and repository contract tests: `20 passed`.
+- Full Pytest with isolated PostgreSQL enabled: `307 passed, 54 skipped`.
+- Ruff on Task 2 touched files: passed.
+- Ruff format check: `28 files already formatted`.
+- MyPy with `--explicit-package-bases`: `281` source files, no issues.
+
+### Exact Recommended Task 3
+
+Proceed with operational completion only: dashboard summary, final health/readiness
+polish, OpenAPI/admin docs protection review, and final API verification. Do not
+add seller identity, frontend work, Telegram live sending, or new marketplace
+logic as part of Task 3.

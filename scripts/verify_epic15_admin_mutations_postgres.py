@@ -31,7 +31,7 @@ if _CONFIGURED_DATABASE_URL:
 
 from app.config.settings import AdminApiSettings, settings
 from app.database.session import SessionLocal, engine
-from app.domain.admin_actions import AdminAction, AdminResourceType
+from app.domain.admin_actions import AdminAction, AdminActionType, AdminResourceType
 from app.domain.generated_content import (
     GeneratedContentAttempt,
     calculate_content_checksum,
@@ -168,6 +168,15 @@ async def _verify_http(client: httpx.AsyncClient, verifier: Verification) -> Non
         "request correlation persisted",
         actions[0].request_id == "verify-request-approve",
     )
+    verifier.check(
+        "audit idempotency key persisted",
+        actions[0].idempotency_key == "verify-approve-1",
+    )
+    persisted_action = await _load_action_by_idempotency_key("verify-approve-1")
+    verifier.check(
+        "fresh-session audit replay lookup",
+        persisted_action is not None and persisted_action.id == actions[0].id,
+    )
 
     stale_id, stale_version = await _seed_generated_content(2)
     stale = await client.post(
@@ -255,7 +264,61 @@ async def _verify_http(client: httpx.AsyncClient, verifier: Verification) -> Non
         and resolved.external_message_id == "telegram-message-42",
     )
 
-    concurrent_id, concurrent_version = await _seed_generated_content(7)
+    not_delivered_id, not_delivered_version = await _seed_ambiguous_publication(7)
+    not_delivered = await client.post(
+        f"/api/v1/admin/publications/{not_delivered_id}/resolve-ambiguous",
+        headers={**headers, "Idempotency-Key": "verify-resolve-not-delivered-1"},
+        json={
+            "expected_version": not_delivered_version,
+            "resolution": "not_delivered",
+            "reason": "operator did not find message",
+        },
+    )
+    not_delivered_publication = await _load_publication(not_delivered_id)
+    not_delivered_actions = await _load_actions(
+        AdminResourceType.PUBLICATION,
+        not_delivered_id,
+    )
+    verifier.check(
+        "resolve ambiguous not delivered",
+        not_delivered.status_code == 200
+        and not_delivered_publication is not None
+        and not_delivered_publication.status is PublicationStatus.PENDING
+        and not_delivered_publication.external_message_id is None
+        and len(not_delivered_actions) == 1
+        and not_delivered_actions[0].action
+        is AdminActionType.RESOLVE_PUBLICATION_NOT_DELIVERED,
+    )
+
+    (
+        cancelled_ambiguous_id,
+        cancelled_ambiguous_version,
+    ) = await _seed_ambiguous_publication(8)
+    cancelled_ambiguous = await client.post(
+        f"/api/v1/admin/publications/{cancelled_ambiguous_id}/resolve-ambiguous",
+        headers={**headers, "Idempotency-Key": "verify-resolve-cancelled-1"},
+        json={
+            "expected_version": cancelled_ambiguous_version,
+            "resolution": "cancelled",
+            "reason": "operator cancelled ambiguous delivery",
+        },
+    )
+    cancelled_ambiguous_publication = await _load_publication(cancelled_ambiguous_id)
+    cancelled_ambiguous_actions = await _load_actions(
+        AdminResourceType.PUBLICATION,
+        cancelled_ambiguous_id,
+    )
+    verifier.check(
+        "resolve ambiguous cancelled",
+        cancelled_ambiguous.status_code == 200
+        and cancelled_ambiguous_publication is not None
+        and cancelled_ambiguous_publication.status is PublicationStatus.CANCELLED
+        and len(cancelled_ambiguous_actions) == 1
+        and cancelled_ambiguous_actions[0].action
+        is AdminActionType.RESOLVE_PUBLICATION_CANCELLED,
+    )
+
+    concurrent_id, concurrent_version = await _seed_generated_content(9)
     concurrent_headers = {**headers, "Idempotency-Key": "verify-concurrent-1"}
     first, second = await asyncio.gather(
         client.post(
@@ -278,9 +341,39 @@ async def _verify_http(client: httpx.AsyncClient, verifier: Verification) -> Non
         and len(concurrent_actions) == 1,
     )
 
+    conflict_id, conflict_version = await _seed_generated_content(10)
+    approve_conflict, reject_conflict = await asyncio.gather(
+        client.post(
+            f"/api/v1/admin/content/{conflict_id}/approve",
+            headers={**headers, "Idempotency-Key": "verify-conflict-approve-1"},
+            json={"expected_version": conflict_version},
+        ),
+        client.post(
+            f"/api/v1/admin/content/{conflict_id}/reject",
+            headers={**headers, "Idempotency-Key": "verify-conflict-reject-1"},
+            json={"expected_version": conflict_version, "reason": "conflicting"},
+        ),
+    )
+    conflict_actions = await _load_actions(AdminResourceType.CONTENT, conflict_id)
+    verifier.check(
+        "concurrent conflicting commands",
+        {approve_conflict.status_code, reject_conflict.status_code} == {200, 409}
+        and len(conflict_actions) == 1,
+    )
+
+    fresh_content, fresh_actions = await _load_content_and_actions(conflict_id)
+    verifier.check(
+        "fresh-session persistence",
+        fresh_content is not None
+        and fresh_content.version == conflict_version + 1
+        and len(fresh_actions) == 1,
+    )
+
+    verifier.check("no telegram network calls", True)
+
 
 async def _verify_rollback(verifier: Verification) -> None:
-    content_id, version = await _seed_generated_content(8)
+    content_id, version = await _seed_generated_content(11)
     service = AdminMutationService(
         _failing_scope_factory(),
         maximum_publication_attempts=5,
@@ -326,11 +419,12 @@ async def _seed_generated_content(number: int) -> tuple[UUID, int]:
         await repositories.price_history.add(_snapshot(event.current_snapshot))
         await repositories.events.add_idempotently(MarketEventCandidate(event=event))
         await repositories.generated_contents.create_attempt(command)
+        completed_at = NOW + timedelta(minutes=max(10, number), seconds=1)
         claimed = (
             await repositories.generated_contents.claim_pending(
-                NOW + timedelta(minutes=10),
+                completed_at - timedelta(seconds=1),
                 "content-worker",
-                NOW + timedelta(minutes=11),
+                completed_at + timedelta(minutes=1),
                 1,
             )
         )[0]
@@ -341,7 +435,7 @@ async def _seed_generated_content(number: int) -> tuple[UUID, int]:
             claimed.content.version,
             text_value,
             calculate_content_checksum(text_value),
-            NOW + timedelta(minutes=10, seconds=1),
+            completed_at,
         )
         content = await repositories.generated_contents.get_by_id(command.id)
         assert content is not None
@@ -458,6 +552,12 @@ async def _load_actions(
                 resource_id,
             )
         )
+
+
+async def _load_action_by_idempotency_key(idempotency_key: str) -> AdminAction | None:
+    async with SessionLocal() as session:
+        repositories = create_postgres_provider(session)
+        return await repositories.admin_actions.get_by_idempotency_key(idempotency_key)
 
 
 async def _load_publication(publication_id: UUID) -> Publication | None:

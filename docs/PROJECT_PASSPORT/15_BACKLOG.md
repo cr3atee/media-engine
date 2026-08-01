@@ -6,8 +6,9 @@ This document lists only confirmed work remaining after EPIC 15 Task 2.
 
 ## Immediate
 
-- Run the isolated PostgreSQL verification for EPIC 15 Task 2 once a safe
-  `EPIC15_DATABASE_URL` or Docker-backed PostgreSQL environment is available.
+- Implement EPIC 15 Task 3 operational completion: dashboard summary,
+  final health/readiness polish, OpenAPI/admin docs protection review, and final
+  API verification.
 - If explicitly approved credentials and a test chat are available, run exactly
   one guarded live Telegram test-chat verification.
 

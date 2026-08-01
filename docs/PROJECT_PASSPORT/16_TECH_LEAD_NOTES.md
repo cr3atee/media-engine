@@ -67,13 +67,15 @@ This document captures architecture notes that are important for future reviews.
 - Final EPIC 13 production-shaped verification passed 83 live PostgreSQL checks
   across ingestion, scoring, content, publication intent, restart, concurrency,
   rollback, Scheduler delegation, and audit linkage.
-- EPIC 14 Task 3 verification artifacts exist, but final PostgreSQL execution
-  was blocked in the current environment by unavailable Docker/PostgreSQL and no
-  `EPIC14_DATABASE_URL`. Do not mark EPIC 14 verified until the extended
-  PostgreSQL verifier passes against an isolated database.
+- EPIC 14 PostgreSQL verification passed against an isolated database. Guarded
+  live Telegram test-chat delivery remains unperformed and must not be implied
+  until one approved test-chat message is actually sent and persisted.
 - The guarded live Telegram script must not be treated as proof of live delivery
   unless one approved test-chat message is actually sent and its external message
   ID is persisted.
+- EPIC 15 Task 2 administration commands are verified against PostgreSQL 17.10.
+  Routes remain thin, commands write immutable `admin_actions` atomically with
+  state changes, and no Telegram call is made from the administration workflow.
 - GGSEL-specific price fields are not fully normalized into `ParsedOffer.price` and `ParsedOffer.currency` yet.
 
 ## Review Notes

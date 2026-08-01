@@ -11,10 +11,15 @@ This document records notable Project Passport updates.
   resolution, with immutable `admin_actions` audit persistence and replay-safe
   idempotency.
 - Added focused Task 2 service, API, repository, and PostgreSQL-guarded verifier
-  coverage; local focused tests, full Pytest, strict MyPy on the touched files,
-  Ruff, Ruff format, Alembic heads, and offline SQL all pass, while live
-  PostgreSQL verification remains blocked by the unavailable isolated database
-  environment.
+  coverage.
+- Completed isolated EPIC 15 Task 2 PostgreSQL verification on PostgreSQL 17.10:
+  `26/26` verifier checks passed, including approve/reject, retry/cancel,
+  ambiguous delivered/not-delivered/cancelled resolution, audit/idempotency,
+  optimistic concurrency, rollback, fresh-session persistence, concurrent
+  commands, and no Telegram network calls.
+- Verified EPIC 15 Task 2 Alembic lifecycle through `0009_admin_actions`,
+  downgrade to `0008`, upgrade back to head, offline SQL, and PostgreSQL catalog
+  checks for `admin_actions` constraints, indexes, and idempotency uniqueness.
 - Implemented EPIC 15 Task 1 read-only administration API for durable events,
   generated content, publications, related-resource reads, and health probes.
 - Added fail-closed `X-Admin-API-Key` authentication, OpenAPI security metadata,

@@ -26,11 +26,10 @@ verification was not performed.
 EPIC 15 Task 1 is implemented and verified: authenticated read-only administration
 routes expose durable events, generated content, publications, and related state
 through dedicated query contracts without changing lifecycle behavior.
-EPIC 15 Task 2 is implemented in code and covered by focused tests: guarded
-content review and publication commands now persist immutable `admin_actions`
-records atomically with state changes. Isolated PostgreSQL verification is still
-blocked in the current environment because no safe `EPIC15_DATABASE_URL` or
-Docker-backed database is available.
+EPIC 15 Task 2 is implemented and verified: guarded content review and
+publication commands persist immutable `admin_actions` records atomically with
+state changes, and isolated PostgreSQL 17.10 verification passed `26/26` checks
+at revision `0009_admin_actions`.
 
 ## Active Capabilities
 
@@ -127,6 +126,9 @@ Docker-backed database is available.
   Telegram call.
 - EPIC 15 Task 1 passed 27 focused tests and 28 isolated PostgreSQL checks;
   full Pytest passed 291 tests with 54 expected skips.
+- EPIC 15 Task 2 passed 26 isolated PostgreSQL admin-mutation checks, focused
+  Task 2/repository contract tests, full Pytest, Ruff, Ruff format, MyPy, and
+  Alembic upgrade/check/downgrade/offline SQL verification.
 
 ## Known Gaps
 
@@ -139,9 +141,7 @@ Docker-backed database is available.
   confirmation, live flags, and PostgreSQL verification database were not
   supplied.
 - No production AI provider is wired into the marketplace pipeline.
-- Administration mutations and immutable audit persistence are implemented, but
-  isolated PostgreSQL verification for EPIC 15 Task 2 remains blocked by the
-  current environment.
+- EPIC 15 Task 3 operational completion is not implemented yet.
 
 ## Architecture Review
 
@@ -159,5 +159,6 @@ rollback, Scheduler delegation, and audit evidence. EPIC 14 connects the Telegra
 adapter to durable publication state and passed isolated PostgreSQL verification;
 the optional guarded live test-chat message remains unperformed. EPIC 15 Task 1
 adds a separate read model and API boundary without coupling HTTP transport to ORM
-or lifecycle repositories. The next administration work must remain in guarded
-application commands with atomic immutable audit rows.
+or lifecycle repositories. EPIC 15 Task 2 adds guarded application commands with
+atomic immutable audit rows; the next work should stay limited to Task 3
+operational completion.

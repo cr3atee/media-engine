@@ -213,3 +213,33 @@ fresh-session restart reads.
 `alembic current` reported `0008_content_publications (head)`, `alembic check`
 reported no new upgrade operations, and offline upgrade SQL generated
 successfully through current head. Task 1 required no migration.
+
+## EPIC 15 Task 2 Administration Mutations
+
+`scripts/verify_epic15_admin_mutations_postgres.py` was executed against a
+temporary isolated PostgreSQL 17.10 container and database named
+`epic15_verification`. The verifier rebuilt the isolated public schema, applied
+migrations through `0009_admin_actions`, exercised the real FastAPI ASGI
+application, and performed no Telegram network calls.
+
+All `26/26` named checks passed. The checks cover authentication failure,
+secret redaction, content approval/rejection, publication retry/cancel,
+ambiguous resolution as delivered/not delivered/cancelled, immutable audit
+records, idempotent replay, fingerprint conflicts, optimistic version conflicts,
+rollback atomicity, fresh-session persistence, concurrent duplicate
+idempotency, and conflicting concurrent commands.
+
+Alembic verification also passed:
+
+- clean upgrade to `0009_admin_actions`;
+- `alembic current` reported `0009_admin_actions (head)`;
+- `alembic check` reported no new upgrade operations;
+- downgrade to `0008_content_publications`;
+- upgrade back to head;
+- offline `upgrade head --sql` with `admin_actions` DDL;
+- PostgreSQL catalog verification of `admin_actions` constraints, indexes, and
+  idempotency uniqueness.
+
+Focused Task 2 and repository contract tests passed `20/20`. Full Pytest passed
+`307` tests with `54` expected skips. Ruff, Ruff format, and MyPy with
+`--explicit-package-bases` passed.

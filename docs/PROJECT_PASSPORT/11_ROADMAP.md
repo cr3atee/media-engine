@@ -80,6 +80,13 @@ This document tracks only work that is reflected by the current repository state
 - Stable API errors, request correlation IDs, API-key OpenAPI security, and
   liveness/readiness endpoints.
 - EPIC 15 PostgreSQL read verification: `28/28` checks with no Telegram calls.
+- EPIC 15 Task 2 guarded administration commands for content approve/reject,
+  publication retry/cancel, and ambiguous resolution.
+- Immutable `admin_actions` audit persistence with migration
+  `0009_admin_actions`, memory/PostgreSQL repositories, idempotency, optimistic
+  concurrency, and transaction rollback verification.
+- EPIC 15 Task 2 PostgreSQL verification: `26/26` checks on PostgreSQL 17.10 at
+  revision `0009_admin_actions`.
 
 ## Current Status
 
@@ -87,8 +94,9 @@ MediaEngine has a live-verified PostgreSQL runtime foundation for repository-bac
 offers, price history, deterministic market events, bounded transactions,
 durable post-commit scoring and content generation with recovery, persisted
 publication intent, PostgreSQL-verified Telegram delivery orchestration, guarded
-live-test tooling, Scheduler delegation, and a PostgreSQL-verified read-only
-administration API.
+live-test tooling, Scheduler delegation, a PostgreSQL-verified read-only
+administration API, and PostgreSQL-verified guarded administration commands with
+immutable audit history.
 
 ## Not Present Yet
 
@@ -96,10 +104,8 @@ administration API.
 - Scheduler overlap and multi-process coordination.
 - Optional guarded live Telegram test-chat message.
 - Production AI provider integration in the pipeline.
-- Administration approve/reject, retry/cancel, ambiguous-resolution, and audit
-  commands.
+- EPIC 15 Task 3 dashboard summary and operational completion.
 
 ## Recommended Next EPIC
 
-**EPIC 15 Task 2: guarded administration commands with immutable, atomic audit
-persistence.**
+**EPIC 15 Task 3: operational completion for the administration API.**
