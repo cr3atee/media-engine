@@ -24,8 +24,8 @@ jobs:
             alembic/versions/0011_tenant_parent_consistency.py
             scripts/verify_epic16_parent_consistency.py
           )
-          uv run ruff check --fix "${files[@]}"
           uv run ruff format "${files[@]}"
+          uv run ruff check --fix "${files[@]}"
           uv run ruff check "${files[@]}"
           uv run mypy --explicit-package-bases "${files[@]}"
       - name: Commit quality fixes
