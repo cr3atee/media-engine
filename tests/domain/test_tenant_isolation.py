@@ -10,25 +10,38 @@ from uuid import UUID
 import pytest
 
 from app.domain.generated_content import build_content_idempotency_key
+from app.domain.identity import hash_identity_fields
 from app.domain.market_events import (
     LEGACY_EVENT_IDENTITY_VERSION,
+    MarketEvent,
+    MarketEventCandidate,
     MarketEventType,
+    PriceDropPayload,
     SnapshotIdentity,
     build_event_identity,
 )
 from app.domain.price_snapshot import PriceSnapshot
-from app.domain.publications import build_publication_idempotency_key
+from app.domain.publications import (
+    CreatePublication,
+    build_publication_idempotency_key,
+)
+from app.domain.tenancy import LEGACY_TENANT_ID
 from app.parsers.models import ParsedOffer
 from app.repositories.base import RepositoryIdentityConflictError
+from app.repositories.memory.memory_events import MemoryMarketEventRepository
 from app.repositories.memory.memory_offers import MemoryOfferRepository
 from app.repositories.memory.memory_price_history import (
     MemoryPriceHistoryRepository,
 )
+from app.repositories.memory.memory_publications import MemoryPublicationRepository
 
 TENANT_A = UUID("10000000-0000-4000-8000-000000000001")
 TENANT_B = UUID("20000000-0000-4000-8000-000000000002")
 EVENT_ID = UUID("30000000-0000-4000-8000-000000000003")
+SECOND_EVENT_ID = UUID("31000000-0000-4000-8000-000000000003")
 CONTENT_ID = UUID("40000000-0000-4000-8000-000000000004")
+PUBLICATION_ID = UUID("50000000-0000-4000-8000-000000000005")
+SECOND_PUBLICATION_ID = UUID("51000000-0000-4000-8000-000000000005")
 PREVIOUS_AT = datetime(2026, 8, 2, 8, 0, tzinfo=UTC)
 CURRENT_AT = datetime(2026, 8, 2, 8, 5, tzinfo=UTC)
 
@@ -67,6 +80,44 @@ def make_snapshot_identity(
     current: bool = False,
 ) -> SnapshotIdentity:
     return SnapshotIdentity.from_snapshot(make_snapshot(tenant_id, current=current))
+
+
+def make_legacy_event(tenant_id: UUID, event_id: UUID) -> MarketEvent[PriceDropPayload]:
+    previous = make_snapshot_identity(tenant_id)
+    current = make_snapshot_identity(tenant_id, current=True)
+    payload = PriceDropPayload(
+        title="Shared offer",
+        url="https://example.test/shared-offer",
+        old_price=previous.price,
+        new_price=current.price,
+        currency=current.currency,
+        absolute_difference=previous.price - current.price,
+        percentage=Decimal("20.20202020202020202020202020"),
+        previous_snapshot=previous,
+        current_snapshot=current,
+    )
+    identity = build_event_identity(
+        event_type=MarketEventType.PRICE_DROP,
+        marketplace="ggsel",
+        external_id="shared-offer",
+        tenant_id=tenant_id,
+        previous_snapshot=previous,
+        current_snapshot=current,
+        identity_version=LEGACY_EVENT_IDENTITY_VERSION,
+    )
+    return MarketEvent(
+        id=event_id,
+        identity_key=identity.key,
+        identity_version=identity.version,
+        event_type=MarketEventType.PRICE_DROP,
+        marketplace="ggsel",
+        external_id="shared-offer",
+        tenant_id=tenant_id,
+        occurred_at=CURRENT_AT,
+        detected_at=CURRENT_AT,
+        created_at=CURRENT_AT,
+        payload=payload,
+    )
 
 
 def test_event_identity_v2_is_tenant_scoped() -> None:
@@ -114,6 +165,38 @@ def test_event_identity_v1_remains_stable_for_legacy_rows() -> None:
     assert first.key == second.key
 
 
+def test_legacy_content_and_publication_keys_remain_unchanged() -> None:
+    content_key = build_content_idempotency_key(
+        tenant_id=LEGACY_TENANT_ID,
+        event_id=EVENT_ID,
+        content_type="telegram",
+        language="ru",
+        prompt_version="v1",
+        attempt_number=1,
+    )
+    publication_key = build_publication_idempotency_key(
+        tenant_id=LEGACY_TENANT_ID,
+        event_id=EVENT_ID,
+        content_id=CONTENT_ID,
+        channel="telegram",
+        destination_key="shared-channel",
+    )
+
+    assert content_key == hash_identity_fields(
+        str(EVENT_ID),
+        "telegram",
+        "ru",
+        "v1",
+        "1",
+    )
+    assert publication_key == hash_identity_fields(
+        str(EVENT_ID),
+        str(CONTENT_ID),
+        "telegram",
+        "shared-channel",
+    )
+
+
 def test_content_and_publication_idempotency_are_tenant_scoped() -> None:
     content_a = build_content_idempotency_key(
         tenant_id=TENANT_A,
@@ -148,6 +231,66 @@ def test_content_and_publication_idempotency_are_tenant_scoped() -> None:
 
     assert content_a != content_b
     assert publication_a != publication_b
+
+
+def test_memory_event_lookup_is_explicitly_tenant_scoped() -> None:
+    repository = MemoryMarketEventRepository()
+    legacy_event = make_legacy_event(LEGACY_TENANT_ID, EVENT_ID)
+    tenant_event = make_legacy_event(TENANT_B, SECOND_EVENT_ID)
+    assert legacy_event.identity_key == tenant_event.identity_key
+
+    run_async(repository.add_idempotently(MarketEventCandidate(event=legacy_event)))
+    run_async(repository.add_idempotently(MarketEventCandidate(event=tenant_event)))
+
+    assert run_async(repository.get_by_identity(legacy_event.identity_key)) == legacy_event
+    assert (
+        run_async(
+            repository.get_by_identity_for_tenant(
+                TENANT_B,
+                tenant_event.identity_key,
+            )
+        )
+        == tenant_event
+    )
+
+
+def test_memory_publication_lookup_is_explicitly_tenant_scoped() -> None:
+    repository = MemoryPublicationRepository()
+    legacy_command = CreatePublication(
+        id=PUBLICATION_ID,
+        tenant_id=LEGACY_TENANT_ID,
+        event_id=EVENT_ID,
+        content_id=CONTENT_ID,
+        channel="telegram",
+        destination_key="shared-channel",
+        created_at=CURRENT_AT,
+    )
+    tenant_command = CreatePublication(
+        id=SECOND_PUBLICATION_ID,
+        tenant_id=TENANT_B,
+        event_id=EVENT_ID,
+        content_id=CONTENT_ID,
+        channel="telegram",
+        destination_key="shared-channel",
+        created_at=CURRENT_AT,
+    )
+
+    legacy_result = run_async(repository.create_idempotently(legacy_command))
+    tenant_result = run_async(repository.create_idempotently(tenant_command))
+
+    assert (
+        run_async(repository.get_by_idempotency_key(legacy_command.idempotency_key))
+        == legacy_result.publication
+    )
+    assert (
+        run_async(
+            repository.get_by_idempotency_key_for_tenant(
+                TENANT_B,
+                tenant_command.idempotency_key,
+            )
+        )
+        == tenant_result.publication
+    )
 
 
 def test_memory_offer_repository_isolates_shared_external_identity() -> None:
