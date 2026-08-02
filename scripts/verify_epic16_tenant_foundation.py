@@ -5,12 +5,13 @@ import os
 from collections.abc import Coroutine
 from typing import Any
 
-from alembic import command
-from alembic.config import Config
 import sqlalchemy as sa
+from alembic.config import Config
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncEngine, create_async_engine
 from sqlalchemy.sql.elements import TextClause
+
+from alembic import command
 
 LEGACY_TENANT_ID = "00000000-0000-4000-8000-000000000001"
 TENANT_B_ID = "20000000-0000-4000-8000-000000000002"
