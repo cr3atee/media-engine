@@ -112,12 +112,45 @@ jobs:
                   1,
               )
               publication_path.write_text(publication_content)
+
+          for identity_path in (
+              Path('app/domain/generated_content.py'),
+              Path('app/domain/publications.py'),
+          ):
+              identity_content = identity_path.read_text()
+              marker = '    identity_fields = (\n'
+              if marker not in identity_content:
+                  raise SystemExit(f'Identity fields marker missing in {identity_path}')
+              identity_path.write_text(
+                  identity_content.replace(
+                      marker,
+                      '    identity_fields: tuple[str, ...] = (\n',
+                      1,
+                  )
+              )
+
+          event_path = Path('app/domain/market_events.py')
+          event_content = event_path.read_text()
+          event_marker = (
+              '    if identity_version >= CURRENT_EVENT_IDENTITY_VERSION:\n'
+              '        fields = (\n'
+          )
+          if event_marker not in event_content:
+              raise SystemExit('Market event identity fields marker missing')
+          event_path.write_text(
+              event_content.replace(
+                  event_marker,
+                  '    fields: tuple[str, ...]\n' + event_marker,
+                  1,
+              )
+          )
           PY
       - name: Format and validate changed files
         run: |
           files=(
             app/domain/admin_actions.py
             app/domain/generated_content.py
+            app/domain/market_events.py
             app/domain/publications.py
             app/repositories/events.py
             app/repositories/memory/memory_events.py
