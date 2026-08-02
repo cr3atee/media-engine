@@ -30,4 +30,3 @@ class UserRepository(BaseRepository):
         expected_version: int,
     ) -> User | None:
         """Update enabled state using optimistic version guarding."""
-

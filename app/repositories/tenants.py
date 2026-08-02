@@ -34,4 +34,3 @@ class TenantRepository(BaseRepository):
         expected_version: int,
     ) -> Tenant | None:
         """Update active state using optimistic version guarding."""
-

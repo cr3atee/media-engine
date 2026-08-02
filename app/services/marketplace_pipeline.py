@@ -227,11 +227,9 @@ class MarketplacePipeline:
                     current_snapshot.external_id,
                 )
             )
-            snapshot_inserted = (
-                await repository_provider.price_history.add_for_tenant(
-                    tenant_id,
-                    current_snapshot,
-                )
+            snapshot_inserted = await repository_provider.price_history.add_for_tenant(
+                tenant_id,
+                current_snapshot,
             )
             if snapshot_inserted:
                 snapshots_persisted += 1

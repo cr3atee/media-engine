@@ -115,8 +115,10 @@ class Membership:
 def normalize_email(value: str) -> str:
     """Normalize the MVP email identity without claiming RFC completeness."""
     normalized = value.strip().lower()
-    if not normalized or len(normalized) > 320 or not _EMAIL_PATTERN.fullmatch(
-        normalized
+    if (
+        not normalized
+        or len(normalized) > 320
+        or not _EMAIL_PATTERN.fullmatch(normalized)
     ):
         msg = "Email must be a non-empty normalized address."
         raise ValueError(msg)

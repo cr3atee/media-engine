@@ -38,4 +38,3 @@ class TenantRecord(Base):
         nullable=False,
     )
     version: Mapped[int] = mapped_column(Integer, nullable=False)
-

@@ -90,8 +90,7 @@ class PriceHistoryRepository(BaseRepository):
         if tenant_id == LEGACY_TENANT_ID:
             return await self.get_history(marketplace, external_id)
         msg = (
-            f"{type(self).__name__} does not implement non-legacy tenant "
-            "price history."
+            f"{type(self).__name__} does not implement non-legacy tenant price history."
         )
         raise NotImplementedError(msg)
 
