@@ -8,9 +8,9 @@ from sqlalchemy import func, select
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.domain.tenancy import LEGACY_TENANT_ID
 from app.models.offer import Offer
 from app.parsers.models import ParsedOffer
-from app.repositories.base import RepositoryIdentityConflictError
 from app.repositories.offers import OfferRepository
 
 
@@ -21,12 +21,11 @@ class PostgresOfferRepository(OfferRepository):
         """Initialize repository with an existing async database session."""
         self._session = session
 
-    async def save(self, tenant_id: UUID, offer: ParsedOffer) -> None:
-        """Insert or race-safely update a parsed offer by stable identity."""
-        _validate_tenant(tenant_id, offer.tenant_id)
+    async def save(self, offer: ParsedOffer) -> None:
+        """Insert or race-safely update an offer by tenant-local identity."""
         statement = insert(Offer).values(
             id=uuid4(),
-            tenant_id=tenant_id,
+            tenant_id=offer.tenant_id,
             marketplace=offer.marketplace,
             external_id=offer.external_id,
             title=offer.title,
@@ -65,22 +64,46 @@ class PostgresOfferRepository(OfferRepository):
 
     async def get_by_identity(
         self,
+        marketplace: str,
+        external_id: str,
+    ) -> ParsedOffer | None:
+        """Return a legacy-tenant offer by stable marketplace identity."""
+        return await self.get_by_identity_for_tenant(
+            LEGACY_TENANT_ID,
+            marketplace,
+            external_id,
+        )
+
+    async def get_by_identity_for_tenant(
+        self,
         tenant_id: UUID,
         marketplace: str,
         external_id: str,
     ) -> ParsedOffer | None:
-        """Return an offer by marketplace and external identifier."""
-        record = await self._get_record_by_identity(tenant_id, marketplace, external_id)
-        if record is None:
-            return None
-        return self._to_parsed_offer(record)
+        """Return an offer by tenant, marketplace, and external identifier."""
+        record = await self._get_record_by_identity(
+            tenant_id,
+            marketplace,
+            external_id,
+        )
+        return self._to_parsed_offer(record) if record is not None else None
 
     async def list_by_marketplace(
+        self,
+        marketplace: str,
+    ) -> Sequence[ParsedOffer]:
+        """Return legacy-tenant offers for one marketplace."""
+        return await self.list_by_marketplace_for_tenant(
+            LEGACY_TENANT_ID,
+            marketplace,
+        )
+
+    async def list_by_marketplace_for_tenant(
         self,
         tenant_id: UUID,
         marketplace: str,
     ) -> Sequence[ParsedOffer]:
-        """Return parsed offers for one marketplace in insertion order."""
+        """Return parsed offers for one tenant and marketplace."""
         result = await self._session.execute(
             select(Offer)
             .where(Offer.tenant_id == tenant_id, Offer.marketplace == marketplace)
@@ -136,9 +159,3 @@ class PostgresOfferRepository(OfferRepository):
             seller_name=offer.seller_name,
             canonical_product_id=offer.canonical_product_id,
         )
-
-
-def _validate_tenant(requested: UUID, actual: UUID) -> None:
-    if requested != actual:
-        msg = f"Offer tenant mismatch: requested {requested}, got {actual}."
-        raise RepositoryIdentityConflictError(msg)

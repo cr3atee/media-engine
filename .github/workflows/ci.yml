@@ -22,50 +22,77 @@ jobs:
         run: >-
           uv run ruff check
           app/domain/tenancy.py
+          app/domain/generated_content.py
+          app/domain/publications.py
           app/models/user_record.py
           app/models/tenant_record.py
           app/models/tenant_membership_record.py
           app/repositories/users.py
           app/repositories/tenants.py
           app/repositories/memberships.py
+          app/repositories/offers.py
+          app/repositories/price_history.py
           app/repositories/memory/memory_users.py
           app/repositories/memory/memory_tenants.py
           app/repositories/memory/memory_memberships.py
+          app/repositories/memory/memory_offers.py
+          app/repositories/memory/memory_price_history.py
           app/repositories/postgres/postgres_users.py
           app/repositories/postgres/postgres_tenants.py
           app/repositories/postgres/postgres_memberships.py
-      - name: Ruff format EPIC 16 scope
-        run: >-
-          uv run ruff format --check
-          app/domain/tenancy.py
-          app/models/user_record.py
-          app/models/tenant_record.py
-          app/models/tenant_membership_record.py
-          app/repositories/users.py
-          app/repositories/tenants.py
-          app/repositories/memberships.py
-          app/repositories/memory/memory_users.py
-          app/repositories/memory/memory_tenants.py
-          app/repositories/memory/memory_memberships.py
-          app/repositories/postgres/postgres_users.py
-          app/repositories/postgres/postgres_tenants.py
-          app/repositories/postgres/postgres_memberships.py
+          app/repositories/postgres/postgres_offers.py
+          app/repositories/postgres/postgres_price_history.py
+          app/services/marketplace_pipeline.py
       - name: MyPy EPIC 16 scope
         run: >-
           uv run mypy
           app/domain/tenancy.py
+          app/domain/generated_content.py
+          app/domain/publications.py
           app/models/user_record.py
           app/models/tenant_record.py
           app/models/tenant_membership_record.py
           app/repositories/users.py
           app/repositories/tenants.py
           app/repositories/memberships.py
+          app/repositories/offers.py
+          app/repositories/price_history.py
           app/repositories/memory/memory_users.py
           app/repositories/memory/memory_tenants.py
           app/repositories/memory/memory_memberships.py
+          app/repositories/memory/memory_offers.py
+          app/repositories/memory/memory_price_history.py
           app/repositories/postgres/postgres_users.py
           app/repositories/postgres/postgres_tenants.py
           app/repositories/postgres/postgres_memberships.py
+          app/repositories/postgres/postgres_offers.py
+          app/repositories/postgres/postgres_price_history.py
+          app/services/marketplace_pipeline.py
+      - name: Ruff format EPIC 16 scope
+        run: >-
+          uv run ruff format --check
+          app/domain/tenancy.py
+          app/domain/generated_content.py
+          app/domain/publications.py
+          app/models/user_record.py
+          app/models/tenant_record.py
+          app/models/tenant_membership_record.py
+          app/repositories/users.py
+          app/repositories/tenants.py
+          app/repositories/memberships.py
+          app/repositories/offers.py
+          app/repositories/price_history.py
+          app/repositories/memory/memory_users.py
+          app/repositories/memory/memory_tenants.py
+          app/repositories/memory/memory_memberships.py
+          app/repositories/memory/memory_offers.py
+          app/repositories/memory/memory_price_history.py
+          app/repositories/postgres/postgres_users.py
+          app/repositories/postgres/postgres_tenants.py
+          app/repositories/postgres/postgres_memberships.py
+          app/repositories/postgres/postgres_offers.py
+          app/repositories/postgres/postgres_price_history.py
+          app/services/marketplace_pipeline.py
 
   tests:
     runs-on: ubuntu-latest

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from collections.abc import Callable, Sequence
 from dataclasses import dataclass
+from uuid import UUID
 
 from app.analytics.models import PriceChange
 from app.analytics.price_change import PriceChangeDetector
@@ -17,6 +18,7 @@ from app.domain.market_events import (
 )
 from app.domain.price_snapshot import PriceSnapshot
 from app.domain.processing import IdempotentCreateStatus
+from app.domain.tenancy import LEGACY_TENANT_ID
 from app.insights.scoring import EventScorer
 from app.models.canonical_product import CanonicalProduct
 from app.parsers.ggsel_extractor import GGSelExtractor
@@ -155,16 +157,24 @@ class MarketplacePipeline:
         parsed_offers: Sequence[ParsedOffer],
     ) -> PreparedMarketplaceRun:
         """Build valid snapshot candidates before opening a transaction."""
+        _resolve_tenant_id(parsed_offers)
         self._report("=== BUILD SNAPSHOTS ===")
         snapshot_candidates: list[PreparedSnapshotCandidate] = []
         errors: list[str] = []
 
         for offer in parsed_offers:
             try:
+                snapshot = self._snapshot_builder.build(offer)
+                if snapshot.tenant_id != offer.tenant_id:
+                    msg = (
+                        "Snapshot tenant must match the source offer tenant: "
+                        f"{snapshot.tenant_id} != {offer.tenant_id}."
+                    )
+                    raise ValueError(msg)
                 snapshot_candidates.append(
                     PreparedSnapshotCandidate(
                         offer=offer,
-                        snapshot=self._snapshot_builder.build(offer),
+                        snapshot=snapshot,
                     )
                 )
             except ValueError as exc:
@@ -188,14 +198,17 @@ class MarketplacePipeline:
         prepared: PreparedMarketplaceRun,
         repository_provider: RepositoryProvider,
     ) -> TransactionalMarketplaceResult:
-        """Persist and process prepared offers within one repository scope."""
+        """Persist and process one tenant's prepared offers in one scope."""
+        tenant_id = _resolve_tenant_id(prepared.offers, prepared.snapshots)
+
         for offer in prepared.offers:
-            await repository_provider.offers.save(offer.tenant_id, offer)
+            await repository_provider.offers.save_for_tenant(tenant_id, offer)
         self._report(f"Persisted offers: {len(prepared.offers)}")
 
         self._report("=== COMPARE OFFERS ===")
         comparison_results = await self.compare_repository_offers(
             repository_provider,
+            tenant_id=tenant_id,
         )
         self._report(f"Comparison results: {len(comparison_results)}")
 
@@ -207,14 +220,18 @@ class MarketplacePipeline:
         for snapshot_candidate in prepared.snapshot_candidates:
             offer = snapshot_candidate.offer
             current_snapshot = snapshot_candidate.snapshot
-            previous_snapshot = await repository_provider.price_history.get_last(
-                current_snapshot.tenant_id,
-                current_snapshot.marketplace,
-                current_snapshot.external_id,
+            previous_snapshot = (
+                await repository_provider.price_history.get_last_for_tenant(
+                    tenant_id,
+                    current_snapshot.marketplace,
+                    current_snapshot.external_id,
+                )
             )
-            snapshot_inserted = await repository_provider.price_history.add(
-                current_snapshot.tenant_id,
-                current_snapshot
+            snapshot_inserted = (
+                await repository_provider.price_history.add_for_tenant(
+                    tenant_id,
+                    current_snapshot,
+                )
             )
             if snapshot_inserted:
                 snapshots_persisted += 1
@@ -290,20 +307,33 @@ class MarketplacePipeline:
         self,
         parsed_offers: Sequence[ParsedOffer],
         repository_provider: RepositoryProvider | None = None,
+        *,
+        tenant_id: UUID | None = None,
     ) -> list[ComparisonResult]:
-        """Build comparison results for normalized marketplace offers."""
+        """Build tenant-local comparison results for normalized offers."""
         provider = repository_provider or self._require_repository_provider()
-        candidates = tuple(await provider.canonical_products.list_all())
+        resolved_tenant_id = tenant_id or _resolve_tenant_id(parsed_offers)
+        candidates = tuple(
+            product
+            for product in await provider.canonical_products.list_all()
+            if product.tenant_id == resolved_tenant_id
+        )
         return self._build_comparison_results(parsed_offers, candidates)
 
     async def compare_repository_offers(
         self,
         repository_provider: RepositoryProvider | None = None,
+        *,
+        tenant_id: UUID = LEGACY_TENANT_ID,
     ) -> list[ComparisonResult]:
-        """Build comparison results from offers stored in the repository."""
+        """Build comparison results from one tenant's stored offers."""
         provider = repository_provider or self._require_repository_provider()
-        parsed_offers = await provider.offers.list_all()
-        return await self.compare_offers(parsed_offers, provider)
+        parsed_offers = await provider.offers.list_by_tenant(tenant_id)
+        return await self.compare_offers(
+            parsed_offers,
+            provider,
+            tenant_id=tenant_id,
+        )
 
     def _build_comparison_results(
         self,
@@ -344,3 +374,19 @@ class MarketplacePipeline:
     def _report(self, message: str) -> None:
         if self._stage_reporter is not None:
             self._stage_reporter(message)
+
+
+def _resolve_tenant_id(
+    offers: Sequence[ParsedOffer],
+    snapshots: Sequence[PriceSnapshot] = (),
+) -> UUID:
+    tenant_ids = {
+        *(offer.tenant_id for offer in offers),
+        *(snapshot.tenant_id for snapshot in snapshots),
+    }
+    if not tenant_ids:
+        return LEGACY_TENANT_ID
+    if len(tenant_ids) != 1:
+        msg = "A marketplace run cannot mix multiple tenants."
+        raise ValueError(msg)
+    return next(iter(tenant_ids))
