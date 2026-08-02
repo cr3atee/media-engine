@@ -1,0 +1,40 @@
+name: Apply Parent Consistency Quality
+
+on:
+  pull_request:
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/epic16-tenant-foundation
+      - uses: astral-sh/setup-uv@v6
+        with:
+          python-version: "3.13"
+      - run: uv sync --all-groups --frozen
+      - name: Apply safe Ruff fixes
+        run: |
+          files=(
+            alembic/versions/0011_tenant_parent_consistency.py
+            scripts/verify_epic16_parent_consistency.py
+          )
+          uv run ruff check --fix "${files[@]}"
+          uv run ruff format "${files[@]}"
+          uv run ruff check "${files[@]}"
+          uv run mypy --explicit-package-bases "${files[@]}"
+      - name: Commit quality fixes
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add \
+            alembic/versions/0011_tenant_parent_consistency.py \
+            scripts/verify_epic16_parent_consistency.py
+          git diff --cached --quiet && exit 0
+          git commit -m "style(epic16): format parent consistency checks"
+          git push origin HEAD:agent/epic16-tenant-foundation
