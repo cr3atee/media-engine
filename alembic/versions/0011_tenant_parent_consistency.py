@@ -201,13 +201,15 @@ def _drop_optional_parent_triggers() -> None:
             "ON market_events"
         )
     )
-    op.execute(sa.text("DROP FUNCTION IF EXISTS enforce_event_canonical_product_tenant"))
     op.execute(
-        sa.text(
-            "DROP TRIGGER IF EXISTS trg_offers_canonical_product_tenant ON offers"
-        )
+        sa.text("DROP FUNCTION IF EXISTS enforce_event_canonical_product_tenant")
     )
-    op.execute(sa.text("DROP FUNCTION IF EXISTS enforce_offer_canonical_product_tenant"))
+    op.execute(
+        sa.text("DROP TRIGGER IF EXISTS trg_offers_canonical_product_tenant ON offers")
+    )
+    op.execute(
+        sa.text("DROP FUNCTION IF EXISTS enforce_offer_canonical_product_tenant")
+    )
 
 
 def _drop_composite_foreign_keys() -> None:

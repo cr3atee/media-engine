@@ -357,9 +357,7 @@ def _content_insert(
     content_type: str,
 ) -> TextClause:
     parent_sql = (
-        "NULL"
-        if parent_content_id is None
-        else f"CAST('{parent_content_id}' AS uuid)"
+        "NULL" if parent_content_id is None else f"CAST('{parent_content_id}' AS uuid)"
     )
     return sa.text(
         f"""
@@ -459,15 +457,13 @@ async def _cleanup(engine: AsyncEngine) -> None:
         )
         await connection.execute(
             sa.text(
-                "DELETE FROM market_events "
-                "WHERE tenant_id = CAST(:tenant_id AS uuid)"
+                "DELETE FROM market_events WHERE tenant_id = CAST(:tenant_id AS uuid)"
             ),
             {"tenant_id": TENANT_ID},
         )
         await connection.execute(
             sa.text(
-                "DELETE FROM price_snapshots "
-                "WHERE tenant_id = CAST(:tenant_id AS uuid)"
+                "DELETE FROM price_snapshots WHERE tenant_id = CAST(:tenant_id AS uuid)"
             ),
             {"tenant_id": TENANT_ID},
         )
