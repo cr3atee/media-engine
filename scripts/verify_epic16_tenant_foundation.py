@@ -5,9 +5,9 @@ import os
 from collections.abc import Coroutine
 from typing import Any
 
-import sqlalchemy as sa
 from alembic import command
 from alembic.config import Config
+import sqlalchemy as sa
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncEngine, create_async_engine
 from sqlalchemy.sql.elements import TextClause
