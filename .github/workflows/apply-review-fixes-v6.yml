@@ -99,6 +99,19 @@ jobs:
           admin_path.write_text(admin_content)
 
           exec(compile(script, 'embedded-review-fixes-v6', 'exec'))
+
+          publication_content = publication_path.read_text()
+          tenant_import = 'from app.domain.tenancy import LEGACY_TENANT_ID\n'
+          if tenant_import not in publication_content:
+              model_import = 'from app.models.publication_record import PublicationRecord\n'
+              if model_import not in publication_content:
+                  raise SystemExit('Publication model import marker was not found')
+              publication_content = publication_content.replace(
+                  model_import,
+                  tenant_import + model_import,
+                  1,
+              )
+              publication_path.write_text(publication_content)
           PY
       - name: Format and validate changed files
         run: |
@@ -116,6 +129,7 @@ jobs:
           )
           uv run ruff format "${files[@]}"
           uv run ruff check "${files[@]}"
+          uv run mypy --explicit-package-bases "${files[@]}"
       - name: Commit and push reviewed fixes
         run: |
           git config user.name "github-actions[bot]"
