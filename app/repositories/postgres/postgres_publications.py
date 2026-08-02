@@ -29,6 +29,7 @@ from app.domain.publications import (
     Publication,
     PublicationCreateResult,
 )
+from app.domain.tenancy import LEGACY_TENANT_ID
 from app.models.publication_record import PublicationRecord
 from app.repositories.base import RepositoryIdentityConflictError
 from app.repositories.publications import PublicationRepository
@@ -72,7 +73,10 @@ class PostgresPublicationRepository(PublicationRepository):
             assert stored is not None
             return PublicationCreateResult(stored, IdempotentCreateStatus.CREATED)
 
-        existing = await self.get_by_idempotency_key(command.idempotency_key)
+        existing = await self.get_by_idempotency_key_for_tenant(
+            command.tenant_id,
+            command.idempotency_key,
+        )
         if existing is not None:
             return PublicationCreateResult(existing, IdempotentCreateStatus.EXISTING)
         conflict = await self._find_identity_conflict(command)
@@ -94,10 +98,22 @@ class PostgresPublicationRepository(PublicationRepository):
         self,
         idempotency_key: str,
     ) -> Publication | None:
-        """Return one publication by deterministic delivery identity."""
+        """Return one legacy-tenant publication by delivery identity."""
+        return await self.get_by_idempotency_key_for_tenant(
+            LEGACY_TENANT_ID,
+            idempotency_key,
+        )
+
+    async def get_by_idempotency_key_for_tenant(
+        self,
+        tenant_id: UUID,
+        idempotency_key: str,
+    ) -> Publication | None:
+        """Return one publication by tenant and delivery identity."""
         result = await self._session.execute(
             select(PublicationRecord).where(
-                PublicationRecord.idempotency_key == idempotency_key
+                PublicationRecord.tenant_id == tenant_id,
+                PublicationRecord.idempotency_key == idempotency_key,
             )
         )
         record = result.scalar_one_or_none()
@@ -435,7 +451,8 @@ class PostgresPublicationRepository(PublicationRepository):
                 or_(
                     PublicationRecord.id == command.id,
                     (
-                        (PublicationRecord.content_id == command.content_id)
+                        (PublicationRecord.tenant_id == command.tenant_id)
+                        & (PublicationRecord.content_id == command.content_id)
                         & (PublicationRecord.channel == command.channel)
                         & (PublicationRecord.destination_key == command.destination_key)
                     ),
@@ -488,6 +505,7 @@ class PostgresPublicationRepository(PublicationRepository):
 def _publication_values(command: CreatePublication) -> dict[str, object]:
     return {
         "id": command.id,
+        "tenant_id": command.tenant_id,
         "event_id": command.event_id,
         "content_id": command.content_id,
         "channel": command.channel,
@@ -523,6 +541,7 @@ def _to_domain(record: PublicationRecord) -> Publication:
     )
     return Publication(
         id=record.id,
+        tenant_id=record.tenant_id,
         event_id=record.event_id,
         content_id=record.content_id,
         channel=record.channel,

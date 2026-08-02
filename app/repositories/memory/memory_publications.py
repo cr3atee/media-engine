@@ -24,6 +24,7 @@ from app.domain.publications import (
     Publication,
     PublicationCreateResult,
 )
+from app.domain.tenancy import LEGACY_TENANT_ID
 from app.repositories.base import RepositoryIdentityConflictError
 from app.repositories.publications import PublicationRepository
 
@@ -45,7 +46,7 @@ class MemoryPublicationRepository(PublicationRepository):
     ) -> None:
         """Initialize isolated storage and an injectable claim-token source."""
         self._publications_by_id: dict[UUID, Publication] = {}
-        self._publication_ids_by_key: dict[str, UUID] = {}
+        self._publication_ids_by_key: dict[tuple[UUID, str], UUID] = {}
         self._claim_token_factory = claim_token_factory
 
     async def create_idempotently(
@@ -53,7 +54,9 @@ class MemoryPublicationRepository(PublicationRepository):
         command: CreatePublication,
     ) -> PublicationCreateResult:
         """Create one logical delivery and preserve its first scheduling facts."""
-        existing_id = self._publication_ids_by_key.get(command.idempotency_key)
+        existing_id = self._publication_ids_by_key.get(
+            (command.tenant_id, command.idempotency_key)
+        )
         if existing_id is not None:
             return PublicationCreateResult(
                 publication=self._publications_by_id[existing_id],
@@ -96,8 +99,19 @@ class MemoryPublicationRepository(PublicationRepository):
         self,
         idempotency_key: str,
     ) -> Publication | None:
-        """Return one immutable publication snapshot by delivery identity."""
-        publication_id = self._publication_ids_by_key.get(idempotency_key)
+        """Return one legacy-tenant publication by delivery identity."""
+        return await self.get_by_idempotency_key_for_tenant(
+            LEGACY_TENANT_ID,
+            idempotency_key,
+        )
+
+    async def get_by_idempotency_key_for_tenant(
+        self,
+        tenant_id: UUID,
+        idempotency_key: str,
+    ) -> Publication | None:
+        """Return one publication by tenant and delivery identity."""
+        publication_id = self._publication_ids_by_key.get((tenant_id, idempotency_key))
         if publication_id is None:
             return None
         return self._publications_by_id[publication_id]
@@ -492,7 +506,9 @@ class MemoryPublicationRepository(PublicationRepository):
 
     def _store(self, publication: Publication) -> None:
         self._publications_by_id[publication.id] = publication
-        self._publication_ids_by_key[publication.idempotency_key] = publication.id
+        self._publication_ids_by_key[
+            (publication.tenant_id, publication.idempotency_key)
+        ] = publication.id
 
 
 def _is_publication_claimable(

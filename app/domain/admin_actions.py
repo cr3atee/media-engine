@@ -141,11 +141,11 @@ def build_admin_request_fingerprint(
             maximum_length=128,
         ),
         "expected_version": expected_version,
-            "metadata": normalized_metadata,
-            "reason": normalize_optional_reason(reason),
-            "resource_id": str(resource_id),
-            "resource_type": resource_type.value,
-        }
+        "metadata": normalized_metadata,
+        "reason": normalize_optional_reason(reason),
+        "resource_id": str(resource_id),
+        "resource_type": resource_type.value,
+    }
     serialized = json.dumps(
         payload,
         ensure_ascii=True,

@@ -217,13 +217,15 @@ def build_publication_idempotency_key(
     tenant_id: UUID = LEGACY_TENANT_ID,
 ) -> str:
     """Build the deterministic identity for one channel delivery."""
-    return hash_identity_fields(
-        str(tenant_id),
+    identity_fields: tuple[str, ...] = (
         str(event_id),
         str(content_id),
         _normalize_channel(channel),
         _require_text(destination_key, field_name="destination_key"),
     )
+    if tenant_id != LEGACY_TENANT_ID:
+        identity_fields = (str(tenant_id), *identity_fields)
+    return hash_identity_fields(*identity_fields)
 
 
 def _normalize_channel(value: str) -> str:

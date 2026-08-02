@@ -258,14 +258,16 @@ def build_content_idempotency_key(
 ) -> str:
     """Build the deterministic identity of a content attempt."""
     _validate_attempt_number(attempt_number)
-    return hash_identity_fields(
-        str(tenant_id),
+    identity_fields: tuple[str, ...] = (
         str(event_id),
         _normalize_code(content_type, field_name="content_type"),
         _normalize_code(language, field_name="language"),
         _require_text(prompt_version, field_name="prompt_version"),
         str(attempt_number),
     )
+    if tenant_id != LEGACY_TENANT_ID:
+        identity_fields = (str(tenant_id), *identity_fields)
+    return hash_identity_fields(*identity_fields)
 
 
 def calculate_content_checksum(content_text: str) -> str:

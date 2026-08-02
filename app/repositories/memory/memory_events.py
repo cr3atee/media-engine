@@ -26,6 +26,7 @@ from app.domain.processing import (
     StateTransitionResult,
     WorkClaim,
 )
+from app.domain.tenancy import LEGACY_TENANT_ID
 from app.repositories.base import RepositoryIdentityConflictError
 from app.repositories.events import MarketEventRepository, event_immutable_signature
 
@@ -95,12 +96,20 @@ class MemoryMarketEventRepository(MarketEventRepository):
         self,
         identity_key: str,
     ) -> PriceDropMarketEvent | None:
-        """Return one immutable event snapshot by deterministic identity."""
-        for event_id in self._event_ids_by_identity.values():
-            event = self._events_by_id[event_id]
-            if event.identity_key == identity_key:
-                return event
-        return None
+        """Return one legacy-tenant event by deterministic identity."""
+        return await self.get_by_identity_for_tenant(
+            LEGACY_TENANT_ID,
+            identity_key,
+        )
+
+    async def get_by_identity_for_tenant(
+        self,
+        tenant_id: UUID,
+        identity_key: str,
+    ) -> PriceDropMarketEvent | None:
+        """Return one event by tenant and deterministic identity."""
+        event_id = self._event_ids_by_identity.get((tenant_id, identity_key))
+        return self._events_by_id.get(event_id) if event_id is not None else None
 
     async def list_pending(
         self,

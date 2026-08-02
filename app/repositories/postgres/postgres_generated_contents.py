@@ -85,7 +85,10 @@ class PostgresGeneratedContentRepository(GeneratedContentRepository):
             assert stored is not None
             return ContentCreateResult(stored, IdempotentCreateStatus.CREATED)
 
-        existing = await self._get_by_key(command.idempotency_key)
+        existing = await self._get_by_key(
+            command.tenant_id,
+            command.idempotency_key,
+        )
         if existing is not None:
             if _content_signature(existing) != _command_signature(command):
                 msg = (
@@ -384,10 +387,15 @@ class PostgresGeneratedContentRepository(GeneratedContentRepository):
             msg = "Content parent must be an existing revision for the same event."
             raise RepositoryIdentityConflictError(msg)
 
-    async def _get_by_key(self, key: str) -> GeneratedContentAttempt | None:
+    async def _get_by_key(
+        self,
+        tenant_id: UUID,
+        key: str,
+    ) -> GeneratedContentAttempt | None:
         result = await self._session.execute(
             select(GeneratedContentRecord).where(
-                GeneratedContentRecord.idempotency_key == key
+                GeneratedContentRecord.tenant_id == tenant_id,
+                GeneratedContentRecord.idempotency_key == key,
             )
         )
         record = result.scalar_one_or_none()

@@ -447,6 +447,7 @@ def build_event_identity(
             msg = "Current snapshot tenant must match event tenant."
             raise ValueError(msg)
 
+    fields: tuple[str, ...]
     if identity_version >= CURRENT_EVENT_IDENTITY_VERSION:
         fields = (
             f"v{identity_version}",
