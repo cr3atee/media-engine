@@ -1,0 +1,21 @@
+name: Ruff Preview
+
+on:
+  push:
+    branches:
+      - agent/epic16-tenant-foundation
+
+jobs:
+  preview:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+        with:
+          python-version: "3.13"
+      - run: uv sync --all-groups --frozen
+      - name: Show Ruff import fix
+        run: |
+          uv run ruff check scripts/verify_epic16_tenant_foundation.py --fix
+          git diff -- scripts/verify_epic16_tenant_foundation.py
+          test -n "$(git diff -- scripts/verify_epic16_tenant_foundation.py)"
