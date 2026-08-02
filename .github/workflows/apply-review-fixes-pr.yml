@@ -1,0 +1,60 @@
+name: Apply EPIC 16 Review Fixes From PR
+
+on:
+  pull_request:
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/epic16-tenant-foundation
+      - uses: astral-sh/setup-uv@v6
+        with:
+          python-version: "3.13"
+      - run: uv sync --all-groups --frozen
+      - name: Execute hardened patch step
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          workflow = Path('.github/workflows/apply-review-fixes-v3.yml').read_text()
+          marker = "          python - <<'PY'\n"
+          start = workflow.index(marker) + len(marker)
+          end = workflow.index("\n          PY", start)
+          script = workflow[start:end]
+          script = "\n".join(
+              line[10:] if line.startswith("          ") else line
+              for line in script.splitlines()
+          )
+          exec(compile(script, 'embedded-review-fixes-v3-step', 'exec'))
+          PY
+      - name: Format and validate changed files
+        run: |
+          files=(
+            app/domain/admin_actions.py
+            app/domain/generated_content.py
+            app/domain/publications.py
+            app/repositories/events.py
+            app/repositories/memory/memory_events.py
+            app/repositories/postgres/postgres_events.py
+            app/repositories/postgres/postgres_generated_contents.py
+            app/repositories/publications.py
+            app/repositories/memory/memory_publications.py
+            app/repositories/postgres/postgres_publications.py
+          )
+          uv run ruff format "${files[@]}"
+          uv run ruff check "${files[@]}"
+      - name: Commit and push reviewed fixes
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add app/domain app/repositories
+          git diff --cached --quiet && exit 0
+          git commit -m "fix(epic16): close tenant identity lookup gaps"
+          git push origin HEAD:agent/epic16-tenant-foundation
