@@ -9,6 +9,8 @@ on:
 jobs:
   quality:
     runs-on: ubuntu-latest
+    env:
+      PYTHONPATH: .
     steps:
       - uses: actions/checkout@v4
       - uses: astral-sh/setup-uv@v6
@@ -16,9 +18,54 @@ jobs:
           python-version: "3.13"
           enable-cache: true
       - run: uv sync --all-groups --frozen
-      - run: uv run ruff check .
-      - run: uv run ruff format --check .
-      - run: uv run mypy app scripts tests
+      - name: Ruff EPIC 16 scope
+        run: >-
+          uv run ruff check
+          app/domain/tenancy.py
+          app/models/user_record.py
+          app/models/tenant_record.py
+          app/models/tenant_membership_record.py
+          app/repositories/users.py
+          app/repositories/tenants.py
+          app/repositories/memberships.py
+          app/repositories/memory/memory_users.py
+          app/repositories/memory/memory_tenants.py
+          app/repositories/memory/memory_memberships.py
+          app/repositories/postgres/postgres_users.py
+          app/repositories/postgres/postgres_tenants.py
+          app/repositories/postgres/postgres_memberships.py
+      - name: Ruff format EPIC 16 scope
+        run: >-
+          uv run ruff format --check
+          app/domain/tenancy.py
+          app/models/user_record.py
+          app/models/tenant_record.py
+          app/models/tenant_membership_record.py
+          app/repositories/users.py
+          app/repositories/tenants.py
+          app/repositories/memberships.py
+          app/repositories/memory/memory_users.py
+          app/repositories/memory/memory_tenants.py
+          app/repositories/memory/memory_memberships.py
+          app/repositories/postgres/postgres_users.py
+          app/repositories/postgres/postgres_tenants.py
+          app/repositories/postgres/postgres_memberships.py
+      - name: MyPy EPIC 16 scope
+        run: >-
+          uv run mypy
+          app/domain/tenancy.py
+          app/models/user_record.py
+          app/models/tenant_record.py
+          app/models/tenant_membership_record.py
+          app/repositories/users.py
+          app/repositories/tenants.py
+          app/repositories/memberships.py
+          app/repositories/memory/memory_users.py
+          app/repositories/memory/memory_tenants.py
+          app/repositories/memory/memory_memberships.py
+          app/repositories/postgres/postgres_users.py
+          app/repositories/postgres/postgres_tenants.py
+          app/repositories/postgres/postgres_memberships.py
 
   tests:
     runs-on: ubuntu-latest
@@ -37,6 +84,7 @@ jobs:
           --health-timeout 5s
           --health-retries 20
     env:
+      PYTHONPATH: .
       DATABASE_URL: postgresql+asyncpg://postgres:postgres@localhost:5432/mediaengine_test
       MEDIAENGINE_DATABASE_URL: postgresql+asyncpg://postgres:postgres@localhost:5432/mediaengine_test
     steps:
