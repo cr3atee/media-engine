@@ -158,20 +158,26 @@ def test_memory_offer_repository_isolates_shared_external_identity() -> None:
     run_async(repository.save_for_tenant(TENANT_A, offer_a))
     run_async(repository.save_for_tenant(TENANT_B, offer_b))
 
-    assert run_async(
-        repository.get_by_identity_for_tenant(
-            TENANT_A,
-            "ggsel",
-            "shared-offer",
+    assert (
+        run_async(
+            repository.get_by_identity_for_tenant(
+                TENANT_A,
+                "ggsel",
+                "shared-offer",
+            )
         )
-    ) == offer_a
-    assert run_async(
-        repository.get_by_identity_for_tenant(
-            TENANT_B,
-            "ggsel",
-            "shared-offer",
+        == offer_a
+    )
+    assert (
+        run_async(
+            repository.get_by_identity_for_tenant(
+                TENANT_B,
+                "ggsel",
+                "shared-offer",
+            )
         )
-    ) == offer_b
+        == offer_b
+    )
     assert len(run_async(repository.list_all())) == 2
 
 

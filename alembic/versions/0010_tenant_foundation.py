@@ -211,14 +211,11 @@ def _backfill_legacy_ownership() -> None:
 
     op.execute(
         sa.text(
-            "UPDATE admin_actions SET actor_type = 'api_key' "
-            "WHERE actor_type IS NULL"
+            "UPDATE admin_actions SET actor_type = 'api_key' WHERE actor_type IS NULL"
         )
     )
     op.execute(
-        sa.text(
-            "UPDATE admin_actions SET elevated = FALSE WHERE elevated IS NULL"
-        )
+        sa.text("UPDATE admin_actions SET elevated = FALSE WHERE elevated IS NULL")
     )
 
 
@@ -534,8 +531,7 @@ def _replace_global_integrity() -> None:
 
 def _assert_downgrade_is_safe() -> None:
     table_checks = " OR ".join(
-        f"EXISTS (SELECT 1 FROM {table} "
-        f"WHERE tenant_id <> '{LEGACY_TENANT_ID}'::uuid)"
+        f"EXISTS (SELECT 1 FROM {table} WHERE tenant_id <> '{LEGACY_TENANT_ID}'::uuid)"
         for table in TENANT_OWNED_TABLES
     )
     op.execute(
