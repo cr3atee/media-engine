@@ -72,7 +72,10 @@ class Tenant:
 
     def __post_init__(self) -> None:
         name = _require_text(self.name, field_name="tenant name", maximum_length=255)
-        slug = normalize_tenant_slug(self.slug, allow_legacy=self.id == LEGACY_TENANT_ID)
+        slug = normalize_tenant_slug(
+            self.slug,
+            allow_legacy=self.id == LEGACY_TENANT_ID,
+        )
         created_at = normalize_utc(self.created_at, field_name="created_at")
         updated_at = normalize_utc(self.updated_at, field_name="updated_at")
         _validate_version(self.version, field_name="Tenant version")
@@ -163,4 +166,3 @@ def _validate_version(value: int, *, field_name: str) -> None:
     if value < 1:
         msg = f"{field_name} must be positive."
         raise ValueError(msg)
-
