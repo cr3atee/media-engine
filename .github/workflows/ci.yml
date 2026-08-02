@@ -11,6 +11,49 @@ jobs:
     runs-on: ubuntu-latest
     env:
       PYTHONPATH: .
+      EPIC16_FILES: >-
+        alembic/versions/0010_tenant_foundation.py
+        app/domain/admin_actions.py
+        app/domain/generated_content.py
+        app/domain/market_events.py
+        app/domain/price_snapshot.py
+        app/domain/publications.py
+        app/domain/tenancy.py
+        app/models/admin_action_record.py
+        app/models/generated_content_record.py
+        app/models/market_event_record.py
+        app/models/publication_record.py
+        app/models/tenant_membership_record.py
+        app/models/tenant_record.py
+        app/models/user_record.py
+        app/parsers/models.py
+        app/repositories/events.py
+        app/repositories/generated_contents.py
+        app/repositories/memberships.py
+        app/repositories/offers.py
+        app/repositories/price_history.py
+        app/repositories/publications.py
+        app/repositories/tenants.py
+        app/repositories/users.py
+        app/repositories/memory/memory_events.py
+        app/repositories/memory/memory_generated_contents.py
+        app/repositories/memory/memory_memberships.py
+        app/repositories/memory/memory_offers.py
+        app/repositories/memory/memory_price_history.py
+        app/repositories/memory/memory_publications.py
+        app/repositories/memory/memory_tenants.py
+        app/repositories/memory/memory_users.py
+        app/repositories/postgres/postgres_events.py
+        app/repositories/postgres/postgres_generated_contents.py
+        app/repositories/postgres/postgres_memberships.py
+        app/repositories/postgres/postgres_offers.py
+        app/repositories/postgres/postgres_price_history.py
+        app/repositories/postgres/postgres_publications.py
+        app/repositories/postgres/postgres_tenants.py
+        app/repositories/postgres/postgres_users.py
+        app/services/marketplace_pipeline.py
+        scripts/verify_epic16_tenant_foundation.py
+        tests/domain/test_tenant_isolation.py
     steps:
       - uses: actions/checkout@v4
       - uses: astral-sh/setup-uv@v6
@@ -19,87 +62,11 @@ jobs:
           enable-cache: true
       - run: uv sync --all-groups --frozen
       - name: Ruff EPIC 16 scope
-        run: >-
-          uv run ruff check
-          alembic/versions/0010_tenant_foundation.py
-          app/domain/tenancy.py
-          app/domain/generated_content.py
-          app/domain/publications.py
-          app/models/user_record.py
-          app/models/tenant_record.py
-          app/models/tenant_membership_record.py
-          app/repositories/users.py
-          app/repositories/tenants.py
-          app/repositories/memberships.py
-          app/repositories/offers.py
-          app/repositories/price_history.py
-          app/repositories/memory/memory_users.py
-          app/repositories/memory/memory_tenants.py
-          app/repositories/memory/memory_memberships.py
-          app/repositories/memory/memory_offers.py
-          app/repositories/memory/memory_price_history.py
-          app/repositories/postgres/postgres_users.py
-          app/repositories/postgres/postgres_tenants.py
-          app/repositories/postgres/postgres_memberships.py
-          app/repositories/postgres/postgres_offers.py
-          app/repositories/postgres/postgres_price_history.py
-          app/services/marketplace_pipeline.py
-          scripts/verify_epic16_tenant_foundation.py
-          tests/domain/test_tenant_isolation.py
+        run: uv run ruff check $EPIC16_FILES
       - name: MyPy EPIC 16 scope
-        run: >-
-          uv run mypy --explicit-package-bases
-          alembic/versions/0010_tenant_foundation.py
-          app/domain/tenancy.py
-          app/domain/generated_content.py
-          app/domain/publications.py
-          app/models/user_record.py
-          app/models/tenant_record.py
-          app/models/tenant_membership_record.py
-          app/repositories/users.py
-          app/repositories/tenants.py
-          app/repositories/memberships.py
-          app/repositories/offers.py
-          app/repositories/price_history.py
-          app/repositories/memory/memory_users.py
-          app/repositories/memory/memory_tenants.py
-          app/repositories/memory/memory_memberships.py
-          app/repositories/memory/memory_offers.py
-          app/repositories/memory/memory_price_history.py
-          app/repositories/postgres/postgres_users.py
-          app/repositories/postgres/postgres_tenants.py
-          app/repositories/postgres/postgres_memberships.py
-          app/repositories/postgres/postgres_offers.py
-          app/repositories/postgres/postgres_price_history.py
-          app/services/marketplace_pipeline.py
-          scripts/verify_epic16_tenant_foundation.py
-          tests/domain/test_tenant_isolation.py
+        run: uv run mypy --explicit-package-bases $EPIC16_FILES
       - name: Ruff format EPIC 16 scope
-        run: >-
-          uv run ruff format --diff
-          alembic/versions/0010_tenant_foundation.py
-          app/domain/tenancy.py
-          app/domain/generated_content.py
-          app/domain/publications.py
-          app/models/user_record.py
-          app/models/tenant_record.py
-          app/models/tenant_membership_record.py
-          app/repositories/users.py
-          app/repositories/tenants.py
-          app/repositories/memberships.py
-          app/repositories/offers.py
-          app/repositories/price_history.py
-          app/repositories/memory/memory_users.py
-          app/repositories/memory/memory_tenants.py
-          app/repositories/memory/memory_memberships.py
-          app/repositories/postgres/postgres_users.py
-          app/repositories/postgres/postgres_tenants.py
-          app/repositories/postgres/postgres_memberships.py
-          app/repositories/postgres/postgres_offers.py
-          app/repositories/postgres/postgres_price_history.py
-          app/services/marketplace_pipeline.py
-          scripts/verify_epic16_tenant_foundation.py
-          tests/domain/test_tenant_isolation.py
+        run: uv run ruff format --diff $EPIC16_FILES
 
   tests:
     runs-on: ubuntu-latest
