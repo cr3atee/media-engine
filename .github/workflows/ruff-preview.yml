@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - agent/epic16-tenant-foundation
+  pull_request:
 
 jobs:
   preview:
