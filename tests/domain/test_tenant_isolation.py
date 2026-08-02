@@ -242,7 +242,10 @@ def test_memory_event_lookup_is_explicitly_tenant_scoped() -> None:
     run_async(repository.add_idempotently(MarketEventCandidate(event=legacy_event)))
     run_async(repository.add_idempotently(MarketEventCandidate(event=tenant_event)))
 
-    assert run_async(repository.get_by_identity(legacy_event.identity_key)) == legacy_event
+    assert (
+        run_async(repository.get_by_identity(legacy_event.identity_key))
+        == legacy_event
+    )
     assert (
         run_async(
             repository.get_by_identity_for_tenant(
