@@ -376,7 +376,11 @@ class PostgresGeneratedContentRepository(GeneratedContentRepository):
         if command.parent_content_id is None:
             return
         parent = await self._get_record(command.parent_content_id)
-        if parent is None or parent.event_id != command.event_id:
+        if (
+            parent is None
+            or parent.event_id != command.event_id
+            or parent.tenant_id != command.tenant_id
+        ):
             msg = "Content parent must be an existing revision for the same event."
             raise RepositoryIdentityConflictError(msg)
 
@@ -399,6 +403,7 @@ class PostgresGeneratedContentRepository(GeneratedContentRepository):
                 or_(
                     GeneratedContentRecord.id == command.id,
                     and_(
+                        GeneratedContentRecord.tenant_id == command.tenant_id,
                         GeneratedContentRecord.event_id == command.event_id,
                         GeneratedContentRecord.content_type == command.content_type,
                         GeneratedContentRecord.language == command.language,
@@ -453,6 +458,7 @@ class PostgresGeneratedContentRepository(GeneratedContentRepository):
 def _content_values(command: CreateContentAttempt) -> dict[str, object]:
     return {
         "id": command.id,
+        "tenant_id": command.tenant_id,
         "event_id": command.event_id,
         "parent_content_id": command.parent_content_id,
         "content_type": command.content_type,
@@ -493,6 +499,7 @@ def _to_domain(record: GeneratedContentRecord) -> GeneratedContentAttempt:
     )
     return GeneratedContentAttempt(
         id=record.id,
+        tenant_id=record.tenant_id,
         event_id=record.event_id,
         parent_content_id=record.parent_content_id,
         content_type=record.content_type,
@@ -594,6 +601,7 @@ def _clear_error(record: GeneratedContentRecord) -> None:
 def _command_signature(command: CreateContentAttempt) -> tuple[object, ...]:
     return (
         command.event_id,
+        command.tenant_id,
         command.content_type,
         command.language,
         command.prompt_version,
@@ -608,6 +616,7 @@ def _command_signature(command: CreateContentAttempt) -> tuple[object, ...]:
 def _content_signature(content: GeneratedContentAttempt) -> tuple[object, ...]:
     return (
         content.event_id,
+        content.tenant_id,
         content.content_type,
         content.language,
         content.prompt_version,

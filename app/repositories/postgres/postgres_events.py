@@ -380,6 +380,7 @@ class PostgresMarketEventRepository(MarketEventRepository):
     async def _resolve_snapshot_id(self, snapshot: SnapshotIdentity) -> int:
         result = await self._session.execute(
             select(PriceSnapshotRecord.id).where(
+                PriceSnapshotRecord.tenant_id == snapshot.tenant_id,
                 PriceSnapshotRecord.marketplace == snapshot.marketplace,
                 PriceSnapshotRecord.external_id == snapshot.external_id,
                 PriceSnapshotRecord.collected_at == snapshot.collected_at,
@@ -405,9 +406,13 @@ class PostgresMarketEventRepository(MarketEventRepository):
         current_snapshot_id: int,
     ) -> PriceDropMarketEvent | None:
         predicates = (
-            MarketEventRecord.identity_key == event.identity_key,
+            and_(
+                MarketEventRecord.tenant_id == event.tenant_id,
+                MarketEventRecord.identity_key == event.identity_key,
+            ),
             MarketEventRecord.id == event.id,
             and_(
+                MarketEventRecord.tenant_id == event.tenant_id,
                 MarketEventRecord.event_type == event.event_type.value,
                 MarketEventRecord.previous_snapshot_id == previous_snapshot_id,
                 MarketEventRecord.current_snapshot_id == current_snapshot_id,

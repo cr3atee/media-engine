@@ -19,6 +19,7 @@ from sqlalchemy import (
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.database.base import Base
+from app.domain.tenancy import LEGACY_TENANT_ID
 
 
 class PublicationRecord(Base):
@@ -28,14 +29,22 @@ class PublicationRecord(Base):
     __table_args__ = (
         PrimaryKeyConstraint("id", name="pk_publications"),
         UniqueConstraint(
+            "tenant_id",
             "idempotency_key",
             name="uq_publications_idempotency_key",
         ),
         UniqueConstraint(
+            "tenant_id",
             "content_id",
             "channel",
             "destination_key",
             name="uq_publications_content_channel_destination",
+        ),
+        ForeignKeyConstraint(
+            ("tenant_id",),
+            ("tenants.id",),
+            name="fk_publications_tenant",
+            ondelete="RESTRICT",
         ),
         ForeignKeyConstraint(
             ("event_id",),
@@ -119,17 +128,24 @@ class PublicationRecord(Base):
         ),
         Index(
             "ix_publications_event_created",
+            "tenant_id",
             "event_id",
             text("created_at DESC"),
         ),
         Index(
             "ix_publications_status_schedule",
+            "tenant_id",
             "publication_status",
             "scheduled_at",
         ),
     )
 
     id: Mapped[UUID] = mapped_column(Uuid, nullable=False)
+    tenant_id: Mapped[UUID] = mapped_column(
+        Uuid,
+        nullable=False,
+        default=LEGACY_TENANT_ID,
+    )
     event_id: Mapped[UUID] = mapped_column(Uuid, nullable=False)
     content_id: Mapped[UUID] = mapped_column(Uuid, nullable=False)
     channel: Mapped[str] = mapped_column(String(64), nullable=False)

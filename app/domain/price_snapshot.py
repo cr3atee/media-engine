@@ -3,6 +3,9 @@ from __future__ import annotations
 from dataclasses import dataclass
 from datetime import datetime
 from decimal import Decimal
+from uuid import UUID
+
+from app.domain.tenancy import LEGACY_TENANT_ID
 
 
 @dataclass(slots=True, frozen=True)
@@ -14,3 +17,4 @@ class PriceSnapshot:
     price: Decimal
     currency: str
     collected_at: datetime
+    tenant_id: UUID = LEGACY_TENANT_ID

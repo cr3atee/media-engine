@@ -16,6 +16,7 @@ from app.domain.processing import (
     ProcessingError,
     WorkClaim,
 )
+from app.domain.tenancy import LEGACY_TENANT_ID
 
 
 @dataclass(slots=True, frozen=True, kw_only=True)
@@ -26,6 +27,7 @@ class CreatePublication:
     content_id: UUID
     channel: str
     destination_key: str
+    tenant_id: UUID = LEGACY_TENANT_ID
     id: UUID = field(default_factory=uuid4)
     scheduled_at: datetime | None = None
     created_at: datetime = field(default_factory=lambda: datetime.now(UTC))
@@ -52,6 +54,7 @@ class CreatePublication:
         return build_publication_idempotency_key(
             event_id=self.event_id,
             content_id=self.content_id,
+            tenant_id=self.tenant_id,
             channel=self.channel,
             destination_key=self.destination_key,
         )
@@ -62,6 +65,7 @@ class Publication:
     """Immutable channel-independent publication lifecycle snapshot."""
 
     id: UUID
+    tenant_id: UUID
     event_id: UUID
     content_id: UUID
     channel: str
@@ -106,6 +110,7 @@ class Publication:
         expected_key = build_publication_idempotency_key(
             event_id=self.event_id,
             content_id=self.content_id,
+            tenant_id=self.tenant_id,
             channel=channel,
             destination_key=destination_key,
         )
@@ -152,6 +157,7 @@ class Publication:
         """Return a deterministic serialization-safe mapping."""
         return {
             "id": str(self.id),
+            "tenant_id": str(self.tenant_id),
             "event_id": str(self.event_id),
             "content_id": str(self.content_id),
             "channel": self.channel,
@@ -208,9 +214,11 @@ def build_publication_idempotency_key(
     content_id: UUID,
     channel: str,
     destination_key: str,
+    tenant_id: UUID = LEGACY_TENANT_ID,
 ) -> str:
     """Build the deterministic identity for one channel delivery."""
     return hash_identity_fields(
+        str(tenant_id),
         str(event_id),
         str(content_id),
         _normalize_channel(channel),

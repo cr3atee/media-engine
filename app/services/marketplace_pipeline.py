@@ -190,7 +190,7 @@ class MarketplacePipeline:
     ) -> TransactionalMarketplaceResult:
         """Persist and process prepared offers within one repository scope."""
         for offer in prepared.offers:
-            await repository_provider.offers.save(offer)
+            await repository_provider.offers.save(offer.tenant_id, offer)
         self._report(f"Persisted offers: {len(prepared.offers)}")
 
         self._report("=== COMPARE OFFERS ===")
@@ -208,10 +208,12 @@ class MarketplacePipeline:
             offer = snapshot_candidate.offer
             current_snapshot = snapshot_candidate.snapshot
             previous_snapshot = await repository_provider.price_history.get_last(
+                current_snapshot.tenant_id,
                 current_snapshot.marketplace,
                 current_snapshot.external_id,
             )
             snapshot_inserted = await repository_provider.price_history.add(
+                current_snapshot.tenant_id,
                 current_snapshot
             )
             if snapshot_inserted:

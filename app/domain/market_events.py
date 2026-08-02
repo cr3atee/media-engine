@@ -22,9 +22,13 @@ from app.domain.processing import (
     ProcessingError,
     WorkClaim,
 )
+from app.domain.tenancy import LEGACY_TENANT_ID
 
-CURRENT_EVENT_IDENTITY_VERSION = 1
-_SUPPORTED_EVENT_IDENTITY_VERSIONS = frozenset({CURRENT_EVENT_IDENTITY_VERSION})
+LEGACY_EVENT_IDENTITY_VERSION = 1
+CURRENT_EVENT_IDENTITY_VERSION = 2
+_SUPPORTED_EVENT_IDENTITY_VERSIONS = frozenset(
+    {LEGACY_EVENT_IDENTITY_VERSION, CURRENT_EVENT_IDENTITY_VERSION},
+)
 
 
 class UnsupportedEventIdentityVersion(ValueError):
@@ -54,6 +58,7 @@ class SnapshotIdentity:
     collected_at: datetime
     price: Decimal
     currency: str
+    tenant_id: UUID = LEGACY_TENANT_ID
 
     def __post_init__(self) -> None:
         marketplace = _normalize_marketplace(self.marketplace)
@@ -75,10 +80,24 @@ class SnapshotIdentity:
             collected_at=snapshot.collected_at,
             price=snapshot.price,
             currency=snapshot.currency,
+            tenant_id=snapshot.tenant_id,
         )
 
-    def canonical_value(self) -> str:
+    def canonical_value(
+        self,
+        identity_version: int = LEGACY_EVENT_IDENTITY_VERSION,
+    ) -> str:
         """Return the canonical snapshot value used by event identity."""
+        _validate_event_identity_version(identity_version)
+        if identity_version >= CURRENT_EVENT_IDENTITY_VERSION:
+            return canonicalize_identity_fields(
+                str(self.tenant_id),
+                self.marketplace,
+                self.external_id,
+                canonicalize_utc(self.collected_at),
+                canonicalize_decimal(self.price),
+                self.currency,
+            )
         return canonicalize_identity_fields(
             self.marketplace,
             self.external_id,
@@ -95,6 +114,7 @@ class SnapshotIdentity:
             "collected_at": canonicalize_utc(self.collected_at),
             "price": canonicalize_decimal(self.price),
             "currency": self.currency,
+            "tenant_id": str(self.tenant_id),
         }
 
 
@@ -189,6 +209,7 @@ class MarketEvent[TEventPayload: EventPayload]:
     event_type: MarketEventType
     marketplace: str
     external_id: str
+    tenant_id: UUID
     occurred_at: datetime
     detected_at: datetime
     payload: TEventPayload
@@ -228,6 +249,13 @@ class MarketEvent[TEventPayload: EventPayload]:
         if external_id != self.payload.current_snapshot.external_id:
             msg = "Event external ID must match its snapshot identities."
             raise ValueError(msg)
+        if self.identity_version >= CURRENT_EVENT_IDENTITY_VERSION:
+            if self.tenant_id != self.payload.previous_snapshot.tenant_id:
+                msg = "Event tenant must match its previous snapshot identity."
+                raise ValueError(msg)
+            if self.tenant_id != self.payload.current_snapshot.tenant_id:
+                msg = "Event tenant must match its current snapshot identity."
+                raise ValueError(msg)
         if occurred_at != self.payload.current_snapshot.collected_at:
             msg = "Event occurred_at must equal the current snapshot timestamp."
             raise ValueError(msg)
@@ -269,6 +297,7 @@ class MarketEvent[TEventPayload: EventPayload]:
             event_type=self.event_type,
             marketplace=marketplace,
             external_id=external_id,
+            tenant_id=self.tenant_id,
             previous_snapshot=self.payload.previous_snapshot,
             current_snapshot=self.payload.current_snapshot,
             identity_version=self.identity_version,
@@ -321,6 +350,7 @@ class MarketEvent[TEventPayload: EventPayload]:
             "event_type": self.event_type.value,
             "marketplace": self.marketplace,
             "external_id": self.external_id,
+            "tenant_id": str(self.tenant_id),
             "canonical_product_id": (
                 str(self.canonical_product_id)
                 if self.canonical_product_id is not None
@@ -384,6 +414,7 @@ def build_event_identity(
     event_type: MarketEventType | str,
     marketplace: str,
     external_id: str,
+    tenant_id: UUID = LEGACY_TENANT_ID,
     previous_snapshot: SnapshotIdentity,
     current_snapshot: SnapshotIdentity,
     identity_version: int = CURRENT_EVENT_IDENTITY_VERSION,
@@ -408,16 +439,35 @@ def build_event_identity(
     if current_snapshot.external_id != external_id:
         msg = "Current snapshot external ID must match event external ID."
         raise ValueError(msg)
+    if identity_version >= CURRENT_EVENT_IDENTITY_VERSION:
+        if previous_snapshot.tenant_id != tenant_id:
+            msg = "Previous snapshot tenant must match event tenant."
+            raise ValueError(msg)
+        if current_snapshot.tenant_id != tenant_id:
+            msg = "Current snapshot tenant must match event tenant."
+            raise ValueError(msg)
 
-    return EventIdentity(
-        key=hash_identity_fields(
+    if identity_version >= CURRENT_EVENT_IDENTITY_VERSION:
+        fields = (
+            f"v{identity_version}",
+            str(tenant_id),
+            event_type_value,
+            marketplace,
+            external_id,
+            previous_snapshot.canonical_value(identity_version),
+            current_snapshot.canonical_value(identity_version),
+        )
+    else:
+        fields = (
             f"v{identity_version}",
             event_type_value,
             marketplace,
             external_id,
-            previous_snapshot.canonical_value(),
-            current_snapshot.canonical_value(),
-        ),
+            previous_snapshot.canonical_value(identity_version),
+            current_snapshot.canonical_value(identity_version),
+        )
+    return EventIdentity(
+        key=hash_identity_fields(*fields),
         version=identity_version,
     )
 
@@ -426,15 +476,18 @@ def create_price_drop_market_event(
     *,
     payload: PriceDropPayload,
     detected_at: datetime,
+    tenant_id: UUID | None = None,
     event_id: UUID | None = None,
     canonical_product_id: UUID | None = None,
     created_at: datetime | None = None,
 ) -> PriceDropMarketEvent:
     """Create a fully identified price-drop market event."""
+    event_tenant_id = tenant_id or payload.current_snapshot.tenant_id
     identity = build_event_identity(
         event_type=MarketEventType.PRICE_DROP,
         marketplace=payload.current_snapshot.marketplace,
         external_id=payload.current_snapshot.external_id,
+        tenant_id=event_tenant_id,
         previous_snapshot=payload.previous_snapshot,
         current_snapshot=payload.current_snapshot,
     )
@@ -445,6 +498,7 @@ def create_price_drop_market_event(
         event_type=MarketEventType.PRICE_DROP,
         marketplace=payload.current_snapshot.marketplace,
         external_id=payload.current_snapshot.external_id,
+        tenant_id=event_tenant_id,
         canonical_product_id=canonical_product_id,
         occurred_at=payload.current_snapshot.collected_at,
         detected_at=detected_at,

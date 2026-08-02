@@ -18,6 +18,7 @@ from app.domain.processing import (
     ProcessingError,
     WorkClaim,
 )
+from app.domain.tenancy import LEGACY_TENANT_ID
 
 
 class ContentOrigin(StrEnum):
@@ -36,6 +37,7 @@ class CreateContentAttempt:
     language: str
     prompt_version: str
     attempt_number: int
+    tenant_id: UUID = LEGACY_TENANT_ID
     id: UUID = field(default_factory=uuid4)
     parent_content_id: UUID | None = None
     origin: ContentOrigin = ContentOrigin.AI
@@ -71,6 +73,7 @@ class CreateContentAttempt:
         """Return the deterministic identity of this generation attempt."""
         return build_content_idempotency_key(
             event_id=self.event_id,
+            tenant_id=self.tenant_id,
             content_type=self.content_type,
             language=self.language,
             prompt_version=self.prompt_version,
@@ -83,6 +86,7 @@ class GeneratedContentAttempt:
     """Immutable snapshot of one content-generation attempt or revision."""
 
     id: UUID
+    tenant_id: UUID
     event_id: UUID
     content_type: str
     language: str
@@ -129,6 +133,7 @@ class GeneratedContentAttempt:
 
         expected_key = build_content_idempotency_key(
             event_id=self.event_id,
+            tenant_id=self.tenant_id,
             content_type=content_type,
             language=language,
             prompt_version=prompt_version,
@@ -191,6 +196,7 @@ class GeneratedContentAttempt:
         """Return a deterministic serialization-safe mapping."""
         return {
             "id": str(self.id),
+            "tenant_id": str(self.tenant_id),
             "event_id": str(self.event_id),
             "parent_content_id": (
                 str(self.parent_content_id)
@@ -248,10 +254,12 @@ def build_content_idempotency_key(
     language: str,
     prompt_version: str,
     attempt_number: int,
+    tenant_id: UUID = LEGACY_TENANT_ID,
 ) -> str:
     """Build the deterministic identity of a content attempt."""
     _validate_attempt_number(attempt_number)
     return hash_identity_fields(
+        str(tenant_id),
         str(event_id),
         _normalize_code(content_type, field_name="content_type"),
         _normalize_code(language, field_name="language"),

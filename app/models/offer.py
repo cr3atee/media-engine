@@ -8,6 +8,7 @@ from sqlalchemy import DateTime, ForeignKey, Index, Numeric, String, Uuid, text
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.database.base import Base
+from app.domain.tenancy import LEGACY_TENANT_ID
 
 
 class Offer(Base):
@@ -17,15 +18,27 @@ class Offer(Base):
     __table_args__ = (
         Index(
             "uq_offers_marketplace_external_id_not_null",
+            "tenant_id",
             "marketplace",
             "external_id",
             unique=True,
             postgresql_where=text("external_id IS NOT NULL"),
         ),
+        Index("ix_offers_tenant_created", "tenant_id", "created_at", "id"),
         Index("ix_offers_canonical_product_id", "canonical_product_id"),
     )
 
     id: Mapped[UUID] = mapped_column(Uuid, primary_key=True, default=uuid4)
+    tenant_id: Mapped[UUID] = mapped_column(
+        Uuid,
+        ForeignKey(
+            "tenants.id",
+            name="fk_offers_tenant_id_tenants",
+            ondelete="RESTRICT",
+        ),
+        nullable=False,
+        default=LEGACY_TENANT_ID,
+    )
     marketplace: Mapped[str] = mapped_column(String(64), nullable=False)
     external_id: Mapped[str | None] = mapped_column(String(255), nullable=True)
     title: Mapped[str | None] = mapped_column(String(1000), nullable=True)

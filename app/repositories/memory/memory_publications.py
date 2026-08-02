@@ -70,6 +70,7 @@ class MemoryPublicationRepository(PublicationRepository):
 
         publication = Publication(
             id=command.id,
+            tenant_id=command.tenant_id,
             event_id=command.event_id,
             content_id=command.content_id,
             channel=command.channel,

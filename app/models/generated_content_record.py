@@ -20,6 +20,7 @@ from sqlalchemy import (
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.database.base import Base
+from app.domain.tenancy import LEGACY_TENANT_ID
 
 
 class GeneratedContentRecord(Base):
@@ -29,16 +30,24 @@ class GeneratedContentRecord(Base):
     __table_args__ = (
         PrimaryKeyConstraint("id", name="pk_generated_contents"),
         UniqueConstraint(
+            "tenant_id",
             "idempotency_key",
             name="uq_generated_contents_idempotency_key",
         ),
         UniqueConstraint(
+            "tenant_id",
             "event_id",
             "content_type",
             "language",
             "prompt_version",
             "attempt_number",
             name="uq_generated_contents_event_attempt",
+        ),
+        ForeignKeyConstraint(
+            ("tenant_id",),
+            ("tenants.id",),
+            name="fk_generated_contents_tenant",
+            ondelete="RESTRICT",
         ),
         ForeignKeyConstraint(
             ("event_id",),
@@ -112,6 +121,7 @@ class GeneratedContentRecord(Base):
         ),
         Index(
             "uq_generated_contents_active_generation",
+            "tenant_id",
             "event_id",
             "content_type",
             "language",
@@ -136,6 +146,7 @@ class GeneratedContentRecord(Base):
         ),
         Index(
             "ix_generated_contents_event_created",
+            "tenant_id",
             "event_id",
             text("created_at DESC"),
         ),
@@ -148,6 +159,11 @@ class GeneratedContentRecord(Base):
     )
 
     id: Mapped[UUID] = mapped_column(Uuid, nullable=False)
+    tenant_id: Mapped[UUID] = mapped_column(
+        Uuid,
+        nullable=False,
+        default=LEGACY_TENANT_ID,
+    )
     event_id: Mapped[UUID] = mapped_column(Uuid, nullable=False)
     parent_content_id: Mapped[UUID | None] = mapped_column(Uuid, nullable=True)
     content_type: Mapped[str] = mapped_column(String(64), nullable=False)

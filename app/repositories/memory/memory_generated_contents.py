@@ -90,7 +90,11 @@ class MemoryGeneratedContentRepository(GeneratedContentRepository):
 
         if command.parent_content_id is not None:
             parent = self._contents_by_id.get(command.parent_content_id)
-            if parent is None or parent.event_id != command.event_id:
+            if (
+                parent is None
+                or parent.event_id != command.event_id
+                or parent.tenant_id != command.tenant_id
+            ):
                 msg = "Content parent must be an existing revision for the same event."
                 raise RepositoryIdentityConflictError(msg)
 
@@ -108,6 +112,7 @@ class MemoryGeneratedContentRepository(GeneratedContentRepository):
 
         content = GeneratedContentAttempt(
             id=command.id,
+            tenant_id=command.tenant_id,
             event_id=command.event_id,
             parent_content_id=command.parent_content_id,
             content_type=command.content_type,
@@ -441,6 +446,7 @@ class MemoryGeneratedContentRepository(GeneratedContentRepository):
 def _command_signature(command: CreateContentAttempt) -> tuple[object, ...]:
     return (
         command.event_id,
+        command.tenant_id,
         command.content_type,
         command.language,
         command.prompt_version,
@@ -457,6 +463,7 @@ def _content_command_signature(
 ) -> tuple[object, ...]:
     return (
         content.event_id,
+        content.tenant_id,
         content.content_type,
         content.language,
         content.prompt_version,
@@ -471,6 +478,7 @@ def _content_command_signature(
 def _active_command_identity(command: CreateContentAttempt) -> tuple[object, ...]:
     return (
         command.event_id,
+        command.tenant_id,
         command.content_type,
         command.language,
         command.prompt_version,
@@ -482,6 +490,7 @@ def _active_generation_identity(
 ) -> tuple[object, ...]:
     return (
         content.event_id,
+        content.tenant_id,
         content.content_type,
         content.language,
         content.prompt_version,

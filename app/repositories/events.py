@@ -126,6 +126,7 @@ def event_immutable_signature(
         event.event_type,
         event.marketplace,
         event.external_id,
+        event.tenant_id,
         event.canonical_product_id,
         event.occurred_at,
         event.detected_at,
