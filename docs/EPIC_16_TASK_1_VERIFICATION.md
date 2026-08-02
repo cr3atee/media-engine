@@ -18,5 +18,8 @@ The final verification suite passed:
 - Cross-tenant parent/child consistency verification for prices,
   offers, events, generated content, and publications
 
+The final branch state was rechecked after all temporary apply/debug workflows
+and failure artifacts were removed.
+
 The pull request remains draft and must not be merged without an
 explicit review decision.
