@@ -26,6 +26,7 @@ from app.domain.processing import (
     StateTransitionResult,
     WorkClaim,
 )
+from app.domain.tenancy import LEGACY_TENANT_ID
 from app.repositories.base import RepositoryIdentityConflictError
 from app.repositories.events import MarketEventRepository, event_immutable_signature
 
@@ -46,7 +47,7 @@ class MemoryMarketEventRepository(MarketEventRepository):
     ) -> None:
         """Initialize isolated storage and an injectable claim-token source."""
         self._events_by_id: dict[UUID, PriceDropMarketEvent] = {}
-        self._event_ids_by_identity: dict[str, UUID] = {}
+        self._event_ids_by_identity: dict[tuple[UUID, str], UUID] = {}
         self._claim_token_factory = claim_token_factory
 
     async def add_idempotently(
@@ -55,7 +56,9 @@ class MemoryMarketEventRepository(MarketEventRepository):
     ) -> EventAddResult:
         """Persist one event per deterministic identity without merging facts."""
         event = candidate.event
-        existing_id = self._event_ids_by_identity.get(event.identity_key)
+        existing_id = self._event_ids_by_identity.get(
+            (event.tenant_id, event.identity_key)
+        )
         if existing_id is not None:
             existing = self._events_by_id[existing_id]
             if event_immutable_signature(existing) != event_immutable_signature(
@@ -93,8 +96,19 @@ class MemoryMarketEventRepository(MarketEventRepository):
         self,
         identity_key: str,
     ) -> PriceDropMarketEvent | None:
-        """Return one immutable event snapshot by deterministic identity."""
-        event_id = self._event_ids_by_identity.get(identity_key)
+        """Return one legacy-tenant event by deterministic identity."""
+        return await self.get_by_identity_for_tenant(
+            LEGACY_TENANT_ID,
+            identity_key,
+        )
+
+    async def get_by_identity_for_tenant(
+        self,
+        tenant_id: UUID,
+        identity_key: str,
+    ) -> PriceDropMarketEvent | None:
+        """Return one event by tenant and deterministic identity."""
+        event_id = self._event_ids_by_identity.get((tenant_id, identity_key))
         return self._events_by_id.get(event_id) if event_id is not None else None
 
     async def list_pending(
@@ -345,7 +359,7 @@ class MemoryMarketEventRepository(MarketEventRepository):
 
     def _store(self, event: PriceDropMarketEvent) -> None:
         self._events_by_id[event.id] = event
-        self._event_ids_by_identity[event.identity_key] = event.id
+        self._event_ids_by_identity[(event.tenant_id, event.identity_key)] = event.id
 
 
 def _is_event_claimable(event: PriceDropMarketEvent, now: datetime) -> bool:

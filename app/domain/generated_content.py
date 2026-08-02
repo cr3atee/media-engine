@@ -18,6 +18,7 @@ from app.domain.processing import (
     ProcessingError,
     WorkClaim,
 )
+from app.domain.tenancy import LEGACY_TENANT_ID
 
 
 class ContentOrigin(StrEnum):
@@ -36,6 +37,7 @@ class CreateContentAttempt:
     language: str
     prompt_version: str
     attempt_number: int
+    tenant_id: UUID = LEGACY_TENANT_ID
     id: UUID = field(default_factory=uuid4)
     parent_content_id: UUID | None = None
     origin: ContentOrigin = ContentOrigin.AI
@@ -71,6 +73,7 @@ class CreateContentAttempt:
         """Return the deterministic identity of this generation attempt."""
         return build_content_idempotency_key(
             event_id=self.event_id,
+            tenant_id=self.tenant_id,
             content_type=self.content_type,
             language=self.language,
             prompt_version=self.prompt_version,
@@ -94,6 +97,7 @@ class GeneratedContentAttempt:
     idempotency_key: str
     created_at: datetime
     updated_at: datetime
+    tenant_id: UUID = LEGACY_TENANT_ID
     parent_content_id: UUID | None = None
     provider: str | None = None
     model: str | None = None
@@ -129,6 +133,7 @@ class GeneratedContentAttempt:
 
         expected_key = build_content_idempotency_key(
             event_id=self.event_id,
+            tenant_id=self.tenant_id,
             content_type=content_type,
             language=language,
             prompt_version=prompt_version,
@@ -191,6 +196,7 @@ class GeneratedContentAttempt:
         """Return a deterministic serialization-safe mapping."""
         return {
             "id": str(self.id),
+            "tenant_id": str(self.tenant_id),
             "event_id": str(self.event_id),
             "parent_content_id": (
                 str(self.parent_content_id)
@@ -248,16 +254,20 @@ def build_content_idempotency_key(
     language: str,
     prompt_version: str,
     attempt_number: int,
+    tenant_id: UUID = LEGACY_TENANT_ID,
 ) -> str:
     """Build the deterministic identity of a content attempt."""
     _validate_attempt_number(attempt_number)
-    return hash_identity_fields(
+    identity_fields: tuple[str, ...] = (
         str(event_id),
         _normalize_code(content_type, field_name="content_type"),
         _normalize_code(language, field_name="language"),
         _require_text(prompt_version, field_name="prompt_version"),
         str(attempt_number),
     )
+    if tenant_id != LEGACY_TENANT_ID:
+        identity_fields = (str(tenant_id), *identity_fields)
+    return hash_identity_fields(*identity_fields)
 
 
 def calculate_content_checksum(content_text: str) -> str:

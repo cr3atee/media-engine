@@ -50,6 +50,7 @@ class PriceDropMarketEventBuilder:
         return create_price_drop_market_event(
             payload=payload,
             detected_at=detected_at,
+            tenant_id=offer.tenant_id,
             canonical_product_id=offer.canonical_product_id,
             created_at=detected_at,
         )
@@ -94,6 +95,12 @@ class PriceDropMarketEventBuilder:
             or change.current_price != current_snapshot.price
         ):
             msg = "Price-change values must match the exact snapshots."
+            raise ValueError(msg)
+        if (
+            offer.tenant_id != previous_snapshot.tenant_id
+            or offer.tenant_id != current_snapshot.tenant_id
+        ):
+            msg = "Offer and snapshot tenant identities must match."
             raise ValueError(msg)
         if change.timestamp != current_snapshot.collected_at:
             msg = "Price-change timestamp must match the current snapshot."

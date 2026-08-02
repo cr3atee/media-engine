@@ -8,6 +8,7 @@ from hashlib import sha256
 from uuid import UUID
 
 from app.domain.identity import normalize_utc, validate_sha256
+from app.domain.tenancy import LEGACY_TENANT_ID
 
 
 class AdminActionType(StrEnum):
@@ -29,6 +30,17 @@ class AdminResourceType(StrEnum):
     PUBLICATION = "publication"
 
 
+class AdminActorType(StrEnum):
+    """Actor categories represented by immutable audit records."""
+
+    API_KEY = "api_key"
+    PLATFORM_ADMIN = "platform_admin"
+    USER = "user"
+    SYSTEM = "system"
+    WORKER = "worker"
+    MIGRATION = "migration"
+
+
 class AmbiguousPublicationResolution(StrEnum):
     """Explicit operator decisions for an ambiguous publication outcome."""
 
@@ -45,9 +57,12 @@ class AdminAction:
     action: AdminActionType
     resource_type: AdminResourceType
     resource_id: UUID
+    tenant_id: UUID = LEGACY_TENANT_ID
     previous_state: str
     resulting_state: str
     actor_id: str
+    actor_type: AdminActorType = AdminActorType.API_KEY
+    elevated: bool = False
     request_id: str
     idempotency_key: str
     request_fingerprint: str

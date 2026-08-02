@@ -2,12 +2,13 @@ from __future__ import annotations
 
 from collections.abc import Sequence
 from datetime import UTC, datetime
-from uuid import uuid4
+from uuid import UUID, uuid4
 
 from sqlalchemy import func, select
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.domain.tenancy import LEGACY_TENANT_ID
 from app.models.offer import Offer
 from app.parsers.models import ParsedOffer
 from app.repositories.offers import OfferRepository
@@ -21,9 +22,10 @@ class PostgresOfferRepository(OfferRepository):
         self._session = session
 
     async def save(self, offer: ParsedOffer) -> None:
-        """Insert or race-safely update a parsed offer by stable identity."""
+        """Insert or race-safely update an offer by tenant-local identity."""
         statement = insert(Offer).values(
             id=uuid4(),
+            tenant_id=offer.tenant_id,
             marketplace=offer.marketplace,
             external_id=offer.external_id,
             title=offer.title,
@@ -39,7 +41,7 @@ class PostgresOfferRepository(OfferRepository):
         if offer.external_id is not None:
             excluded = statement.excluded
             statement = statement.on_conflict_do_update(
-                index_elements=(Offer.marketplace, Offer.external_id),
+                index_elements=(Offer.tenant_id, Offer.marketplace, Offer.external_id),
                 index_where=Offer.external_id.is_not(None),
                 set_={
                     "title": func.coalesce(excluded.title, Offer.title),
@@ -65,17 +67,55 @@ class PostgresOfferRepository(OfferRepository):
         marketplace: str,
         external_id: str,
     ) -> ParsedOffer | None:
-        """Return an offer by marketplace and external identifier."""
-        record = await self._get_record_by_identity(marketplace, external_id)
-        if record is None:
-            return None
-        return self._to_parsed_offer(record)
+        """Return a legacy-tenant offer by stable marketplace identity."""
+        return await self.get_by_identity_for_tenant(
+            LEGACY_TENANT_ID,
+            marketplace,
+            external_id,
+        )
 
-    async def list_by_marketplace(self, marketplace: str) -> Sequence[ParsedOffer]:
-        """Return parsed offers for one marketplace in insertion order."""
+    async def get_by_identity_for_tenant(
+        self,
+        tenant_id: UUID,
+        marketplace: str,
+        external_id: str,
+    ) -> ParsedOffer | None:
+        """Return an offer by tenant, marketplace, and external identifier."""
+        record = await self._get_record_by_identity(
+            tenant_id,
+            marketplace,
+            external_id,
+        )
+        return self._to_parsed_offer(record) if record is not None else None
+
+    async def list_by_marketplace(
+        self,
+        marketplace: str,
+    ) -> Sequence[ParsedOffer]:
+        """Return legacy-tenant offers for one marketplace."""
+        return await self.list_by_marketplace_for_tenant(
+            LEGACY_TENANT_ID,
+            marketplace,
+        )
+
+    async def list_by_marketplace_for_tenant(
+        self,
+        tenant_id: UUID,
+        marketplace: str,
+    ) -> Sequence[ParsedOffer]:
+        """Return parsed offers for one tenant and marketplace."""
         result = await self._session.execute(
             select(Offer)
-            .where(Offer.marketplace == marketplace)
+            .where(Offer.tenant_id == tenant_id, Offer.marketplace == marketplace)
+            .order_by(Offer.created_at, Offer.id)
+        )
+        return tuple(self._to_parsed_offer(offer) for offer in result.scalars())
+
+    async def list_by_tenant(self, tenant_id: UUID) -> Sequence[ParsedOffer]:
+        """Return parsed offers for one tenant in insertion order."""
+        result = await self._session.execute(
+            select(Offer)
+            .where(Offer.tenant_id == tenant_id)
             .order_by(Offer.created_at, Offer.id)
         )
         return tuple(self._to_parsed_offer(offer) for offer in result.scalars())
@@ -89,12 +129,14 @@ class PostgresOfferRepository(OfferRepository):
 
     async def _get_record_by_identity(
         self,
+        tenant_id: UUID,
         marketplace: str,
         external_id: str,
     ) -> Offer | None:
         result = await self._session.execute(
             select(Offer)
             .where(
+                Offer.tenant_id == tenant_id,
                 Offer.marketplace == marketplace,
                 Offer.external_id == external_id,
             )
@@ -106,6 +148,7 @@ class PostgresOfferRepository(OfferRepository):
     @staticmethod
     def _to_parsed_offer(offer: Offer) -> ParsedOffer:
         return ParsedOffer(
+            tenant_id=offer.tenant_id,
             marketplace=offer.marketplace,
             external_id=offer.external_id,
             title=offer.title,

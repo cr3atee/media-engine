@@ -25,6 +25,7 @@ from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.database.base import Base
+from app.domain.tenancy import LEGACY_TENANT_ID
 
 
 class MarketEventRecord(Base):
@@ -34,8 +35,20 @@ class MarketEventRecord(Base):
     __table_args__ = (
         PrimaryKeyConstraint("id", name="pk_market_events"),
         UniqueConstraint(
+            "id",
+            "tenant_id",
+            name="uq_market_events_id_tenant",
+        ),
+        UniqueConstraint(
+            "tenant_id",
             "identity_key",
             name="uq_market_events_identity_key",
+        ),
+        ForeignKeyConstraint(
+            ("tenant_id",),
+            ("tenants.id",),
+            name="fk_market_events_tenant",
+            ondelete="RESTRICT",
         ),
         ForeignKeyConstraint(
             ("canonical_product_id",),
@@ -53,6 +66,18 @@ class MarketEventRecord(Base):
             ("current_snapshot_id",),
             ("price_snapshots.id",),
             name="fk_market_events_current_snapshot",
+            ondelete="RESTRICT",
+        ),
+        ForeignKeyConstraint(
+            ("previous_snapshot_id", "tenant_id"),
+            ("price_snapshots.id", "price_snapshots.tenant_id"),
+            name="fk_market_events_previous_snapshot_tenant",
+            ondelete="RESTRICT",
+        ),
+        ForeignKeyConstraint(
+            ("current_snapshot_id", "tenant_id"),
+            ("price_snapshots.id", "price_snapshots.tenant_id"),
+            name="fk_market_events_current_snapshot_tenant",
             ondelete="RESTRICT",
         ),
         CheckConstraint(
@@ -139,6 +164,7 @@ class MarketEventRecord(Base):
         ),
         Index(
             "uq_market_events_snapshot_transition",
+            "tenant_id",
             "event_type",
             "previous_snapshot_id",
             "current_snapshot_id",
@@ -167,12 +193,14 @@ class MarketEventRecord(Base):
         ),
         Index(
             "ix_market_events_offer_timeline",
+            "tenant_id",
             "marketplace",
             "external_id",
             text("occurred_at DESC"),
         ),
         Index(
             "ix_market_events_canonical_timeline",
+            "tenant_id",
             "canonical_product_id",
             text("occurred_at DESC"),
             postgresql_where=text("canonical_product_id IS NOT NULL"),
@@ -180,6 +208,11 @@ class MarketEventRecord(Base):
     )
 
     id: Mapped[UUID] = mapped_column(Uuid, nullable=False)
+    tenant_id: Mapped[UUID] = mapped_column(
+        Uuid,
+        nullable=False,
+        default=LEGACY_TENANT_ID,
+    )
     identity_key: Mapped[str] = mapped_column(CHAR(64), nullable=False)
     identity_version: Mapped[int] = mapped_column(SmallInteger, nullable=False)
     identity_source: Mapped[str] = mapped_column(String(32), nullable=False)

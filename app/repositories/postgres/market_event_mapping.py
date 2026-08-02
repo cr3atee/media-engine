@@ -30,6 +30,7 @@ def market_event_values(
     last_error = event.last_error
     return {
         "id": event.id,
+        "tenant_id": event.tenant_id,
         "identity_key": event.identity_key,
         "identity_version": event.identity_version,
         "identity_source": "snapshot_ids",
@@ -109,6 +110,7 @@ def market_event_to_domain(
         event_type=MarketEventType.PRICE_DROP,
         marketplace=record.marketplace,
         external_id=record.external_id,
+        tenant_id=record.tenant_id,
         canonical_product_id=record.canonical_product_id,
         occurred_at=record.occurred_at,
         detected_at=record.detected_at,
@@ -132,6 +134,7 @@ def _snapshot_identity(record: PriceSnapshotRecord) -> SnapshotIdentity:
         collected_at=record.collected_at,
         price=record.price,
         currency=record.currency,
+        tenant_id=record.tenant_id,
     )
 
 

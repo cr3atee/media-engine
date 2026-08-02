@@ -13,6 +13,7 @@ from app.domain.market_events import (
     PriceDropMarketEvent,
 )
 from app.domain.processing import ProcessingError, StateTransitionResult
+from app.domain.tenancy import LEGACY_TENANT_ID
 from app.repositories.base import BaseRepository
 
 
@@ -35,7 +36,21 @@ class MarketEventRepository(BaseRepository):
         self,
         identity_key: str,
     ) -> PriceDropMarketEvent | None:
-        """Return a market event by deterministic identity."""
+        """Return a legacy-tenant event by deterministic identity."""
+
+    async def get_by_identity_for_tenant(
+        self,
+        tenant_id: UUID,
+        identity_key: str,
+    ) -> PriceDropMarketEvent | None:
+        """Return a market event by tenant and deterministic identity."""
+        if tenant_id == LEGACY_TENANT_ID:
+            return await self.get_by_identity(identity_key)
+        msg = (
+            f"{type(self).__name__} does not implement tenant-scoped "
+            "event identity lookup."
+        )
+        raise NotImplementedError(msg)
 
     @abstractmethod
     async def list_pending(
@@ -126,6 +141,7 @@ def event_immutable_signature(
         event.event_type,
         event.marketplace,
         event.external_id,
+        event.tenant_id,
         event.canonical_product_id,
         event.occurred_at,
         event.detected_at,

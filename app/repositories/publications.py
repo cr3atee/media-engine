@@ -13,6 +13,7 @@ from app.domain.publications import (
     Publication,
     PublicationCreateResult,
 )
+from app.domain.tenancy import LEGACY_TENANT_ID
 from app.repositories.base import BaseRepository
 
 
@@ -35,7 +36,21 @@ class PublicationRepository(BaseRepository):
         self,
         idempotency_key: str,
     ) -> Publication | None:
-        """Return a publication by deterministic delivery identity."""
+        """Return a legacy-tenant publication by delivery identity."""
+
+    async def get_by_idempotency_key_for_tenant(
+        self,
+        tenant_id: UUID,
+        idempotency_key: str,
+    ) -> Publication | None:
+        """Return a publication by tenant and delivery identity."""
+        if tenant_id == LEGACY_TENANT_ID:
+            return await self.get_by_idempotency_key(idempotency_key)
+        msg = (
+            f"{type(self).__name__} does not implement tenant-scoped "
+            "publication identity lookup."
+        )
+        raise NotImplementedError(msg)
 
     @abstractmethod
     async def list_for_event(self, event_id: UUID) -> Sequence[Publication]:

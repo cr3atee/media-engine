@@ -16,6 +16,7 @@ class SnapshotBuilder:
             raise ValueError(msg)
 
         return PriceSnapshot(
+            tenant_id=offer.tenant_id,
             marketplace=offer.marketplace,
             external_id=offer.external_id,
             price=offer.price,

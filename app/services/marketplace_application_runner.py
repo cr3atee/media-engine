@@ -1,10 +1,11 @@
 from __future__ import annotations
 
 from collections.abc import Awaitable, Callable, Sequence
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from uuid import UUID
 
 from app.domain.marketplace import Marketplace
+from app.domain.tenancy import LEGACY_TENANT_ID
 from app.parsers.models import ParsedOffer
 from app.services.marketplace_pipeline import MarketplacePipeline
 from app.services.repository_scope import RepositoryScopeFactory
@@ -33,6 +34,7 @@ class MarketplaceRunResult:
     content_items_generated: int
     persistence_committed: bool
     errors: tuple[str, ...]
+    tenant_id: UUID = LEGACY_TENANT_ID
 
 
 class MarketplaceApplicationRunner:
@@ -45,16 +47,21 @@ class MarketplaceApplicationRunner:
         ingestion: OfferIngestion,
         repository_scope_factory: RepositoryScopeFactory,
         pipeline: MarketplacePipeline,
+        tenant_id: UUID = LEGACY_TENANT_ID,
     ) -> None:
         """Initialize one marketplace runner at the composition boundary."""
         self._marketplace = marketplace
         self._ingestion = ingestion
         self._repository_scope_factory = repository_scope_factory
         self._pipeline = pipeline
+        self._tenant_id = tenant_id
 
     async def run(self, url: str) -> MarketplaceRunResult:
         """Execute one bounded marketplace run with explicit phase ownership."""
-        parsed_offers = tuple(await self._ingestion(url))
+        parsed_offers = tuple(
+            replace(offer, tenant_id=self._tenant_id)
+            for offer in await self._ingestion(url)
+        )
         prepared = self._pipeline.prepare_offers(parsed_offers)
 
         async with self._repository_scope_factory() as repository_provider:
@@ -81,4 +88,5 @@ class MarketplaceApplicationRunner:
             content_items_generated=0,
             persistence_committed=True,
             errors=prepared.errors,
+            tenant_id=self._tenant_id,
         )

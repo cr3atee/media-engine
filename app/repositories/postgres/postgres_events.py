@@ -34,6 +34,7 @@ from app.domain.processing import (
     StateTransitionResult,
     WorkClaim,
 )
+from app.domain.tenancy import LEGACY_TENANT_ID
 from app.models.market_event_record import MarketEventRecord
 from app.models.price_snapshot_record import PriceSnapshotRecord
 from app.repositories.base import RepositoryIdentityConflictError
@@ -131,9 +132,21 @@ class PostgresMarketEventRepository(MarketEventRepository):
         self,
         identity_key: str,
     ) -> PriceDropMarketEvent | None:
-        """Return one immutable event snapshot by deterministic identity."""
+        """Return one legacy-tenant event by deterministic identity."""
+        return await self.get_by_identity_for_tenant(
+            LEGACY_TENANT_ID,
+            identity_key,
+        )
+
+    async def get_by_identity_for_tenant(
+        self,
+        tenant_id: UUID,
+        identity_key: str,
+    ) -> PriceDropMarketEvent | None:
+        """Return one event by tenant and deterministic identity."""
         row = await self._get_event_row(
             self._event_query().where(
+                MarketEventRecord.tenant_id == tenant_id,
                 MarketEventRecord.identity_key == identity_key,
             ),
         )
@@ -380,6 +393,7 @@ class PostgresMarketEventRepository(MarketEventRepository):
     async def _resolve_snapshot_id(self, snapshot: SnapshotIdentity) -> int:
         result = await self._session.execute(
             select(PriceSnapshotRecord.id).where(
+                PriceSnapshotRecord.tenant_id == snapshot.tenant_id,
                 PriceSnapshotRecord.marketplace == snapshot.marketplace,
                 PriceSnapshotRecord.external_id == snapshot.external_id,
                 PriceSnapshotRecord.collected_at == snapshot.collected_at,
@@ -405,9 +419,13 @@ class PostgresMarketEventRepository(MarketEventRepository):
         current_snapshot_id: int,
     ) -> PriceDropMarketEvent | None:
         predicates = (
-            MarketEventRecord.identity_key == event.identity_key,
+            and_(
+                MarketEventRecord.tenant_id == event.tenant_id,
+                MarketEventRecord.identity_key == event.identity_key,
+            ),
             MarketEventRecord.id == event.id,
             and_(
+                MarketEventRecord.tenant_id == event.tenant_id,
                 MarketEventRecord.event_type == event.event_type.value,
                 MarketEventRecord.previous_snapshot_id == previous_snapshot_id,
                 MarketEventRecord.current_snapshot_id == current_snapshot_id,
