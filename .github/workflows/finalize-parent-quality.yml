@@ -1,0 +1,42 @@
+name: Finalize Parent Consistency Quality
+
+on:
+  pull_request:
+
+permissions:
+  contents: write
+
+jobs:
+  finalize:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/epic16-tenant-foundation
+      - uses: astral-sh/setup-uv@v6
+        with:
+          python-version: "3.13"
+      - run: uv sync --all-groups --frozen
+      - name: Format and validate parent consistency
+        run: |
+          files=(
+            alembic/versions/0011_tenant_parent_consistency.py
+            scripts/verify_epic16_parent_consistency.py
+          )
+          uv run ruff format "${files[@]}"
+          uv run ruff check --fix "${files[@]}"
+          uv run ruff check "${files[@]}"
+          uv run mypy --explicit-package-bases "${files[@]}"
+      - name: Remove temporary quality workflows
+        run: |
+          rm -f .github/workflows/apply-parent-quality.yml
+          rm -f .github/workflows/finalize-parent-quality.yml
+      - name: Commit finalized files
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git diff --cached --quiet && exit 0
+          git commit -m "style(epic16): finalize parent consistency quality"
+          git push origin HEAD:agent/epic16-tenant-foundation
