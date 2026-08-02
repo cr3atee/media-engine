@@ -86,7 +86,6 @@ class GeneratedContentAttempt:
     """Immutable snapshot of one content-generation attempt or revision."""
 
     id: UUID
-    tenant_id: UUID
     event_id: UUID
     content_type: str
     language: str
@@ -98,6 +97,7 @@ class GeneratedContentAttempt:
     idempotency_key: str
     created_at: datetime
     updated_at: datetime
+    tenant_id: UUID = LEGACY_TENANT_ID
     parent_content_id: UUID | None = None
     provider: str | None = None
     model: str | None = None

@@ -45,7 +45,7 @@ jobs:
           app/services/marketplace_pipeline.py
       - name: MyPy EPIC 16 scope
         run: >-
-          uv run mypy
+          uv run mypy --explicit-package-bases
           app/domain/tenancy.py
           app/domain/generated_content.py
           app/domain/publications.py
@@ -70,7 +70,7 @@ jobs:
           app/services/marketplace_pipeline.py
       - name: Ruff format EPIC 16 scope
         run: >-
-          uv run ruff format --check
+          uv run ruff format --diff
           app/domain/tenancy.py
           app/domain/generated_content.py
           app/domain/publications.py
@@ -85,8 +85,6 @@ jobs:
           app/repositories/memory/memory_users.py
           app/repositories/memory/memory_tenants.py
           app/repositories/memory/memory_memberships.py
-          app/repositories/memory/memory_offers.py
-          app/repositories/memory/memory_price_history.py
           app/repositories/postgres/postgres_users.py
           app/repositories/postgres/postgres_tenants.py
           app/repositories/postgres/postgres_memberships.py

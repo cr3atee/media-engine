@@ -65,7 +65,6 @@ class Publication:
     """Immutable channel-independent publication lifecycle snapshot."""
 
     id: UUID
-    tenant_id: UUID
     event_id: UUID
     content_id: UUID
     channel: str
@@ -75,6 +74,7 @@ class Publication:
     attempt_count: int
     created_at: datetime
     updated_at: datetime
+    tenant_id: UUID = LEGACY_TENANT_ID
     external_message_id: str | None = None
     scheduled_at: datetime | None = None
     next_retry_at: datetime | None = None
