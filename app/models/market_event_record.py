@@ -35,6 +35,11 @@ class MarketEventRecord(Base):
     __table_args__ = (
         PrimaryKeyConstraint("id", name="pk_market_events"),
         UniqueConstraint(
+            "id",
+            "tenant_id",
+            name="uq_market_events_id_tenant",
+        ),
+        UniqueConstraint(
             "tenant_id",
             "identity_key",
             name="uq_market_events_identity_key",
@@ -61,6 +66,18 @@ class MarketEventRecord(Base):
             ("current_snapshot_id",),
             ("price_snapshots.id",),
             name="fk_market_events_current_snapshot",
+            ondelete="RESTRICT",
+        ),
+        ForeignKeyConstraint(
+            ("previous_snapshot_id", "tenant_id"),
+            ("price_snapshots.id", "price_snapshots.tenant_id"),
+            name="fk_market_events_previous_snapshot_tenant",
+            ondelete="RESTRICT",
+        ),
+        ForeignKeyConstraint(
+            ("current_snapshot_id", "tenant_id"),
+            ("price_snapshots.id", "price_snapshots.tenant_id"),
+            name="fk_market_events_current_snapshot_tenant",
             ondelete="RESTRICT",
         ),
         CheckConstraint(

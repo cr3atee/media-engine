@@ -30,6 +30,11 @@ class GeneratedContentRecord(Base):
     __table_args__ = (
         PrimaryKeyConstraint("id", name="pk_generated_contents"),
         UniqueConstraint(
+            "id",
+            "tenant_id",
+            name="uq_generated_contents_id_tenant",
+        ),
+        UniqueConstraint(
             "tenant_id",
             "idempotency_key",
             name="uq_generated_contents_idempotency_key",
@@ -59,6 +64,18 @@ class GeneratedContentRecord(Base):
             ("parent_content_id",),
             ("generated_contents.id",),
             name="fk_generated_contents_parent",
+            ondelete="RESTRICT",
+        ),
+        ForeignKeyConstraint(
+            ("event_id", "tenant_id"),
+            ("market_events.id", "market_events.tenant_id"),
+            name="fk_generated_contents_event_tenant",
+            ondelete="RESTRICT",
+        ),
+        ForeignKeyConstraint(
+            ("parent_content_id", "tenant_id"),
+            ("generated_contents.id", "generated_contents.tenant_id"),
+            name="fk_generated_contents_parent_tenant",
             ondelete="RESTRICT",
         ),
         CheckConstraint(

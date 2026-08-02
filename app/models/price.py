@@ -4,7 +4,14 @@ from datetime import UTC, datetime
 from decimal import Decimal
 from uuid import UUID, uuid4
 
-from sqlalchemy import ForeignKey, Index, Numeric, String, Uuid
+from sqlalchemy import (
+    ForeignKey,
+    ForeignKeyConstraint,
+    Index,
+    Numeric,
+    String,
+    Uuid,
+)
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.database.base import Base
@@ -14,7 +21,18 @@ from app.domain.tenancy import LEGACY_TENANT_ID
 class Price(Base):
     __tablename__ = "prices"
     __table_args__ = (
-        Index("ix_prices_tenant_product_collected", "tenant_id", "product_id", "collected_at"),
+        ForeignKeyConstraint(
+            ("product_id", "tenant_id"),
+            ("products.id", "products.tenant_id"),
+            name="fk_prices_product_tenant",
+            ondelete="RESTRICT",
+        ),
+        Index(
+            "ix_prices_tenant_product_collected",
+            "tenant_id",
+            "product_id",
+            "collected_at",
+        ),
     )
 
     id: Mapped[UUID] = mapped_column(Uuid, primary_key=True, default=uuid4)

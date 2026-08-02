@@ -4,7 +4,16 @@ from datetime import datetime
 from decimal import Decimal
 from uuid import UUID
 
-from sqlalchemy import BigInteger, DateTime, ForeignKey, Index, Numeric, String, UniqueConstraint, Uuid
+from sqlalchemy import (
+    BigInteger,
+    DateTime,
+    ForeignKey,
+    Index,
+    Numeric,
+    String,
+    UniqueConstraint,
+    Uuid,
+)
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.database.base import Base
@@ -16,6 +25,11 @@ class PriceSnapshotRecord(Base):
 
     __tablename__ = "price_snapshots"
     __table_args__ = (
+        UniqueConstraint(
+            "id",
+            "tenant_id",
+            name="uq_price_snapshots_id_tenant",
+        ),
         UniqueConstraint(
             "tenant_id",
             "marketplace",

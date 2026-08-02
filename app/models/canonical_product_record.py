@@ -3,7 +3,15 @@ from __future__ import annotations
 from datetime import UTC, datetime
 from uuid import UUID, uuid4
 
-from sqlalchemy import JSON, DateTime, ForeignKey, Index, String, Uuid
+from sqlalchemy import (
+    JSON,
+    DateTime,
+    ForeignKey,
+    Index,
+    String,
+    UniqueConstraint,
+    Uuid,
+)
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.database.base import Base
@@ -15,6 +23,11 @@ class CanonicalProductRecord(Base):
 
     __tablename__ = "canonical_products"
     __table_args__ = (
+        UniqueConstraint(
+            "id",
+            "tenant_id",
+            name="uq_canonical_products_id_tenant",
+        ),
         Index("ix_canonical_products_tenant_name", "tenant_id", "name"),
     )
 

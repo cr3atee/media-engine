@@ -3,7 +3,7 @@ from __future__ import annotations
 from datetime import UTC, datetime
 from uuid import UUID, uuid4
 
-from sqlalchemy import ForeignKey, Index, String, Uuid
+from sqlalchemy import ForeignKey, Index, String, UniqueConstraint, Uuid
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.database.base import Base
@@ -13,6 +13,7 @@ from app.domain.tenancy import LEGACY_TENANT_ID
 class Product(Base):
     __tablename__ = "products"
     __table_args__ = (
+        UniqueConstraint("id", "tenant_id", name="uq_products_id_tenant"),
         Index(
             "uq_products_tenant_marketplace_external_id",
             "tenant_id",

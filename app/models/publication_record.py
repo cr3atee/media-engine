@@ -58,6 +58,18 @@ class PublicationRecord(Base):
             name="fk_publications_content",
             ondelete="RESTRICT",
         ),
+        ForeignKeyConstraint(
+            ("event_id", "tenant_id"),
+            ("market_events.id", "market_events.tenant_id"),
+            name="fk_publications_event_tenant",
+            ondelete="RESTRICT",
+        ),
+        ForeignKeyConstraint(
+            ("content_id", "tenant_id"),
+            ("generated_contents.id", "generated_contents.tenant_id"),
+            name="fk_publications_content_tenant",
+            ondelete="RESTRICT",
+        ),
         CheckConstraint(
             "publication_status IN "
             "('pending', 'in_progress', 'published', 'failed', "
