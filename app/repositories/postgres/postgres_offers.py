@@ -11,7 +11,12 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.models.offer import Offer
 from app.parsers.models import ParsedOffer
 from app.repositories.base import RepositoryIdentityConflictError
-from app.repositories.offers import OfferRepository
+from app.repositories.offers import (
+    OfferRepository,
+    resolve_offer_identity_args,
+    resolve_offer_marketplace_args,
+    resolve_offer_save_args,
+)
 
 
 class PostgresOfferRepository(OfferRepository):
@@ -21,8 +26,13 @@ class PostgresOfferRepository(OfferRepository):
         """Initialize repository with an existing async database session."""
         self._session = session
 
-    async def save(self, tenant_id: UUID, offer: ParsedOffer) -> None:
+    async def save(
+        self,
+        tenant_id: UUID | ParsedOffer,
+        offer: ParsedOffer | None = None,
+    ) -> None:
         """Insert or race-safely update a parsed offer by stable identity."""
+        tenant_id, offer = resolve_offer_save_args(tenant_id, offer)
         _validate_tenant(tenant_id, offer.tenant_id)
         statement = insert(Offer).values(
             id=uuid4(),
@@ -65,11 +75,16 @@ class PostgresOfferRepository(OfferRepository):
 
     async def get_by_identity(
         self,
-        tenant_id: UUID,
+        tenant_id: UUID | str,
         marketplace: str,
-        external_id: str,
+        external_id: str | None = None,
     ) -> ParsedOffer | None:
         """Return an offer by marketplace and external identifier."""
+        tenant_id, marketplace, external_id = resolve_offer_identity_args(
+            tenant_id,
+            marketplace,
+            external_id,
+        )
         record = await self._get_record_by_identity(tenant_id, marketplace, external_id)
         if record is None:
             return None
@@ -77,10 +92,14 @@ class PostgresOfferRepository(OfferRepository):
 
     async def list_by_marketplace(
         self,
-        tenant_id: UUID,
-        marketplace: str,
+        tenant_id: UUID | str,
+        marketplace: str | None = None,
     ) -> Sequence[ParsedOffer]:
         """Return parsed offers for one marketplace in insertion order."""
+        tenant_id, marketplace = resolve_offer_marketplace_args(
+            tenant_id,
+            marketplace,
+        )
         result = await self._session.execute(
             select(Offer)
             .where(Offer.tenant_id == tenant_id, Offer.marketplace == marketplace)

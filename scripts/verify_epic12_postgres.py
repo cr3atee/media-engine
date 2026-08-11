@@ -165,24 +165,45 @@ class FailingOfferRepository(OfferRepository):
         self._fail_on_call = fail_on_call
         self._calls = 0
 
-    async def save(self, offer: ParsedOffer) -> None:
+    async def save(
+        self,
+        tenant_id: UUID | ParsedOffer,
+        offer: ParsedOffer | None = None,
+    ) -> None:
         """Save until the controlled failure point is reached."""
         self._calls += 1
         if self._calls == self._fail_on_call:
             raise RuntimeError("controlled offer write failure")
-        await self._delegate.save(offer)
+        parsed_offer = cast(ParsedOffer, tenant_id) if offer is None else offer
+        await self._delegate.save(parsed_offer)
 
     async def get_by_identity(
         self,
+        tenant_id: UUID | str,
         marketplace: str,
-        external_id: str,
+        external_id: str | None = None,
     ) -> ParsedOffer | None:
         """Delegate identity lookup."""
-        return await self._delegate.get_by_identity(marketplace, external_id)
+        if external_id is None:
+            return await self._delegate.get_by_identity(
+                cast(str, tenant_id),
+                marketplace,
+            )
+        return await self._delegate.get_by_identity(
+            tenant_id,
+            marketplace,
+            external_id,
+        )
 
-    async def list_by_marketplace(self, marketplace: str) -> Sequence[ParsedOffer]:
+    async def list_by_marketplace(
+        self,
+        tenant_id: UUID | str,
+        marketplace: str | None = None,
+    ) -> Sequence[ParsedOffer]:
         """Delegate marketplace lookup."""
-        return await self._delegate.list_by_marketplace(marketplace)
+        if marketplace is None:
+            return await self._delegate.list_by_marketplace(cast(str, tenant_id))
+        return await self._delegate.list_by_marketplace(tenant_id, marketplace)
 
     async def list_all(self) -> Sequence[ParsedOffer]:
         """Delegate complete lookup."""
@@ -195,33 +216,53 @@ class FailingPriceHistoryRepository(PriceHistoryRepository):
     def __init__(self, delegate: PriceHistoryRepository) -> None:
         self._delegate = delegate
 
-    async def add(self, snapshot: PriceSnapshot) -> bool:
+    async def add(
+        self,
+        tenant_id: UUID | PriceSnapshot,
+        snapshot: PriceSnapshot | None = None,
+    ) -> bool:
         """Raise at the controlled snapshot write boundary."""
         raise RuntimeError("controlled snapshot write failure")
 
     async def get_last(
         self,
+        tenant_id: UUID | str,
         marketplace: str,
-        external_id: str,
+        external_id: str | None = None,
     ) -> PriceSnapshot | None:
         """Delegate latest lookup."""
-        return await self._delegate.get_last(marketplace, external_id)
+        if external_id is None:
+            return await self._delegate.get_last(cast(str, tenant_id), marketplace)
+        return await self._delegate.get_last(tenant_id, marketplace, external_id)
 
     async def get_previous(
         self,
+        tenant_id: UUID | str,
         marketplace: str,
-        external_id: str,
+        external_id: str | None = None,
     ) -> PriceSnapshot | None:
         """Delegate previous lookup."""
-        return await self._delegate.get_previous(marketplace, external_id)
+        if external_id is None:
+            return await self._delegate.get_previous(
+                cast(str, tenant_id),
+                marketplace,
+            )
+        return await self._delegate.get_previous(
+            tenant_id,
+            marketplace,
+            external_id,
+        )
 
     async def get_history(
         self,
+        tenant_id: UUID | str,
         marketplace: str,
-        external_id: str,
+        external_id: str | None = None,
     ) -> list[PriceSnapshot]:
         """Delegate history lookup."""
-        return await self._delegate.get_history(marketplace, external_id)
+        if external_id is None:
+            return await self._delegate.get_history(cast(str, tenant_id), marketplace)
+        return await self._delegate.get_history(tenant_id, marketplace, external_id)
 
 
 class FailOnceRunner:

@@ -9,6 +9,7 @@ from typing import Any
 from uuid import UUID, uuid4
 
 from app.domain.price_snapshot import PriceSnapshot
+from app.domain.tenancy import LEGACY_TENANT_ID
 from app.models.canonical_product import CanonicalProduct
 from app.parsers.models import ParsedOffer
 from app.repositories.memory import (
@@ -16,6 +17,9 @@ from app.repositories.memory import (
     MemoryOfferRepository,
     MemoryPriceHistoryRepository,
 )
+
+TENANT_A_ID = UUID("10000000-0000-4000-8000-000000000001")
+TENANT_B_ID = UUID("10000000-0000-4000-8000-000000000002")
 
 
 def run_async[T](awaitable: Coroutine[Any, Any, T]) -> T:
@@ -26,6 +30,7 @@ def run_async[T](awaitable: Coroutine[Any, Any, T]) -> T:
 def make_product(
     *,
     id: UUID | None = None,
+    tenant_id: UUID | None = None,
     name: str = "Minecraft Premium",
     category: str | None = "games",
     aliases: tuple[str, ...] = ("minecraft",),
@@ -36,11 +41,13 @@ def make_product(
         name=name,
         category=category,
         aliases=aliases,
+        tenant_id=tenant_id or LEGACY_TENANT_ID,
     )
 
 
 def make_offer(
     *,
+    tenant_id: UUID | None = None,
     marketplace: str = "ggsel",
     external_id: str | None = "offer-1",
     title: str | None = "Minecraft Premium",
@@ -59,11 +66,13 @@ def make_offer(
         seller_id=f"{marketplace}-seller",
         seller_name=f"{marketplace} Seller",
         canonical_product_id=canonical_product_id,
+        tenant_id=tenant_id or LEGACY_TENANT_ID,
     )
 
 
 def make_snapshot(
     *,
+    tenant_id: UUID | None = None,
     marketplace: str = "ggsel",
     external_id: str = "offer-1",
     price: Decimal = Decimal("790.00"),
@@ -76,6 +85,7 @@ def make_snapshot(
         price=price,
         currency="RUB",
         collected_at=collected_at or datetime.now(UTC),
+        tenant_id=tenant_id or LEGACY_TENANT_ID,
     )
 
 
@@ -172,6 +182,28 @@ def test_offer_repository_filters_by_marketplace() -> None:
     )
 
 
+def test_offer_repository_isolates_same_identity_by_tenant() -> None:
+    repository = MemoryOfferRepository()
+    tenant_a_offer = make_offer(tenant_id=TENANT_A_ID, external_id="shared")
+    tenant_b_offer = make_offer(
+        tenant_id=TENANT_B_ID,
+        external_id="shared",
+        title="Tenant B Minecraft",
+    )
+
+    run_async(repository.save(TENANT_A_ID, tenant_a_offer))
+    run_async(repository.save(TENANT_B_ID, tenant_b_offer))
+
+    assert run_async(repository.get_by_identity(TENANT_A_ID, "ggsel", "shared")) == (
+        tenant_a_offer
+    )
+    assert run_async(repository.get_by_identity(TENANT_B_ID, "ggsel", "shared")) == (
+        tenant_b_offer
+    )
+    assert tuple(run_async(repository.list_by_tenant(TENANT_A_ID))) == (tenant_a_offer,)
+    assert tuple(run_async(repository.list_by_tenant(TENANT_B_ID))) == (tenant_b_offer,)
+
+
 def test_offer_repository_keeps_instances_isolated() -> None:
     first_repository = MemoryOfferRepository()
     second_repository = MemoryOfferRepository()
@@ -209,6 +241,28 @@ def test_canonical_product_repository_lists_in_insertion_order() -> None:
     run_async(repository.save(second))
 
     assert tuple(run_async(repository.list_all())) == (first, second)
+
+
+def test_canonical_product_repository_filters_by_tenant() -> None:
+    repository = MemoryCanonicalProductRepository()
+    product_id = uuid4()
+    tenant_a_product = make_product(id=product_id, tenant_id=TENANT_A_ID)
+    tenant_b_product = make_product(tenant_id=TENANT_B_ID, name="Counter Strike 2")
+
+    run_async(repository.save(tenant_a_product))
+    run_async(repository.save(tenant_b_product))
+
+    assert (
+        run_async(repository.get_by_tenant_and_id(TENANT_A_ID, product_id))
+        == tenant_a_product
+    )
+    assert run_async(repository.get_by_tenant_and_id(TENANT_B_ID, product_id)) is None
+    assert tuple(run_async(repository.list_by_tenant(TENANT_A_ID))) == (
+        tenant_a_product,
+    )
+    assert tuple(run_async(repository.list_by_tenant(TENANT_B_ID))) == (
+        tenant_b_product,
+    )
 
 
 def test_canonical_product_repository_keeps_instances_isolated() -> None:
@@ -300,6 +354,36 @@ def test_price_history_repository_isolates_marketplace_and_external_id() -> None
     assert run_async(repository.get_history("ggsel", "one")) == [ggsel_snapshot]
     assert run_async(repository.get_history("playerok", "one")) == [playerok_snapshot]
     assert run_async(repository.get_history("ggsel", "two")) == [other_snapshot]
+
+
+def test_price_history_repository_isolates_same_identity_by_tenant() -> None:
+    repository = MemoryPriceHistoryRepository()
+    tenant_a_snapshot = make_snapshot(
+        tenant_id=TENANT_A_ID,
+        external_id="shared",
+        price=Decimal("990.00"),
+    )
+    tenant_b_snapshot = make_snapshot(
+        tenant_id=TENANT_B_ID,
+        external_id="shared",
+        price=Decimal("790.00"),
+    )
+
+    run_async(repository.add(TENANT_A_ID, tenant_a_snapshot))
+    run_async(repository.add(TENANT_B_ID, tenant_b_snapshot))
+
+    assert run_async(repository.get_history(TENANT_A_ID, "ggsel", "shared")) == [
+        tenant_a_snapshot
+    ]
+    assert run_async(repository.get_history(TENANT_B_ID, "ggsel", "shared")) == [
+        tenant_b_snapshot
+    ]
+    assert run_async(repository.get_last(TENANT_A_ID, "ggsel", "shared")) == (
+        tenant_a_snapshot
+    )
+    assert run_async(repository.get_last(TENANT_B_ID, "ggsel", "shared")) == (
+        tenant_b_snapshot
+    )
 
 
 def test_price_history_repository_ignores_exact_duplicate_snapshots() -> None:

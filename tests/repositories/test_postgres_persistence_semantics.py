@@ -81,6 +81,7 @@ def test_offer_metadata_defines_identity_and_canonical_integrity() -> None:
 
     assert identity.unique is True
     assert tuple(column.name for column in identity.columns) == (
+        "tenant_id",
         "marketplace",
         "external_id",
     )
@@ -93,6 +94,9 @@ def test_offer_metadata_defines_identity_and_canonical_integrity() -> None:
     assert foreign_key.name == "fk_offers_canonical_product_id_canonical_products"
     assert foreign_key.target_fullname == "canonical_products.id"
     assert foreign_key.ondelete == "SET NULL"
+    tenant_foreign_key = next(iter(Offer.__table__.c.tenant_id.foreign_keys))
+    assert tenant_foreign_key.name == "fk_offers_tenant_id_tenants"
+    assert tenant_foreign_key.target_fullname == "tenants.id"
 
 
 def test_snapshot_metadata_defines_exact_identity_and_history_index() -> None:
@@ -104,6 +108,7 @@ def test_snapshot_metadata_defines_exact_identity_and_history_index() -> None:
     )
     assert isinstance(exact_identity, UniqueConstraint)
     assert tuple(column.name for column in exact_identity.columns) == (
+        "tenant_id",
         "marketplace",
         "external_id",
         "collected_at",
@@ -114,6 +119,7 @@ def test_snapshot_metadata_defines_exact_identity_and_history_index() -> None:
     indexes = {str(index.name): index for index in table.indexes}
     history = indexes["ix_price_snapshots_history_order"]
     assert tuple(column.name for column in history.columns) == (
+        "tenant_id",
         "marketplace",
         "external_id",
         "collected_at",
@@ -144,7 +150,7 @@ def test_offer_save_compiles_partial_identity_upsert() -> None:
     run_async(repository.save(make_offer()))
 
     sql = compile_postgres(session.statements[0])
-    assert "ON CONFLICT (marketplace, external_id)" in sql
+    assert "ON CONFLICT (tenant_id, marketplace, external_id)" in sql
     assert "WHERE external_id IS NOT NULL" in sql
     assert "DO UPDATE SET" in sql
     assert "title = coalesce(excluded.title, offers.title)" in sql

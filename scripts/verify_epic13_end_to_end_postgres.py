@@ -127,9 +127,16 @@ class TransactionTracker:
 class AddThenFailSnapshotRepository(PostgresPriceHistoryRepository):
     """Persist a snapshot inside the scope, then force outer rollback."""
 
-    async def add(self, snapshot: PriceSnapshot) -> bool:
+    async def add(
+        self,
+        tenant_id: UUID | PriceSnapshot,
+        snapshot: PriceSnapshot | None = None,
+    ) -> bool:
         """Execute the real insert before raising a controlled failure."""
-        await super().add(snapshot)
+        if snapshot is None:
+            await super().add(cast(PriceSnapshot, tenant_id))
+        else:
+            await super().add(tenant_id, snapshot)
         msg = "controlled snapshot persistence failure"
         raise RuntimeError(msg)
 

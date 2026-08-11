@@ -6,7 +6,12 @@ from uuid import UUID
 
 from app.parsers.models import ParsedOffer
 from app.repositories.base import RepositoryIdentityConflictError
-from app.repositories.offers import OfferRepository
+from app.repositories.offers import (
+    OfferRepository,
+    resolve_offer_identity_args,
+    resolve_offer_marketplace_args,
+    resolve_offer_save_args,
+)
 
 
 class MemoryOfferRepository(OfferRepository):
@@ -16,8 +21,13 @@ class MemoryOfferRepository(OfferRepository):
         """Initialize empty in-memory offer storage."""
         self._offers: list[ParsedOffer] = []
 
-    async def save(self, tenant_id: UUID, offer: ParsedOffer) -> None:
+    async def save(
+        self,
+        tenant_id: UUID | ParsedOffer,
+        offer: ParsedOffer | None = None,
+    ) -> None:
         """Store or update a parsed offer in deterministic order."""
+        tenant_id, offer = resolve_offer_save_args(tenant_id, offer)
         _validate_tenant(tenant_id, offer.tenant_id)
         if offer.external_id is not None:
             for index, stored_offer in enumerate(self._offers):
@@ -54,11 +64,16 @@ class MemoryOfferRepository(OfferRepository):
 
     async def get_by_identity(
         self,
-        tenant_id: UUID,
+        tenant_id: UUID | str,
         marketplace: str,
-        external_id: str,
+        external_id: str | None = None,
     ) -> ParsedOffer | None:
         """Return an offer by marketplace and external identifier."""
+        tenant_id, marketplace, external_id = resolve_offer_identity_args(
+            tenant_id,
+            marketplace,
+            external_id,
+        )
         for offer in self._offers:
             if (
                 offer.tenant_id == tenant_id
@@ -70,10 +85,14 @@ class MemoryOfferRepository(OfferRepository):
 
     async def list_by_marketplace(
         self,
-        tenant_id: UUID,
-        marketplace: str,
+        tenant_id: UUID | str,
+        marketplace: str | None = None,
     ) -> Sequence[ParsedOffer]:
         """Return parsed offers for one marketplace in insertion order."""
+        tenant_id, marketplace = resolve_offer_marketplace_args(
+            tenant_id,
+            marketplace,
+        )
         return tuple(
             offer
             for offer in self._offers

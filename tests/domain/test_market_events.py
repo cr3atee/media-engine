@@ -248,9 +248,9 @@ def test_unsupported_identity_version_fails_explicitly() -> None:
 
     with pytest.raises(
         UnsupportedEventIdentityVersion,
-        match="Unsupported event identity version: 2",
+        match="Unsupported event identity version: 3",
     ):
-        identity_for(previous, current, identity_version=2)
+        identity_for(previous, current, identity_version=3)
 
 
 def test_market_event_and_payload_are_immutable() -> None:

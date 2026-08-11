@@ -7,6 +7,7 @@ from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 from decimal import Decimal
 from typing import Any, cast
+from uuid import UUID
 
 import pytest
 from sqlalchemy.ext.asyncio import async_sessionmaker
@@ -185,25 +186,38 @@ class FailingOfferRepository(OfferRepository):
         self._fail_on_call = fail_on_call
         self._save_calls = 0
 
-    async def save(self, offer: ParsedOffer) -> None:
+    async def save(
+        self,
+        tenant_id: UUID | ParsedOffer,
+        offer: ParsedOffer | None = None,
+    ) -> None:
         """Fail on the selected save call."""
         self._save_calls += 1
         if self._save_calls == self._fail_on_call:
             msg = "offer write failed"
             raise RuntimeError(msg)
-        await self._delegate.save(offer)
+        await self._delegate.save(tenant_id, offer)
 
     async def get_by_identity(
         self,
+        tenant_id: UUID | str,
         marketplace: str,
-        external_id: str,
+        external_id: str | None = None,
     ) -> ParsedOffer | None:
         """Delegate identity lookup."""
-        return await self._delegate.get_by_identity(marketplace, external_id)
+        return await self._delegate.get_by_identity(
+            tenant_id,
+            marketplace,
+            external_id,
+        )
 
-    async def list_by_marketplace(self, marketplace: str) -> Sequence[ParsedOffer]:
+    async def list_by_marketplace(
+        self,
+        tenant_id: UUID | str,
+        marketplace: str | None = None,
+    ) -> Sequence[ParsedOffer]:
         """Delegate marketplace listing."""
-        return await self._delegate.list_by_marketplace(marketplace)
+        return await self._delegate.list_by_marketplace(tenant_id, marketplace)
 
     async def list_all(self) -> Sequence[ParsedOffer]:
         """Delegate complete listing."""
@@ -213,31 +227,38 @@ class FailingOfferRepository(OfferRepository):
 class FailingPriceHistoryRepository(PriceHistoryRepository):
     """Price-history contract double that fails every write."""
 
-    async def add(self, snapshot: PriceSnapshot) -> bool:
+    async def add(
+        self,
+        tenant_id: UUID | PriceSnapshot,
+        snapshot: PriceSnapshot | None = None,
+    ) -> bool:
         """Raise a deterministic persistence failure."""
         msg = "snapshot write failed"
         raise RuntimeError(msg)
 
     async def get_last(
         self,
+        tenant_id: UUID | str,
         marketplace: str,
-        external_id: str,
+        external_id: str | None = None,
     ) -> PriceSnapshot | None:
         """Return no previous snapshot."""
         return None
 
     async def get_previous(
         self,
+        tenant_id: UUID | str,
         marketplace: str,
-        external_id: str,
+        external_id: str | None = None,
     ) -> PriceSnapshot | None:
         """Return no previous snapshot."""
         return None
 
     async def get_history(
         self,
+        tenant_id: UUID | str,
         marketplace: str,
-        external_id: str,
+        external_id: str | None = None,
     ) -> list[PriceSnapshot]:
         """Return empty history."""
         return []

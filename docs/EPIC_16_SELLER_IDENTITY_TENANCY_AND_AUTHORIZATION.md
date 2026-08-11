@@ -1,12 +1,41 @@
 # EPIC 16 - Seller Identity, Tenant Scoping and Authorization
 
-Status: design only.
+Status: Task 1 foundation implemented locally; isolated PostgreSQL verification
+is pending because no test PostgreSQL runtime is available in the current
+environment.
 
 Baseline commit: `5341b1cda4bfc81c04e4e72f453ee7907685c732`.
 
 This document designs the next safe product boundary after EPIC 15. It does not
 implement authentication, migrations, frontend routes, marketplace credentials,
 Telegram live delivery, billing, or subscriptions.
+
+Task 1 recovery/implementation has introduced durable tenant identity
+foundation pieces: `User`, `Tenant`, `Membership`, tenant-aware repository
+primitives, deterministic legacy tenant ownership, event identity v2 tenant
+inputs, and migration `0010_tenant_identity_foundation` after
+`0009_admin_actions`. Existing durable rows are assigned to the legacy tenant
+during migration, tenant-owned columns are converted to `NOT NULL`, and global
+business uniqueness is replaced with tenant-scoped constraints where required.
+
+Verified locally:
+
+- focused tenant/repository/event tests: `163 passed`;
+- full Pytest: `307 passed, 58 skipped`;
+- full MyPy: `288 source files`;
+- Ruff and Ruff format for touched files;
+- Alembic head detection: `0010_tenant_identity_foundation`;
+- offline SQL generation through head.
+
+Blocked in this environment:
+
+- live PostgreSQL tenant isolation verifier;
+- Alembic `current` and `check`;
+- downgrade/upgrade lifecycle against PostgreSQL.
+
+Blocker: Docker daemon is unavailable, `EPIC16_DATABASE_URL` is not set, and no
+local PostgreSQL command-line runtime is installed. The verifier exits safely
+without fabricating success when no isolated test database is supplied.
 
 EPIC 15 is functionally complete for the internal administration API boundary.
 The current `/api/v1/admin` surface is intentionally internal: it exposes
@@ -1234,4 +1263,3 @@ isolation.
 
 Do not begin authentication, seller dashboard, or public seller routes before
 Task 1 is complete and verified.
-

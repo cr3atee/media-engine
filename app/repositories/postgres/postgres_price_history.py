@@ -9,7 +9,11 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.domain.price_snapshot import PriceSnapshot
 from app.models.price_snapshot_record import PriceSnapshotRecord
 from app.repositories.base import RepositoryIdentityConflictError
-from app.repositories.price_history import PriceHistoryRepository
+from app.repositories.price_history import (
+    PriceHistoryRepository,
+    resolve_snapshot_add_args,
+    resolve_snapshot_identity_args,
+)
 
 
 class PostgresPriceHistoryRepository(PriceHistoryRepository):
@@ -19,29 +23,44 @@ class PostgresPriceHistoryRepository(PriceHistoryRepository):
         """Initialize repository with an existing async database session."""
         self._session = session
 
-    async def add(self, tenant_id: UUID, snapshot: PriceSnapshot) -> bool:
+    async def add(
+        self,
+        tenant_id: UUID | PriceSnapshot,
+        snapshot: PriceSnapshot | None = None,
+    ) -> bool:
         """Insert a snapshot and report whether PostgreSQL created a row."""
+        tenant_id, snapshot = resolve_snapshot_add_args(tenant_id, snapshot)
         _validate_tenant(tenant_id, snapshot.tenant_id)
-        statement = insert(PriceSnapshotRecord).values(
-            tenant_id=tenant_id,
-            marketplace=snapshot.marketplace,
-            external_id=snapshot.external_id,
-            price=snapshot.price,
-            currency=snapshot.currency,
-            collected_at=snapshot.collected_at,
-        ).on_conflict_do_nothing(
-            constraint="uq_price_snapshots_exact_identity",
-        ).returning(PriceSnapshotRecord.id)
+        statement = (
+            insert(PriceSnapshotRecord)
+            .values(
+                tenant_id=tenant_id,
+                marketplace=snapshot.marketplace,
+                external_id=snapshot.external_id,
+                price=snapshot.price,
+                currency=snapshot.currency,
+                collected_at=snapshot.collected_at,
+            )
+            .on_conflict_do_nothing(
+                constraint="uq_price_snapshots_exact_identity",
+            )
+            .returning(PriceSnapshotRecord.id)
+        )
         result = await self._session.execute(statement)
         return result.scalar_one_or_none() is not None
 
     async def get_last(
         self,
-        tenant_id: UUID,
+        tenant_id: UUID | str,
         marketplace: str,
-        external_id: str,
+        external_id: str | None = None,
     ) -> PriceSnapshot | None:
         """Return the latest stored snapshot for a marketplace offer."""
+        tenant_id, marketplace, external_id = resolve_snapshot_identity_args(
+            tenant_id,
+            marketplace,
+            external_id,
+        )
         result = await self._session.execute(
             self._base_query(tenant_id, marketplace, external_id)
             .order_by(
@@ -57,11 +76,16 @@ class PostgresPriceHistoryRepository(PriceHistoryRepository):
 
     async def get_previous(
         self,
-        tenant_id: UUID,
+        tenant_id: UUID | str,
         marketplace: str,
-        external_id: str,
+        external_id: str | None = None,
     ) -> PriceSnapshot | None:
         """Return the snapshot before the latest one for a marketplace offer."""
+        tenant_id, marketplace, external_id = resolve_snapshot_identity_args(
+            tenant_id,
+            marketplace,
+            external_id,
+        )
         result = await self._session.execute(
             self._base_query(tenant_id, marketplace, external_id)
             .order_by(
@@ -78,11 +102,16 @@ class PostgresPriceHistoryRepository(PriceHistoryRepository):
 
     async def get_history(
         self,
-        tenant_id: UUID,
+        tenant_id: UUID | str,
         marketplace: str,
-        external_id: str,
+        external_id: str | None = None,
     ) -> list[PriceSnapshot]:
         """Return snapshots by collection time, then persistent record ID."""
+        tenant_id, marketplace, external_id = resolve_snapshot_identity_args(
+            tenant_id,
+            marketplace,
+            external_id,
+        )
         result = await self._session.execute(
             self._base_query(tenant_id, marketplace, external_id).order_by(
                 PriceSnapshotRecord.collected_at,

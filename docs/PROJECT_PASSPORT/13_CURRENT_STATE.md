@@ -34,6 +34,13 @@ EPIC 15 Task 3 is implemented and verified: dashboard summary, protected
 OpenAPI/Swagger/ReDoc, expanded sanitized readiness, final PostgreSQL admin API
 verification, and compatibility verifiers passed against isolated PostgreSQL 17.
 EPIC 15 is functionally complete for the internal administration API boundary.
+EPIC 16 Task 1 tenant identity foundation is implemented locally: domain
+contracts, tenant-aware repository primitives, deterministic legacy tenant
+ownership, event identity v2 tenant inputs, and migration
+`0010_tenant_identity_foundation` are present. Live PostgreSQL tenant isolation
+verification is still blocked in the current environment because Docker daemon
+is unavailable, `EPIC16_DATABASE_URL` is not set, and no local PostgreSQL runtime
+is installed.
 
 ## Active Capabilities
 
@@ -142,6 +149,14 @@ EPIC 15 is functionally complete for the internal administration API boundary.
 - EPIC 15 final verification passed: Task3 `23/23`, Task1 `29/29`, Task2
   `26/26`, EPIC14 compatibility `39/39`, full Pytest `304 passed, 58 skipped`,
   full MyPy `274` source files, Ruff, Ruff format, and Alembic lifecycle.
+- EPIC 16 Task 1 adds `User`, `Tenant`, and `Membership` domain contracts,
+  tenant-aware offer, canonical-product, and price-history repository
+  primitives, deterministic legacy tenant backfill, tenant-scoped uniqueness and
+  lookup indexes, and tenant-aware event identity v2 support.
+- EPIC 16 Task 1 local verification passed: focused tests `163 passed`, full
+  Pytest `307 passed, 58 skipped`, full MyPy `288` source files, Ruff, Ruff
+  format, Alembic head detection, and offline SQL generation through
+  `0010_tenant_identity_foundation`.
 
 ## Known Gaps
 
@@ -154,7 +169,10 @@ EPIC 15 is functionally complete for the internal administration API boundary.
   confirmation, live flags, and PostgreSQL verification database were not
   supplied.
 - No production AI provider is wired into the marketplace pipeline.
-- Seller identity, tenant isolation, and public seller routes do not exist yet.
+- Live EPIC 16 PostgreSQL tenant isolation verification is pending until an
+  isolated test database is available.
+- Seller authentication, centralized authorization, tenant-scoped seller APIs,
+  and public seller routes do not exist yet.
 
 ## Architecture Review
 

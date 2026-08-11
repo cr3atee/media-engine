@@ -6,6 +6,20 @@ This document records notable Project Passport updates.
 
 ## Unreleased
 
+- Implemented EPIC 16 Task 1 tenant identity foundation locally: tenant/user/
+  membership domain contracts, tenant-aware repository primitives, deterministic
+  legacy tenant ownership, tenant-scoped persistence constraints, and event
+  identity v2 tenant inputs.
+- Added migration `0010_tenant_identity_foundation` after `0009_admin_actions`
+  to create identity tables, backfill legacy tenant ownership, convert durable
+  tenant-owned rows to `NOT NULL`, and replace global business uniqueness with
+  tenant-scoped constraints and indexes.
+- Added `scripts/verify_epic16_tenant_isolation_postgres.py`; live PostgreSQL
+  verification remains pending because no isolated PostgreSQL runtime is
+  available in the current environment.
+- Verified EPIC 16 Task 1 local quality: focused tests `163 passed`, full
+  Pytest `307 passed, 58 skipped`, full MyPy `288` source files, Ruff, Ruff
+  format, Alembic head detection, and offline SQL generation through head.
 - Completed EPIC 15 Task 3 operational administration API completion with a
   bounded dashboard summary, dedicated dashboard query repository, protected
   OpenAPI/Swagger/ReDoc routes, and expanded sanitized readiness.

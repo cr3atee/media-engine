@@ -71,29 +71,45 @@ class RecordingOfferRepository(OfferRepository):
         self._offers: list[ParsedOffer] = []
         self._fail_on_save = fail_on_save
 
-    async def save(self, offer: ParsedOffer) -> None:
+    async def save(
+        self,
+        tenant_id: UUID | ParsedOffer,
+        offer: ParsedOffer | None = None,
+    ) -> None:
         """Store an offer and record an awaited save operation."""
+        parsed_offer = cast(ParsedOffer, tenant_id) if offer is None else offer
         self._state.offer_save_count += 1
         if self._fail_on_save:
             msg = "offer repository failed"
             raise RuntimeError(msg)
-        self._offers.append(offer)
+        self._offers.append(parsed_offer)
 
     async def get_by_identity(
         self,
+        tenant_id: UUID | str,
         marketplace: str,
-        external_id: str,
+        external_id: str | None = None,
     ) -> ParsedOffer | None:
         """Return an offer by marketplace and external identifier."""
+        offer_marketplace = cast(str, tenant_id) if external_id is None else marketplace
+        offer_external_id = marketplace if external_id is None else external_id
         for offer in self._offers:
-            if offer.marketplace == marketplace and offer.external_id == external_id:
+            if (
+                offer.marketplace == offer_marketplace
+                and offer.external_id == offer_external_id
+            ):
                 return offer
         return None
 
-    async def list_by_marketplace(self, marketplace: str) -> Sequence[ParsedOffer]:
+    async def list_by_marketplace(
+        self,
+        tenant_id: UUID | str,
+        marketplace: str | None = None,
+    ) -> Sequence[ParsedOffer]:
         """Return offers from one marketplace."""
+        offer_marketplace = cast(str, tenant_id) if marketplace is None else marketplace
         return tuple(
-            offer for offer in self._offers if offer.marketplace == marketplace
+            offer for offer in self._offers if offer.marketplace == offer_marketplace
         )
 
     async def list_all(self) -> Sequence[ParsedOffer]:
@@ -142,51 +158,65 @@ class RecordingPriceHistoryRepository(PriceHistoryRepository):
         self._fail_on_read = fail_on_read
         self._fail_on_write = fail_on_write
 
-    async def add(self, snapshot: PriceSnapshot) -> bool:
+    async def add(
+        self,
+        tenant_id: UUID | PriceSnapshot,
+        snapshot: PriceSnapshot | None = None,
+    ) -> bool:
         """Store a snapshot and record the awaited write."""
+        price_snapshot = (
+            cast(PriceSnapshot, tenant_id) if snapshot is None else snapshot
+        )
         self._state.history_add_count += 1
         if self._fail_on_write:
             msg = "price history write failed"
             raise RuntimeError(msg)
-        if snapshot in self._history:
+        if price_snapshot in self._history:
             return False
-        self._history.append(snapshot)
+        self._history.append(price_snapshot)
         return True
 
     async def get_last(
         self,
+        tenant_id: UUID | str,
         marketplace: str,
-        external_id: str,
+        external_id: str | None = None,
     ) -> PriceSnapshot | None:
         """Return the latest matching snapshot and record the awaited read."""
         self._state.history_get_last_count += 1
         if self._fail_on_read:
             msg = "price history read failed"
             raise RuntimeError(msg)
-        history = await self.get_history(marketplace, external_id)
+        history = await self.get_history(tenant_id, marketplace, external_id)
         return history[-1] if history else None
 
     async def get_previous(
         self,
+        tenant_id: UUID | str,
         marketplace: str,
-        external_id: str,
+        external_id: str | None = None,
     ) -> PriceSnapshot | None:
         """Return the snapshot before the latest matching snapshot."""
-        history = await self.get_history(marketplace, external_id)
+        history = await self.get_history(tenant_id, marketplace, external_id)
         return history[-2] if len(history) >= 2 else None
 
     async def get_history(
         self,
+        tenant_id: UUID | str,
         marketplace: str,
-        external_id: str,
+        external_id: str | None = None,
     ) -> list[PriceSnapshot]:
         """Return matching snapshots in deterministic chronological order."""
+        snapshot_marketplace = (
+            cast(str, tenant_id) if external_id is None else marketplace
+        )
+        snapshot_external_id = marketplace if external_id is None else external_id
         return sorted(
             (
                 snapshot
                 for snapshot in self._history
-                if snapshot.marketplace == marketplace
-                and snapshot.external_id == external_id
+                if snapshot.marketplace == snapshot_marketplace
+                and snapshot.external_id == snapshot_external_id
             ),
             key=lambda snapshot: snapshot.collected_at,
         )

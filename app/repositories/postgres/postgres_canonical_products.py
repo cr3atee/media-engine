@@ -26,6 +26,7 @@ class PostgresCanonicalProductRepository(CanonicalProductRepository):
             self._session.add(
                 CanonicalProductRecord(
                     id=product.id,
+                    tenant_id=product.tenant_id,
                     name=product.name,
                     category=product.category,
                     aliases=list(product.aliases),
@@ -33,6 +34,9 @@ class PostgresCanonicalProductRepository(CanonicalProductRepository):
                 )
             )
         else:
+            if record.tenant_id != product.tenant_id:
+                msg = "Canonical product ID already belongs to another tenant."
+                raise ValueError(msg)
             record.name = product.name
             record.category = product.category
             record.aliases = list(product.aliases)
@@ -48,6 +52,35 @@ class PostgresCanonicalProductRepository(CanonicalProductRepository):
         if record is None:
             return None
         return self._to_domain(record)
+
+    async def get_by_tenant_and_id(
+        self,
+        tenant_id: UUID,
+        id: UUID,
+    ) -> CanonicalProduct | None:
+        """Return a canonical product only inside its owning tenant."""
+        result = await self._session.execute(
+            select(CanonicalProductRecord)
+            .where(
+                CanonicalProductRecord.tenant_id == tenant_id,
+                CanonicalProductRecord.id == id,
+            )
+            .limit(1)
+        )
+        record = result.scalar_one_or_none()
+        return self._to_domain(record) if record is not None else None
+
+    async def list_by_tenant(self, tenant_id: UUID) -> Sequence[CanonicalProduct]:
+        """Return tenant-owned canonical products in insertion order."""
+        result = await self._session.execute(
+            select(CanonicalProductRecord)
+            .where(CanonicalProductRecord.tenant_id == tenant_id)
+            .order_by(
+                CanonicalProductRecord.created_at,
+                CanonicalProductRecord.id,
+            )
+        )
+        return tuple(self._to_domain(record) for record in result.scalars())
 
     async def list_all(self) -> Sequence[CanonicalProduct]:
         """Return all canonical products in insertion order."""
@@ -66,4 +99,5 @@ class PostgresCanonicalProductRepository(CanonicalProductRepository):
             name=record.name,
             category=record.category,
             aliases=tuple(record.aliases),
+            tenant_id=record.tenant_id,
         )
