@@ -4,11 +4,11 @@
 
 PostgreSQL persistence, the EPIC 12 runtime, EPIC 13 transactional market-event
 ingestion, durable scoring, generated content, publication-intent state, EPIC 14
-delivery orchestration, EPIC 15 administration API, and EPIC 16 tenant identity
-foundation are live-verified. EPIC 16 verification used isolated PostgreSQL
-17.10 database `epic16_verify` and current revision
-`0010_tenant_identity_foundation` without using a project or production
-database.
+delivery orchestration, EPIC 15 administration API, EPIC 16 tenant identity
+foundation, and EPIC 16 authentication/authorization boundary are
+live-verified. EPIC 16 verification used isolated PostgreSQL 17.10 databases
+`epic16_verify` and `epic16_auth_verify` without using a project or production
+database. The current verified revision is `0011_auth_boundary`.
 
 ## Verified Schema
 
@@ -304,3 +304,31 @@ Downgrading a populated multi-tenant database that already contains duplicate
 tenant-scoped business identities back to the pre-tenant global uniqueness model
 is not lossless and should be treated as a development rollback only. Clean
 downgrade/upgrade lifecycle is verified.
+
+## EPIC 16 Task 2 Authentication Boundary
+
+`scripts/verify_epic16_auth_postgres.py` was executed against a temporary
+isolated PostgreSQL 17.10 database named `epic16_auth_verify`. The verifier
+recreated the isolated public schema, applied migrations through
+`0011_auth_boundary`, seeded one user, tenant, membership, and password
+credential, then exercised the real FastAPI authentication routes and durable
+PostgreSQL repositories.
+
+All `14/14` named checks passed. The checks cover invalid login and secret
+redaction, successful login, `/api/v1/me`, tenant context and permission
+resolution, refresh-token rotation, old refresh rejection, logout-driven access
+session revocation, password-reset request enumeration safety, reset-token
+hashing, password reset session revocation, credential rotation, role changes,
+membership removal, and fresh-session persistence.
+
+Alembic verification passed:
+
+- `alembic current` reported `0011_auth_boundary (head)`;
+- `alembic check` reported no new upgrade operations;
+- downgrade to `0010_tenant_identity_foundation`;
+- upgrade back to head;
+- offline `upgrade head --sql` generation through `0011_auth_boundary`.
+
+Focused auth/API tests passed. Full Pytest passed `313` tests with `58`
+expected skips. MyPy checked `302` source files with no issues. Ruff and Ruff
+format checks passed for touched files.

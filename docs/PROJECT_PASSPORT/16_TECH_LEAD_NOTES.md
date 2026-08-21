@@ -84,9 +84,23 @@ This document captures architecture notes that are important for future reviews.
 - Readiness can report database and Alembic head status, repository composition,
   Scheduler configuration, and Telegram configuration without exposing secrets
   or contacting Telegram.
-- The next major architecture risk is seller identity and tenant isolation; do
-  not expose seller-facing routes or frontend claims until those boundaries
-  exist.
+- EPIC 16 Task 1 resolves the durable tenant-ownership foundation; EPIC 16 Task
+  2 resolves the seller authentication and centralized authorization boundary.
+- Seller access tokens are short-lived signed bearer tokens, but tenant roles
+  and permissions are resolved from durable memberships on each tenant-context
+  lookup. Do not treat token payloads as authoritative role state.
+- Logout and password reset revoke durable auth sessions, so existing access
+  tokens become unusable when the backing session is no longer active.
+- Refresh tokens and password reset tokens are stored only as hashes. API
+  responses must never expose refresh-token hashes, reset tokens, password
+  hashes, or signing secrets.
+- Password hashing currently uses a dependency-neutral PBKDF2 boundary. Revisit
+  Argon2id before production only if adding a dedicated password-hashing
+  dependency is approved.
+- The next major architecture risk is tenant-scoping existing workflows through
+  `TenantContext`; do not expose seller-facing content/publication operations
+  until reads, commands, audit, and repository access are tenant-scoped end to
+  end.
 - GGSEL-specific price fields are not fully normalized into `ParsedOffer.price` and `ParsedOffer.currency` yet.
 
 ## Review Notes

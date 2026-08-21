@@ -6,17 +6,25 @@ from typing import Literal, overload
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.repositories.admin_actions import AdminActionRepository
+from app.repositories.auth import (
+    AuthSessionRepository,
+    PasswordCredentialRepository,
+    PasswordResetTokenRepository,
+)
 from app.repositories.canonical_products import CanonicalProductRepository
 from app.repositories.events import MarketEventRepository
 from app.repositories.generated_contents import GeneratedContentRepository
 from app.repositories.memberships import MembershipRepository
 from app.repositories.memory import (
     MemoryAdminActionRepository,
+    MemoryAuthSessionRepository,
     MemoryCanonicalProductRepository,
     MemoryGeneratedContentRepository,
     MemoryMarketEventRepository,
     MemoryMembershipRepository,
     MemoryOfferRepository,
+    MemoryPasswordCredentialRepository,
+    MemoryPasswordResetTokenRepository,
     MemoryPriceHistoryRepository,
     MemoryPublicationRepository,
     MemoryTenantRepository,
@@ -25,11 +33,14 @@ from app.repositories.memory import (
 from app.repositories.offers import OfferRepository
 from app.repositories.postgres import (
     PostgresAdminActionRepository,
+    PostgresAuthSessionRepository,
     PostgresCanonicalProductRepository,
     PostgresGeneratedContentRepository,
     PostgresMarketEventRepository,
     PostgresMembershipRepository,
     PostgresOfferRepository,
+    PostgresPasswordCredentialRepository,
+    PostgresPasswordResetTokenRepository,
     PostgresPriceHistoryRepository,
     PostgresPublicationRepository,
     PostgresTenantRepository,
@@ -61,6 +72,15 @@ class RepositoryProvider:
     memberships: MembershipRepository = field(
         default_factory=MemoryMembershipRepository,
     )
+    password_credentials: PasswordCredentialRepository = field(
+        default_factory=MemoryPasswordCredentialRepository,
+    )
+    auth_sessions: AuthSessionRepository = field(
+        default_factory=MemoryAuthSessionRepository,
+    )
+    password_reset_tokens: PasswordResetTokenRepository = field(
+        default_factory=MemoryPasswordResetTokenRepository,
+    )
 
 
 def create_memory_provider() -> RepositoryProvider:
@@ -76,6 +96,9 @@ def create_memory_provider() -> RepositoryProvider:
         users=MemoryUserRepository(),
         tenants=MemoryTenantRepository(),
         memberships=MemoryMembershipRepository(),
+        password_credentials=MemoryPasswordCredentialRepository(),
+        auth_sessions=MemoryAuthSessionRepository(),
+        password_reset_tokens=MemoryPasswordResetTokenRepository(),
     )
 
 
@@ -92,6 +115,9 @@ def create_postgres_provider(session: AsyncSession) -> RepositoryProvider:
         users=PostgresUserRepository(session),
         tenants=PostgresTenantRepository(session),
         memberships=PostgresMembershipRepository(session),
+        password_credentials=PostgresPasswordCredentialRepository(session),
+        auth_sessions=PostgresAuthSessionRepository(session),
+        password_reset_tokens=PostgresPasswordResetTokenRepository(session),
     )
 
 

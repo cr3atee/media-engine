@@ -2,12 +2,16 @@
 
 ## Purpose
 
-This document lists only confirmed work remaining after EPIC 15 completion.
+This document lists only confirmed work remaining after EPIC 16 Task 2.
 
 ## Immediate
 
-- Design seller identity, tenant ownership, and authorization before exposing a
-  public seller dashboard or seller API routes.
+- Scope existing read and command workflows through `TenantContext` before
+  exposing a public seller dashboard or seller API routes.
+- Add tenant-aware seller command audit attribution for content/publication
+  workflows.
+- Define tenant-owned marketplace credential and integration management before
+  tenant-specific ingestion is exposed.
 - If explicitly approved credentials and a test chat are available, run exactly
   one guarded live Telegram test-chat verification.
 

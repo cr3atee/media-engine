@@ -1,6 +1,11 @@
 from __future__ import annotations
 
 from app.repositories.admin_actions import AdminActionRepository
+from app.repositories.auth import (
+    AuthSessionRepository,
+    PasswordCredentialRepository,
+    PasswordResetTokenRepository,
+)
 from app.repositories.base import BaseRepository, RepositoryIdentityConflictError
 from app.repositories.canonical_products import CanonicalProductRepository
 from app.repositories.events import MarketEventRepository
@@ -14,12 +19,15 @@ from app.repositories.users import UserRepository
 
 __all__ = (
     "AdminActionRepository",
+    "AuthSessionRepository",
     "BaseRepository",
     "CanonicalProductRepository",
     "GeneratedContentRepository",
     "MarketEventRepository",
     "MembershipRepository",
     "OfferRepository",
+    "PasswordCredentialRepository",
+    "PasswordResetTokenRepository",
     "PriceHistoryRepository",
     "PublicationRepository",
     "RepositoryIdentityConflictError",

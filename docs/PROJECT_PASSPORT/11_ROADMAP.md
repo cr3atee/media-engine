@@ -93,6 +93,20 @@ This document tracks only work that is reflected by the current repository state
 - EPIC 15 final verification: Task3 `23/23`, Task1 `29/29`, Task2 `26/26`,
   EPIC14 compatibility `39/39`, full Pytest `304 passed, 58 skipped`, MyPy
   `274` source files, Ruff, Ruff format, and Alembic lifecycle.
+- EPIC 16 Task 1 tenant identity foundation: durable `User`, `Tenant`,
+  `Membership`, deterministic legacy tenant backfill, tenant-aware repository
+  primitives, tenant-scoped constraints/indexes, and event identity v2 inputs.
+- EPIC 16 Task 1 PostgreSQL verification: tenant isolation `37/37`, full Pytest
+  `307 passed, 58 skipped`, MyPy `288` source files, Ruff, Ruff format, and
+  Alembic lifecycle through `0010_tenant_identity_foundation`.
+- EPIC 16 Task 2 authentication and authorization boundary: durable password
+  credentials, refresh sessions, password reset tokens, signed access tokens,
+  login/refresh/logout/reset routes, `/api/v1/me`, tenant context lookup,
+  `AuthenticatedPrincipal`, `TenantContext`, `Permission`, and
+  `AuthorizationService`.
+- EPIC 16 Task 2 PostgreSQL verification: auth boundary `14/14`, full Pytest
+  `313 passed, 58 skipped`, MyPy `302` source files, Ruff, Ruff format, and
+  Alembic lifecycle through `0011_auth_boundary`.
 
 ## Current Status
 
@@ -103,7 +117,8 @@ publication intent, PostgreSQL-verified Telegram delivery orchestration, guarded
 live-test tooling, Scheduler delegation, a PostgreSQL-verified read-only
   administration API, PostgreSQL-verified guarded administration commands with
 immutable audit history, and PostgreSQL-verified operational dashboard/readiness
-hardening.
+hardening. EPIC 16 has a verified tenant identity foundation plus a verified
+seller authentication and tenant authorization boundary.
 
 ## Not Present Yet
 
@@ -111,8 +126,10 @@ hardening.
 - Scheduler overlap and multi-process coordination.
 - Optional guarded live Telegram test-chat message.
 - Production AI provider integration in the pipeline.
-- Seller identity, tenant isolation, and public seller route authorization.
+- Tenant-scoped seller-facing workflow routes for existing reads and commands.
+- Tenant-owned marketplace credential management.
+- Tenant-aware seller command audit attribution.
 
 ## Recommended Next EPIC
 
-**Seller identity and tenant-scoped authorization before public dashboard/UI.**
+**Tenant-scope existing workflows before public dashboard/UI.**

@@ -1,6 +1,11 @@
 from __future__ import annotations
 
 from app.repositories.memory.memory_admin_actions import MemoryAdminActionRepository
+from app.repositories.memory.memory_auth import (
+    MemoryAuthSessionRepository,
+    MemoryPasswordCredentialRepository,
+    MemoryPasswordResetTokenRepository,
+)
 from app.repositories.memory.memory_canonical_products import (
     MemoryCanonicalProductRepository,
 )
@@ -17,11 +22,14 @@ from app.repositories.memory.memory_users import MemoryUserRepository
 
 __all__ = (
     "MemoryAdminActionRepository",
+    "MemoryAuthSessionRepository",
     "MemoryCanonicalProductRepository",
     "MemoryGeneratedContentRepository",
     "MemoryMarketEventRepository",
     "MemoryMembershipRepository",
     "MemoryOfferRepository",
+    "MemoryPasswordCredentialRepository",
+    "MemoryPasswordResetTokenRepository",
     "MemoryPriceHistoryRepository",
     "MemoryPublicationRepository",
     "MemoryTenantRepository",

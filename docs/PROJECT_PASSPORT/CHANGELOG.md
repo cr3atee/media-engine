@@ -6,6 +6,22 @@ This document records notable Project Passport updates.
 
 ## Unreleased
 
+- Implemented EPIC 16 Task 2 authentication and authorization boundary:
+  durable password credentials, hashed refresh sessions, hashed password reset
+  tokens, short-lived signed access tokens, login/refresh/logout/reset routes,
+  `/api/v1/me`, tenant context lookup, centralized `Permission`, and
+  `AuthorizationService`.
+- Added migration `0011_auth_boundary` after
+  `0010_tenant_identity_foundation` for `user_credentials`, `auth_sessions`,
+  and `password_reset_tokens`.
+- Completed EPIC 16 Task 2 live PostgreSQL verification against isolated
+  PostgreSQL 17.10 database `epic16_auth_verify`: auth verifier passed `14/14`,
+  Alembic current/check passed at `0011_auth_boundary`, downgrade to
+  `0010_tenant_identity_foundation` and upgrade back to head passed, and
+  offline upgrade SQL generated.
+- Verified EPIC 16 Task 2 quality: focused auth/API tests, full Pytest `313
+  passed, 58 skipped`, full MyPy `302` source files, Ruff, and Ruff format for
+  touched files.
 - Completed EPIC 16 Task 1 live PostgreSQL verification against isolated
   PostgreSQL 17.10 database `epic16_verify`: tenant isolation verifier passed
   `37/37`, Alembic current/check passed at

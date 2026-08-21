@@ -3,6 +3,11 @@ from __future__ import annotations
 from app.repositories.postgres.postgres_admin_actions import (
     PostgresAdminActionRepository,
 )
+from app.repositories.postgres.postgres_auth import (
+    PostgresAuthSessionRepository,
+    PostgresPasswordCredentialRepository,
+    PostgresPasswordResetTokenRepository,
+)
 from app.repositories.postgres.postgres_canonical_products import (
     PostgresCanonicalProductRepository,
 )
@@ -23,11 +28,14 @@ from app.repositories.postgres.postgres_users import PostgresUserRepository
 
 __all__ = [
     "PostgresAdminActionRepository",
+    "PostgresAuthSessionRepository",
     "PostgresCanonicalProductRepository",
     "PostgresGeneratedContentRepository",
     "PostgresMarketEventRepository",
     "PostgresMembershipRepository",
     "PostgresOfferRepository",
+    "PostgresPasswordCredentialRepository",
+    "PostgresPasswordResetTokenRepository",
     "PostgresPriceHistoryRepository",
     "PostgresPublicationRepository",
     "PostgresTenantRepository",

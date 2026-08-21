@@ -168,6 +168,32 @@ class AdminApiSettings(BaseSettings):
         return self
 
 
+class AuthSettings(BaseSettings):
+    """Configuration for seller authentication and tenant authorization."""
+
+    model_config = SettingsConfigDict(
+        env_file=".env",
+        env_file_encoding="utf-8",
+        env_prefix="AUTH_",
+        extra="ignore",
+    )
+
+    access_token_secret: SecretStr = SecretStr("")
+    access_token_ttl_seconds: int = Field(default=900, gt=0)
+    refresh_token_ttl_seconds: int = Field(default=2_592_000, gt=0)
+    password_reset_token_ttl_seconds: int = Field(default=3600, gt=0)
+    token_issuer: str = "mediaengine"
+    token_audience: str = "mediaengine-seller-api"
+    password_hash_iterations: int = Field(default=210_000, ge=100_000)
+
+    @model_validator(mode="after")
+    def validate_token_secret(self) -> "AuthSettings":
+        if self.access_token_ttl_seconds >= self.refresh_token_ttl_seconds:
+            msg = "Auth access token TTL must be lower than refresh token TTL."
+            raise ValueError(msg)
+        return self
+
+
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(
         env_file=".env",
@@ -186,6 +212,7 @@ class Settings(BaseSettings):
         default_factory=ContentProcessingSettings
     )
     admin_api: AdminApiSettings = Field(default_factory=AdminApiSettings)
+    auth: AuthSettings = Field(default_factory=AuthSettings)
     logging: LoggingSettings = Field(default_factory=LoggingSettings)
 
 

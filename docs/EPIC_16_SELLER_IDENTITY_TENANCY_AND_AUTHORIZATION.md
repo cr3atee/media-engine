@@ -1,13 +1,14 @@
 # EPIC 16 - Seller Identity, Tenant Scoping and Authorization
 
-Status: Task 1 foundation implemented and verified against isolated PostgreSQL
-17.10. Authentication and authorization tasks have not started.
+Status: Task 1 tenant identity foundation and Task 2 authentication/
+authorization boundary are implemented and verified against isolated PostgreSQL
+17.10. Task 3 has not started.
 
 Baseline commit: `5341b1cda4bfc81c04e4e72f453ee7907685c732`.
 
 This document designs the next safe product boundary after EPIC 15. It does not
-implement authentication, migrations, frontend routes, marketplace credentials,
-Telegram live delivery, billing, or subscriptions.
+implement frontend routes, marketplace credentials, Telegram live delivery,
+billing, or subscriptions.
 
 Task 1 recovery/implementation has introduced durable tenant identity
 foundation pieces: `User`, `Tenant`, `Membership`, tenant-aware repository
@@ -17,16 +18,27 @@ inputs, and migration `0010_tenant_identity_foundation` after
 during migration, tenant-owned columns are converted to `NOT NULL`, and global
 business uniqueness is replaced with tenant-scoped constraints where required.
 
+Task 2 implementation has introduced the seller authentication and authorization
+boundary: durable password credentials, hashed refresh sessions, hashed password
+reset tokens, short-lived signed access tokens, `/api/v1/auth/*`, `/api/v1/me`,
+`/api/v1/tenants/{tenant_id}/context`, `AuthenticatedPrincipal`,
+`TenantContext`, `Permission`, and `AuthorizationService`.
+
 Verified:
 
 - focused tenant/repository/event tests: `70 passed`;
 - live PostgreSQL tenant isolation verifier: `37/37` checks passed against
   isolated database `epic16_verify`;
+- live PostgreSQL auth verifier: `14/14` checks passed against isolated
+  database `epic16_auth_verify`;
 - full Pytest: `307 passed, 58 skipped`;
-- full MyPy: `288 source files`;
+- full Pytest after Task 2: `313 passed, 58 skipped`;
+- full MyPy after Task 2: `302 source files`;
 - Ruff and Ruff format for touched files;
-- Alembic current/check at `0010_tenant_identity_foundation`;
+- Alembic current/check at `0011_auth_boundary`;
 - clean PostgreSQL downgrade to `0009_admin_actions` and upgrade back to head;
+- clean PostgreSQL downgrade from `0011_auth_boundary` to
+  `0010_tenant_identity_foundation` and upgrade back to head;
 - offline SQL generation through head.
 
 The verifier uses only an isolated `epic16_*` database and exits safely without
@@ -38,10 +50,11 @@ PostgreSQL-verified reads, dashboard summary, protected OpenAPI, guarded content
 review commands, publication commands, ambiguous-delivery resolution, and
 immutable `admin_actions` audit rows behind `X-Admin-API-Key`.
 
-MediaEngine still has no seller identity, tenant ownership, seller-facing
-authorization, user membership, tenant-scoped marketplace credentials, or
-tenant-aware audit attribution. A public seller dashboard or seller API must not
-be exposed before this EPIC is implemented and verified.
+MediaEngine now has durable seller identity, user membership, token sessions,
+and centralized tenant authorization. Tenant-scoped seller workflows,
+tenant-owned marketplace credentials, seller command routes, and tenant-aware
+audit attribution are still not implemented. A public seller dashboard must not
+be exposed before Task 3 scopes existing workflows through this boundary.
 
 ## 1. Current Verified Boundary
 
@@ -147,6 +160,11 @@ Authentication design:
 | Account disable | Blocks login, refresh, and seller API access. |
 | Rate limiting | Apply to login, refresh, reset, invitation acceptance, and mutations. |
 | Secrets | No passwords, hashes, reset tokens, access tokens, refresh tokens, marketplace credentials, or bot tokens in logs/API responses. |
+
+Task 2 implementation note: the current code uses a dependency-neutral
+standard-library PBKDF2-SHA256 `PasswordHasher` boundary with unique salts and a
+configurable iteration count. Argon2id remains the preferred production
+hardening target if adding a dedicated password-hashing dependency is approved.
 
 Token model:
 
@@ -1246,15 +1264,15 @@ EPIC 16 is complete only when:
 - No secrets are exposed.
 - Existing EPIC 13-15 semantics are not silently weakened.
 
-## 41. Recommended First Implementation Task
+## 41. Recommended Next Implementation Task
 
-Start with **Task 1 - Tenant identity and schema foundation**.
+Continue with **Task 3 - Tenant-scope existing workflows**.
 
-It is the smallest safe first implementation task because public seller auth
-cannot be correct until durable resources have tenant ownership, tenant-scoped
-constraints, and a verified legacy-data backfill. Starting with routes or
-frontend would create a public boundary before the database can enforce or prove
-isolation.
+Task 1 has already created the durable tenant-ownership foundation and Task 2
+has already created the seller authentication/authorization boundary. The next
+safe step is to route existing reads and commands through `TenantContext`
+without changing their business behavior.
 
-Do not begin authentication, seller dashboard, or public seller routes before
-Task 1 is complete and verified.
+Do not begin public dashboard work, marketplace credential management, billing,
+or live tenant operations before existing workflows are tenant-scoped and
+verified.

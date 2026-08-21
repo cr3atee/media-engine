@@ -39,6 +39,12 @@ isolated PostgreSQL 17.10: domain contracts, tenant-aware repository primitives,
 deterministic legacy tenant ownership, event identity v2 tenant inputs, and
 migration `0010_tenant_identity_foundation` are present. The live tenant
 isolation verifier passed `37/37` checks.
+EPIC 16 Task 2 authentication and authorization boundary is implemented and
+verified against isolated PostgreSQL 17.10: login, refresh, logout, password
+reset request/completion, `/api/v1/me`, tenant context lookup, durable sessions,
+hashed tokens, centralized permissions, and `AuthorizationService` are present.
+The live auth verifier passed `14/14` checks at migration
+`0011_auth_boundary`.
 
 ## Active Capabilities
 
@@ -156,6 +162,18 @@ isolation verifier passed `37/37` checks.
   full MyPy `288` source files, Ruff and Ruff format for touched files,
   Alembic current/check, clean downgrade to `0009_admin_actions`, upgrade back
   to head, and offline SQL generation through `0010_tenant_identity_foundation`.
+- EPIC 16 Task 2 adds seller authentication and authorization primitives:
+  durable password credentials, durable refresh sessions, hashed reset tokens,
+  short-lived signed access tokens, `AuthenticatedPrincipal`, `TenantContext`,
+  `Permission`, and centralized `AuthorizationService`.
+- Seller auth routes are available for login, refresh, logout, password reset
+  request/completion, `/api/v1/me`, and
+  `/api/v1/tenants/{tenant_id}/context`.
+- EPIC 16 Task 2 verification passed: live PostgreSQL auth boundary `14/14`,
+  focused auth/API tests, full Pytest `313 passed, 58 skipped`, full MyPy `302`
+  source files, Ruff, Ruff format, Alembic current/check at
+  `0011_auth_boundary`, downgrade to `0010_tenant_identity_foundation`, upgrade
+  back to head, and offline SQL generation through head.
 
 ## Known Gaps
 
@@ -168,8 +186,13 @@ isolation verifier passed `37/37` checks.
   confirmation, live flags, and PostgreSQL verification database were not
   supplied.
 - No production AI provider is wired into the marketplace pipeline.
-- Seller authentication, centralized authorization, tenant-scoped seller APIs,
-  and public seller routes do not exist yet.
+- Existing administration, ingestion, publication, and dashboard workflows are
+  not yet exposed through tenant-scoped seller routes.
+- Tenant-owned marketplace credentials and tenant-aware seller command audit
+  attribution are not implemented yet.
+- Password hashing currently uses a standard-library PBKDF2 boundary so Task 2
+  could remain dependency-neutral; production hardening should revisit Argon2id
+  if adding a dependency is approved.
 
 ## Architecture Review
 
@@ -189,6 +212,7 @@ the optional guarded live test-chat message remains unperformed. EPIC 15 Task 1
 adds a separate read model and API boundary without coupling HTTP transport to ORM
 or lifecycle repositories. EPIC 15 Task 2 adds guarded application commands with
 atomic immutable audit rows. EPIC 15 Task 3 completes the operational admin
-boundary with dashboard/readiness/OpenAPI hardening; the next architectural work
-should focus on seller identity and tenant-scoped authorization before any public
-seller dashboard.
+boundary with dashboard/readiness/OpenAPI hardening. EPIC 16 Task 1 adds durable
+tenant ownership and Task 2 adds seller authentication/authorization; the next
+architectural work should scope existing workflows through `TenantContext`
+before any public seller dashboard.

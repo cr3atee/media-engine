@@ -32,8 +32,9 @@ from app.api.routes.admin_publications import (
 from app.api.routes.admin_publications import (
     router as admin_publications_router,
 )
+from app.api.routes.auth import router as auth_router
 from app.api.routes.health import router as health_router
-from app.config.settings import AdminApiSettings, settings
+from app.config.settings import AdminApiSettings, AuthSettings, settings
 from app.core.logging import setup_logging
 from app.repositories.queries.provider import (
     ReadRepositoryScopeFactory,
@@ -48,6 +49,7 @@ setup_logging()
 def create_app(
     *,
     admin_api_settings: AdminApiSettings | None = None,
+    auth_settings: AuthSettings | None = None,
     read_repository_scope_factory: ReadRepositoryScopeFactory | None = None,
     repository_scope_factory: RepositoryScopeFactory | None = None,
 ) -> FastAPI:
@@ -59,6 +61,7 @@ def create_app(
         redoc_url=None,
     )
     application.state.admin_api_settings = configuration
+    application.state.auth_settings = auth_settings or settings.auth
     application.state.read_repository_scope_factory = (
         read_repository_scope_factory or create_postgres_read_repository_scope()
     )
@@ -89,6 +92,7 @@ def create_app(
     application.include_router(admin_publications_router)
     application.include_router(event_content_router)
     application.include_router(event_publication_router)
+    application.include_router(auth_router)
     if configuration.api_docs_enabled:
         _mount_protected_api_docs(application)
     return application
