@@ -34,13 +34,11 @@ EPIC 15 Task 3 is implemented and verified: dashboard summary, protected
 OpenAPI/Swagger/ReDoc, expanded sanitized readiness, final PostgreSQL admin API
 verification, and compatibility verifiers passed against isolated PostgreSQL 17.
 EPIC 15 is functionally complete for the internal administration API boundary.
-EPIC 16 Task 1 tenant identity foundation is implemented locally: domain
-contracts, tenant-aware repository primitives, deterministic legacy tenant
-ownership, event identity v2 tenant inputs, and migration
-`0010_tenant_identity_foundation` are present. Live PostgreSQL tenant isolation
-verification is still blocked in the current environment because Docker daemon
-is unavailable, `EPIC16_DATABASE_URL` is not set, and no local PostgreSQL runtime
-is installed.
+EPIC 16 Task 1 tenant identity foundation is implemented and verified against
+isolated PostgreSQL 17.10: domain contracts, tenant-aware repository primitives,
+deterministic legacy tenant ownership, event identity v2 tenant inputs, and
+migration `0010_tenant_identity_foundation` are present. The live tenant
+isolation verifier passed `37/37` checks.
 
 ## Active Capabilities
 
@@ -153,10 +151,11 @@ is installed.
   tenant-aware offer, canonical-product, and price-history repository
   primitives, deterministic legacy tenant backfill, tenant-scoped uniqueness and
   lookup indexes, and tenant-aware event identity v2 support.
-- EPIC 16 Task 1 local verification passed: focused tests `163 passed`, full
-  Pytest `307 passed, 58 skipped`, full MyPy `288` source files, Ruff, Ruff
-  format, Alembic head detection, and offline SQL generation through
-  `0010_tenant_identity_foundation`.
+- EPIC 16 Task 1 verification passed: live PostgreSQL tenant isolation
+  `37/37`, focused tests `70 passed`, full Pytest `307 passed, 58 skipped`,
+  full MyPy `288` source files, Ruff and Ruff format for touched files,
+  Alembic current/check, clean downgrade to `0009_admin_actions`, upgrade back
+  to head, and offline SQL generation through `0010_tenant_identity_foundation`.
 
 ## Known Gaps
 
@@ -169,8 +168,6 @@ is installed.
   confirmation, live flags, and PostgreSQL verification database were not
   supplied.
 - No production AI provider is wired into the marketplace pipeline.
-- Live EPIC 16 PostgreSQL tenant isolation verification is pending until an
-  isolated test database is available.
 - Seller authentication, centralized authorization, tenant-scoped seller APIs,
   and public seller routes do not exist yet.
 

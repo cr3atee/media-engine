@@ -1,8 +1,7 @@
 # EPIC 16 - Seller Identity, Tenant Scoping and Authorization
 
-Status: Task 1 foundation implemented locally; isolated PostgreSQL verification
-is pending because no test PostgreSQL runtime is available in the current
-environment.
+Status: Task 1 foundation implemented and verified against isolated PostgreSQL
+17.10. Authentication and authorization tasks have not started.
 
 Baseline commit: `5341b1cda4bfc81c04e4e72f453ee7907685c732`.
 
@@ -18,24 +17,20 @@ inputs, and migration `0010_tenant_identity_foundation` after
 during migration, tenant-owned columns are converted to `NOT NULL`, and global
 business uniqueness is replaced with tenant-scoped constraints where required.
 
-Verified locally:
+Verified:
 
-- focused tenant/repository/event tests: `163 passed`;
+- focused tenant/repository/event tests: `70 passed`;
+- live PostgreSQL tenant isolation verifier: `37/37` checks passed against
+  isolated database `epic16_verify`;
 - full Pytest: `307 passed, 58 skipped`;
 - full MyPy: `288 source files`;
 - Ruff and Ruff format for touched files;
-- Alembic head detection: `0010_tenant_identity_foundation`;
+- Alembic current/check at `0010_tenant_identity_foundation`;
+- clean PostgreSQL downgrade to `0009_admin_actions` and upgrade back to head;
 - offline SQL generation through head.
 
-Blocked in this environment:
-
-- live PostgreSQL tenant isolation verifier;
-- Alembic `current` and `check`;
-- downgrade/upgrade lifecycle against PostgreSQL.
-
-Blocker: Docker daemon is unavailable, `EPIC16_DATABASE_URL` is not set, and no
-local PostgreSQL command-line runtime is installed. The verifier exits safely
-without fabricating success when no isolated test database is supplied.
+The verifier uses only an isolated `epic16_*` database and exits safely without
+fabricating success when `EPIC16_DATABASE_URL` is missing.
 
 EPIC 15 is functionally complete for the internal administration API boundary.
 The current `/api/v1/admin` surface is intentionally internal: it exposes

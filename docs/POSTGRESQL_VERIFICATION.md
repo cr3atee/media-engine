@@ -4,9 +4,11 @@
 
 PostgreSQL persistence, the EPIC 12 runtime, EPIC 13 transactional market-event
 ingestion, durable scoring, generated content, publication-intent state, EPIC 14
-delivery orchestration, and EPIC 15 administration API are live-verified. Final
-EPIC 15 verification used isolated PostgreSQL 17 databases and current revision
-`0009_admin_actions` without using a project or production database.
+delivery orchestration, EPIC 15 administration API, and EPIC 16 tenant identity
+foundation are live-verified. EPIC 16 verification used isolated PostgreSQL
+17.10 database `epic16_verify` and current revision
+`0010_tenant_identity_foundation` without using a project or production
+database.
 
 ## Verified Schema
 
@@ -268,3 +270,37 @@ head, offline upgrade SQL generation, and PostgreSQL catalog checks for
 Full Pytest passed `304` tests with `58` expected skips. MyPy checked `274`
 source files with no issues. Ruff and Ruff format checks passed for touched
 files.
+
+## EPIC 16 Task 1 Tenant Identity Foundation
+
+`scripts/verify_epic16_tenant_isolation_postgres.py` was executed against a
+temporary isolated PostgreSQL 17.10 database named `epic16_verify`. The verifier
+recreated the isolated public schema, applied migrations through
+`0009_admin_actions`, seeded legacy tenant-blind rows, upgraded to
+`0010_tenant_identity_foundation`, and exercised tenant-aware repository
+primitives.
+
+All `37/37` named checks passed. The checks cover identity tables, tenant-aware
+constraints and indexes, deterministic legacy tenant creation, legacy backfill,
+`NOT NULL` tenant ownership, same marketplace external IDs across tenants,
+tenant-isolated offer reads, tenant-isolated price history, event identity v2
+tenant separation, equivalent tenant events persisted independently, and
+fresh-session persistence.
+
+Alembic verification passed:
+
+- clean upgrade to `0010_tenant_identity_foundation`;
+- `alembic current` reported `0010_tenant_identity_foundation (head)`;
+- `alembic check` reported no new upgrade operations;
+- clean downgrade to `0009_admin_actions`;
+- upgrade back to head;
+- offline `upgrade head --sql` generation.
+
+Focused tenant/repository tests passed. Full Pytest passed `307` tests with `58`
+expected skips. MyPy checked `288` source files with no issues. Ruff and Ruff
+format checks passed for EPIC 16 touched files.
+
+Downgrading a populated multi-tenant database that already contains duplicate
+tenant-scoped business identities back to the pre-tenant global uniqueness model
+is not lossless and should be treated as a development rollback only. Clean
+downgrade/upgrade lifecycle is verified.

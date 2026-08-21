@@ -14,13 +14,22 @@ from app.domain.tenancy import LEGACY_TENANT_ID
 class Price(Base):
     __tablename__ = "prices"
     __table_args__ = (
-        Index("ix_prices_tenant_product_collected", "tenant_id", "product_id", "collected_at"),
+        Index(
+            "ix_prices_tenant_product_collected",
+            "tenant_id",
+            "product_id",
+            "collected_at",
+        ),
     )
 
     id: Mapped[UUID] = mapped_column(Uuid, primary_key=True, default=uuid4)
     tenant_id: Mapped[UUID] = mapped_column(
         Uuid,
-        ForeignKey("tenants.id", name="fk_prices_tenant_id_tenants"),
+        ForeignKey(
+            "tenants.id",
+            name="fk_prices_tenant_id_tenants",
+            ondelete="RESTRICT",
+        ),
         nullable=False,
         default=LEGACY_TENANT_ID,
     )

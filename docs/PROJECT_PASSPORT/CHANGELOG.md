@@ -6,6 +6,15 @@ This document records notable Project Passport updates.
 
 ## Unreleased
 
+- Completed EPIC 16 Task 1 live PostgreSQL verification against isolated
+  PostgreSQL 17.10 database `epic16_verify`: tenant isolation verifier passed
+  `37/37`, Alembic current/check passed at
+  `0010_tenant_identity_foundation`, clean downgrade to `0009_admin_actions`
+  and upgrade back to head passed, and offline upgrade SQL generated.
+- Fixed EPIC 16 PostgreSQL verification defects exposed by live execution:
+  legacy seed timestamps now match pre-tenant timestamp columns, migration
+  binds the deterministic legacy tenant as a UUID, and tenant identity migration
+  uses `pg_temp` for temporary SQL helper functions.
 - Implemented EPIC 16 Task 1 tenant identity foundation locally: tenant/user/
   membership domain contracts, tenant-aware repository primitives, deterministic
   legacy tenant ownership, tenant-scoped persistence constraints, and event
@@ -15,11 +24,13 @@ This document records notable Project Passport updates.
   tenant-owned rows to `NOT NULL`, and replace global business uniqueness with
   tenant-scoped constraints and indexes.
 - Added `scripts/verify_epic16_tenant_isolation_postgres.py`; live PostgreSQL
-  verification remains pending because no isolated PostgreSQL runtime is
-  available in the current environment.
-- Verified EPIC 16 Task 1 local quality: focused tests `163 passed`, full
-  Pytest `307 passed, 58 skipped`, full MyPy `288` source files, Ruff, Ruff
-  format, Alembic head detection, and offline SQL generation through head.
+  verification requires an isolated `EPIC16_DATABASE_URL` targeting an
+  `epic16_*` database and refuses to fabricate success when that prerequisite is
+  missing.
+- Verified EPIC 16 Task 1 quality: focused tests, full Pytest `307 passed, 58
+  skipped`, full MyPy `288` source files, Ruff, Ruff format, Alembic
+  current/check, clean downgrade/upgrade, and offline SQL generation through
+  head.
 - Completed EPIC 15 Task 3 operational administration API completion with a
   bounded dashboard summary, dedicated dashboard query repository, protected
   OpenAPI/Swagger/ReDoc routes, and expanded sanitized readiness.

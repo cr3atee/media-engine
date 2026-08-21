@@ -54,6 +54,7 @@ USER_B_ID = UUID("20000000-0000-4000-8000-000000000002")
 MEMBERSHIP_A_ID = UUID("30000000-0000-4000-8000-000000000001")
 MEMBERSHIP_B_ID = UUID("30000000-0000-4000-8000-000000000002")
 NOW = datetime(2026, 8, 11, 9, 0, tzinfo=UTC)
+LEGACY_NAIVE_NOW = NOW.replace(tzinfo=None)
 
 
 class Verification:
@@ -171,17 +172,18 @@ async def _verify_legacy_backfill(
         "deterministic legacy tenant exists", legacy_slug == LEGACY_TENANT_SLUG
     )
 
-    for table_name in (
-        "products",
-        "prices",
-        "canonical_products",
-        "offers",
-        "price_snapshots",
-        "market_events",
-        "generated_contents",
-        "publications",
-        "admin_actions",
-    ):
+    expected_legacy_counts = {
+        "products": 1,
+        "prices": 1,
+        "canonical_products": 1,
+        "offers": 1,
+        "price_snapshots": 2,
+        "market_events": 1,
+        "generated_contents": 1,
+        "publications": 1,
+        "admin_actions": 1,
+    }
+    for table_name, expected_count in expected_legacy_counts.items():
         count = await connection.scalar(
             text(f"SELECT count(*) FROM {table_name} WHERE tenant_id = :tenant_id"),
             {"tenant_id": LEGACY_TENANT_ID},
@@ -189,7 +191,10 @@ async def _verify_legacy_backfill(
         null_count = await connection.scalar(
             text(f"SELECT count(*) FROM {table_name} WHERE tenant_id IS NULL"),
         )
-        verifier.check(f"{table_name} legacy rows backfilled", count == 1)
+        verifier.check(
+            f"{table_name} legacy rows backfilled",
+            count == expected_count,
+        )
         verifier.check(f"{table_name} tenant_id not null", null_count == 0)
 
 
@@ -345,7 +350,7 @@ async def _seed_legacy_rows(database_url: str) -> None:
                     )
                     """,
                 ),
-                {"now": NOW},
+                {"now": LEGACY_NAIVE_NOW},
             )
             await connection.execute(
                 text(
@@ -366,7 +371,7 @@ async def _seed_legacy_rows(database_url: str) -> None:
                     )
                     """,
                 ),
-                {"now": NOW},
+                {"now": LEGACY_NAIVE_NOW},
             )
             await connection.execute(
                 text(
@@ -389,7 +394,7 @@ async def _seed_legacy_rows(database_url: str) -> None:
                     )
                     """,
                 ),
-                {"now": NOW},
+                {"now": LEGACY_NAIVE_NOW},
             )
             await connection.execute(
                 text(

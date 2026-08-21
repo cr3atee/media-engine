@@ -7,6 +7,8 @@ Create Date: 2026-08-11 00:00:00.000000
 
 from __future__ import annotations
 
+from uuid import UUID
+
 import sqlalchemy as sa
 
 from alembic import op
@@ -16,7 +18,7 @@ down_revision = "0009_admin_actions"
 branch_labels = None
 depends_on = None
 
-LEGACY_TENANT_ID = "00000000-0000-4000-8000-000000000001"
+LEGACY_TENANT_ID = UUID("00000000-0000-4000-8000-000000000001")
 TENANT_TABLES = (
     "products",
     "prices",
@@ -476,7 +478,7 @@ def _rebuild_tenant_scoped_deterministic_keys() -> None:
     op.execute(
         sa.text(
             r"""
-            CREATE TEMPORARY FUNCTION mediaengine_identity_escape(value text)
+            CREATE FUNCTION pg_temp.mediaengine_identity_escape(value text)
             RETURNS text
             LANGUAGE sql
             IMMUTABLE
@@ -493,12 +495,14 @@ def _rebuild_tenant_scoped_deterministic_keys() -> None:
             SET idempotency_key = encode(
                 sha256(
                     convert_to(
-                        mediaengine_identity_escape(tenant_id::text) || '|' ||
-                        mediaengine_identity_escape(event_id::text) || '|' ||
-                        mediaengine_identity_escape(lower(content_type)) || '|' ||
-                        mediaengine_identity_escape(lower(language)) || '|' ||
-                        mediaengine_identity_escape(prompt_version) || '|' ||
-                        mediaengine_identity_escape(attempt_number::text),
+                        pg_temp.mediaengine_identity_escape(tenant_id::text) || '|' ||
+                        pg_temp.mediaengine_identity_escape(event_id::text) || '|' ||
+                        pg_temp.mediaengine_identity_escape(
+                            lower(content_type)
+                        ) || '|' ||
+                        pg_temp.mediaengine_identity_escape(lower(language)) || '|' ||
+                        pg_temp.mediaengine_identity_escape(prompt_version) || '|' ||
+                        pg_temp.mediaengine_identity_escape(attempt_number::text),
                         'UTF8'
                     )
                 ),
@@ -514,11 +518,11 @@ def _rebuild_tenant_scoped_deterministic_keys() -> None:
             SET idempotency_key = encode(
                 sha256(
                     convert_to(
-                        mediaengine_identity_escape(tenant_id::text) || '|' ||
-                        mediaengine_identity_escape(event_id::text) || '|' ||
-                        mediaengine_identity_escape(content_id::text) || '|' ||
-                        mediaengine_identity_escape(lower(channel)) || '|' ||
-                        mediaengine_identity_escape(destination_key),
+                        pg_temp.mediaengine_identity_escape(tenant_id::text) || '|' ||
+                        pg_temp.mediaengine_identity_escape(event_id::text) || '|' ||
+                        pg_temp.mediaengine_identity_escape(content_id::text) || '|' ||
+                        pg_temp.mediaengine_identity_escape(lower(channel)) || '|' ||
+                        pg_temp.mediaengine_identity_escape(destination_key),
                         'UTF8'
                     )
                 ),
@@ -527,7 +531,7 @@ def _rebuild_tenant_scoped_deterministic_keys() -> None:
             """,
         ),
     )
-    op.execute("DROP FUNCTION mediaengine_identity_escape(text)")
+    op.execute("DROP FUNCTION pg_temp.mediaengine_identity_escape(text)")
 
 
 def _restore_global_constraints() -> None:

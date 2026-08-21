@@ -25,7 +25,11 @@ class Product(Base):
     id: Mapped[UUID] = mapped_column(Uuid, primary_key=True, default=uuid4)
     tenant_id: Mapped[UUID] = mapped_column(
         Uuid,
-        ForeignKey("tenants.id", name="fk_products_tenant_id_tenants"),
+        ForeignKey(
+            "tenants.id",
+            name="fk_products_tenant_id_tenants",
+            ondelete="RESTRICT",
+        ),
         nullable=False,
         default=LEGACY_TENANT_ID,
     )
