@@ -116,6 +116,9 @@ This document captures architecture notes that are important for future reviews.
   Public seller launch should now wait on tenant-owned marketplace credentials,
   operational limits, and product-facing UI scope rather than core tenant
   isolation.
+- EPIC 17 should start with integration identity and persistence only. Do not
+  store live marketplace credentials until the credential-reference, redaction,
+  audit, and key-management boundaries are explicitly verified.
 - GGSEL-specific price fields are not fully normalized into `ParsedOffer.price` and `ParsedOffer.currency` yet.
 
 ## Review Notes

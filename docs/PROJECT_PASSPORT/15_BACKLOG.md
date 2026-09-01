@@ -7,6 +7,8 @@ verification.
 
 ## Immediate
 
+- Implement EPIC 17 Task 1: tenant-owned marketplace integration domain,
+  repository contracts, memory/PostgreSQL persistence, and migration foundation.
 - Define tenant-owned marketplace credential and integration management before
   tenant-specific ingestion is exposed.
 - If explicitly approved credentials and a test chat are available, run exactly

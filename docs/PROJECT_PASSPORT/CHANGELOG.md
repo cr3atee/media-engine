@@ -6,6 +6,10 @@ This document records notable Project Passport updates.
 
 ## Unreleased
 
+- Added EPIC 17 marketplace integrations and credentials specification,
+  defining the tenant-owned integration boundary, credential redaction
+  requirements, PostgreSQL schema direction, repository/API/Scheduler
+  boundaries, verification requirements, and implementation breakdown.
 - Completed EPIC 16 Task 4 final isolation verification against a temporary
   isolated PostgreSQL 17.10 database `epic16_task4_verify`: tenant isolation
   verifier `37/37`, auth verifier `14/14`, and seller workflow verifier `20/20`

@@ -120,6 +120,7 @@ This document tracks only work that is reflected by the current repository state
   boundary `14/14`, seller workflows `20/20`, full Pytest `318 passed, 58
   skipped`, MyPy `305` source files, Alembic lifecycle, and focused Ruff/format
   checks against isolated PostgreSQL 17.10.
+- EPIC 17 marketplace integrations and credentials specification.
 
 ## Current Status
 
@@ -145,3 +146,5 @@ readiness.
 
 **Define tenant-owned marketplace credentials and integration management before
 public seller launch.**
+
+Start with EPIC 17 Task 1: integration domain and schema foundation.
