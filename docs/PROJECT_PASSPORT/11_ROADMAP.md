@@ -107,6 +107,15 @@ This document tracks only work that is reflected by the current repository state
 - EPIC 16 Task 2 PostgreSQL verification: auth boundary `14/14`, full Pytest
   `313 passed, 58 skipped`, MyPy `302` source files, Ruff, Ruff format, and
   Alembic lifecycle through `0011_auth_boundary`.
+- EPIC 16 Task 3 tenant-scoped seller workflow routes for existing event,
+  generated-content, publication, dashboard, content-review, and
+  publication-operation workflows.
+- EPIC 16 Task 3 tenant-aware seller command audit attribution and tenant-scoped
+  admin-action idempotency.
+- EPIC 16 Task 3 offline verification: focused seller/admin/auth tests,
+  marketplace runner tenant propagation coverage, full Pytest `318 passed, 58
+  skipped`, MyPy `305` source files, Ruff, Ruff format, and Alembic offline SQL
+  generation.
 
 ## Current Status
 
@@ -117,8 +126,9 @@ publication intent, PostgreSQL-verified Telegram delivery orchestration, guarded
 live-test tooling, Scheduler delegation, a PostgreSQL-verified read-only
   administration API, PostgreSQL-verified guarded administration commands with
 immutable audit history, and PostgreSQL-verified operational dashboard/readiness
-hardening. EPIC 16 has a verified tenant identity foundation plus a verified
-seller authentication and tenant authorization boundary.
+hardening. EPIC 16 has a verified tenant identity foundation, a verified seller
+authentication and tenant authorization boundary, and offline-verified
+tenant-scoped seller workflows pending live PostgreSQL verification.
 
 ## Not Present Yet
 
@@ -126,10 +136,11 @@ seller authentication and tenant authorization boundary.
 - Scheduler overlap and multi-process coordination.
 - Optional guarded live Telegram test-chat message.
 - Production AI provider integration in the pipeline.
-- Tenant-scoped seller-facing workflow routes for existing reads and commands.
 - Tenant-owned marketplace credential management.
-- Tenant-aware seller command audit attribution.
+- EPIC 16 Task 3 live PostgreSQL verification for tenant-scoped seller
+  workflows.
 
 ## Recommended Next EPIC
 
-**Tenant-scope existing workflows before public dashboard/UI.**
+**Run EPIC 16 Task 4 final isolation verification once isolated PostgreSQL is
+available.**

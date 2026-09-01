@@ -37,9 +37,13 @@ class AdminEventQueryService:
         """Return a filtered event page."""
         return await self._repository.list_events(query, page)
 
-    async def get_event(self, event_id: UUID) -> EventRead | None:
+    async def get_event(
+        self,
+        event_id: UUID,
+        tenant_id: UUID | None = None,
+    ) -> EventRead | None:
         """Return one event projection."""
-        return await self._repository.get_event(event_id)
+        return await self._repository.get_event(event_id, tenant_id)
 
 
 class AdminContentQueryService:
@@ -57,9 +61,13 @@ class AdminContentQueryService:
         """Return a filtered content page."""
         return await self._repository.list_content(query, page)
 
-    async def get_content(self, content_id: UUID) -> ContentRead | None:
+    async def get_content(
+        self,
+        content_id: UUID,
+        tenant_id: UUID | None = None,
+    ) -> ContentRead | None:
         """Return one content projection."""
-        return await self._repository.get_content(content_id)
+        return await self._repository.get_content(content_id, tenant_id)
 
 
 class AdminPublicationQueryService:
@@ -77,9 +85,13 @@ class AdminPublicationQueryService:
         """Return a filtered publication page."""
         return await self._repository.list_publications(query, page)
 
-    async def get_publication(self, publication_id: UUID) -> PublicationRead | None:
+    async def get_publication(
+        self,
+        publication_id: UUID,
+        tenant_id: UUID | None = None,
+    ) -> PublicationRead | None:
         """Return one publication projection."""
-        return await self._repository.get_publication(publication_id)
+        return await self._repository.get_publication(publication_id, tenant_id)
 
 
 class AdminDashboardQueryService:

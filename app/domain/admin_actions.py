@@ -129,6 +129,9 @@ def build_admin_request_fingerprint(
     resource_id: UUID,
     expected_version: int,
     reason: str | None,
+    tenant_id: UUID = LEGACY_TENANT_ID,
+    actor_type: AdminActorType = AdminActorType.API_KEY,
+    elevated: bool = False,
     metadata: tuple[tuple[str, str], ...] = (),
 ) -> str:
     """Hash the normalized semantics bound to an idempotency key."""
@@ -140,12 +143,15 @@ def build_admin_request_fingerprint(
             field_name="actor_id",
             maximum_length=128,
         ),
+        "actor_type": actor_type.value,
+        "elevated": elevated,
         "expected_version": expected_version,
-            "metadata": normalized_metadata,
-            "reason": normalize_optional_reason(reason),
-            "resource_id": str(resource_id),
-            "resource_type": resource_type.value,
-        }
+        "metadata": normalized_metadata,
+        "reason": normalize_optional_reason(reason),
+        "resource_id": str(resource_id),
+        "resource_type": resource_type.value,
+        "tenant_id": str(tenant_id),
+    }
     serialized = json.dumps(
         payload,
         ensure_ascii=True,

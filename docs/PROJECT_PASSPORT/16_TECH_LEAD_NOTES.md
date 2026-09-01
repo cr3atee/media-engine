@@ -101,6 +101,19 @@ This document captures architecture notes that are important for future reviews.
   `TenantContext`; do not expose seller-facing content/publication operations
   until reads, commands, audit, and repository access are tenant-scoped end to
   end.
+- EPIC 16 Task 3 adds seller-facing tenant-scoped workflow routes without
+  changing the internal `/api/v1/admin` boundary. Seller routes must continue to
+  resolve `TenantContext` from bearer auth and path tenant ID before invoking
+  read or command services.
+- Seller command audit records must keep tenant-scoped idempotency and actor
+  attribution. Internal API-key admin commands remain non-tenant-selected at the
+  route layer, but the command service records the actual resource tenant.
+- `MarketplaceApplicationRunner` is the tenant propagation point for ingestion:
+  parsers remain tenant-unaware, while the runner stamps normalized offers with
+  the configured tenant before snapshots and durable event identity are built.
+- EPIC 16 Task 3 PostgreSQL verification is pending until an isolated database
+  is available; do not treat offline tests as final proof of cross-tenant
+  database isolation.
 - GGSEL-specific price fields are not fully normalized into `ParsedOffer.price` and `ParsedOffer.currency` yet.
 
 ## Review Notes

@@ -488,6 +488,7 @@ class PostgresPublicationRepository(PublicationRepository):
 def _publication_values(command: CreatePublication) -> dict[str, object]:
     return {
         "id": command.id,
+        "tenant_id": command.tenant_id,
         "event_id": command.event_id,
         "content_id": command.content_id,
         "channel": command.channel,
@@ -523,6 +524,7 @@ def _to_domain(record: PublicationRecord) -> Publication:
     )
     return Publication(
         id=record.id,
+        tenant_id=record.tenant_id,
         event_id=record.event_id,
         content_id=record.content_id,
         channel=record.channel,

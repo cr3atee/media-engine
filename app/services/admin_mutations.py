@@ -9,6 +9,7 @@ from uuid import UUID, uuid4
 from app.domain.admin_actions import (
     AdminAction,
     AdminActionType,
+    AdminActorType,
     AdminResourceType,
     AmbiguousPublicationResolution,
     build_admin_request_fingerprint,
@@ -39,6 +40,9 @@ class AdminCommandContext:
     actor_id: str
     request_id: str
     idempotency_key: str
+    tenant_id: UUID | None = None
+    actor_type: AdminActorType = AdminActorType.API_KEY
+    elevated: bool = False
 
     def __post_init__(self) -> None:
         actor_id = _require_bounded_text(
@@ -192,14 +196,19 @@ class AdminMutationService:
             reason=reason,
         )
         async with self._repository_scope_factory() as repositories:
-            replay = await self._prepare(repositories, context, specification)
-            if replay is not None:
-                return replay
             publication = await repositories.publications.get_by_id(
                 command.publication_id
             )
             _require_resource(publication, specification)
             assert publication is not None
+            tenant_id = _resolve_command_tenant(
+                publication.tenant_id, context, specification
+            )
+            replay = await self._prepare(
+                repositories, context, specification, tenant_id
+            )
+            if replay is not None:
+                return replay
             _guard_expected_version(publication.version, specification)
             _guard_retryable_publication(
                 publication,
@@ -218,6 +227,7 @@ class AdminMutationService:
                 previous_state=publication.status.value,
                 resulting_state=PublicationStatus.PENDING.value,
                 transition=transition,
+                tenant_id=tenant_id,
             )
 
     async def cancel(
@@ -236,14 +246,19 @@ class AdminMutationService:
             reason=reason,
         )
         async with self._repository_scope_factory() as repositories:
-            replay = await self._prepare(repositories, context, specification)
-            if replay is not None:
-                return replay
             publication = await repositories.publications.get_by_id(
                 command.publication_id
             )
             _require_resource(publication, specification)
             assert publication is not None
+            tenant_id = _resolve_command_tenant(
+                publication.tenant_id, context, specification
+            )
+            replay = await self._prepare(
+                repositories, context, specification, tenant_id
+            )
+            if replay is not None:
+                return replay
             _guard_expected_version(publication.version, specification)
             _guard_cancellable_publication(publication, specification)
             transition = await repositories.publications.cancel(
@@ -258,6 +273,7 @@ class AdminMutationService:
                 previous_state=publication.status.value,
                 resulting_state=PublicationStatus.CANCELLED.value,
                 transition=transition,
+                tenant_id=tenant_id,
             )
 
     async def resolve_ambiguous(
@@ -287,14 +303,19 @@ class AdminMutationService:
             metadata=metadata,
         )
         async with self._repository_scope_factory() as repositories:
-            replay = await self._prepare(repositories, context, specification)
-            if replay is not None:
-                return replay
             publication = await repositories.publications.get_by_id(
                 command.publication_id
             )
             _require_resource(publication, specification)
             assert publication is not None
+            tenant_id = _resolve_command_tenant(
+                publication.tenant_id, context, specification
+            )
+            replay = await self._prepare(
+                repositories, context, specification, tenant_id
+            )
+            if replay is not None:
+                return replay
             _guard_expected_version(publication.version, specification)
             if publication.status is not PublicationStatus.AMBIGUOUS:
                 raise _invalid_transition(
@@ -316,6 +337,7 @@ class AdminMutationService:
                 previous_state=publication.status.value,
                 resulting_state=target_status.value,
                 transition=transition,
+                tenant_id=tenant_id,
             )
 
     async def _review_content(
@@ -339,14 +361,19 @@ class AdminMutationService:
             reason=reason,
         )
         async with self._repository_scope_factory() as repositories:
-            replay = await self._prepare(repositories, context, specification)
-            if replay is not None:
-                return replay
             content = await repositories.generated_contents.get_by_id(
                 command.content_id
             )
             _require_resource(content, specification)
             assert content is not None
+            tenant_id = _resolve_command_tenant(
+                content.tenant_id, context, specification
+            )
+            replay = await self._prepare(
+                repositories, context, specification, tenant_id
+            )
+            if replay is not None:
+                return replay
             _guard_expected_version(content.version, specification)
             _guard_reviewable_content(content, specification)
             transition = await repositories.generated_contents.set_review_status(
@@ -362,6 +389,7 @@ class AdminMutationService:
                 previous_state=content.review_status.value,
                 resulting_state=target.value,
                 transition=transition,
+                tenant_id=tenant_id,
             )
 
     async def _prepare(
@@ -369,16 +397,19 @@ class AdminMutationService:
         repositories: RepositoryProvider,
         context: AdminCommandContext,
         specification: _CommandSpecification,
+        tenant_id: UUID,
     ) -> AdminMutationResult | None:
         await repositories.admin_actions.acquire_idempotency_lock(
-            context.idempotency_key
+            context.idempotency_key,
+            tenant_id,
         )
         existing = await repositories.admin_actions.get_by_idempotency_key(
-            context.idempotency_key
+            context.idempotency_key,
+            tenant_id,
         )
         if existing is None:
             return None
-        fingerprint = _fingerprint(context, specification)
+        fingerprint = _fingerprint(context, specification, tenant_id)
         if existing.request_fingerprint != fingerprint:
             raise AdminCommandError(
                 "idempotency_conflict",
@@ -397,6 +428,7 @@ class AdminMutationService:
         previous_state: str,
         resulting_state: str,
         transition: StateTransitionResult,
+        tenant_id: UUID,
     ) -> AdminMutationResult:
         _raise_for_transition(transition, specification, previous_state)
         assert transition.version is not None
@@ -405,13 +437,16 @@ class AdminMutationService:
             action=specification.action,
             resource_type=specification.resource_type,
             resource_id=specification.resource_id,
+            tenant_id=tenant_id,
             previous_state=previous_state,
             resulting_state=resulting_state,
             reason=specification.reason,
             actor_id=context.actor_id,
+            actor_type=context.actor_type,
+            elevated=context.elevated,
             request_id=context.request_id,
             idempotency_key=context.idempotency_key,
-            request_fingerprint=_fingerprint(context, specification),
+            request_fingerprint=_fingerprint(context, specification, tenant_id),
             expected_version=specification.expected_version,
             resulting_version=transition.version,
             created_at=self._clock(),
@@ -434,9 +469,13 @@ class _CommandSpecification:
 def _fingerprint(
     context: AdminCommandContext,
     specification: _CommandSpecification,
+    tenant_id: UUID,
 ) -> str:
     return build_admin_request_fingerprint(
         actor_id=context.actor_id,
+        tenant_id=tenant_id,
+        actor_type=context.actor_type,
+        elevated=context.elevated,
         action=specification.action,
         resource_type=specification.resource_type,
         resource_id=specification.resource_id,
@@ -444,6 +483,21 @@ def _fingerprint(
         reason=specification.reason,
         metadata=specification.metadata,
     )
+
+
+def _resolve_command_tenant(
+    resource_tenant_id: UUID,
+    context: AdminCommandContext,
+    specification: _CommandSpecification,
+) -> UUID:
+    if context.tenant_id is not None and context.tenant_id != resource_tenant_id:
+        raise AdminCommandError(
+            "resource_not_found",
+            "Administrative target was not found.",
+            resource_type=specification.resource_type,
+            resource_id=specification.resource_id,
+        )
+    return resource_tenant_id
 
 
 def _result(action: AdminAction, *, replayed: bool) -> AdminMutationResult:

@@ -6,6 +6,21 @@ This document records notable Project Passport updates.
 
 ## Unreleased
 
+- Implemented EPIC 16 Task 3 tenant-scoped seller workflow routes for existing
+  event, generated-content, publication, dashboard, content-review, and
+  publication-operation workflows.
+- Added tenant-aware seller command audit attribution: seller commands carry
+  tenant/user actor context, request fingerprints include tenant and actor type,
+  and `admin_actions` idempotency lookup is tenant-scoped.
+- Fixed PostgreSQL publication mapping to preserve `tenant_id`, aligning it with
+  memory publication repository behavior.
+- Added `scripts/verify_epic16_seller_workflows_postgres.py`, guarded by
+  isolated `EPIC16_DATABASE_URL` and refusing non-`epic16_*` database names.
+- Verified EPIC 16 Task 3 offline: focused seller/admin/auth tests, marketplace
+  runner tenant propagation coverage, full Pytest `318 passed, 58 skipped`,
+  full MyPy `305` source files, Ruff, Ruff format, and Alembic offline SQL.
+- Recorded that EPIC 16 Task 3 live PostgreSQL verification is pending because
+  the current environment has no available isolated PostgreSQL runtime.
 - Implemented EPIC 16 Task 2 authentication and authorization boundary:
   durable password credentials, hashed refresh sessions, hashed password reset
   tokens, short-lived signed access tokens, login/refresh/logout/reset routes,

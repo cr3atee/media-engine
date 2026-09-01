@@ -34,6 +34,7 @@ from app.api.routes.admin_publications import (
 )
 from app.api.routes.auth import router as auth_router
 from app.api.routes.health import router as health_router
+from app.api.routes.seller_workflows import router as seller_workflows_router
 from app.config.settings import AdminApiSettings, AuthSettings, settings
 from app.core.logging import setup_logging
 from app.repositories.queries.provider import (
@@ -93,6 +94,7 @@ def create_app(
     application.include_router(event_content_router)
     application.include_router(event_publication_router)
     application.include_router(auth_router)
+    application.include_router(seller_workflows_router)
     if configuration.api_docs_enabled:
         _mount_protected_api_docs(application)
     return application

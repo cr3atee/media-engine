@@ -5,6 +5,7 @@ from collections.abc import Sequence
 from uuid import UUID
 
 from app.domain.admin_actions import AdminAction, AdminResourceType
+from app.domain.tenancy import LEGACY_TENANT_ID
 from app.repositories.base import BaseRepository
 
 
@@ -12,7 +13,11 @@ class AdminActionRepository(BaseRepository):
     """Append-only persistence contract for immutable admin actions."""
 
     @abstractmethod
-    async def acquire_idempotency_lock(self, idempotency_key: str) -> None:
+    async def acquire_idempotency_lock(
+        self,
+        idempotency_key: str,
+        tenant_id: UUID = LEGACY_TENANT_ID,
+    ) -> None:
         """Serialize commands sharing one explicit idempotency key."""
 
     @abstractmethod
@@ -27,6 +32,7 @@ class AdminActionRepository(BaseRepository):
     async def get_by_idempotency_key(
         self,
         idempotency_key: str,
+        tenant_id: UUID = LEGACY_TENANT_ID,
     ) -> AdminAction | None:
         """Return the accepted action associated with an idempotency key."""
 

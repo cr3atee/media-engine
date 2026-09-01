@@ -5,6 +5,8 @@ from datetime import datetime
 from decimal import Decimal
 from uuid import UUID
 
+from app.domain.tenancy import LEGACY_TENANT_ID
+
 
 @dataclass(slots=True, frozen=True)
 class CursorPosition:
@@ -98,6 +100,7 @@ class EventRead:
     version: int
     content_summary: RelatedSummary
     publication_summary: RelatedSummary
+    tenant_id: UUID = LEGACY_TENANT_ID
 
 
 @dataclass(slots=True, frozen=True)
@@ -126,6 +129,7 @@ class ContentRead:
     completed_at: datetime | None
     version: int
     publication_summary: RelatedSummary
+    tenant_id: UUID = LEGACY_TENANT_ID
 
 
 @dataclass(slots=True, frozen=True)
@@ -148,6 +152,7 @@ class PublicationRead:
     created_at: datetime
     updated_at: datetime
     version: int
+    tenant_id: UUID = LEGACY_TENANT_ID
 
 
 @dataclass(slots=True, frozen=True)
@@ -156,6 +161,7 @@ class DashboardWindow:
 
     starts_at: datetime
     ends_at: datetime
+    tenant_id: UUID | None = None
 
 
 @dataclass(slots=True, frozen=True)
@@ -183,6 +189,7 @@ class DashboardSummaryRead:
 class EventQuery:
     """Typed filters supported by the event read API."""
 
+    tenant_id: UUID | None = None
     marketplace: str | None = None
     event_type: str | None = None
     disposition: str | None = None
@@ -208,6 +215,7 @@ class EventQuery:
 class ContentQuery:
     """Typed filters supported by the generated-content read API."""
 
+    tenant_id: UUID | None = None
     event_id: UUID | None = None
     search: str | None = None
     generation_status: str | None = None
@@ -225,6 +233,7 @@ class ContentQuery:
 class PublicationQuery:
     """Typed filters supported by the publication read API."""
 
+    tenant_id: UUID | None = None
     event_id: UUID | None = None
     content_id: UUID | None = None
     channel: str | None = None

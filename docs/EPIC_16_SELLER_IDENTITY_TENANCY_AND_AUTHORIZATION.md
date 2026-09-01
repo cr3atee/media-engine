@@ -2,7 +2,9 @@
 
 Status: Task 1 tenant identity foundation and Task 2 authentication/
 authorization boundary are implemented and verified against isolated PostgreSQL
-17.10. Task 3 has not started.
+17.10. Task 3 seller workflow scoping is implemented and passes offline quality
+checks; live PostgreSQL verification is pending because no isolated PostgreSQL
+runtime is currently available.
 
 Baseline commit: `5341b1cda4bfc81c04e4e72f453ee7907685c732`.
 
@@ -24,6 +26,14 @@ reset tokens, short-lived signed access tokens, `/api/v1/auth/*`, `/api/v1/me`,
 `/api/v1/tenants/{tenant_id}/context`, `AuthenticatedPrincipal`,
 `TenantContext`, `Permission`, and `AuthorizationService`.
 
+Task 3 implementation has introduced tenant-scoped seller routes for existing
+event, generated-content, publication, dashboard, content-review, and
+publication-operation workflows. Read repositories now accept optional tenant
+filters for seller-facing access, `AdminMutationService` validates tenant
+ownership when a tenant context is supplied, and `admin_actions` idempotency and
+fingerprints are tenant-scoped. The internal `/api/v1/admin` API remains
+compatible during the transition.
+
 Verified:
 
 - focused tenant/repository/event tests: `70 passed`;
@@ -35,6 +45,10 @@ Verified:
 - full Pytest after Task 2: `313 passed, 58 skipped`;
 - full MyPy after Task 2: `302 source files`;
 - Ruff and Ruff format for touched files;
+- Task 3 focused seller/admin/auth tests: `44 passed, 1 skipped`;
+- Task 3 full Pytest: `317 passed, 58 skipped`;
+- Task 3 full MyPy: `305 source files`;
+- Task 3 Alembic offline `upgrade head --sql` generation;
 - Alembic current/check at `0011_auth_boundary`;
 - clean PostgreSQL downgrade to `0009_admin_actions` and upgrade back to head;
 - clean PostgreSQL downgrade from `0011_auth_boundary` to
@@ -44,6 +58,12 @@ Verified:
 The verifier uses only an isolated `epic16_*` database and exits safely without
 fabricating success when `EPIC16_DATABASE_URL` is missing.
 
+Task 3 live PostgreSQL verification is pending. Docker CLI is installed, but the
+Docker Desktop daemon pipe `dockerDesktopLinuxEngine` is unavailable in the
+current session, `EPIC16_DATABASE_URL` is not set, and local `postgres`, `psql`,
+and `pg_isready` are not available. Online `alembic current` and
+`alembic check` are blocked until an isolated PostgreSQL runtime is available.
+
 EPIC 15 is functionally complete for the internal administration API boundary.
 The current `/api/v1/admin` surface is intentionally internal: it exposes
 PostgreSQL-verified reads, dashboard summary, protected OpenAPI, guarded content
@@ -51,10 +71,10 @@ review commands, publication commands, ambiguous-delivery resolution, and
 immutable `admin_actions` audit rows behind `X-Admin-API-Key`.
 
 MediaEngine now has durable seller identity, user membership, token sessions,
-and centralized tenant authorization. Tenant-scoped seller workflows,
-tenant-owned marketplace credentials, seller command routes, and tenant-aware
-audit attribution are still not implemented. A public seller dashboard must not
-be exposed before Task 3 scopes existing workflows through this boundary.
+centralized tenant authorization, tenant-scoped seller workflow routes, and
+tenant-aware seller command audit attribution. Tenant-owned marketplace
+credentials are still not implemented. Public seller UI exposure should wait for
+Task 3 PostgreSQL verification and Task 4 final isolation readiness.
 
 ## 1. Current Verified Boundary
 
@@ -75,10 +95,10 @@ The current implementation has these verified durable capabilities:
 - Current FastAPI composition keeps routes thin and uses repository scopes from
   the application composition root.
 
-The important limitation is that all durable business records are currently
-tenant-blind. Existing unique constraints are global for offer identity, event
-identity, generated-content idempotency, publication idempotency, and admin
-mutation idempotency.
+The important limitation is no longer the database schema: durable business
+records now carry tenant ownership and tenant-scoped uniqueness where required.
+The remaining Task 3 risk is operational verification of seller-facing routes
+against an isolated PostgreSQL runtime.
 
 ## 2. Canonical Product Terminology
 
@@ -1227,11 +1247,17 @@ Keep EPIC 16 to four focused tasks.
 
 ### Task 3 - Tenant-scope existing workflows
 
-- Add seller-facing tenant-scoped read routes.
-- Add tenant-scoped content/publication commands.
-- Update ingestion/background services to carry tenant context.
-- Add tenant-aware audit attribution.
-- Preserve existing internal admin API behavior during transition.
+- Seller-facing tenant-scoped read routes are implemented.
+- Tenant-scoped content/publication commands are implemented.
+- `MarketplaceApplicationRunner` carries configured tenant context through
+  ingestion into parsed offers, snapshots, and durable event identity.
+- Tenant-aware seller command audit attribution is implemented.
+- Existing internal admin API behavior is preserved during transition.
+- PostgreSQL verifier is implemented but not yet executed because no isolated
+  PostgreSQL runtime is currently available.
+- Tenant-owned marketplace integration management remains outside Task 3 and
+  must not be started before Task 4 verification closes the current isolation
+  loop.
 
 ### Task 4 - Final isolation verification and readiness
 
@@ -1266,13 +1292,15 @@ EPIC 16 is complete only when:
 
 ## 41. Recommended Next Implementation Task
 
-Continue with **Task 3 - Tenant-scope existing workflows**.
+Continue with **Task 4 - Final isolation verification and readiness** once an
+isolated PostgreSQL runtime is available.
 
-Task 1 has already created the durable tenant-ownership foundation and Task 2
-has already created the seller authentication/authorization boundary. The next
-safe step is to route existing reads and commands through `TenantContext`
-without changing their business behavior.
+Task 1 has already created the durable tenant-ownership foundation, Task 2 has
+created the seller authentication/authorization boundary, and Task 3 now routes
+existing reads and commands through `TenantContext` without changing their
+business behavior. The next safe step is to run the PostgreSQL verifier and
+final quality gates with an isolated `EPIC16_DATABASE_URL`.
 
 Do not begin public dashboard work, marketplace credential management, billing,
-or live tenant operations before existing workflows are tenant-scoped and
-verified.
+or live tenant operations before Task 3 PostgreSQL verification and Task 4
+readiness are complete.

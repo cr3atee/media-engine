@@ -332,3 +332,33 @@ Alembic verification passed:
 Focused auth/API tests passed. Full Pytest passed `313` tests with `58`
 expected skips. MyPy checked `302` source files with no issues. Ruff and Ruff
 format checks passed for touched files.
+
+## EPIC 16 Task 3 Seller Workflows
+
+EPIC 16 Task 3 implemented tenant-scoped seller workflow routes for event,
+generated-content, publication, dashboard, content-review, and
+publication-operation access. Read-side query contracts now support optional
+tenant filtering, seller command contexts carry tenant and user actor
+attribution, `admin_actions` idempotency lookup is tenant-scoped, and
+PostgreSQL publication mapping preserves `tenant_id`.
+
+`MarketplaceApplicationRunner` already carries a configured tenant context from
+ingestion into parsed offers, snapshots, and durable event identities; focused
+coverage now verifies this propagation through the memory-backed application
+runner.
+
+Offline verification passed:
+
+- focused seller/admin/auth tests: `44 passed, 1 skipped`;
+- focused runner/seller tests: `16 passed`;
+- full Pytest: `318 passed, 58 skipped`;
+- full MyPy: `305 source files`;
+- Ruff and Ruff format for touched files;
+- Alembic offline `upgrade head --sql` generation.
+
+Live PostgreSQL verification is not yet complete for Task 3 because the current
+environment has no isolated PostgreSQL runtime: Docker Desktop daemon pipe
+`dockerDesktopLinuxEngine` is unavailable, `EPIC16_DATABASE_URL` is not set, and
+local `postgres`, `psql`, and `pg_isready` are absent. The guarded verifier
+`scripts/verify_epic16_seller_workflows_postgres.py` is present and requires an
+isolated `epic16_*` database before it will run.

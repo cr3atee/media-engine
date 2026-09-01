@@ -4,6 +4,7 @@ from collections.abc import Sequence
 from uuid import UUID
 
 from app.domain.admin_actions import AdminAction, AdminResourceType
+from app.domain.tenancy import LEGACY_TENANT_ID
 from app.repositories.admin_actions import AdminActionRepository
 from app.repositories.base import RepositoryIdentityConflictError
 
@@ -13,17 +14,23 @@ class MemoryAdminActionRepository(AdminActionRepository):
 
     def __init__(self) -> None:
         self._actions_by_id: dict[UUID, AdminAction] = {}
-        self._action_ids_by_key: dict[str, UUID] = {}
+        self._action_ids_by_key: dict[tuple[UUID, str], UUID] = {}
 
-    async def acquire_idempotency_lock(self, idempotency_key: str) -> None:
+    async def acquire_idempotency_lock(
+        self,
+        idempotency_key: str,
+        tenant_id: UUID = LEGACY_TENANT_ID,
+    ) -> None:
         """Rely on the enclosing transactional memory scope for serialization."""
+        del tenant_id
         if not idempotency_key.strip():
             msg = "Idempotency key must not be empty."
             raise ValueError(msg)
 
     async def append(self, action: AdminAction) -> AdminAction:
         """Append an immutable action without replacing existing history."""
-        existing_id = self._action_ids_by_key.get(action.idempotency_key)
+        key = (action.tenant_id, action.idempotency_key)
+        existing_id = self._action_ids_by_key.get(key)
         if existing_id is not None:
             existing = self._actions_by_id[existing_id]
             if existing.request_fingerprint != action.request_fingerprint:
@@ -35,7 +42,7 @@ class MemoryAdminActionRepository(AdminActionRepository):
             msg = "Admin action ID is already in use."
             raise RepositoryIdentityConflictError(msg)
         self._actions_by_id[action.id] = action
-        self._action_ids_by_key[action.idempotency_key] = action.id
+        self._action_ids_by_key[key] = action.id
         return action
 
     async def get_by_id(self, action_id: UUID) -> AdminAction | None:
@@ -45,9 +52,10 @@ class MemoryAdminActionRepository(AdminActionRepository):
     async def get_by_idempotency_key(
         self,
         idempotency_key: str,
+        tenant_id: UUID = LEGACY_TENANT_ID,
     ) -> AdminAction | None:
         """Return one action by command idempotency key."""
-        action_id = self._action_ids_by_key.get(idempotency_key)
+        action_id = self._action_ids_by_key.get((tenant_id, idempotency_key))
         return self._actions_by_id.get(action_id) if action_id is not None else None
 
     async def list_for_resource(

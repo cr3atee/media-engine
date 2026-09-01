@@ -402,6 +402,43 @@ def test_successful_run_orders_phases_and_reports_counts() -> None:
     assert result.errors == ()
 
 
+def test_runner_propagates_tenant_context_to_ingested_work() -> None:
+    tenant_id = UUID("22000000-0000-4000-8000-000000000401")
+    provider = create_memory_provider()
+    previous = PriceSnapshot(
+        tenant_id=tenant_id,
+        marketplace="ggsel",
+        external_id="1001",
+        price=Decimal("990"),
+        currency="RUB",
+        collected_at=datetime.now(UTC) - timedelta(minutes=1),
+    )
+    run_async(provider.price_history.add(tenant_id, previous))
+    pipeline = make_pipeline()
+    scope = RecordingScopeFactory(provider)
+    runner = MarketplaceApplicationRunner(
+        marketplace=Marketplace.GGSEL,
+        ingestion=RecordingIngestion((make_offer(),)),
+        repository_scope_factory=scope,
+        pipeline=pipeline,
+        tenant_id=tenant_id,
+    )
+
+    result = run_async(runner.run("demo://ggsel"))
+
+    offers = run_async(provider.offers.list_all())
+    history = run_async(provider.price_history.get_history(tenant_id, "ggsel", "1001"))
+    event = run_async(provider.events.get_by_id(result.event_ids[0]))
+
+    assert result.tenant_id == tenant_id
+    assert offers[0].tenant_id == tenant_id
+    assert [snapshot.tenant_id for snapshot in history] == [tenant_id, tenant_id]
+    assert event is not None
+    assert event.tenant_id == tenant_id
+    assert event.previous_snapshot.tenant_id == tenant_id
+    assert event.current_snapshot.tenant_id == tenant_id
+
+
 def test_offer_repository_failure_rolls_back_and_skips_post_commit() -> None:
     provider = create_memory_provider()
     provider.offers = FailingOfferRepository(fail_on_call=2)

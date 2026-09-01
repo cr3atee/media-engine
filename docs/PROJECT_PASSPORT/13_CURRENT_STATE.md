@@ -45,6 +45,12 @@ reset request/completion, `/api/v1/me`, tenant context lookup, durable sessions,
 hashed tokens, centralized permissions, and `AuthorizationService` are present.
 The live auth verifier passed `14/14` checks at migration
 `0011_auth_boundary`.
+EPIC 16 Task 3 seller workflow scoping is implemented offline: existing event,
+generated-content, publication, dashboard, content-review, and
+publication-operation workflows now have tenant-scoped seller routes and
+tenant-aware audit attribution. Full Pytest, MyPy, Ruff, Ruff format, and
+Alembic offline SQL generation passed. Live PostgreSQL verification is pending
+until an isolated PostgreSQL runtime is available.
 
 ## Active Capabilities
 
@@ -174,6 +180,21 @@ The live auth verifier passed `14/14` checks at migration
   source files, Ruff, Ruff format, Alembic current/check at
   `0011_auth_boundary`, downgrade to `0010_tenant_identity_foundation`, upgrade
   back to head, and offline SQL generation through head.
+- Tenant-scoped seller workflow routes exist under `/api/v1/tenants/{tenant_id}`
+  for events, generated content, publications, dashboard summary,
+  content-review commands, and publication-operation commands.
+- Seller workflow routes require bearer authentication, resolve tenant
+  membership through `AuthorizationService`, and enforce centralized
+  permissions before executing read or command services.
+- Seller commands carry tenant/user actor context into `AdminMutationService`;
+  `admin_actions` idempotency and request fingerprints are tenant-scoped.
+- `MarketplaceApplicationRunner` propagates configured tenant ownership from
+  ingestion into `ParsedOffer`, `PriceSnapshot`, and durable market-event
+  identity.
+- EPIC 16 Task 3 offline verification passed: focused seller/admin/auth tests
+  `44 passed, 1 skipped`, focused runner/seller tests `16 passed`, full Pytest
+  `318 passed, 58 skipped`, full MyPy `305` source files, Ruff, Ruff format,
+  and Alembic offline `upgrade head --sql`.
 
 ## Known Gaps
 
@@ -186,10 +207,9 @@ The live auth verifier passed `14/14` checks at migration
   confirmation, live flags, and PostgreSQL verification database were not
   supplied.
 - No production AI provider is wired into the marketplace pipeline.
-- Existing administration, ingestion, publication, and dashboard workflows are
-  not yet exposed through tenant-scoped seller routes.
-- Tenant-owned marketplace credentials and tenant-aware seller command audit
-  attribution are not implemented yet.
+- EPIC 16 Task 3 live PostgreSQL verification is pending because the current
+  environment has no available isolated PostgreSQL runtime.
+- Tenant-owned marketplace credentials are not implemented yet.
 - Password hashing currently uses a standard-library PBKDF2 boundary so Task 2
   could remain dependency-neutral; production hardening should revisit Argon2id
   if adding a dependency is approved.

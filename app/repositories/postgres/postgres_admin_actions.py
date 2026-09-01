@@ -9,8 +9,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.domain.admin_actions import (
     AdminAction,
     AdminActionType,
+    AdminActorType,
     AdminResourceType,
 )
+from app.domain.tenancy import LEGACY_TENANT_ID
 from app.models.admin_action_record import AdminActionRecord
 from app.repositories.admin_actions import AdminActionRepository
 from app.repositories.base import RepositoryIdentityConflictError
@@ -22,19 +24,26 @@ class PostgresAdminActionRepository(AdminActionRepository):
     def __init__(self, session: AsyncSession) -> None:
         self._session = session
 
-    async def acquire_idempotency_lock(self, idempotency_key: str) -> None:
+    async def acquire_idempotency_lock(
+        self,
+        idempotency_key: str,
+        tenant_id: UUID = LEGACY_TENANT_ID,
+    ) -> None:
         """Acquire a transaction-scoped advisory lock for one command key."""
         if not idempotency_key.strip():
             msg = "Idempotency key must not be empty."
             raise ValueError(msg)
         await self._session.execute(
             text("SELECT pg_advisory_xact_lock(hashtextextended(:key, 0))"),
-            {"key": idempotency_key},
+            {"key": f"{tenant_id}:{idempotency_key}"},
         )
 
     async def append(self, action: AdminAction) -> AdminAction:
         """Append one immutable action inside the caller-owned transaction."""
-        existing = await self.get_by_idempotency_key(action.idempotency_key)
+        existing = await self.get_by_idempotency_key(
+            action.idempotency_key,
+            action.tenant_id,
+        )
         if existing is not None:
             if existing.request_fingerprint != action.request_fingerprint:
                 msg = "Idempotency key is already bound to another admin command."
@@ -56,11 +65,13 @@ class PostgresAdminActionRepository(AdminActionRepository):
     async def get_by_idempotency_key(
         self,
         idempotency_key: str,
+        tenant_id: UUID = LEGACY_TENANT_ID,
     ) -> AdminAction | None:
         """Return an accepted action by idempotency key."""
         result = await self._session.execute(
             select(AdminActionRecord).where(
-                AdminActionRecord.idempotency_key == idempotency_key
+                AdminActionRecord.tenant_id == tenant_id,
+                AdminActionRecord.idempotency_key == idempotency_key,
             )
         )
         record = result.scalar_one_or_none()
@@ -86,6 +97,7 @@ class PostgresAdminActionRepository(AdminActionRepository):
 def _to_record(action: AdminAction) -> AdminActionRecord:
     return AdminActionRecord(
         id=action.id,
+        tenant_id=action.tenant_id,
         action=action.action.value,
         resource_type=action.resource_type.value,
         resource_id=action.resource_id,
@@ -93,6 +105,8 @@ def _to_record(action: AdminAction) -> AdminActionRecord:
         resulting_state=action.resulting_state,
         reason=action.reason,
         actor_id=action.actor_id,
+        actor_type=action.actor_type.value,
+        elevated=action.elevated,
         request_id=action.request_id,
         idempotency_key=action.idempotency_key,
         request_fingerprint=action.request_fingerprint,
@@ -106,6 +120,7 @@ def _to_record(action: AdminAction) -> AdminActionRecord:
 def _to_domain(record: AdminActionRecord) -> AdminAction:
     return AdminAction(
         id=record.id,
+        tenant_id=record.tenant_id,
         action=AdminActionType(record.action),
         resource_type=AdminResourceType(record.resource_type),
         resource_id=record.resource_id,
@@ -113,6 +128,8 @@ def _to_domain(record: AdminActionRecord) -> AdminAction:
         resulting_state=record.resulting_state,
         reason=record.reason,
         actor_id=record.actor_id,
+        actor_type=AdminActorType(record.actor_type),
+        elevated=record.elevated,
         request_id=record.request_id,
         idempotency_key=record.idempotency_key,
         request_fingerprint=record.request_fingerprint,

@@ -29,7 +29,11 @@ class MarketEventQueryRepository(ABC):
         """Return a filtered, deterministically ordered event page."""
 
     @abstractmethod
-    async def get_event(self, event_id: UUID) -> EventRead | None:
+    async def get_event(
+        self,
+        event_id: UUID,
+        tenant_id: UUID | None = None,
+    ) -> EventRead | None:
         """Return one event read projection by technical identifier."""
 
 
@@ -45,7 +49,11 @@ class GeneratedContentQueryRepository(ABC):
         """Return a filtered, deterministically ordered content page."""
 
     @abstractmethod
-    async def get_content(self, content_id: UUID) -> ContentRead | None:
+    async def get_content(
+        self,
+        content_id: UUID,
+        tenant_id: UUID | None = None,
+    ) -> ContentRead | None:
         """Return one content read projection by technical identifier."""
 
 
@@ -61,7 +69,11 @@ class PublicationQueryRepository(ABC):
         """Return a filtered, deterministically ordered publication page."""
 
     @abstractmethod
-    async def get_publication(self, publication_id: UUID) -> PublicationRead | None:
+    async def get_publication(
+        self,
+        publication_id: UUID,
+        tenant_id: UUID | None = None,
+    ) -> PublicationRead | None:
         """Return one publication read projection by technical identifier."""
 
 

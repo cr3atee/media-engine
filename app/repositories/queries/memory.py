@@ -58,9 +58,21 @@ class MemoryMarketEventQueryRepository(MarketEventQueryRepository):
             next_cursor = event_cursor(selected[-1], page)
         return ReadPage(items=selected, next_cursor=next_cursor)
 
-    async def get_event(self, event_id: UUID) -> EventRead | None:
+    async def get_event(
+        self,
+        event_id: UUID,
+        tenant_id: UUID | None = None,
+    ) -> EventRead | None:
         """Return one event projection by identifier."""
-        return next((event for event in self._events if event.id == event_id), None)
+        return next(
+            (
+                event
+                for event in self._events
+                if event.id == event_id
+                and (tenant_id is None or event.tenant_id == tenant_id)
+            ),
+            None,
+        )
 
 
 class MemoryGeneratedContentQueryRepository(GeneratedContentQueryRepository):
@@ -94,10 +106,19 @@ class MemoryGeneratedContentQueryRepository(GeneratedContentQueryRepository):
             next_cursor = content_cursor(selected[-1], page)
         return ReadPage(items=selected, next_cursor=next_cursor)
 
-    async def get_content(self, content_id: UUID) -> ContentRead | None:
+    async def get_content(
+        self,
+        content_id: UUID,
+        tenant_id: UUID | None = None,
+    ) -> ContentRead | None:
         """Return one content projection by identifier."""
         return next(
-            (content for content in self._contents if content.id == content_id),
+            (
+                content
+                for content in self._contents
+                if content.id == content_id
+                and (tenant_id is None or content.tenant_id == tenant_id)
+            ),
             None,
         )
 
@@ -132,13 +153,18 @@ class MemoryPublicationQueryRepository(PublicationQueryRepository):
             next_cursor = publication_cursor(selected[-1], page)
         return ReadPage(items=selected, next_cursor=next_cursor)
 
-    async def get_publication(self, publication_id: UUID) -> PublicationRead | None:
+    async def get_publication(
+        self,
+        publication_id: UUID,
+        tenant_id: UUID | None = None,
+    ) -> PublicationRead | None:
         """Return one publication projection by identifier."""
         return next(
             (
                 publication
                 for publication in self._publications
                 if publication.id == publication_id
+                and (tenant_id is None or publication.tenant_id == tenant_id)
             ),
             None,
         )
@@ -162,15 +188,22 @@ class MemoryDashboardQueryRepository(DashboardQueryRepository):
     async def get_summary(self, window: DashboardWindow) -> DashboardSummaryRead:
         """Return aggregate counters over the configured in-memory rows."""
         events = [
-            event for event in self._events if _inside_window(event.created_at, window)
+            event
+            for event in self._events
+            if _inside_window(event.created_at, window)
+            and _tenant_matches(event.tenant_id, window.tenant_id)
         ]
         content = [
-            item for item in self._content if _inside_window(item.created_at, window)
+            item
+            for item in self._content
+            if _inside_window(item.created_at, window)
+            and _tenant_matches(item.tenant_id, window.tenant_id)
         ]
         publications = [
             item
             for item in self._publications
             if _inside_window(item.created_at, window)
+            and _tenant_matches(item.tenant_id, window.tenant_id)
         ]
         return DashboardSummaryRead(
             window=window,
@@ -224,6 +257,8 @@ class MemoryDashboardQueryRepository(DashboardQueryRepository):
 
 
 def _event_matches(event: EventRead, query: EventQuery) -> bool:
+    if query.tenant_id is not None and event.tenant_id != query.tenant_id:
+        return False
     if query.marketplace is not None and event.marketplace != query.marketplace:
         return False
     if query.event_type is not None and event.event_type != query.event_type:
@@ -297,6 +332,8 @@ def _event_matches(event: EventRead, query: EventQuery) -> bool:
 
 
 def _content_matches(content: ContentRead, query: ContentQuery) -> bool:
+    if query.tenant_id is not None and content.tenant_id != query.tenant_id:
+        return False
     if query.event_id is not None and content.event_id != query.event_id:
         return False
     if (
@@ -339,6 +376,8 @@ def _publication_matches(
     publication: PublicationRead,
     query: PublicationQuery,
 ) -> bool:
+    if query.tenant_id is not None and publication.tenant_id != query.tenant_id:
+        return False
     if query.event_id is not None and publication.event_id != query.event_id:
         return False
     if query.content_id is not None and publication.content_id != query.content_id:
@@ -419,6 +458,10 @@ def _item_position[TRead](item: TRead, sort: str) -> tuple[object, UUID]:
 
 def _inside_window(value: datetime, window: DashboardWindow) -> bool:
     return window.starts_at <= value < window.ends_at
+
+
+def _tenant_matches(item_tenant_id: UUID, query_tenant_id: UUID | None) -> bool:
+    return query_tenant_id is None or item_tenant_id == query_tenant_id
 
 
 def _content_awaits_publication(

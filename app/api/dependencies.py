@@ -1,8 +1,9 @@
 from __future__ import annotations
 
-from collections.abc import AsyncIterator
+from collections.abc import AsyncIterator, Awaitable, Callable
 from contextlib import AbstractAsyncContextManager
 from typing import Annotated, cast
+from uuid import UUID
 
 from fastapi import Depends, Header, Request, Security
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
@@ -10,7 +11,7 @@ from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from app.api.auth import get_admin_settings
 from app.api.errors import ApiError
 from app.config.settings import AuthSettings
-from app.domain.auth import AuthenticatedPrincipal
+from app.domain.auth import AuthenticatedPrincipal, Permission, TenantContext
 from app.repositories.queries.provider import (
     ReadRepositoryProvider,
     ReadRepositoryScopeFactory,
@@ -219,6 +220,34 @@ def _repository_scope_factory(request: Request) -> RepositoryScopeFactory:
 
         factory = create_postgres_repository_scope()
     return cast(RepositoryScopeFactory, factory)
+
+
+def require_tenant_permission(
+    permission: Permission,
+) -> Callable[..., Awaitable[TenantContext]]:
+    """Build a FastAPI dependency that resolves a permitted tenant context."""
+
+    async def dependency(
+        tenant_id: UUID,
+        principal: Annotated[
+            AuthenticatedPrincipal,
+            Depends(require_seller_principal),
+        ],
+        service: Annotated[
+            AuthorizationService,
+            Depends(get_authorization_service),
+        ],
+    ) -> TenantContext:
+        try:
+            return await service.require_tenant_context(
+                principal,
+                tenant_id,
+                permission,
+            )
+        except AuthorizationError as exc:
+            raise map_authorization_error(exc) from exc
+
+    return dependency
 
 
 def map_authentication_error(error: AuthenticationError) -> ApiError:

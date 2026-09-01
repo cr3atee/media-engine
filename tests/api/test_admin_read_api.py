@@ -186,7 +186,12 @@ class _FailingEventRepository(MarketEventQueryRepository):
     ) -> ReadPage[EventRead]:
         raise RuntimeError("database password=do-not-expose")
 
-    async def get_event(self, event_id: UUID) -> EventRead | None:
+    async def get_event(
+        self,
+        event_id: UUID,
+        tenant_id: UUID | None = None,
+    ) -> EventRead | None:
+        del tenant_id
         raise RuntimeError("database password=do-not-expose")
 
 

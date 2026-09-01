@@ -21,6 +21,7 @@ def page_request(
     *,
     resource: str,
     params: Any,
+    extra_filters: Mapping[str, object] | None = None,
 ) -> PageRequest:
     """Build a repository page request from a validated query DTO."""
     configuration = get_admin_settings(request)
@@ -30,6 +31,8 @@ def page_request(
         mode="json",
         exclude={"limit", "cursor", "sort", "direction"},
     )
+    if extra_filters:
+        filters.update(extra_filters)
     key = configuration.cursor_signing_key.get_secret_value()
     if not key:
         key = configuration.api_key.get_secret_value()

@@ -70,10 +70,14 @@ class PostgresMarketEventQueryRepository(MarketEventQueryRepository):
         next_cursor = event_cursor(items[-1], page) if has_next and items else None
         return ReadPage(items=items, next_cursor=next_cursor)
 
-    async def get_event(self, event_id: UUID) -> EventRead | None:
+    async def get_event(
+        self,
+        event_id: UUID,
+        tenant_id: UUID | None = None,
+    ) -> EventRead | None:
         """Return one event projection by identifier."""
         statement = self._statement(
-            EventQuery(),
+            EventQuery(tenant_id=tenant_id),
             PageRequest(
                 limit=1,
                 sort="detected_at",
@@ -162,10 +166,14 @@ class PostgresGeneratedContentQueryRepository(GeneratedContentQueryRepository):
         next_cursor = content_cursor(items[-1], page) if has_next and items else None
         return ReadPage(items=items, next_cursor=next_cursor)
 
-    async def get_content(self, content_id: UUID) -> ContentRead | None:
+    async def get_content(
+        self,
+        content_id: UUID,
+        tenant_id: UUID | None = None,
+    ) -> ContentRead | None:
         """Return one content projection by identifier."""
         statement = self._statement(
-            ContentQuery(),
+            ContentQuery(tenant_id=tenant_id),
             PageRequest(
                 limit=1,
                 sort="created_at",
@@ -233,11 +241,18 @@ class PostgresPublicationQueryRepository(PublicationQueryRepository):
         )
         return ReadPage(items=items, next_cursor=next_cursor)
 
-    async def get_publication(self, publication_id: UUID) -> PublicationRead | None:
+    async def get_publication(
+        self,
+        publication_id: UUID,
+        tenant_id: UUID | None = None,
+    ) -> PublicationRead | None:
         """Return one publication projection by identifier."""
-        result = await self._session.execute(
-            select(PublicationRecord).where(PublicationRecord.id == publication_id)
-        )
+        filters: list[ColumnElement[bool]] = [
+            PublicationRecord.id == publication_id,
+        ]
+        if tenant_id is not None:
+            filters.append(PublicationRecord.tenant_id == tenant_id)
+        result = await self._session.execute(select(PublicationRecord).where(*filters))
         record = result.scalar_one_or_none()
         return _publication_from_record(record) if record is not None else None
 
@@ -278,43 +293,71 @@ class PostgresDashboardQueryRepository(DashboardQueryRepository):
             window=window,
             total_new_market_events=await self._count(
                 select(func.count(MarketEventRecord.id)).where(
-                    _window_filter(MarketEventRecord.created_at, window)
+                    *_window_filters(
+                        MarketEventRecord.created_at,
+                        MarketEventRecord.tenant_id,
+                        window,
+                    )
                 )
             ),
             events_awaiting_scoring=await self._count(
                 select(func.count(MarketEventRecord.id)).where(
-                    _window_filter(MarketEventRecord.created_at, window),
+                    *_window_filters(
+                        MarketEventRecord.created_at,
+                        MarketEventRecord.tenant_id,
+                        window,
+                    ),
                     MarketEventRecord.scoring_status == "pending",
                 )
             ),
             scoring_failures=await self._count(
                 select(func.count(MarketEventRecord.id)).where(
-                    _window_filter(MarketEventRecord.created_at, window),
+                    *_window_filters(
+                        MarketEventRecord.created_at,
+                        MarketEventRecord.tenant_id,
+                        window,
+                    ),
                     MarketEventRecord.scoring_status == "failed",
                 )
             ),
             generated_content_pending=await self._count(
                 select(func.count(GeneratedContentRecord.id)).where(
-                    _window_filter(GeneratedContentRecord.created_at, window),
+                    *_window_filters(
+                        GeneratedContentRecord.created_at,
+                        GeneratedContentRecord.tenant_id,
+                        window,
+                    ),
                     GeneratedContentRecord.generation_status == "pending",
                 )
             ),
             generated_content_failed=await self._count(
                 select(func.count(GeneratedContentRecord.id)).where(
-                    _window_filter(GeneratedContentRecord.created_at, window),
+                    *_window_filters(
+                        GeneratedContentRecord.created_at,
+                        GeneratedContentRecord.tenant_id,
+                        window,
+                    ),
                     GeneratedContentRecord.generation_status == "failed",
                 )
             ),
             generated_content_awaiting_review=await self._count(
                 select(func.count(GeneratedContentRecord.id)).where(
-                    _window_filter(GeneratedContentRecord.created_at, window),
+                    *_window_filters(
+                        GeneratedContentRecord.created_at,
+                        GeneratedContentRecord.tenant_id,
+                        window,
+                    ),
                     GeneratedContentRecord.generation_status == "generated",
                     GeneratedContentRecord.review_status == "pending",
                 )
             ),
             approved_content_awaiting_publication=await self._count(
                 select(func.count(GeneratedContentRecord.id)).where(
-                    _window_filter(GeneratedContentRecord.created_at, window),
+                    *_window_filters(
+                        GeneratedContentRecord.created_at,
+                        GeneratedContentRecord.tenant_id,
+                        window,
+                    ),
                     GeneratedContentRecord.generation_status == "generated",
                     GeneratedContentRecord.review_status == "approved",
                     exists(
@@ -351,13 +394,21 @@ class PostgresDashboardQueryRepository(DashboardQueryRepository):
             ),
             latest_event_activity_at=await self._max_timestamp(
                 select(func.max(MarketEventRecord.created_at)).where(
-                    _window_filter(MarketEventRecord.created_at, window)
+                    *_window_filters(
+                        MarketEventRecord.created_at,
+                        MarketEventRecord.tenant_id,
+                        window,
+                    )
                 )
             ),
             latest_publication_at=await self._max_timestamp(
                 select(func.max(PublicationRecord.published_at)).where(
                     PublicationRecord.published_at.is_not(None),
-                    _window_filter(PublicationRecord.published_at, window),
+                    *_window_filters(
+                        PublicationRecord.published_at,
+                        PublicationRecord.tenant_id,
+                        window,
+                    ),
                 )
             ),
         )
@@ -373,7 +424,11 @@ class PostgresDashboardQueryRepository(DashboardQueryRepository):
     ) -> int:
         return await self._count(
             select(func.count(PublicationRecord.id)).where(
-                _window_filter(PublicationRecord.created_at, window),
+                *_window_filters(
+                    PublicationRecord.created_at,
+                    PublicationRecord.tenant_id,
+                    window,
+                ),
                 *filters,
             )
         )
@@ -385,6 +440,8 @@ class PostgresDashboardQueryRepository(DashboardQueryRepository):
 
 def _event_filters(query: EventQuery) -> tuple[ColumnElement[bool], ...]:
     filters: list[ColumnElement[bool]] = []
+    if query.tenant_id is not None:
+        filters.append(MarketEventRecord.tenant_id == query.tenant_id)
     if query.marketplace is not None:
         filters.append(MarketEventRecord.marketplace == query.marketplace)
     if query.event_type is not None:
@@ -473,6 +530,8 @@ def _event_filters(query: EventQuery) -> tuple[ColumnElement[bool], ...]:
 
 def _content_filters(query: ContentQuery) -> tuple[ColumnElement[bool], ...]:
     filters: list[ColumnElement[bool]] = []
+    if query.tenant_id is not None:
+        filters.append(GeneratedContentRecord.tenant_id == query.tenant_id)
     if query.event_id is not None:
         filters.append(GeneratedContentRecord.event_id == query.event_id)
     if query.search is not None:
@@ -510,6 +569,8 @@ def _content_filters(query: ContentQuery) -> tuple[ColumnElement[bool], ...]:
 
 def _publication_filters(query: PublicationQuery) -> tuple[ColumnElement[bool], ...]:
     filters: list[ColumnElement[bool]] = []
+    if query.tenant_id is not None:
+        filters.append(PublicationRecord.tenant_id == query.tenant_id)
     if query.event_id is not None:
         filters.append(PublicationRecord.event_id == query.event_id)
     if query.content_id is not None:
@@ -661,6 +722,17 @@ def _window_filter(column: Any, window: DashboardWindow) -> ColumnElement[bool]:
     return and_(column >= window.starts_at, column < window.ends_at)
 
 
+def _window_filters(
+    column: Any,
+    tenant_column: Any,
+    window: DashboardWindow,
+) -> tuple[ColumnElement[bool], ...]:
+    filters = [_window_filter(column, window)]
+    if window.tenant_id is not None:
+        filters.append(tenant_column == window.tenant_id)
+    return tuple(filters)
+
+
 def _event_from_row(row: Any) -> EventRead:
     record = row[0]
     previous = row[1]
@@ -699,6 +771,7 @@ def _event_from_row(row: Any) -> EventRead:
         version=record.version,
         content_summary=_summary(row[3], row[4]),
         publication_summary=_summary(row[5], row[6]),
+        tenant_id=record.tenant_id,
     )
 
 
@@ -731,6 +804,7 @@ def _content_from_row(row: Any) -> ContentRead:
         completed_at=record.completed_at,
         version=record.version,
         publication_summary=_summary(row[1], row[2]),
+        tenant_id=record.tenant_id,
     )
 
 
@@ -756,6 +830,7 @@ def _publication_from_record(record: PublicationRecord) -> PublicationRead:
         created_at=record.created_at,
         updated_at=record.updated_at,
         version=record.version,
+        tenant_id=record.tenant_id,
     )
 
 
