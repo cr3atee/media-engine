@@ -5,9 +5,9 @@
 PostgreSQL persistence, the EPIC 12 runtime, EPIC 13 transactional market-event
 ingestion, durable scoring, generated content, publication-intent state, EPIC 14
 delivery orchestration, EPIC 15 administration API, EPIC 16 tenant identity
-foundation, and EPIC 16 authentication/authorization boundary are
-live-verified. EPIC 16 verification used isolated PostgreSQL 17.10 databases
-`epic16_verify` and `epic16_auth_verify` without using a project or production
+foundation, EPIC 16 authentication/authorization boundary, and EPIC 16
+tenant-scoped seller workflows are live-verified. EPIC 16 verification used
+isolated PostgreSQL 17.10 databases without using a project or production
 database. The current verified revision is `0011_auth_boundary`.
 
 ## Verified Schema
@@ -356,9 +356,43 @@ Offline verification passed:
 - Ruff and Ruff format for touched files;
 - Alembic offline `upgrade head --sql` generation.
 
-Live PostgreSQL verification is not yet complete for Task 3 because the current
-environment has no isolated PostgreSQL runtime: Docker Desktop daemon pipe
-`dockerDesktopLinuxEngine` is unavailable, `EPIC16_DATABASE_URL` is not set, and
-local `postgres`, `psql`, and `pg_isready` are absent. The guarded verifier
-`scripts/verify_epic16_seller_workflows_postgres.py` is present and requires an
-isolated `epic16_*` database before it will run.
+Live PostgreSQL verification later passed during EPIC 16 Task 4.
+
+## EPIC 16 Task 4 Final Isolation Readiness
+
+Task 4 verification used a temporary `postgres:17-alpine` container with
+PostgreSQL 17.10 and isolated database `epic16_task4_verify` on
+`127.0.0.1:55433`. No project or production database was used.
+
+The following PostgreSQL verifiers passed:
+
+- tenant isolation: `37/37`;
+- authentication boundary: `14/14`;
+- tenant-scoped seller workflows: `20/20`.
+
+The seller workflow verifier covers tenant-scoped read access, cross-tenant
+resource hiding, multi-tenant membership reads, tenant-scoped content and
+publication lists, dashboard isolation, content approvals, command idempotency,
+fingerprint conflicts, cross-tenant command blocking, tenant/user audit
+attribution, publication retry, permission denial, preserved internal admin
+behavior, fresh-session persistence, and rollback atomicity.
+
+Alembic verification passed:
+
+- clean upgrade through `0011_auth_boundary`;
+- `alembic current` reported `0011_auth_boundary (head)`;
+- `alembic check` reported no new upgrade operations;
+- downgrade from `0011_auth_boundary` to `0010_tenant_identity_foundation`;
+- upgrade back to head;
+- offline `upgrade head --sql` generation.
+
+Quality verification passed:
+
+- focused EPIC 16 seller/auth/repository/runner tests:
+  `48 passed, 1 skipped`;
+- full Pytest: `318 passed, 58 skipped`;
+- full MyPy: `305 source files`;
+- Ruff and Ruff format checks for EPIC 16 touched files.
+
+Full-repository Ruff and full-repository Ruff format still report pre-existing
+issues outside EPIC 16 scope. They were not changed during Task 4.

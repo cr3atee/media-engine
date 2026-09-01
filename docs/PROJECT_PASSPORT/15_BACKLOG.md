@@ -2,15 +2,11 @@
 
 ## Purpose
 
-This document lists only confirmed work remaining after EPIC 16 Task 3 offline
-implementation.
+This document lists only confirmed work remaining after EPIC 16 final isolation
+verification.
 
 ## Immediate
 
-- Run EPIC 16 Task 3 PostgreSQL verifier with an isolated `EPIC16_DATABASE_URL`
-  and record the results.
-- Complete EPIC 16 Task 4 final isolation/readiness verification before
-  exposing a public seller dashboard or seller API routes.
 - Define tenant-owned marketplace credential and integration management before
   tenant-specific ingestion is exposed.
 - If explicitly approved credentials and a test chat are available, run exactly

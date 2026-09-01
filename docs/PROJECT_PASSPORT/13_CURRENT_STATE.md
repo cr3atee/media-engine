@@ -45,12 +45,13 @@ reset request/completion, `/api/v1/me`, tenant context lookup, durable sessions,
 hashed tokens, centralized permissions, and `AuthorizationService` are present.
 The live auth verifier passed `14/14` checks at migration
 `0011_auth_boundary`.
-EPIC 16 Task 3 seller workflow scoping is implemented offline: existing event,
-generated-content, publication, dashboard, content-review, and
+EPIC 16 Task 3 seller workflow scoping is implemented and live-verified:
+existing event, generated-content, publication, dashboard, content-review, and
 publication-operation workflows now have tenant-scoped seller routes and
-tenant-aware audit attribution. Full Pytest, MyPy, Ruff, Ruff format, and
-Alembic offline SQL generation passed. Live PostgreSQL verification is pending
-until an isolated PostgreSQL runtime is available.
+tenant-aware audit attribution.
+EPIC 16 Task 4 final isolation readiness is complete: tenant isolation,
+authentication, seller workflow, Alembic lifecycle, full Pytest, MyPy, and
+focused Ruff/format verification passed against isolated PostgreSQL 17.10.
 
 ## Active Capabilities
 
@@ -195,6 +196,11 @@ until an isolated PostgreSQL runtime is available.
   `44 passed, 1 skipped`, focused runner/seller tests `16 passed`, full Pytest
   `318 passed, 58 skipped`, full MyPy `305` source files, Ruff, Ruff format,
   and Alembic offline `upgrade head --sql`.
+- EPIC 16 Task 4 final isolation verification passed against isolated
+  PostgreSQL 17.10 database `epic16_task4_verify`: tenant isolation `37/37`,
+  auth boundary `14/14`, seller workflows `20/20`, focused EPIC16 tests
+  `48 passed, 1 skipped`, full Pytest `318 passed, 58 skipped`, full MyPy `305`
+  source files, Alembic lifecycle, and focused Ruff/format checks.
 
 ## Known Gaps
 
@@ -207,8 +213,6 @@ until an isolated PostgreSQL runtime is available.
   confirmation, live flags, and PostgreSQL verification database were not
   supplied.
 - No production AI provider is wired into the marketplace pipeline.
-- EPIC 16 Task 3 live PostgreSQL verification is pending because the current
-  environment has no available isolated PostgreSQL runtime.
 - Tenant-owned marketplace credentials are not implemented yet.
 - Password hashing currently uses a standard-library PBKDF2 boundary so Task 2
   could remain dependency-neutral; production hardening should revisit Argon2id
@@ -233,6 +237,8 @@ adds a separate read model and API boundary without coupling HTTP transport to O
 or lifecycle repositories. EPIC 15 Task 2 adds guarded application commands with
 atomic immutable audit rows. EPIC 15 Task 3 completes the operational admin
 boundary with dashboard/readiness/OpenAPI hardening. EPIC 16 Task 1 adds durable
-tenant ownership and Task 2 adds seller authentication/authorization; the next
-architectural work should scope existing workflows through `TenantContext`
-before any public seller dashboard.
+tenant ownership, Task 2 adds seller authentication/authorization, Task 3 scopes
+existing workflows through `TenantContext`, and Task 4 verifies the complete
+tenant isolation loop against PostgreSQL. The next architectural work should
+define tenant-owned marketplace credentials and integration management before
+public seller launch.

@@ -116,6 +116,10 @@ This document tracks only work that is reflected by the current repository state
   marketplace runner tenant propagation coverage, full Pytest `318 passed, 58
   skipped`, MyPy `305` source files, Ruff, Ruff format, and Alembic offline SQL
   generation.
+- EPIC 16 Task 4 final isolation verification: tenant isolation `37/37`, auth
+  boundary `14/14`, seller workflows `20/20`, full Pytest `318 passed, 58
+  skipped`, MyPy `305` source files, Alembic lifecycle, and focused Ruff/format
+  checks against isolated PostgreSQL 17.10.
 
 ## Current Status
 
@@ -126,9 +130,9 @@ publication intent, PostgreSQL-verified Telegram delivery orchestration, guarded
 live-test tooling, Scheduler delegation, a PostgreSQL-verified read-only
   administration API, PostgreSQL-verified guarded administration commands with
 immutable audit history, and PostgreSQL-verified operational dashboard/readiness
-hardening. EPIC 16 has a verified tenant identity foundation, a verified seller
-authentication and tenant authorization boundary, and offline-verified
-tenant-scoped seller workflows pending live PostgreSQL verification.
+hardening. EPIC 16 is functionally complete for tenant identity, authentication,
+authorization, tenant-scoped seller workflows, and final PostgreSQL isolation
+readiness.
 
 ## Not Present Yet
 
@@ -137,10 +141,7 @@ tenant-scoped seller workflows pending live PostgreSQL verification.
 - Optional guarded live Telegram test-chat message.
 - Production AI provider integration in the pipeline.
 - Tenant-owned marketplace credential management.
-- EPIC 16 Task 3 live PostgreSQL verification for tenant-scoped seller
-  workflows.
-
 ## Recommended Next EPIC
 
-**Run EPIC 16 Task 4 final isolation verification once isolated PostgreSQL is
-available.**
+**Define tenant-owned marketplace credentials and integration management before
+public seller launch.**

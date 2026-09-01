@@ -111,9 +111,11 @@ This document captures architecture notes that are important for future reviews.
 - `MarketplaceApplicationRunner` is the tenant propagation point for ingestion:
   parsers remain tenant-unaware, while the runner stamps normalized offers with
   the configured tenant before snapshots and durable event identity are built.
-- EPIC 16 Task 3 PostgreSQL verification is pending until an isolated database
-  is available; do not treat offline tests as final proof of cross-tenant
-  database isolation.
+- EPIC 16 Task 4 closes the tenant isolation verification loop: live PostgreSQL
+  verifiers passed for tenant isolation, auth boundary, and seller workflows.
+  Public seller launch should now wait on tenant-owned marketplace credentials,
+  operational limits, and product-facing UI scope rather than core tenant
+  isolation.
 - GGSEL-specific price fields are not fully normalized into `ParsedOffer.price` and `ParsedOffer.currency` yet.
 
 ## Review Notes

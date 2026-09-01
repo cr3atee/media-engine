@@ -1,10 +1,8 @@
 # EPIC 16 - Seller Identity, Tenant Scoping and Authorization
 
-Status: Task 1 tenant identity foundation and Task 2 authentication/
-authorization boundary are implemented and verified against isolated PostgreSQL
-17.10. Task 3 seller workflow scoping is implemented and passes offline quality
-checks; live PostgreSQL verification is pending because no isolated PostgreSQL
-runtime is currently available.
+Status: EPIC 16 is functionally complete. Tenant identity, authentication,
+authorization, tenant-scoped seller workflows, and final isolation readiness are
+implemented and verified against isolated PostgreSQL 17.10.
 
 Baseline commit: `5341b1cda4bfc81c04e4e72f453ee7907685c732`.
 
@@ -49,6 +47,17 @@ Verified:
 - Task 3 full Pytest: `317 passed, 58 skipped`;
 - Task 3 full MyPy: `305 source files`;
 - Task 3 Alembic offline `upgrade head --sql` generation;
+- Task 4 live seller workflow verifier: `20/20` checks passed against isolated
+  database `epic16_task4_verify`;
+- Task 4 live PostgreSQL tenant isolation verifier: `37/37` checks passed
+  against isolated database `epic16_task4_verify`;
+- Task 4 live PostgreSQL auth verifier: `14/14` checks passed against isolated
+  database `epic16_task4_verify`;
+- Task 4 focused seller/auth/repository/runner tests:
+  `48 passed, 1 skipped`;
+- Task 4 full Pytest: `318 passed, 58 skipped`;
+- Task 4 full MyPy: `305 source files`;
+- Task 4 Ruff and Ruff format checks for EPIC 16 touched files;
 - Alembic current/check at `0011_auth_boundary`;
 - clean PostgreSQL downgrade to `0009_admin_actions` and upgrade back to head;
 - clean PostgreSQL downgrade from `0011_auth_boundary` to
@@ -58,11 +67,9 @@ Verified:
 The verifier uses only an isolated `epic16_*` database and exits safely without
 fabricating success when `EPIC16_DATABASE_URL` is missing.
 
-Task 3 live PostgreSQL verification is pending. Docker CLI is installed, but the
-Docker Desktop daemon pipe `dockerDesktopLinuxEngine` is unavailable in the
-current session, `EPIC16_DATABASE_URL` is not set, and local `postgres`, `psql`,
-and `pg_isready` are not available. Online `alembic current` and
-`alembic check` are blocked until an isolated PostgreSQL runtime is available.
+Task 4 verification used a temporary `postgres:17-alpine` container on
+`127.0.0.1:55433` and isolated database `epic16_task4_verify`. No production or
+project database was used.
 
 EPIC 15 is functionally complete for the internal administration API boundary.
 The current `/api/v1/admin` surface is intentionally internal: it exposes
@@ -73,8 +80,7 @@ immutable `admin_actions` audit rows behind `X-Admin-API-Key`.
 MediaEngine now has durable seller identity, user membership, token sessions,
 centralized tenant authorization, tenant-scoped seller workflow routes, and
 tenant-aware seller command audit attribution. Tenant-owned marketplace
-credentials are still not implemented. Public seller UI exposure should wait for
-Task 3 PostgreSQL verification and Task 4 final isolation readiness.
+credentials are still not implemented.
 
 ## 1. Current Verified Boundary
 
@@ -1253,19 +1259,19 @@ Keep EPIC 16 to four focused tasks.
   ingestion into parsed offers, snapshots, and durable event identity.
 - Tenant-aware seller command audit attribution is implemented.
 - Existing internal admin API behavior is preserved during transition.
-- PostgreSQL verifier is implemented but not yet executed because no isolated
-  PostgreSQL runtime is currently available.
+- PostgreSQL verifier was implemented during Task 3 and executed during Task 4;
+  it passed `20/20` checks against isolated PostgreSQL.
 - Tenant-owned marketplace integration management remains outside Task 3 and
-  must not be started before Task 4 verification closes the current isolation
-  loop.
+  was not started.
 
 ### Task 4 - Final isolation verification and readiness
 
-- Run full PostgreSQL tenant isolation verifier.
-- Run Alembic lifecycle and offline SQL.
-- Run full Pytest, MyPy, Ruff, and format checks.
-- Update documentation and readiness assessment.
-- Record remaining limitations before public seller UI.
+- Full PostgreSQL tenant isolation, auth, and seller workflow verifiers passed.
+- Alembic clean upgrade, current/check, downgrade/upgrade, and offline SQL
+  passed at `0011_auth_boundary`.
+- Full Pytest, MyPy, and focused Ruff/format checks passed.
+- Documentation and readiness assessment are updated.
+- Remaining limitations before public seller UI are recorded.
 
 ## 40. Acceptance Criteria
 
@@ -1292,15 +1298,14 @@ EPIC 16 is complete only when:
 
 ## 41. Recommended Next Implementation Task
 
-Continue with **Task 4 - Final isolation verification and readiness** once an
-isolated PostgreSQL runtime is available.
+Continue with the next EPIC only after product scope is confirmed for the public
+seller surface.
 
 Task 1 has already created the durable tenant-ownership foundation, Task 2 has
 created the seller authentication/authorization boundary, and Task 3 now routes
 existing reads and commands through `TenantContext` without changing their
-business behavior. The next safe step is to run the PostgreSQL verifier and
-final quality gates with an isolated `EPIC16_DATABASE_URL`.
+business behavior. Task 4 has verified the complete EPIC 16 isolation/readiness
+loop against an isolated PostgreSQL database.
 
 Do not begin public dashboard work, marketplace credential management, billing,
-or live tenant operations before Task 3 PostgreSQL verification and Task 4
-readiness are complete.
+or live tenant operations without an explicit next-EPIC scope.

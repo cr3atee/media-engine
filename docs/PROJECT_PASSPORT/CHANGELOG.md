@@ -6,6 +6,14 @@ This document records notable Project Passport updates.
 
 ## Unreleased
 
+- Completed EPIC 16 Task 4 final isolation verification against a temporary
+  isolated PostgreSQL 17.10 database `epic16_task4_verify`: tenant isolation
+  verifier `37/37`, auth verifier `14/14`, and seller workflow verifier `20/20`
+  passed.
+- Verified EPIC 16 Task 4 quality: focused EPIC16 tests `48 passed, 1 skipped`,
+  full Pytest `318 passed, 58 skipped`, full MyPy `305` source files, Alembic
+  clean upgrade/current/check/downgrade/upgrade/offline SQL, and focused
+  Ruff/Ruff format checks.
 - Implemented EPIC 16 Task 3 tenant-scoped seller workflow routes for existing
   event, generated-content, publication, dashboard, content-review, and
   publication-operation workflows.
@@ -19,8 +27,8 @@ This document records notable Project Passport updates.
 - Verified EPIC 16 Task 3 offline: focused seller/admin/auth tests, marketplace
   runner tenant propagation coverage, full Pytest `318 passed, 58 skipped`,
   full MyPy `305` source files, Ruff, Ruff format, and Alembic offline SQL.
-- Recorded that EPIC 16 Task 3 live PostgreSQL verification is pending because
-  the current environment has no available isolated PostgreSQL runtime.
+- Previously recorded the Task 3 live PostgreSQL verification blocker; Task 4
+  has now closed that blocker with isolated PostgreSQL verification.
 - Implemented EPIC 16 Task 2 authentication and authorization boundary:
   durable password credentials, hashed refresh sessions, hashed password reset
   tokens, short-lived signed access tokens, login/refresh/logout/reset routes,
