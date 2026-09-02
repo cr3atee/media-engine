@@ -7,9 +7,10 @@ ingestion, durable scoring, generated content, publication-intent state, EPIC 14
 delivery orchestration, EPIC 15 administration API, EPIC 16 tenant identity
 foundation, EPIC 16 authentication/authorization boundary, and EPIC 16
 tenant-scoped seller workflows are live-verified. EPIC 17 marketplace
-integration persistence foundation is also live-verified. EPIC 16 and EPIC 17
-verification used isolated PostgreSQL 17.10 databases without using a project or
-production database. The current verified revision is
+integration persistence, credential metadata redaction, and seller integration
+API boundaries are also live-verified. EPIC 16 and EPIC 17 verification used
+isolated PostgreSQL 17.10 databases without using a project or production
+database. The current verified revision is
 `0013_marketplace_credentials`.
 
 ## Verified Schema
@@ -477,3 +478,38 @@ Quality verification passed:
 - full Pytest: `329 passed, 58 skipped`;
 - full MyPy: `326 source files`;
 - Ruff and Ruff format checks for EPIC 17 Task 2 touched files.
+
+## EPIC 17 Task 3 Seller Integration API
+
+Task 3 introduced tenant-scoped seller API routes for marketplace integrations
+without adding a migration. The existing `marketplace_integrations` schema and
+credential metadata columns from revisions `0012` and `0013` remain the active
+persistence boundary.
+
+`scripts/verify_epic17_seller_integrations_postgres.py` was executed against a
+temporary `postgres:17-alpine` container with PostgreSQL 17.10 and isolated
+database `epic17_task3_verify`. No project or production database was used.
+
+All `16/16` verifier checks passed. The checks cover missing authentication,
+permission denial, empty tenant reads, create, tenant-scoped list, cross-tenant
+detail hiding, duplicate rollback safety, same identity allowed across tenants,
+update, stale update rejection, credential rotation redaction, stale credential
+rotation rejection, sanitized invalid payloads, disable, fresh-session
+credential metadata persistence, and no partial row after duplicate create.
+
+Alembic verification passed:
+
+- `alembic current` reported `0013_marketplace_credentials (head)`;
+- `alembic check` reported no new upgrade operations;
+- downgrade from `0013_marketplace_credentials` to
+  `0012_marketplace_integrations`;
+- upgrade back to head;
+- offline `upgrade head --sql` generation.
+
+Quality verification passed:
+
+- focused seller integration API and marketplace integration repository tests:
+  `16 passed`;
+- full Pytest: `334 passed, 58 skipped`;
+- full MyPy: `331 source files`;
+- Ruff and Ruff format checks for EPIC 17 Task 3 touched files.

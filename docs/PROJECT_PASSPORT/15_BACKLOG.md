@@ -2,14 +2,16 @@
 
 ## Purpose
 
-This document lists only confirmed work remaining after EPIC 17 Task 2.
+This document lists only confirmed work remaining after EPIC 17 Task 3.
 
 ## Immediate
 
-- Implement EPIC 17 Task 3: seller integration API routes for tenant-owned
-  marketplace integration metadata.
-- Keep credential routes tenant-scoped, permission-checked, redacted, and
-  rollback-safe before tenant-specific authenticated ingestion is exposed.
+- Implement EPIC 17 Task 4: Scheduler selection of enabled tenant-owned
+  marketplace integrations.
+- Exclude disabled integrations and deactivated tenants from automatic
+  marketplace work.
+- Keep parsers tenant-unaware; Scheduler should only select integration
+  configuration and delegate orchestration.
 - If explicitly approved credentials and a test chat are available, run exactly
   one guarded live Telegram test-chat verification.
 

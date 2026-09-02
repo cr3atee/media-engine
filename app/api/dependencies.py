@@ -27,6 +27,7 @@ from app.services.admin_queries import (
 from app.services.auth_tokens import AuthTokenError, SignedAccessTokenService
 from app.services.authentication import AuthenticationError, AuthenticationService
 from app.services.authorization import AuthorizationError, AuthorizationService
+from app.services.marketplace_integrations import MarketplaceIntegrationService
 from app.services.passwords import PasswordHasher
 from app.services.repository_scope import RepositoryScopeFactory
 
@@ -115,6 +116,13 @@ async def get_admin_mutation_service(request: Request) -> AdminMutationService:
         scope_factory,
         maximum_publication_attempts=int(maximum_attempts),
     )
+
+
+async def get_marketplace_integration_service(
+    request: Request,
+) -> MarketplaceIntegrationService:
+    """Build the seller marketplace integration service from app repositories."""
+    return MarketplaceIntegrationService(_repository_scope_factory(request))
 
 
 async def require_idempotency_key(

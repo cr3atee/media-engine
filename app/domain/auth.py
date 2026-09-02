@@ -26,6 +26,7 @@ class Permission(StrEnum):
     CONTENT_READ = "content_read"
     PUBLICATIONS_READ = "publications_read"
     DASHBOARD_READ = "dashboard_read"
+    INTEGRATIONS_READ = "integrations_read"
     CONTENT_REVIEW = "content_review"
     PUBLICATION_OPERATE = "publication_operate"
     AUDIT_READ = "audit_read"
@@ -200,6 +201,7 @@ ROLE_PERMISSIONS: dict[TenantRole, frozenset[Permission]] = {
             Permission.CONTENT_READ,
             Permission.PUBLICATIONS_READ,
             Permission.DASHBOARD_READ,
+            Permission.INTEGRATIONS_READ,
             Permission.CONTENT_REVIEW,
             Permission.PUBLICATION_OPERATE,
             Permission.AUDIT_READ,
@@ -214,6 +216,7 @@ ROLE_PERMISSIONS: dict[TenantRole, frozenset[Permission]] = {
             Permission.CONTENT_READ,
             Permission.PUBLICATIONS_READ,
             Permission.DASHBOARD_READ,
+            Permission.INTEGRATIONS_READ,
             Permission.CONTENT_REVIEW,
         }
     ),
@@ -223,6 +226,7 @@ ROLE_PERMISSIONS: dict[TenantRole, frozenset[Permission]] = {
             Permission.CONTENT_READ,
             Permission.PUBLICATIONS_READ,
             Permission.DASHBOARD_READ,
+            Permission.INTEGRATIONS_READ,
             Permission.PUBLICATION_OPERATE,
         }
     ),
@@ -232,6 +236,7 @@ ROLE_PERMISSIONS: dict[TenantRole, frozenset[Permission]] = {
             Permission.CONTENT_READ,
             Permission.PUBLICATIONS_READ,
             Permission.DASHBOARD_READ,
+            Permission.INTEGRATIONS_READ,
         }
     ),
 }

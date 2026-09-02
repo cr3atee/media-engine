@@ -126,6 +126,13 @@ This document captures architecture notes that are important for future reviews.
   Credential references are opaque internal metadata; repository rotation
   responses, audit metadata, logs, and future seller API responses must expose
   only redacted safe DTOs.
+- EPIC 17 Task 3 completed the seller integration API boundary. Seller routes
+  use `TenantContext`, `INTEGRATIONS_READ`, and `INTEGRATION_MANAGE`; mutation
+  endpoints stay action-style `POST` routes to preserve the existing OpenAPI
+  hardening policy.
+- Seller integration APIs return redacted credential metadata only. Raw
+  credential references remain internal repository metadata and are not returned
+  by HTTP responses.
 - Live marketplace credential material remains out of scope. Do not add
   plaintext credential columns or execution-time credential retrieval without an
   explicit secret-storage design.

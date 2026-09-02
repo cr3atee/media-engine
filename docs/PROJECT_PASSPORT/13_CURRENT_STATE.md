@@ -61,6 +61,10 @@ live-verified: opaque credential references, redacted safe DTOs, audit-safe
 rotation intent, memory/PostgreSQL credential-reference updates, and migration
 `0013_marketplace_credentials` are present. No live marketplace credential is
 stored or used yet.
+EPIC 17 Task 3 seller integration API is implemented and live-verified:
+tenant-scoped routes allow authorized seller users to list, read, create,
+update, disable, and rotate credential references for marketplace integrations
+without exposing raw credential material.
 
 ## Active Capabilities
 
@@ -227,6 +231,16 @@ stored or used yet.
   Pytest `329 passed, 58 skipped`, full MyPy `326` source files, Alembic
   lifecycle through `0013_marketplace_credentials`, and focused Ruff/format
   checks.
+- Tenant-scoped seller marketplace integration routes exist under
+  `/api/v1/tenants/{tenant_id}/marketplace-integrations`.
+- Seller integration reads use `INTEGRATIONS_READ`; create/update/disable and
+  credential rotation use `INTEGRATION_MANAGE`.
+- Seller integration API responses expose only redacted credential metadata and
+  stable sanitized errors.
+- EPIC 17 Task 3 verification passed: live PostgreSQL seller integration API
+  verifier `16/16`, focused API/repository tests `16 passed`, full Pytest
+  `334 passed, 58 skipped`, full MyPy `331` source files, Alembic lifecycle
+  through `0013_marketplace_credentials`, and focused Ruff/format checks.
 
 ## Known Gaps
 
@@ -239,7 +253,8 @@ stored or used yet.
   confirmation, live flags, and PostgreSQL verification database were not
   supplied.
 - No production AI provider is wired into the marketplace pipeline.
-- Seller marketplace integration API routes are not implemented yet.
+- Scheduler selection of enabled tenant-owned marketplace integrations is not
+  implemented yet.
 - Live marketplace credential storage and execution-time credential retrieval are
   not implemented yet.
 - Password hashing currently uses a standard-library PBKDF2 boundary so Task 2
@@ -269,6 +284,8 @@ tenant ownership, Task 2 adds seller authentication/authorization, Task 3 scopes
 existing workflows through `TenantContext`, and Task 4 verifies the complete
 tenant isolation loop against PostgreSQL. EPIC 17 Task 1 adds the tenant-owned
 marketplace integration persistence foundation. EPIC 17 Task 2 adds the
-credential metadata and redaction boundary without live credential use. The next
-architectural work should expose tenant-scoped seller integration API routes
-before Scheduler-driven tenant integration execution is introduced.
+credential metadata and redaction boundary without live credential use. EPIC 17
+Task 3 adds tenant-scoped seller integration routes with permission checks and
+redacted credential responses. The next architectural work should select enabled
+tenant integrations for Scheduler-driven execution without moving marketplace
+business logic into Scheduler.

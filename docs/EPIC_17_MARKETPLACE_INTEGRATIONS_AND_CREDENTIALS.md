@@ -1,8 +1,9 @@
 # EPIC 17 - Marketplace Integrations and Credentials
 
-Status: Task 1 integration domain and schema foundation and Task 2 credential
-metadata/redaction boundary are implemented and verified against isolated
-PostgreSQL 17.10. Task 3 seller integration API is not started.
+Status: Task 1 integration domain and schema foundation, Task 2 credential
+metadata/redaction boundary, and Task 3 seller integration API are implemented
+and verified against isolated PostgreSQL 17.10. Task 4 Scheduler integration
+selection is not started.
 
 EPIC 17 defines tenant-owned marketplace integration configuration and the
 credential boundary required before tenant-specific ingestion can be exposed to
@@ -19,6 +20,13 @@ migration `0013_marketplace_credentials`, focused tests, and guarded PostgreSQL
 verification. It does not implement plaintext credential storage, live
 marketplace authentication, billing, Telegram delivery, seller routes, or seller
 UI.
+
+Task 3 implements tenant-scoped seller routes for listing, reading, creating,
+updating, disabling, and rotating credential references for marketplace
+integrations. It enforces centralized `TenantContext` permissions, returns
+stable sanitized API errors, and exposes only redacted credential metadata. It
+does not implement Scheduler selection, live credential use, plaintext secret
+storage, billing, Telegram delivery, or seller UI.
 
 ## Task 1 Verification
 
@@ -68,6 +76,35 @@ The verifier covers credential metadata columns, constraints and indexes,
 tenant-scoped integration behavior, credential-reference persistence,
 redacted update responses, stale version rejection, fresh-session persistence,
 rollback safety, and tenant-scoped uniqueness.
+
+## Task 3 Verification
+
+Task 3 verification used a temporary `postgres:17-alpine` container with
+PostgreSQL 17.10 and isolated database `epic17_task3_verify` on
+`127.0.0.1:55436`. No project or production database was used.
+
+Verified:
+
+- PostgreSQL seller API verifier
+  `scripts/verify_epic17_seller_integrations_postgres.py`: `16/16` checks
+  passed;
+- focused seller integration API and marketplace integration repository tests:
+  `16 passed`;
+- full Pytest: `334 passed, 58 skipped`;
+- full MyPy: `331 source files`;
+- Ruff and Ruff format checks for EPIC 17 Task 3 touched files;
+- Alembic current at `0013_marketplace_credentials (head)`;
+- `alembic check`: no new upgrade operations;
+- downgrade from `0013_marketplace_credentials` to
+  `0012_marketplace_integrations`;
+- upgrade back to head;
+- offline `upgrade head --sql`.
+
+The verifier covers missing authentication, permission denial, tenant-scoped
+reads, cross-tenant hiding, create/update/disable operations, credential
+rotation redaction, stale version rejection, invalid payload sanitization,
+tenant-scoped uniqueness, duplicate rollback safety, and fresh-session
+credential metadata persistence.
 
 ## 1. Goal
 
@@ -320,10 +357,11 @@ EPIC 17 is complete only when verification proves:
 
 ### Task 3 - Seller integration API
 
-- Add tenant-scoped seller routes for integration metadata.
-- Enforce centralized permissions through `TenantContext`.
-- Preserve stable sanitized API errors.
-- Verify cross-tenant isolation, version conflicts, and rollback.
+- Tenant-scoped seller routes for integration metadata are implemented.
+- Centralized permissions are enforced through `TenantContext`.
+- Stable sanitized API errors are preserved.
+- Cross-tenant isolation, version conflicts, rollback, and redacted credential
+  responses are verified.
 
 ### Task 4 - Scheduler integration selection
 
@@ -357,8 +395,9 @@ EPIC 17 is complete only when:
 
 ## 15. Recommended Next Implementation Task
 
-Continue with **Task 3 - Seller integration API**.
+Continue with **Task 4 - Scheduler integration selection**.
 
 Do not implement live credential use or Scheduler-driven authenticated
-marketplace ingestion until seller integration routes are tenant-scoped,
-permission-checked, rollback-safe, and verified against PostgreSQL.
+marketplace ingestion until enabled tenant integration selection is implemented,
+disabled/deactivated integrations are excluded, and the orchestration path is
+verified against PostgreSQL.

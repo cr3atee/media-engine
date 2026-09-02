@@ -6,6 +6,14 @@ This document records notable Project Passport updates.
 
 ## Unreleased
 
+- Implemented EPIC 17 Task 3 seller integration API: tenant-scoped routes for
+  listing, reading, creating, updating, disabling, and rotating credential
+  references for marketplace integrations.
+- Verified EPIC 17 Task 3 against isolated PostgreSQL 17.10 database
+  `epic17_task3_verify`: seller API verifier `16/16`, focused API/repository
+  tests `16 passed`, full Pytest `334 passed, 58 skipped`, full MyPy `331`
+  source files, Alembic current/check/downgrade/upgrade/offline SQL, and focused
+  Ruff/Ruff format checks.
 - Implemented EPIC 17 Task 2 credential metadata and redaction boundary:
   opaque credential-reference metadata, redacted safe DTOs, audit-safe rotation
   intent, memory/PostgreSQL repository updates, SQLAlchemy metadata, and
