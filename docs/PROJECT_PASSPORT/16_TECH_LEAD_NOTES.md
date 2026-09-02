@@ -119,6 +119,9 @@ This document captures architecture notes that are important for future reviews.
 - EPIC 17 should start with integration identity and persistence only. Do not
   store live marketplace credentials until the credential-reference, redaction,
   audit, and key-management boundaries are explicitly verified.
+- EPIC 17 Task 1 completed the integration identity and persistence foundation.
+  `marketplace_integrations` stores tenant-owned metadata only; no live secrets
+  or credential references are persisted yet.
 - GGSEL-specific price fields are not fully normalized into `ParsedOffer.price` and `ParsedOffer.currency` yet.
 
 ## Review Notes

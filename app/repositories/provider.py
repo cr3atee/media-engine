@@ -14,6 +14,7 @@ from app.repositories.auth import (
 from app.repositories.canonical_products import CanonicalProductRepository
 from app.repositories.events import MarketEventRepository
 from app.repositories.generated_contents import GeneratedContentRepository
+from app.repositories.marketplace_integrations import MarketplaceIntegrationRepository
 from app.repositories.memberships import MembershipRepository
 from app.repositories.memory import (
     MemoryAdminActionRepository,
@@ -21,6 +22,7 @@ from app.repositories.memory import (
     MemoryCanonicalProductRepository,
     MemoryGeneratedContentRepository,
     MemoryMarketEventRepository,
+    MemoryMarketplaceIntegrationRepository,
     MemoryMembershipRepository,
     MemoryOfferRepository,
     MemoryPasswordCredentialRepository,
@@ -37,6 +39,7 @@ from app.repositories.postgres import (
     PostgresCanonicalProductRepository,
     PostgresGeneratedContentRepository,
     PostgresMarketEventRepository,
+    PostgresMarketplaceIntegrationRepository,
     PostgresMembershipRepository,
     PostgresOfferRepository,
     PostgresPasswordCredentialRepository,
@@ -64,6 +67,9 @@ class RepositoryProvider:
     events: MarketEventRepository
     generated_contents: GeneratedContentRepository
     publications: PublicationRepository
+    marketplace_integrations: MarketplaceIntegrationRepository = field(
+        default_factory=MemoryMarketplaceIntegrationRepository,
+    )
     admin_actions: AdminActionRepository = field(
         default_factory=MemoryAdminActionRepository,
     )
@@ -93,6 +99,7 @@ def create_memory_provider() -> RepositoryProvider:
         events=MemoryMarketEventRepository(),
         generated_contents=MemoryGeneratedContentRepository(),
         publications=MemoryPublicationRepository(),
+        marketplace_integrations=MemoryMarketplaceIntegrationRepository(),
         users=MemoryUserRepository(),
         tenants=MemoryTenantRepository(),
         memberships=MemoryMembershipRepository(),
@@ -112,6 +119,7 @@ def create_postgres_provider(session: AsyncSession) -> RepositoryProvider:
         events=PostgresMarketEventRepository(session),
         generated_contents=PostgresGeneratedContentRepository(session),
         publications=PostgresPublicationRepository(session),
+        marketplace_integrations=PostgresMarketplaceIntegrationRepository(session),
         users=PostgresUserRepository(session),
         tenants=PostgresTenantRepository(session),
         memberships=PostgresMembershipRepository(session),

@@ -121,6 +121,11 @@ This document tracks only work that is reflected by the current repository state
   skipped`, MyPy `305` source files, Alembic lifecycle, and focused Ruff/format
   checks against isolated PostgreSQL 17.10.
 - EPIC 17 marketplace integrations and credentials specification.
+- EPIC 17 Task 1 marketplace integration foundation: domain contract,
+  repository contract, memory/PostgreSQL repositories, provider wiring,
+  migration `0012_marketplace_integrations`, live PostgreSQL verifier `12/12`,
+  full Pytest `325 passed, 58 skipped`, MyPy `312` source files, Alembic
+  lifecycle, and focused Ruff/format checks.
 
 ## Current Status
 
@@ -133,7 +138,8 @@ live-test tooling, Scheduler delegation, a PostgreSQL-verified read-only
 immutable audit history, and PostgreSQL-verified operational dashboard/readiness
 hardening. EPIC 16 is functionally complete for tenant identity, authentication,
 authorization, tenant-scoped seller workflows, and final PostgreSQL isolation
-readiness.
+readiness. EPIC 17 Task 1 has introduced the tenant-owned marketplace
+integration persistence foundation.
 
 ## Not Present Yet
 
@@ -141,10 +147,8 @@ readiness.
 - Scheduler overlap and multi-process coordination.
 - Optional guarded live Telegram test-chat message.
 - Production AI provider integration in the pipeline.
-- Tenant-owned marketplace credential management.
+- Marketplace credential metadata, redaction/audit handling, and live credential
+  storage.
 ## Recommended Next EPIC
 
-**Define tenant-owned marketplace credentials and integration management before
-public seller launch.**
-
-Start with EPIC 17 Task 1: integration domain and schema foundation.
+**Continue EPIC 17 with Task 2: credential metadata and redaction boundary.**

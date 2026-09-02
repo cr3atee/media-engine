@@ -1,14 +1,40 @@
 # EPIC 17 - Marketplace Integrations and Credentials
 
-Status: design ready; implementation not started.
+Status: Task 1 integration domain and schema foundation is implemented and
+verified against isolated PostgreSQL 17.10. Task 2 credential metadata and
+redaction boundary is not started.
 
 EPIC 17 defines tenant-owned marketplace integration configuration and the
 credential boundary required before tenant-specific ingestion can be exposed to
 seller users.
 
-This document is documentation only. It does not implement code, migrations,
-credentials, live marketplace authentication, billing, Telegram delivery, or
-seller UI.
+Task 1 implements only integration identity, repository contracts,
+memory/PostgreSQL persistence, provider wiring, migration
+`0012_marketplace_integrations`, focused tests, and guarded PostgreSQL
+verification. It does not implement credentials, live marketplace
+authentication, billing, Telegram delivery, or seller UI.
+
+## Task 1 Verification
+
+Task 1 verification used a temporary `postgres:17-alpine` container with
+PostgreSQL 17.10 and isolated database `epic17_task1_verify` on
+`127.0.0.1:55434`. No project or production database was used.
+
+Verified:
+
+- PostgreSQL verifier `scripts/verify_epic17_marketplace_integrations_postgres.py`:
+  `12/12` checks passed;
+- focused marketplace integration tests: `7 passed`;
+- focused repository tests: `27 passed`;
+- full Pytest: `325 passed, 58 skipped`;
+- full MyPy: `312 source files`;
+- Ruff and Ruff format checks for EPIC 17 touched files;
+- Alembic clean upgrade through `0012_marketplace_integrations`;
+- `alembic current`: `0012_marketplace_integrations (head)`;
+- `alembic check`: no new upgrade operations;
+- downgrade from `0012_marketplace_integrations` to `0011_auth_boundary`;
+- upgrade back to head;
+- offline `upgrade head --sql`.
 
 ## 1. Goal
 
@@ -82,7 +108,7 @@ Recommended fields:
 | `external_account_id` | Marketplace account identifier when available. |
 | `source_url` | Public/category/source URL when the marketplace flow uses one. |
 | `auth_type` | Credential mode, for example `none`, `api_key`, `cookie`, or `session`. |
-| `credential_reference` | Opaque reference to stored credential material, not the secret itself. |
+| `credential_reference` | Planned for Task 2; opaque reference to stored credential material, not the secret itself. |
 | `last_successful_run_at` | Last successful ingestion timestamp. |
 | `last_failed_run_at` | Last failed ingestion timestamp. |
 | `last_error_code` | Safe machine-readable error code. |
@@ -239,12 +265,14 @@ EPIC 17 is complete only when verification proves:
 
 ### Task 1 - Integration domain and schema foundation
 
-- Add marketplace integration domain contracts.
-- Add repository interfaces and memory implementations.
-- Add PostgreSQL table and migration after `0011_auth_boundary`.
-- Add tenant-scoped uniqueness, indexes, foreign keys, and optimistic version
-  constraints.
-- Verify memory/PostgreSQL behavior alignment.
+- Marketplace integration domain contracts are implemented.
+- Repository interface, memory implementation, and PostgreSQL implementation are
+  implemented.
+- PostgreSQL table and migration `0012_marketplace_integrations` after
+  `0011_auth_boundary` are implemented.
+- Tenant-scoped uniqueness, indexes, foreign keys, and optimistic version
+  constraints are implemented.
+- Memory/PostgreSQL behavior alignment is verified.
 
 ### Task 2 - Credential metadata and redaction boundary
 
@@ -292,8 +320,7 @@ EPIC 17 is complete only when:
 
 ## 15. Recommended First Implementation Task
 
-Start with **Task 1 - Integration domain and schema foundation**.
+Continue with **Task 2 - Credential metadata and redaction boundary**.
 
-Do not implement live credential storage in Task 1. First create the tenant-owned
-integration identity and persistence boundary, then layer credential handling on
-top of that verified foundation.
+Do not implement live credential storage until the credential-reference,
+redaction, audit, and key-management boundaries are explicitly verified.

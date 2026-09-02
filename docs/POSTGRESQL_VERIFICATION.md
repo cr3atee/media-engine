@@ -6,9 +6,11 @@ PostgreSQL persistence, the EPIC 12 runtime, EPIC 13 transactional market-event
 ingestion, durable scoring, generated content, publication-intent state, EPIC 14
 delivery orchestration, EPIC 15 administration API, EPIC 16 tenant identity
 foundation, EPIC 16 authentication/authorization boundary, and EPIC 16
-tenant-scoped seller workflows are live-verified. EPIC 16 verification used
-isolated PostgreSQL 17.10 databases without using a project or production
-database. The current verified revision is `0011_auth_boundary`.
+tenant-scoped seller workflows are live-verified. EPIC 17 marketplace
+integration persistence foundation is also live-verified. EPIC 16 and EPIC 17
+verification used isolated PostgreSQL 17.10 databases without using a project or
+production database. The current verified revision is
+`0012_marketplace_integrations`.
 
 ## Verified Schema
 
@@ -396,3 +398,38 @@ Quality verification passed:
 
 Full-repository Ruff and full-repository Ruff format still report pre-existing
 issues outside EPIC 16 scope. They were not changed during Task 4.
+
+## EPIC 17 Task 1 Marketplace Integration Foundation
+
+Task 1 introduced tenant-owned marketplace integration metadata without storing
+live credentials or plaintext secrets. It added the domain contract, repository
+contract, memory repository, PostgreSQL repository, `RepositoryProvider` wiring,
+SQLAlchemy metadata, and migration `0012_marketplace_integrations`.
+
+`scripts/verify_epic17_marketplace_integrations_postgres.py` was executed
+against a temporary `postgres:17-alpine` container with PostgreSQL 17.10 and
+isolated database `epic17_task1_verify` on `127.0.0.1:55434`. No project or
+production database was used.
+
+All `12/12` verifier checks passed. The checks cover table creation,
+constraints/indexes, tenant-scoped identity for external accounts and source
+URLs, cross-tenant detail hiding, tenant-isolated lists, enabled-active
+selection, updates, duplicate rejection within one tenant, fresh-session
+persistence, and rollback atomicity.
+
+Alembic verification passed:
+
+- clean upgrade through `0012_marketplace_integrations`;
+- `alembic current` reported `0012_marketplace_integrations (head)`;
+- `alembic check` reported no new upgrade operations;
+- downgrade from `0012_marketplace_integrations` to `0011_auth_boundary`;
+- upgrade back to head;
+- offline `upgrade head --sql` generation.
+
+Quality verification passed:
+
+- focused marketplace integration tests: `7 passed`;
+- focused repository tests: `27 passed`;
+- full Pytest: `325 passed, 58 skipped`;
+- full MyPy: `312 source files`;
+- Ruff and Ruff format checks for EPIC 17 touched files.

@@ -52,6 +52,10 @@ tenant-aware audit attribution.
 EPIC 16 Task 4 final isolation readiness is complete: tenant isolation,
 authentication, seller workflow, Alembic lifecycle, full Pytest, MyPy, and
 focused Ruff/format verification passed against isolated PostgreSQL 17.10.
+EPIC 17 Task 1 marketplace integration foundation is implemented and
+live-verified: tenant-owned integration metadata, repository contracts,
+memory/PostgreSQL persistence, provider wiring, and migration
+`0012_marketplace_integrations` are present. No live credentials are stored yet.
 
 ## Active Capabilities
 
@@ -201,6 +205,14 @@ focused Ruff/format verification passed against isolated PostgreSQL 17.10.
   auth boundary `14/14`, seller workflows `20/20`, focused EPIC16 tests
   `48 passed, 1 skipped`, full Pytest `318 passed, 58 skipped`, full MyPy `305`
   source files, Alembic lifecycle, and focused Ruff/format checks.
+- Tenant-owned marketplace integrations can be represented, persisted, listed
+  per tenant, selected for enabled active runs, and verified across memory and
+  PostgreSQL repositories.
+- EPIC 17 Task 1 verification passed: live PostgreSQL integration verifier
+  `12/12`, focused marketplace integration tests `7 passed`, focused repository
+  tests `27 passed`, full Pytest `325 passed, 58 skipped`, full MyPy `312`
+  source files, Alembic lifecycle through `0012_marketplace_integrations`, and
+  focused Ruff/format checks.
 
 ## Known Gaps
 
@@ -213,7 +225,8 @@ focused Ruff/format verification passed against isolated PostgreSQL 17.10.
   confirmation, live flags, and PostgreSQL verification database were not
   supplied.
 - No production AI provider is wired into the marketplace pipeline.
-- Tenant-owned marketplace credentials are not implemented yet.
+- Marketplace credential references, redaction/audit handling, and live
+  credential storage are not implemented yet.
 - Password hashing currently uses a standard-library PBKDF2 boundary so Task 2
   could remain dependency-neutral; production hardening should revisit Argon2id
   if adding a dependency is approved.
@@ -239,6 +252,7 @@ atomic immutable audit rows. EPIC 15 Task 3 completes the operational admin
 boundary with dashboard/readiness/OpenAPI hardening. EPIC 16 Task 1 adds durable
 tenant ownership, Task 2 adds seller authentication/authorization, Task 3 scopes
 existing workflows through `TenantContext`, and Task 4 verifies the complete
-tenant isolation loop against PostgreSQL. The next architectural work should
-define tenant-owned marketplace credentials and integration management before
-public seller launch.
+tenant isolation loop against PostgreSQL. EPIC 17 Task 1 adds the tenant-owned
+marketplace integration persistence foundation. The next architectural work
+should define credential metadata, redaction, audit, and safe rotation before
+live marketplace credentials are accepted.

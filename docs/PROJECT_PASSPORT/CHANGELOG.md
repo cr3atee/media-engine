@@ -6,6 +6,15 @@ This document records notable Project Passport updates.
 
 ## Unreleased
 
+- Implemented EPIC 17 Task 1 marketplace integration foundation: tenant-owned
+  integration domain contract, repository interface, memory/PostgreSQL
+  repositories, `RepositoryProvider` wiring, SQLAlchemy metadata, and migration
+  `0012_marketplace_integrations`.
+- Verified EPIC 17 Task 1 against isolated PostgreSQL 17.10 database
+  `epic17_task1_verify`: verifier `12/12`, Alembic clean upgrade/current/check/
+  downgrade/upgrade/offline SQL, focused tests, full Pytest
+  `325 passed, 58 skipped`, full MyPy `312` source files, and focused
+  Ruff/Ruff format checks.
 - Added EPIC 17 marketplace integrations and credentials specification,
   defining the tenant-owned integration boundary, credential redaction
   requirements, PostgreSQL schema direction, repository/API/Scheduler

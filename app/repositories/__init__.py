@@ -10,6 +10,7 @@ from app.repositories.base import BaseRepository, RepositoryIdentityConflictErro
 from app.repositories.canonical_products import CanonicalProductRepository
 from app.repositories.events import MarketEventRepository
 from app.repositories.generated_contents import GeneratedContentRepository
+from app.repositories.marketplace_integrations import MarketplaceIntegrationRepository
 from app.repositories.memberships import MembershipRepository
 from app.repositories.offers import OfferRepository
 from app.repositories.price_history import PriceHistoryRepository
@@ -24,6 +25,7 @@ __all__ = (
     "CanonicalProductRepository",
     "GeneratedContentRepository",
     "MarketEventRepository",
+    "MarketplaceIntegrationRepository",
     "MembershipRepository",
     "OfferRepository",
     "PasswordCredentialRepository",
