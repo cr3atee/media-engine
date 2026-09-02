@@ -56,6 +56,11 @@ EPIC 17 Task 1 marketplace integration foundation is implemented and
 live-verified: tenant-owned integration metadata, repository contracts,
 memory/PostgreSQL persistence, provider wiring, and migration
 `0012_marketplace_integrations` are present. No live credentials are stored yet.
+EPIC 17 Task 2 credential metadata and redaction boundary is implemented and
+live-verified: opaque credential references, redacted safe DTOs, audit-safe
+rotation intent, memory/PostgreSQL credential-reference updates, and migration
+`0013_marketplace_credentials` are present. No live marketplace credential is
+stored or used yet.
 
 ## Active Capabilities
 
@@ -213,6 +218,15 @@ memory/PostgreSQL persistence, provider wiring, and migration
   tests `27 passed`, full Pytest `325 passed, 58 skipped`, full MyPy `312`
   source files, Alembic lifecycle through `0012_marketplace_integrations`, and
   focused Ruff/format checks.
+- Marketplace integration credential references can be persisted as opaque
+  metadata and updated through optimistic-version guarded repository methods.
+- Credential update responses use redacted safe DTOs; audit metadata records a
+  constant redaction marker instead of the raw reference.
+- EPIC 17 Task 2 verification passed: live PostgreSQL integration verifier
+  `18/18`, focused marketplace integration repository tests `11 passed`, full
+  Pytest `329 passed, 58 skipped`, full MyPy `326` source files, Alembic
+  lifecycle through `0013_marketplace_credentials`, and focused Ruff/format
+  checks.
 
 ## Known Gaps
 
@@ -225,8 +239,9 @@ memory/PostgreSQL persistence, provider wiring, and migration
   confirmation, live flags, and PostgreSQL verification database were not
   supplied.
 - No production AI provider is wired into the marketplace pipeline.
-- Marketplace credential references, redaction/audit handling, and live
-  credential storage are not implemented yet.
+- Seller marketplace integration API routes are not implemented yet.
+- Live marketplace credential storage and execution-time credential retrieval are
+  not implemented yet.
 - Password hashing currently uses a standard-library PBKDF2 boundary so Task 2
   could remain dependency-neutral; production hardening should revisit Argon2id
   if adding a dependency is approved.
@@ -253,6 +268,7 @@ boundary with dashboard/readiness/OpenAPI hardening. EPIC 16 Task 1 adds durable
 tenant ownership, Task 2 adds seller authentication/authorization, Task 3 scopes
 existing workflows through `TenantContext`, and Task 4 verifies the complete
 tenant isolation loop against PostgreSQL. EPIC 17 Task 1 adds the tenant-owned
-marketplace integration persistence foundation. The next architectural work
-should define credential metadata, redaction, audit, and safe rotation before
-live marketplace credentials are accepted.
+marketplace integration persistence foundation. EPIC 17 Task 2 adds the
+credential metadata and redaction boundary without live credential use. The next
+architectural work should expose tenant-scoped seller integration API routes
+before Scheduler-driven tenant integration execution is introduced.

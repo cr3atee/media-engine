@@ -1,11 +1,15 @@
 from __future__ import annotations
 
 from collections.abc import Sequence
+from dataclasses import replace
 from uuid import UUID
 
 from app.domain.marketplace_integrations import (
+    CredentialRotationIntent,
     MarketplaceIntegration,
     MarketplaceIntegrationStatus,
+    SafeMarketplaceIntegration,
+    safe_marketplace_integration,
 )
 from app.repositories.base import RepositoryIdentityConflictError
 from app.repositories.marketplace_integrations import (
@@ -74,6 +78,28 @@ class MemoryMarketplaceIntegrationRepository(MarketplaceIntegrationRepository):
             for integration in self._iter_ordered()
             if integration.tenant_id == tenant_id and _is_enabled_active(integration)
         )
+
+    async def update_credential_reference(
+        self,
+        intent: CredentialRotationIntent,
+    ) -> SafeMarketplaceIntegration | None:
+        """Attach a credential reference and return a redacted integration view."""
+        integration = self._integrations_by_id.get(intent.integration_id)
+        if integration is None or integration.tenant_id != intent.tenant_id:
+            return None
+        if integration.version != intent.expected_version:
+            return None
+
+        updated = replace(
+            integration,
+            auth_type=intent.auth_type,
+            credential=intent.credential,
+            updated_at=intent.requested_at,
+            version=integration.version + 1,
+        )
+        self._ensure_unique_identity(updated)
+        self._integrations_by_id[updated.id] = updated
+        return safe_marketplace_integration(updated)
 
     def _iter_ordered(self) -> tuple[MarketplaceIntegration, ...]:
         return tuple(

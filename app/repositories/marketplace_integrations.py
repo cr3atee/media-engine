@@ -4,7 +4,11 @@ from abc import abstractmethod
 from collections.abc import Sequence
 from uuid import UUID
 
-from app.domain.marketplace_integrations import MarketplaceIntegration
+from app.domain.marketplace_integrations import (
+    CredentialRotationIntent,
+    MarketplaceIntegration,
+    SafeMarketplaceIntegration,
+)
 from app.repositories.base import BaseRepository
 
 
@@ -40,3 +44,10 @@ class MarketplaceIntegrationRepository(BaseRepository):
         tenant_id: UUID,
     ) -> Sequence[MarketplaceIntegration]:
         """Return enabled active integrations owned by one tenant."""
+
+    @abstractmethod
+    async def update_credential_reference(
+        self,
+        intent: CredentialRotationIntent,
+    ) -> SafeMarketplaceIntegration | None:
+        """Attach a credential reference and return only redacted metadata."""

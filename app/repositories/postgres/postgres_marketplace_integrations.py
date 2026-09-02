@@ -7,9 +7,13 @@ from sqlalchemy import Select, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.domain.marketplace_integrations import (
+    CredentialRotationIntent,
     MarketplaceAuthType,
+    MarketplaceCredentialMetadata,
     MarketplaceIntegration,
     MarketplaceIntegrationStatus,
+    SafeMarketplaceIntegration,
+    safe_marketplace_integration,
 )
 from app.models.marketplace_integration_record import MarketplaceIntegrationRecord
 from app.repositories.base import RepositoryIdentityConflictError
@@ -95,6 +99,33 @@ class PostgresMarketplaceIntegrationRepository(MarketplaceIntegrationRepository)
         )
         return tuple(_to_domain(record) for record in result.scalars())
 
+    async def update_credential_reference(
+        self,
+        intent: CredentialRotationIntent,
+    ) -> SafeMarketplaceIntegration | None:
+        """Attach a credential reference and return a redacted integration view."""
+        result = await self._session.execute(
+            select(MarketplaceIntegrationRecord)
+            .where(
+                MarketplaceIntegrationRecord.id == intent.integration_id,
+                MarketplaceIntegrationRecord.tenant_id == intent.tenant_id,
+            )
+            .with_for_update()
+        )
+        record = result.scalar_one_or_none()
+        if record is None or record.version != intent.expected_version:
+            return None
+
+        record.auth_type = intent.auth_type.value
+        record.credential_reference = intent.credential.reference
+        record.credential_configured_at = intent.credential.configured_at
+        record.credential_last_rotated_at = intent.credential.last_rotated_at
+        record.credential_version = intent.credential.version
+        record.updated_at = intent.requested_at
+        record.version += 1
+        await self._session.flush()
+        return safe_marketplace_integration(_to_domain(record))
+
     async def _ensure_unique_identity(
         self,
         integration: MarketplaceIntegration,
@@ -159,6 +190,7 @@ def _enabled_query() -> Select[tuple[MarketplaceIntegrationRecord]]:
 
 
 def _to_record(integration: MarketplaceIntegration) -> MarketplaceIntegrationRecord:
+    credential = integration.credential
     return MarketplaceIntegrationRecord(
         id=integration.id,
         tenant_id=integration.tenant_id,
@@ -169,6 +201,14 @@ def _to_record(integration: MarketplaceIntegration) -> MarketplaceIntegrationRec
         external_account_id=integration.external_account_id,
         source_url=integration.source_url,
         auth_type=integration.auth_type.value,
+        credential_reference=credential.reference if credential is not None else None,
+        credential_configured_at=credential.configured_at
+        if credential is not None
+        else None,
+        credential_last_rotated_at=credential.last_rotated_at
+        if credential is not None
+        else None,
+        credential_version=credential.version if credential is not None else 0,
         last_successful_run_at=integration.last_successful_run_at,
         last_failed_run_at=integration.last_failed_run_at,
         last_error_code=integration.last_error_code,
@@ -183,6 +223,7 @@ def _update_record(
     record: MarketplaceIntegrationRecord,
     integration: MarketplaceIntegration,
 ) -> None:
+    credential = integration.credential
     record.marketplace = integration.marketplace
     record.display_name = integration.display_name
     record.enabled = integration.enabled
@@ -190,6 +231,16 @@ def _update_record(
     record.external_account_id = integration.external_account_id
     record.source_url = integration.source_url
     record.auth_type = integration.auth_type.value
+    record.credential_reference = (
+        credential.reference if credential is not None else None
+    )
+    record.credential_configured_at = (
+        credential.configured_at if credential is not None else None
+    )
+    record.credential_last_rotated_at = (
+        credential.last_rotated_at if credential is not None else None
+    )
+    record.credential_version = credential.version if credential is not None else 0
     record.last_successful_run_at = integration.last_successful_run_at
     record.last_failed_run_at = integration.last_failed_run_at
     record.last_error_code = integration.last_error_code
@@ -209,6 +260,7 @@ def _to_domain(record: MarketplaceIntegrationRecord) -> MarketplaceIntegration:
         external_account_id=record.external_account_id,
         source_url=record.source_url,
         auth_type=MarketplaceAuthType(record.auth_type),
+        credential=_to_credential_metadata(record),
         last_successful_run_at=record.last_successful_run_at,
         last_failed_run_at=record.last_failed_run_at,
         last_error_code=record.last_error_code,
@@ -216,4 +268,21 @@ def _to_domain(record: MarketplaceIntegrationRecord) -> MarketplaceIntegration:
         created_at=record.created_at,
         updated_at=record.updated_at,
         version=record.version,
+    )
+
+
+def _to_credential_metadata(
+    record: MarketplaceIntegrationRecord,
+) -> MarketplaceCredentialMetadata | None:
+    if record.credential_reference is None:
+        return None
+    configured_at = record.credential_configured_at
+    if configured_at is None:
+        msg = "Credential metadata is missing configuration timestamp."
+        raise RuntimeError(msg)
+    return MarketplaceCredentialMetadata(
+        reference=record.credential_reference,
+        configured_at=configured_at,
+        last_rotated_at=record.credential_last_rotated_at,
+        version=record.credential_version,
     )

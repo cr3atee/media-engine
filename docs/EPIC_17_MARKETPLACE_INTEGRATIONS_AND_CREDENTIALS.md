@@ -1,18 +1,24 @@
 # EPIC 17 - Marketplace Integrations and Credentials
 
-Status: Task 1 integration domain and schema foundation is implemented and
-verified against isolated PostgreSQL 17.10. Task 2 credential metadata and
-redaction boundary is not started.
+Status: Task 1 integration domain and schema foundation and Task 2 credential
+metadata/redaction boundary are implemented and verified against isolated
+PostgreSQL 17.10. Task 3 seller integration API is not started.
 
 EPIC 17 defines tenant-owned marketplace integration configuration and the
 credential boundary required before tenant-specific ingestion can be exposed to
 seller users.
 
-Task 1 implements only integration identity, repository contracts,
+Task 1 implements integration identity, repository contracts,
 memory/PostgreSQL persistence, provider wiring, migration
 `0012_marketplace_integrations`, focused tests, and guarded PostgreSQL
-verification. It does not implement credentials, live marketplace
-authentication, billing, Telegram delivery, or seller UI.
+verification.
+
+Task 2 implements opaque credential-reference metadata, redacted safe DTOs,
+audit-safe credential rotation intent, repository credential-reference updates,
+migration `0013_marketplace_credentials`, focused tests, and guarded PostgreSQL
+verification. It does not implement plaintext credential storage, live
+marketplace authentication, billing, Telegram delivery, seller routes, or seller
+UI.
 
 ## Task 1 Verification
 
@@ -35,6 +41,33 @@ Verified:
 - downgrade from `0012_marketplace_integrations` to `0011_auth_boundary`;
 - upgrade back to head;
 - offline `upgrade head --sql`.
+
+## Task 2 Verification
+
+Task 2 verification used a temporary `postgres:17-alpine` container with
+PostgreSQL 17.10 and isolated database `epic17_task2_verify` on
+`127.0.0.1:55435`. No project or production database was used.
+
+Verified:
+
+- PostgreSQL verifier `scripts/verify_epic17_marketplace_integrations_postgres.py`:
+  `18/18` checks passed;
+- focused marketplace integration repository tests: `11 passed`;
+- full Pytest: `329 passed, 58 skipped`;
+- full MyPy: `326 source files`;
+- Ruff and Ruff format checks for EPIC 17 Task 2 touched files;
+- Alembic clean upgrade through `0013_marketplace_credentials`;
+- `alembic current`: `0013_marketplace_credentials (head)`;
+- `alembic check`: no new upgrade operations;
+- downgrade from `0013_marketplace_credentials` to
+  `0012_marketplace_integrations`;
+- upgrade back to head;
+- offline `upgrade head --sql`.
+
+The verifier covers credential metadata columns, constraints and indexes,
+tenant-scoped integration behavior, credential-reference persistence,
+redacted update responses, stale version rejection, fresh-session persistence,
+rollback safety, and tenant-scoped uniqueness.
 
 ## 1. Goal
 
@@ -108,7 +141,7 @@ Recommended fields:
 | `external_account_id` | Marketplace account identifier when available. |
 | `source_url` | Public/category/source URL when the marketplace flow uses one. |
 | `auth_type` | Credential mode, for example `none`, `api_key`, `cookie`, or `session`. |
-| `credential_reference` | Planned for Task 2; opaque reference to stored credential material, not the secret itself. |
+| `credential_reference` | Opaque reference to stored credential material, not the secret itself. Returned only through redacted safe DTOs. |
 | `last_successful_run_at` | Last successful ingestion timestamp. |
 | `last_failed_run_at` | Last failed ingestion timestamp. |
 | `last_error_code` | Safe machine-readable error code. |
@@ -276,10 +309,14 @@ EPIC 17 is complete only when verification proves:
 
 ### Task 2 - Credential metadata and redaction boundary
 
-- Add credential-reference metadata without plaintext secret exposure.
-- Add redaction helpers and safe DTOs.
-- Add audit-safe credential rotation intent.
-- Verify no secret values are returned or logged.
+- Credential-reference metadata without plaintext secret exposure is
+  implemented.
+- Redaction helpers and safe DTOs are implemented.
+- Audit-safe credential rotation intent is implemented.
+- Memory and PostgreSQL repository updates return only redacted metadata.
+- Migration `0013_marketplace_credentials` is implemented and verified.
+- PostgreSQL verification proves fresh-session persistence, optimistic version
+  conflict handling, rollback safety, and credential redaction.
 
 ### Task 3 - Seller integration API
 
@@ -318,9 +355,10 @@ EPIC 17 is complete only when:
 - existing marketplace parsing, matching, comparator, event, content, and
   Telegram behavior remain unchanged.
 
-## 15. Recommended First Implementation Task
+## 15. Recommended Next Implementation Task
 
-Continue with **Task 2 - Credential metadata and redaction boundary**.
+Continue with **Task 3 - Seller integration API**.
 
-Do not implement live credential storage until the credential-reference,
-redaction, audit, and key-management boundaries are explicitly verified.
+Do not implement live credential use or Scheduler-driven authenticated
+marketplace ingestion until seller integration routes are tenant-scoped,
+permission-checked, rollback-safe, and verified against PostgreSQL.

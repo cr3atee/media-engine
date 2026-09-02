@@ -10,7 +10,7 @@ tenant-scoped seller workflows are live-verified. EPIC 17 marketplace
 integration persistence foundation is also live-verified. EPIC 16 and EPIC 17
 verification used isolated PostgreSQL 17.10 databases without using a project or
 production database. The current verified revision is
-`0012_marketplace_integrations`.
+`0013_marketplace_credentials`.
 
 ## Verified Schema
 
@@ -433,3 +433,47 @@ Quality verification passed:
 - full Pytest: `325 passed, 58 skipped`;
 - full MyPy: `312 source files`;
 - Ruff and Ruff format checks for EPIC 17 touched files.
+
+## EPIC 17 Task 2 Credential Metadata Boundary
+
+Task 2 introduced opaque credential-reference metadata and redacted repository
+responses for marketplace integrations. Live credentials and plaintext secrets
+are still not stored or used.
+
+The domain layer now exposes `MarketplaceCredentialMetadata`,
+`CredentialRotationIntent`, `RedactedCredentialMetadata`, and
+`SafeMarketplaceIntegration`. Repository credential-reference updates are
+optimistic-version guarded and return only redacted safe DTOs.
+
+Migration `0013_marketplace_credentials` adds credential-reference metadata
+columns, state consistency checks, non-empty reference checks, rotation timestamp
+ordering, credential version checks, and a credential lookup index.
+
+`scripts/verify_epic17_marketplace_integrations_postgres.py` was executed
+against a temporary `postgres:17-alpine` container with PostgreSQL 17.10 and
+isolated database `epic17_task2_verify` on `127.0.0.1:55435`. No project or
+production database was used.
+
+All `18/18` verifier checks passed. The checks cover table existence,
+constraints and indexes, credential metadata columns, tenant-scoped identity,
+cross-tenant hiding, enabled-active selection, credential-reference persistence,
+redacted update responses, stale version rejection, duplicate rejection,
+fresh-session persistence, and rollback atomicity for integration and
+credential-reference updates.
+
+Alembic verification passed:
+
+- clean upgrade through `0013_marketplace_credentials`;
+- `alembic current` reported `0013_marketplace_credentials (head)`;
+- `alembic check` reported no new upgrade operations;
+- downgrade from `0013_marketplace_credentials` to
+  `0012_marketplace_integrations`;
+- upgrade back to head;
+- offline `upgrade head --sql` generation.
+
+Quality verification passed:
+
+- focused marketplace integration repository tests: `11 passed`;
+- full Pytest: `329 passed, 58 skipped`;
+- full MyPy: `326 source files`;
+- Ruff and Ruff format checks for EPIC 17 Task 2 touched files.

@@ -6,6 +6,15 @@ This document records notable Project Passport updates.
 
 ## Unreleased
 
+- Implemented EPIC 17 Task 2 credential metadata and redaction boundary:
+  opaque credential-reference metadata, redacted safe DTOs, audit-safe rotation
+  intent, memory/PostgreSQL repository updates, SQLAlchemy metadata, and
+  migration `0013_marketplace_credentials`.
+- Verified EPIC 17 Task 2 against isolated PostgreSQL 17.10 database
+  `epic17_task2_verify`: verifier `18/18`, Alembic clean upgrade/current/check/
+  downgrade/upgrade/offline SQL, focused marketplace integration repository
+  tests `11 passed`, full Pytest `329 passed, 58 skipped`, full MyPy `326`
+  source files, and focused Ruff/Ruff format checks.
 - Implemented EPIC 17 Task 1 marketplace integration foundation: tenant-owned
   integration domain contract, repository interface, memory/PostgreSQL
   repositories, `RepositoryProvider` wiring, SQLAlchemy metadata, and migration

@@ -25,9 +25,12 @@ if _CONFIGURED_DATABASE_URL:
     os.environ["DATABASE_URL"] = _CONFIGURED_DATABASE_URL
 
 from app.domain.marketplace_integrations import (
+    CredentialRotationIntent,
     MarketplaceAuthType,
+    MarketplaceCredentialMetadata,
     MarketplaceIntegration,
     MarketplaceIntegrationStatus,
+    REDACTED_CREDENTIAL_REFERENCE,
 )
 from app.domain.tenancy import Tenant
 from app.repositories.base import RepositoryIdentityConflictError
@@ -108,11 +111,17 @@ async def _verify_schema(
         "fk_marketplace_integrations_tenant",
         "ck_marketplace_integrations_status",
         "ck_marketplace_integrations_auth_type",
+        "ck_marketplace_integrations_credential_reference_nonempty",
+        "ck_marketplace_integrations_credential_version",
+        "ck_marketplace_integrations_auth_none_without_reference",
+        "ck_marketplace_integrations_credential_state",
+        "ck_marketplace_integrations_credential_rotation_time",
         "ck_marketplace_integrations_version",
         "uq_marketplace_integrations_tenant_marketplace_external_account",
         "uq_marketplace_integrations_tenant_marketplace_source_url",
         "ix_marketplace_integrations_tenant",
         "ix_marketplace_integrations_enabled_runs",
+        "ix_marketplace_integrations_credentials",
     }
     rows = await connection.execute(
         text(
@@ -130,6 +139,35 @@ async def _verify_schema(
     )
     found = {row[0] for row in rows}
     verifier.check("integration constraints and indexes exist", expected <= found)
+
+    columns = await connection.execute(
+        text(
+            """
+            SELECT column_name
+            FROM information_schema.columns
+            WHERE table_name = 'marketplace_integrations'
+            AND column_name = ANY(:names)
+            """,
+        ),
+        {
+            "names": [
+                "credential_reference",
+                "credential_configured_at",
+                "credential_last_rotated_at",
+                "credential_version",
+            ],
+        },
+    )
+    verifier.check(
+        "credential metadata columns exist",
+        {row[0] for row in columns}
+        == {
+            "credential_reference",
+            "credential_configured_at",
+            "credential_last_rotated_at",
+            "credential_version",
+        },
+    )
 
 
 async def _seed_tenants(session: AsyncSession) -> None:
@@ -222,6 +260,54 @@ async def _verify_repository_behavior(
         and updated.display_name == "GGSEL updated"
         and updated.version == 2,
     )
+    assert updated is not None
+
+    credential_result = await repository.update_credential_reference(
+        CredentialRotationIntent(
+            tenant_id=TENANT_A_ID,
+            integration_id=updated.id,
+            auth_type=MarketplaceAuthType.API_KEY,
+            credential=_credential(number=20),
+            actor_id="admin-1",
+            requested_at=NOW + timedelta(minutes=21),
+            expected_version=updated.version,
+            reason="initial credential reference",
+        )
+    )
+    verifier.check(
+        "credential update returns only redacted metadata",
+        credential_result is not None
+        and credential_result.credential.configured is True
+        and credential_result.credential.reference == REDACTED_CREDENTIAL_REFERENCE
+        and credential_result.version == 3,
+    )
+    persisted_with_credential = await repository.get_by_tenant_and_id(
+        TENANT_A_ID,
+        updated.id,
+    )
+    verifier.check(
+        "credential reference persists as internal metadata",
+        persisted_with_credential is not None
+        and persisted_with_credential.credential is not None
+        and persisted_with_credential.credential.version == 1
+        and persisted_with_credential.auth_type is MarketplaceAuthType.API_KEY,
+    )
+    verifier.check(
+        "stale credential update is rejected",
+        await repository.update_credential_reference(
+            CredentialRotationIntent(
+                tenant_id=TENANT_A_ID,
+                integration_id=updated.id,
+                auth_type=MarketplaceAuthType.API_KEY,
+                credential=_credential(number=22),
+                actor_id="admin-1",
+                requested_at=NOW + timedelta(minutes=23),
+                expected_version=2,
+                reason="stale update",
+            )
+        )
+        is None,
+    )
 
     try:
         await repository.save(
@@ -259,6 +345,15 @@ async def _verify_fresh_session_persistence(
     repository = create_postgres_provider(session).marketplace_integrations
     rows = await repository.list_by_tenant(TENANT_A_ID)
     verifier.check("fresh-session integration persistence", len(rows) == 2)
+    credential_rows = [
+        integration for integration in rows if integration.credential is not None
+    ]
+    verifier.check(
+        "fresh-session credential metadata persistence",
+        len(credential_rows) == 1
+        and credential_rows[0].credential is not None
+        and credential_rows[0].credential.version == 1,
+    )
 
 
 async def _verify_rollback(
@@ -282,6 +377,37 @@ async def _verify_rollback(
 
     after_rollback = await repository.list_by_tenant(TENANT_A_ID)
     verifier.check("rollback leaves no partial integration", len(after_rollback) == 2)
+
+    target = after_rollback[0]
+    previous_version = target.version
+    await session.rollback()
+    try:
+        async with session.begin():
+            await repository.update_credential_reference(
+                CredentialRotationIntent(
+                    tenant_id=TENANT_A_ID,
+                    integration_id=target.id,
+                    auth_type=MarketplaceAuthType.API_KEY,
+                    credential=_credential(number=30),
+                    actor_id="admin-1",
+                    requested_at=NOW + timedelta(minutes=31),
+                    expected_version=previous_version,
+                    reason="rollback credential update",
+                )
+            )
+            raise RuntimeError("forced credential rollback")
+    except RuntimeError:
+        pass
+
+    after_credential_rollback = await repository.get_by_tenant_and_id(
+        TENANT_A_ID,
+        target.id,
+    )
+    verifier.check(
+        "rollback leaves no partial credential update",
+        after_credential_rollback is not None
+        and after_credential_rollback.version == previous_version,
+    )
 
 
 async def _recreate_schema(database_url: str) -> None:
@@ -325,6 +451,14 @@ def _integration(
         created_at=timestamp,
         updated_at=timestamp,
         version=version,
+    )
+
+
+def _credential(*, number: int) -> MarketplaceCredentialMetadata:
+    return MarketplaceCredentialMetadata(
+        reference=f"secret://tenant-a/ggsel/{number}",
+        configured_at=NOW + timedelta(minutes=number),
+        version=1,
     )
 
 

@@ -10,9 +10,13 @@ import pytest
 from sqlalchemy import CheckConstraint, Table
 
 from app.domain.marketplace_integrations import (
+    REDACTED_CREDENTIAL_REFERENCE,
+    CredentialRotationIntent,
     MarketplaceAuthType,
+    MarketplaceCredentialMetadata,
     MarketplaceIntegration,
     MarketplaceIntegrationStatus,
+    redact_credential_reference,
 )
 from app.models.marketplace_integration_record import MarketplaceIntegrationRecord
 from app.repositories.base import RepositoryIdentityConflictError
@@ -40,6 +44,7 @@ def make_integration(
     external_account_id: str | None = None,
     source_url: str | None = "https://ggsel.net/catalog/minecraft",
     auth_type: MarketplaceAuthType = MarketplaceAuthType.NONE,
+    credential: MarketplaceCredentialMetadata | None = None,
 ) -> MarketplaceIntegration:
     """Create deterministic marketplace integration test data."""
     return MarketplaceIntegration(
@@ -52,6 +57,7 @@ def make_integration(
         external_account_id=external_account_id,
         source_url=source_url,
         auth_type=auth_type,
+        credential=credential,
         created_at=NOW + timedelta(minutes=number),
         updated_at=NOW + timedelta(minutes=number),
     )
@@ -69,6 +75,48 @@ def test_marketplace_integration_normalizes_text_and_enums() -> None:
     assert integration.source_url == "https://example.com/catalog"
     assert integration.status is MarketplaceIntegrationStatus.ACTIVE
     assert integration.auth_type is MarketplaceAuthType.NONE
+
+
+def test_credential_metadata_redacts_reference() -> None:
+    credential = MarketplaceCredentialMetadata(
+        reference="secret://tenant-a/ggsel/main",
+        configured_at=NOW,
+    )
+    integration = make_integration(
+        auth_type=MarketplaceAuthType.API_KEY,
+        credential=credential,
+    )
+
+    assert redact_credential_reference(credential.reference) == (
+        REDACTED_CREDENTIAL_REFERENCE
+    )
+    assert integration.credential == credential
+
+
+def test_credential_rotation_intent_audit_metadata_is_redacted() -> None:
+    credential = MarketplaceCredentialMetadata(
+        reference="secret://tenant-a/ggsel/main",
+        configured_at=NOW,
+        version=2,
+    )
+    intent = CredentialRotationIntent(
+        tenant_id=TENANT_A_ID,
+        integration_id=UUID(int=17_001),
+        auth_type=MarketplaceAuthType.API_KEY,
+        credential=credential,
+        actor_id="admin-1",
+        requested_at=NOW + timedelta(minutes=10),
+        expected_version=1,
+        reason="rotate key",
+    )
+
+    assert intent.audit_metadata() == {
+        "auth_type": "api_key",
+        "credential_configured": True,
+        "credential_reference": REDACTED_CREDENTIAL_REFERENCE,
+        "credential_version": 2,
+        "reason": "rotate key",
+    }
 
 
 def test_memory_repository_saves_updates_and_lists_by_tenant() -> None:
@@ -119,6 +167,62 @@ def test_memory_repository_lists_only_enabled_active_integrations() -> None:
 
     assert tuple(run_async(repository.list_enabled())) == (active, tenant_b_active)
     assert tuple(run_async(repository.list_enabled_by_tenant(TENANT_A_ID))) == (active,)
+
+
+def test_memory_repository_updates_credentials_without_returning_reference() -> None:
+    repository = MemoryMarketplaceIntegrationRepository()
+    integration = make_integration()
+    credential = MarketplaceCredentialMetadata(
+        reference="secret://tenant-a/ggsel/main",
+        configured_at=NOW + timedelta(minutes=5),
+    )
+    intent = CredentialRotationIntent(
+        tenant_id=TENANT_A_ID,
+        integration_id=integration.id,
+        auth_type=MarketplaceAuthType.API_KEY,
+        credential=credential,
+        actor_id="admin-1",
+        requested_at=NOW + timedelta(minutes=6),
+        expected_version=1,
+    )
+
+    run_async(repository.save(integration))
+    result = run_async(repository.update_credential_reference(intent))
+    stored = run_async(repository.get_by_tenant_and_id(TENANT_A_ID, integration.id))
+
+    assert result is not None
+    assert result.credential.configured is True
+    assert result.credential.reference == REDACTED_CREDENTIAL_REFERENCE
+    assert result.auth_type is MarketplaceAuthType.API_KEY
+    assert result.version == 2
+    assert stored is not None
+    assert stored.credential == credential
+
+
+def test_memory_repository_rejects_stale_credential_version() -> None:
+    repository = MemoryMarketplaceIntegrationRepository()
+    integration = make_integration()
+    credential = MarketplaceCredentialMetadata(
+        reference="secret://tenant-a/ggsel/main",
+        configured_at=NOW + timedelta(minutes=5),
+    )
+    intent = CredentialRotationIntent(
+        tenant_id=TENANT_A_ID,
+        integration_id=integration.id,
+        auth_type=MarketplaceAuthType.API_KEY,
+        credential=credential,
+        actor_id="admin-1",
+        requested_at=NOW + timedelta(minutes=6),
+        expected_version=2,
+    )
+
+    run_async(repository.save(integration))
+
+    assert run_async(repository.update_credential_reference(intent)) is None
+    assert (
+        run_async(repository.get_by_tenant_and_id(TENANT_A_ID, integration.id))
+        == integration
+    )
 
 
 def test_memory_repository_scopes_external_account_identity_by_tenant() -> None:
@@ -187,6 +291,11 @@ def test_marketplace_integration_metadata_matches_task_contract() -> None:
         "ck_marketplace_integrations_display_name_nonempty",
         "ck_marketplace_integrations_status",
         "ck_marketplace_integrations_auth_type",
+        "ck_marketplace_integrations_credential_reference_nonempty",
+        "ck_marketplace_integrations_credential_version",
+        "ck_marketplace_integrations_auth_none_without_reference",
+        "ck_marketplace_integrations_credential_state",
+        "ck_marketplace_integrations_credential_rotation_time",
         "ck_marketplace_integrations_version",
         "ck_marketplace_integrations_timestamp_order",
     } <= constraints
@@ -197,6 +306,7 @@ def test_marketplace_integration_metadata_matches_task_contract() -> None:
     ]
     source_url = indexes["uq_marketplace_integrations_tenant_marketplace_source_url"]
     enabled_runs = indexes["ix_marketplace_integrations_enabled_runs"]
+    credentials = indexes["ix_marketplace_integrations_credentials"]
 
     assert external_account.unique is True
     assert tuple(column.name for column in external_account.columns) == (
@@ -218,6 +328,12 @@ def test_marketplace_integration_metadata_matches_task_contract() -> None:
         "created_at",
         "id",
     )
+    assert tuple(column.name for column in credentials.columns) == (
+        "tenant_id",
+        "auth_type",
+        "credential_configured_at",
+    )
+    assert credentials.dialect_options["postgresql"]["where"] is not None
 
     foreign_key = next(iter(table.c.tenant_id.foreign_keys))
     assert foreign_key.name == "fk_marketplace_integrations_tenant"

@@ -126,6 +126,12 @@ This document tracks only work that is reflected by the current repository state
   migration `0012_marketplace_integrations`, live PostgreSQL verifier `12/12`,
   full Pytest `325 passed, 58 skipped`, MyPy `312` source files, Alembic
   lifecycle, and focused Ruff/format checks.
+- EPIC 17 Task 2 credential metadata and redaction boundary: opaque credential
+  reference metadata, redacted safe DTOs, audit-safe rotation intent,
+  memory/PostgreSQL repository updates, migration
+  `0013_marketplace_credentials`, live PostgreSQL verifier `18/18`, full Pytest
+  `329 passed, 58 skipped`, MyPy `326` source files, Alembic lifecycle, and
+  focused Ruff/format checks.
 
 ## Current Status
 
@@ -138,8 +144,9 @@ live-test tooling, Scheduler delegation, a PostgreSQL-verified read-only
 immutable audit history, and PostgreSQL-verified operational dashboard/readiness
 hardening. EPIC 16 is functionally complete for tenant identity, authentication,
 authorization, tenant-scoped seller workflows, and final PostgreSQL isolation
-readiness. EPIC 17 Task 1 has introduced the tenant-owned marketplace
-integration persistence foundation.
+readiness. EPIC 17 Task 2 has introduced the credential metadata and redaction
+boundary for tenant-owned marketplace integrations without enabling live
+credential use.
 
 ## Not Present Yet
 
@@ -147,8 +154,8 @@ integration persistence foundation.
 - Scheduler overlap and multi-process coordination.
 - Optional guarded live Telegram test-chat message.
 - Production AI provider integration in the pipeline.
-- Marketplace credential metadata, redaction/audit handling, and live credential
-  storage.
+- Seller marketplace integration API routes.
+- Live marketplace credential storage and credential retrieval for execution.
 ## Recommended Next EPIC
 
-**Continue EPIC 17 with Task 2: credential metadata and redaction boundary.**
+**Continue EPIC 17 with Task 3: seller integration API.**

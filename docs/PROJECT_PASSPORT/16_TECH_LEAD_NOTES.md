@@ -122,6 +122,13 @@ This document captures architecture notes that are important for future reviews.
 - EPIC 17 Task 1 completed the integration identity and persistence foundation.
   `marketplace_integrations` stores tenant-owned metadata only; no live secrets
   or credential references are persisted yet.
+- EPIC 17 Task 2 completed the credential metadata and redaction boundary.
+  Credential references are opaque internal metadata; repository rotation
+  responses, audit metadata, logs, and future seller API responses must expose
+  only redacted safe DTOs.
+- Live marketplace credential material remains out of scope. Do not add
+  plaintext credential columns or execution-time credential retrieval without an
+  explicit secret-storage design.
 - GGSEL-specific price fields are not fully normalized into `ParsedOffer.price` and `ParsedOffer.currency` yet.
 
 ## Review Notes

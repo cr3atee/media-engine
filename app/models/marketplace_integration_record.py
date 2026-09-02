@@ -60,6 +60,36 @@ class MarketplaceIntegrationRecord(Base):
             "auth_type IN ('none', 'api_key', 'cookie', 'session')",
             name="ck_marketplace_integrations_auth_type",
         ),
+        CheckConstraint(
+            "credential_reference IS NULL OR length(btrim(credential_reference)) > 0",
+            name="ck_marketplace_integrations_credential_reference_nonempty",
+        ),
+        CheckConstraint(
+            "credential_version >= 0",
+            name="ck_marketplace_integrations_credential_version",
+        ),
+        CheckConstraint(
+            "auth_type <> 'none' OR credential_reference IS NULL",
+            name="ck_marketplace_integrations_auth_none_without_reference",
+        ),
+        CheckConstraint(
+            "("
+            "credential_reference IS NULL "
+            "AND credential_configured_at IS NULL "
+            "AND credential_last_rotated_at IS NULL "
+            "AND credential_version = 0"
+            ") OR ("
+            "credential_reference IS NOT NULL "
+            "AND credential_configured_at IS NOT NULL "
+            "AND credential_version >= 1"
+            ")",
+            name="ck_marketplace_integrations_credential_state",
+        ),
+        CheckConstraint(
+            "credential_last_rotated_at IS NULL "
+            "OR credential_last_rotated_at >= credential_configured_at",
+            name="ck_marketplace_integrations_credential_rotation_time",
+        ),
         CheckConstraint("version >= 1", name="ck_marketplace_integrations_version"),
         CheckConstraint(
             "updated_at >= created_at",
@@ -97,6 +127,13 @@ class MarketplaceIntegrationRecord(Base):
             "created_at",
             "id",
         ),
+        Index(
+            "ix_marketplace_integrations_credentials",
+            "tenant_id",
+            "auth_type",
+            "credential_configured_at",
+            postgresql_where=text("credential_reference IS NOT NULL"),
+        ),
     )
 
     id: Mapped[UUID] = mapped_column(Uuid, primary_key=True)
@@ -126,6 +163,23 @@ class MarketplaceIntegrationRecord(Base):
         String(32),
         nullable=False,
         default=MarketplaceAuthType.NONE.value,
+    )
+    credential_reference: Mapped[str | None] = mapped_column(
+        String(512),
+        nullable=True,
+    )
+    credential_configured_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True),
+        nullable=True,
+    )
+    credential_last_rotated_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True),
+        nullable=True,
+    )
+    credential_version: Mapped[int] = mapped_column(
+        Integer,
+        nullable=False,
+        default=0,
     )
     last_successful_run_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True),

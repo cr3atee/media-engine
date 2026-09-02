@@ -2,14 +2,14 @@
 
 ## Purpose
 
-This document lists only confirmed work remaining after EPIC 17 Task 1.
+This document lists only confirmed work remaining after EPIC 17 Task 2.
 
 ## Immediate
 
-- Implement EPIC 17 Task 2: credential metadata and redaction boundary before
-  any live marketplace credential storage is accepted.
-- Define tenant-owned marketplace credential rotation, audit, and safe secret
-  reference handling before tenant-specific authenticated ingestion is exposed.
+- Implement EPIC 17 Task 3: seller integration API routes for tenant-owned
+  marketplace integration metadata.
+- Keep credential routes tenant-scoped, permission-checked, redacted, and
+  rollback-safe before tenant-specific authenticated ingestion is exposed.
 - If explicitly approved credentials and a test chat are available, run exactly
   one guarded live Telegram test-chat verification.
 
