@@ -3,7 +3,8 @@
 Status: Task 1 integration domain and schema foundation, Task 2 credential
 metadata/redaction boundary, and Task 3 seller integration API are implemented
 and verified against isolated PostgreSQL 17.10. Task 4 Scheduler integration
-selection is not started.
+selection is implemented and offline-verified; live PostgreSQL verification is
+blocked until Docker Desktop or an isolated `EPIC17_DATABASE_URL` is available.
 
 EPIC 17 defines tenant-owned marketplace integration configuration and the
 credential boundary required before tenant-specific ingestion can be exposed to
@@ -27,6 +28,12 @@ integrations. It enforces centralized `TenantContext` permissions, returns
 stable sanitized API errors, and exposes only redacted credential metadata. It
 does not implement Scheduler selection, live credential use, plaintext secret
 storage, billing, Telegram delivery, or seller UI.
+
+Task 4 implements an orchestration-only service and Scheduler job that select
+enabled marketplace integrations, exclude inactive tenants, and delegate to
+existing marketplace runners through injected factories. It does not implement
+live marketplace credential use, parser changes, repository redesign,
+PostgreSQL migrations, billing, Telegram delivery, or seller UI.
 
 ## Task 1 Verification
 
@@ -105,6 +112,24 @@ reads, cross-tenant hiding, create/update/disable operations, credential
 rotation redaction, stale version rejection, invalid payload sanitization,
 tenant-scoped uniqueness, duplicate rollback safety, and fresh-session
 credential metadata persistence.
+
+## Task 4 Verification
+
+Task 4 offline verification passed:
+
+- focused marketplace integration execution tests: `2 passed`;
+- focused marketplace integration execution and repository tests: `13 passed`;
+- demo `scripts/demo_marketplace_integration_scheduler.py`;
+- full Pytest: `336 passed, 58 skipped`;
+- full MyPy: `335 source files`;
+- Ruff and Ruff format checks for EPIC 17 Task 4 touched files;
+- offline `upgrade head --sql`.
+
+`scripts/verify_epic17_scheduler_integrations_postgres.py` is implemented and
+guarded by `EPIC17_DATABASE_URL`. It was not executed against PostgreSQL in the
+current environment because Docker Desktop daemon was unavailable and
+`EPIC17_DATABASE_URL` was not set. The verifier exits with an explicit skip
+instead of fabricating success.
 
 ## 1. Goal
 
@@ -365,10 +390,12 @@ EPIC 17 is complete only when verification proves:
 
 ### Task 4 - Scheduler integration selection
 
-- Add an orchestration path that selects enabled tenant integrations.
-- Pass tenant/integration context into existing marketplace application runner.
-- Keep parsers tenant-unaware.
-- Verify disabled/deactivated integration exclusion and fresh-session behavior.
+- An orchestration path that selects enabled tenant integrations is implemented.
+- Tenant/integration context is passed to injected marketplace runner factories.
+- Parsers remain tenant-unaware.
+- Disabled integrations and inactive tenants are excluded by the service.
+- Fresh-session PostgreSQL behavior still requires live isolated PostgreSQL
+  verification.
 
 ### Task 5 - Final PostgreSQL verification
 
@@ -395,7 +422,8 @@ EPIC 17 is complete only when:
 
 ## 15. Recommended Next Implementation Task
 
-Continue with **Task 4 - Scheduler integration selection**.
+Continue with **Task 4 live PostgreSQL verification** once Docker Desktop or an
+isolated `EPIC17_DATABASE_URL` is available.
 
 Do not implement live credential use or Scheduler-driven authenticated
 marketplace ingestion until enabled tenant integration selection is implemented,

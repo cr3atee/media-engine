@@ -513,3 +513,19 @@ Quality verification passed:
 - full Pytest: `334 passed, 58 skipped`;
 - full MyPy: `331 source files`;
 - Ruff and Ruff format checks for EPIC 17 Task 3 touched files.
+
+## EPIC 17 Task 4 Scheduler Integration Selection
+
+Task 4 added an orchestration-only selection service and Scheduler job for
+enabled tenant-owned marketplace integrations. No PostgreSQL migration was
+required.
+
+Offline verification passed: focused marketplace integration execution tests
+`2 passed`, focused execution/repository tests `13 passed`, full Pytest
+`336 passed, 58 skipped`, full MyPy `335 source files`, Ruff, Ruff format, demo
+execution, and offline `upgrade head --sql`.
+
+Live PostgreSQL verification is still blocked in the current environment:
+Docker Desktop daemon was unavailable and `EPIC17_DATABASE_URL` was not set.
+`scripts/verify_epic17_scheduler_integrations_postgres.py` exists and exits with
+an explicit skip when no isolated PostgreSQL URL is provided.

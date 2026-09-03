@@ -133,6 +133,12 @@ This document captures architecture notes that are important for future reviews.
 - Seller integration APIs return redacted credential metadata only. Raw
   credential references remain internal repository metadata and are not returned
   by HTTP responses.
+- EPIC 17 Task 4 adds a Scheduler-facing selection service for enabled
+  tenant-owned integrations. It must stay an orchestration boundary: parsers,
+  marketplace fetchers, matching, comparison, credential retrieval, and Telegram
+  delivery remain outside Scheduler.
+- Task 4 PostgreSQL verification is still pending because no isolated
+  PostgreSQL runtime was available in the current environment.
 - Live marketplace credential material remains out of scope. Do not add
   plaintext credential columns or execution-time credential retrieval without an
   explicit secret-storage design.

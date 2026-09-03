@@ -2,16 +2,17 @@
 
 ## Purpose
 
-This document lists only confirmed work remaining after EPIC 17 Task 3.
+This document lists only confirmed work remaining after EPIC 17 Task 4 offline
+implementation.
 
 ## Immediate
 
-- Implement EPIC 17 Task 4: Scheduler selection of enabled tenant-owned
-  marketplace integrations.
-- Exclude disabled integrations and deactivated tenants from automatic
-  marketplace work.
-- Keep parsers tenant-unaware; Scheduler should only select integration
-  configuration and delegate orchestration.
+- Run EPIC 17 Task 4 live PostgreSQL verification once Docker Desktop or an
+  isolated `EPIC17_DATABASE_URL` is available.
+- Verify disabled integration exclusion, inactive tenant exclusion, fresh-session
+  persistence, and Scheduler delegation against PostgreSQL.
+- Complete EPIC 17 final verification after Task 4 PostgreSQL verification
+  passes.
 - If explicitly approved credentials and a test chat are available, run exactly
   one guarded live Telegram test-chat verification.
 

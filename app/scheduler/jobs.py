@@ -23,6 +23,13 @@ class MarketplaceRunner(Protocol):
         """Execute one bounded marketplace application run."""
 
 
+class MarketplaceIntegrationExecutionRunner(Protocol):
+    """Application boundary for enabled marketplace integration execution."""
+
+    async def run_enabled_integrations(self) -> object:
+        """Execute one bounded batch of selected marketplace integrations."""
+
+
 class EventProcessingRunner(Protocol):
     """Application boundary invoked by durable event Scheduler jobs."""
 
@@ -225,6 +232,22 @@ class PlayerokJob(MarketplaceJob):
     def run(self) -> Awaitable[object]:
         """Execute the configured Playerok application runner."""
         return self._runner.run(self.url)
+
+
+class EnabledMarketplaceIntegrationsJob(BaseJob):
+    """Invoke enabled tenant-owned marketplace integration execution."""
+
+    def __init__(
+        self,
+        service: MarketplaceIntegrationExecutionRunner,
+    ) -> None:
+        """Configure delegation without marketplace or repository logic."""
+        super().__init__("enabled-marketplace-integrations")
+        self._service = service
+
+    def run(self) -> Awaitable[object]:
+        """Delegate enabled integration execution to the application service."""
+        return self._service.run_enabled_integrations()
 
 
 class MarketEventScoringJob(BaseJob):

@@ -6,6 +6,16 @@ This document records notable Project Passport updates.
 
 ## Unreleased
 
+- Implemented EPIC 17 Task 4 Scheduler integration selection: enabled
+  tenant-owned marketplace integrations are selected through an
+  orchestration-only service, inactive tenants are excluded, and Scheduler
+  delegates through `EnabledMarketplaceIntegrationsJob`.
+- Verified EPIC 17 Task 4 offline: focused execution tests `2 passed`, focused
+  execution/repository tests `13 passed`, demo execution, full Pytest
+  `336 passed, 58 skipped`, full MyPy `335` source files, Ruff, Ruff format, and
+  offline Alembic SQL generation. Live PostgreSQL verification remains blocked
+  because Docker Desktop daemon was unavailable and `EPIC17_DATABASE_URL` was not
+  set.
 - Implemented EPIC 17 Task 3 seller integration API: tenant-scoped routes for
   listing, reading, creating, updating, disabling, and rotating credential
   references for marketplace integrations.

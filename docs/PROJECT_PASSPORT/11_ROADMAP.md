@@ -137,6 +137,13 @@ This document tracks only work that is reflected by the current repository state
   marketplace integrations, live PostgreSQL verifier `16/16`, full Pytest
   `334 passed, 58 skipped`, MyPy `331` source files, Alembic lifecycle, and
   focused Ruff/format checks.
+- EPIC 17 Task 4 Scheduler integration selection implementation:
+  orchestration-only enabled integration selection, inactive tenant exclusion,
+  injected marketplace runner factories, and `EnabledMarketplaceIntegrationsJob`.
+- EPIC 17 Task 4 offline verification: focused tests, full Pytest
+  `336 passed, 58 skipped`, MyPy `335` source files, Ruff, Ruff format, demo,
+  and offline Alembic SQL generation. Live PostgreSQL verification is blocked
+  until Docker Desktop or an isolated `EPIC17_DATABASE_URL` is available.
 
 ## Current Status
 
@@ -149,9 +156,10 @@ live-test tooling, Scheduler delegation, a PostgreSQL-verified read-only
 immutable audit history, and PostgreSQL-verified operational dashboard/readiness
 hardening. EPIC 16 is functionally complete for tenant identity, authentication,
 authorization, tenant-scoped seller workflows, and final PostgreSQL isolation
-readiness. EPIC 17 Task 3 has introduced the seller marketplace integration API
-for tenant-owned marketplace integrations without enabling live credential use or
-Scheduler-driven integration selection.
+readiness. EPIC 17 Task 4 has introduced Scheduler-facing selection for
+tenant-owned marketplace integrations without enabling live credential use.
+PostgreSQL live verification for Task 4 remains blocked by environment
+availability.
 
 ## Not Present Yet
 
@@ -159,8 +167,8 @@ Scheduler-driven integration selection.
 - Scheduler overlap and multi-process coordination.
 - Optional guarded live Telegram test-chat message.
 - Production AI provider integration in the pipeline.
-- Scheduler selection of enabled tenant-owned marketplace integrations.
+- EPIC 17 Task 4 live PostgreSQL verification.
 - Live marketplace credential storage and credential retrieval for execution.
 ## Recommended Next EPIC
 
-**Continue EPIC 17 with Task 4: Scheduler integration selection.**
+**Continue EPIC 17 with Task 4 live PostgreSQL verification.**
