@@ -73,6 +73,7 @@ Remaining gaps:
 
 - complete technical source investigation;
 - choose allowed data access strategy;
+- analyze the captured response with `scripts/analyze_funpay_response.py`;
 - implement extractor and normalizer boundaries;
 - prove conversion into `ParsedOffer`.
 

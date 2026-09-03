@@ -113,6 +113,7 @@ Verification commands:
 
 ```powershell
 .venv\Scripts\python.exe scripts/demo_funpay_fetch.py
+.venv\Scripts\python.exe scripts/analyze_funpay_response.py
 .venv\Scripts\python.exe scripts/verify_marketplace_data_readiness.py
 ```
 
