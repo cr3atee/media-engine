@@ -145,6 +145,10 @@ This document tracks only work that is reflected by the current repository state
   `10/10`, focused tests `18 passed`, full Pytest `336 passed, 58 skipped`,
   MyPy `335` source files, Ruff, Ruff format, demo, Alembic lifecycle, and
   offline Alembic SQL generation against isolated PostgreSQL 17.10.
+- EPIC 18 marketplace data readiness foundation: offline readiness verifier,
+  marketplace capture checklist, GGSEL absolute URL normalization, GGSEL
+  extractor/normalizer contract coverage, Playerok response analyzer, and FunPay
+  raw fetch/analyzer boundary.
 
 ## Current Status
 
@@ -160,10 +164,13 @@ authorization, tenant-scoped seller workflows, and final PostgreSQL isolation
 readiness. EPIC 17 is functionally complete for tenant-owned marketplace
 integration metadata, credential-reference redaction, seller integration API, and
 Scheduler-facing integration selection without enabling live credential use.
+EPIC 18 is in progress to close marketplace data reliability before calling the
+multi-marketplace ingestion core complete.
 
 ## Not Present Yet
 
-- Full price normalization for GGSEL extracted fields.
+- Captured real Playerok listing response and proven `ParsedOffer` conversion.
+- FunPay extractor, normalizer, and proven `ParsedOffer` conversion.
 - Scheduler overlap and multi-process coordination.
 - Optional guarded live Telegram test-chat message.
 - Production AI provider integration in the pipeline.

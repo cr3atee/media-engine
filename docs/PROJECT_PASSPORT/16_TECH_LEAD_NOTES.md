@@ -144,7 +144,9 @@ This document captures architecture notes that are important for future reviews.
 - Live marketplace credential material remains out of scope. Do not add
   plaintext credential columns or execution-time credential retrieval without an
   explicit secret-storage design.
-- GGSEL-specific price fields are not fully normalized into `ParsedOffer.price` and `ParsedOffer.currency` yet.
+- GGSEL saved-response extraction now reaches snapshot-ready `ParsedOffer`
+  objects. Keep Playerok and FunPay behind captured-response proof gates; do not
+  mark either marketplace ready from heuristic extraction or empty live results.
 
 ## Review Notes
 

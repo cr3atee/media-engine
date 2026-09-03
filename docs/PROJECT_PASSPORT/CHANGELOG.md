@@ -6,6 +6,10 @@ This document records notable Project Passport updates.
 
 ## Unreleased
 
+- Started EPIC 18 marketplace data reliability work: added offline readiness
+  verification, marketplace capture checklist, GGSEL absolute URL normalization,
+  GGSEL extractor/normalizer contract coverage, Playerok response analysis
+  tooling, and FunPay raw fetch/analyzer boundaries.
 - Implemented EPIC 17 Task 4 Scheduler integration selection: enabled
   tenant-owned marketplace integrations are selected through an
   orchestration-only service, inactive tenants are excluded, and Scheduler

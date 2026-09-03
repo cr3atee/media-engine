@@ -259,8 +259,14 @@ EPIC 17 is functionally complete.
 
 ## Known Gaps
 
-- GGSEL extracted price fields are preserved in raw `extra` data, but full price normalization from marketplace-specific fields is not complete.
-- Snapshot creation is skipped when parsed offers do not contain normalized price and currency.
+- GGSEL saved-response extraction now produces 60 snapshot-ready `ParsedOffer`
+  objects with absolute catalog URLs.
+- Playerok has fetch/extract/normalize infrastructure, but no captured real
+  Playerok listing response is present in the workspace.
+- FunPay has a raw fetch boundary and response analyzer only; extractor,
+  normalizer, and `ParsedOffer` conversion are not implemented yet.
+- Snapshot creation is skipped when parsed offers from any marketplace do not
+  contain normalized price and currency.
 - Ingestion, scoring, and durable content processing are separate services and
   still require production process/bootstrap configuration.
 - Scheduler has no explicit overlap or multi-process coordination policy.
@@ -302,4 +308,7 @@ Task 3 adds tenant-scoped seller integration routes with permission checks and
 redacted credential responses. EPIC 17 Task 4 adds Scheduler-facing integration
 selection without moving marketplace business logic into Scheduler. EPIC 17 is
 functionally complete; live marketplace credential storage and execution-time
-credential retrieval require a new explicitly approved EPIC.
+credential retrieval require a new explicitly approved EPIC. EPIC 18 begins the
+marketplace data reliability closure: GGSEL is verified from saved real payloads,
+while Playerok and FunPay must pass captured-response proof gates before they can
+be marked marketplace-ready.
