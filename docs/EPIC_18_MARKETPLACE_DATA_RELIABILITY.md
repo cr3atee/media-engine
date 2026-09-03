@@ -54,6 +54,7 @@ Playerok public listing response shape is not confirmed yet.
 Remaining gaps:
 
 - capture a real public listing response or approved API response;
+- analyze the captured response with `scripts/analyze_playerok_response.py`;
 - confirm the exact source fields for id, title, price, currency, URL and
   seller;
 - prove extraction into `ParsedOffer`;

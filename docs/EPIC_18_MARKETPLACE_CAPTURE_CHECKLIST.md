@@ -82,6 +82,7 @@ Verification commands:
 
 ```powershell
 .venv\Scripts\python.exe scripts/demo_playerok_fetch.py
+.venv\Scripts\python.exe scripts/analyze_playerok_response.py
 .venv\Scripts\python.exe scripts/demo_playerok_extractor.py
 .venv\Scripts\python.exe scripts/verify_marketplace_data_readiness.py
 ```
