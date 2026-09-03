@@ -1,9 +1,11 @@
 from __future__ import annotations
 
 from decimal import Decimal, InvalidOperation
+from urllib.parse import urljoin, urlsplit
 
 from app.parsers.models import ParsedOffer, RawMarketplaceOffer
 
+_GGSEL_CATALOG_BASE_URL = "https://ggsel.net/catalog/"
 _CURRENCY_ALIASES = {
     "RUR": "RUB",
     "RUB": "RUB",
@@ -31,9 +33,19 @@ class OfferNormalizer:
     """Normalizes typed raw marketplace offers into ParsedOffer objects."""
 
     _SELLER_ID_KEYS = ("seller_id", "id_seller")
-    def __init__(self, marketplace: str = "ggsel") -> None:
+
+    def __init__(
+        self,
+        marketplace: str = "ggsel",
+        base_url: str | None = None,
+    ) -> None:
         """Initialize normalizer with the marketplace assigned to parsed offers."""
         self._marketplace = marketplace
+        self._base_url = (
+            _GGSEL_CATALOG_BASE_URL
+            if base_url is None and marketplace == "ggsel"
+            else base_url
+        )
 
     def normalize(self, raw_offer: RawMarketplaceOffer) -> ParsedOffer:
         """Convert a typed raw marketplace offer into ParsedOffer."""
@@ -44,7 +56,7 @@ class OfferNormalizer:
             marketplace=self._marketplace,
             external_id=str(raw_offer.id_goods),
             title=self._clean_text(raw_offer.name),
-            url=self._clean_text(raw_offer.url),
+            url=self._clean_url(raw_offer.url),
             price=price,
             currency=currency or currency_from_price,
             seller_id=self._first_extra_str(raw_offer, self._SELLER_ID_KEYS),
@@ -65,6 +77,14 @@ class OfferNormalizer:
 
     def _clean_text(self, value: str | None) -> str | None:
         return normalize_text(value)
+
+    def _clean_url(self, value: str | None) -> str | None:
+        url = self._clean_text(value)
+        if url is None or self._base_url is None:
+            return url
+        if urlsplit(url).scheme:
+            return url
+        return urljoin(self._base_url, url)
 
     def _normalize_price(
         self,
