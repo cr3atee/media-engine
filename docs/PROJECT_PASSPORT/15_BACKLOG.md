@@ -8,8 +8,8 @@ This document lists only confirmed work remaining after EPIC 17 completion.
 
 - Capture and analyze a real Playerok listing response, then harden extraction
   only against the confirmed response shape.
-- Capture and analyze a real FunPay listing response, then implement extraction
-  only after the source structure is confirmed.
+- Capture and analyze a real FunPay listing response, then verify the existing
+  extraction boundary against the confirmed source structure.
 - Define the next EPIC before implementing live marketplace credential storage
   or execution-time credential retrieval.
 - Keep tenant-owned marketplace integrations redacted and metadata-only until a
@@ -33,5 +33,5 @@ This document lists only confirmed work remaining after EPIC 17 completion.
 
 - Playerok cannot be marked marketplace-ready until a real captured listing
   response produces snapshot-ready `ParsedOffer` objects.
-- FunPay cannot be marked marketplace-ready until extractor and normalizer
-  boundaries exist and are proven against a real captured response.
+- FunPay cannot be marked marketplace-ready until existing extractor and
+  normalizer boundaries are proven against a real captured response.

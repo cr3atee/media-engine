@@ -147,28 +147,33 @@ def verify_playerok() -> MarketplaceReadiness:
 
 def verify_funpay() -> MarketplaceReadiness:
     """Report FunPay readiness from the current repository state."""
+    from app.parsers.funpay_extractor import FunPayExtractor
+    from app.parsers.funpay_normalizer import FunPayNormalizer
+
     if FUNPAY_RESPONSE_PATH.exists():
+        raw_response = FUNPAY_RESPONSE_PATH.read_text(encoding="utf-8")
+        extracted = FunPayExtractor().extract(raw_response)
+        parsed_offers = tuple(FunPayNormalizer().normalize(extracted))
+        ready_offers = snapshot_ready(parsed_offers)
         return MarketplaceReadiness(
             marketplace="funpay",
-            status="raw_only",
-            raw_items=0,
-            parsed_offers=0,
-            snapshot_ready_offers=0,
-            notes=(
-                "Saved FunPay raw response exists.",
-                "FunPay extractor and normalizer are not implemented yet.",
-            ),
+            status="ready" if ready_offers else "partial",
+            raw_items=len(extracted),
+            parsed_offers=len(parsed_offers),
+            snapshot_ready_offers=ready_offers,
+            notes=("Saved FunPay raw response exists.",),
+            examples=parsed_offers[:3],
         )
 
     return MarketplaceReadiness(
         marketplace="funpay",
-        status="not_implemented",
+        status="blocked",
         raw_items=0,
         parsed_offers=0,
         snapshot_ready_offers=0,
         notes=(
-            "FunPay raw fetcher exists, but no saved raw response is available.",
-            "FunPay extractor and normalizer are not implemented yet.",
+            "FunPay fetcher/extractor/normalizer exist.",
+            "Saved FunPay raw response is not available.",
         ),
     )
 

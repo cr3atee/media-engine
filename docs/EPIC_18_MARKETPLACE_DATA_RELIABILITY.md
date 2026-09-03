@@ -62,19 +62,19 @@ Remaining gaps:
 
 ### FunPay
 
-Status: raw fetch boundary prepared.
+Status: extraction boundary prepared.
 
-The repository currently contains empty adapter scaffolding for FunPay only.
 `FunPayFetcher` can download raw marketplace responses through the shared
-`HttpClient`, and `scripts/demo_funpay_fetch.py` can save raw HTML diagnostics to
-`tmp/funpay_response.html`.
+`HttpClient`, `FunPayExtractor` can read public offer anchors from listing HTML,
+and `FunPayNormalizer` can produce normalized `ParsedOffer` objects. The
+implementation is covered by representative parser tests, but it is not yet
+proven against a captured real FunPay response in the current workspace.
 
 Remaining gaps:
 
 - complete technical source investigation;
 - choose allowed data access strategy;
 - analyze the captured response with `scripts/analyze_funpay_response.py`;
-- implement extractor and normalizer boundaries;
 - prove conversion into `ParsedOffer`.
 
 ## Verification
@@ -103,7 +103,7 @@ before a marketplace can be marked ready.
 3. Capture and document one real Playerok category/listing response.
 4. Harden Playerok extraction only after the response shape is confirmed.
 5. Research FunPay data access and document the selected source.
-6. Implement FunPay fetcher, extractor, and normalizer.
+6. Prove FunPay extractor and normalizer against a captured real response.
 7. Add a live-optional marketplace data verifier guarded by explicit flags.
 8. Wire verified marketplace integrations into Scheduler execution with
    tenant-owned integration configuration.

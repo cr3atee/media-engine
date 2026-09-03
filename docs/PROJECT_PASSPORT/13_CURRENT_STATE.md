@@ -263,8 +263,9 @@ EPIC 17 is functionally complete.
   objects with absolute catalog URLs.
 - Playerok has fetch/extract/normalize infrastructure, but no captured real
   Playerok listing response is present in the workspace.
-- FunPay has a raw fetch boundary and response analyzer only; extractor,
-  normalizer, and `ParsedOffer` conversion are not implemented yet.
+- FunPay has fetch/extract/normalize/pipeline boundaries and representative
+  parser coverage, but no captured real FunPay response is present in the
+  workspace.
 - Snapshot creation is skipped when parsed offers from any marketplace do not
   contain normalized price and currency.
 - Ingestion, scoring, and durable content processing are separate services and

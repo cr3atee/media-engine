@@ -148,7 +148,7 @@ This document tracks only work that is reflected by the current repository state
 - EPIC 18 marketplace data readiness foundation: offline readiness verifier,
   marketplace capture checklist, GGSEL absolute URL normalization, GGSEL
   extractor/normalizer contract coverage, Playerok response analyzer, and FunPay
-  raw fetch/analyzer boundary.
+  fetch/extract/normalize/analyzer boundaries.
 
 ## Current Status
 
@@ -170,7 +170,7 @@ multi-marketplace ingestion core complete.
 ## Not Present Yet
 
 - Captured real Playerok listing response and proven `ParsedOffer` conversion.
-- FunPay extractor, normalizer, and proven `ParsedOffer` conversion.
+- Captured real FunPay listing response and proven `ParsedOffer` conversion.
 - Scheduler overlap and multi-process coordination.
 - Optional guarded live Telegram test-chat message.
 - Production AI provider integration in the pipeline.

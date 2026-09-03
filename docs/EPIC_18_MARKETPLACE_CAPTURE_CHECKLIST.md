@@ -94,11 +94,14 @@ documentation first.
 
 ## FunPay
 
-Current status: raw fetch boundary only.
+Current status: extraction boundary prepared.
 
 Existing implementation:
 
 - `FunPayFetcher`;
+- `FunPayExtractor`;
+- `FunPayNormalizer`;
+- `FunPayPipeline`;
 - `scripts/demo_funpay_fetch.py`.
 
 Required proof:
@@ -106,7 +109,6 @@ Required proof:
 - capture one real public listing/category response;
 - save it as `tmp/funpay_response.html`;
 - review the payload structure before implementing extraction;
-- create extractor and normalizer only after the source structure is known;
 - prove conversion into snapshot-ready `ParsedOffer`.
 
 Verification commands:
