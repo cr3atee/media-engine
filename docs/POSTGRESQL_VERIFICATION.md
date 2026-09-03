@@ -520,12 +520,25 @@ Task 4 added an orchestration-only selection service and Scheduler job for
 enabled tenant-owned marketplace integrations. No PostgreSQL migration was
 required.
 
-Offline verification passed: focused marketplace integration execution tests
-`2 passed`, focused execution/repository tests `13 passed`, full Pytest
-`336 passed, 58 skipped`, full MyPy `335 source files`, Ruff, Ruff format, demo
-execution, and offline `upgrade head --sql`.
+Live verification used a temporary `postgres:17-alpine` container with
+PostgreSQL 17.10 and isolated database `epic17_final_verify` on
+`127.0.0.1:55438`. No project or production database was used.
 
-Live PostgreSQL verification is still blocked in the current environment:
-Docker Desktop daemon was unavailable and `EPIC17_DATABASE_URL` was not set.
-`scripts/verify_epic17_scheduler_integrations_postgres.py` exists and exits with
-an explicit skip when no isolated PostgreSQL URL is provided.
+`scripts/verify_epic17_scheduler_integrations_postgres.py` passed `10/10`
+checks. The checks cover enabled active integration selection, disabled
+integration exclusion, inactive tenant exclusion, supported marketplace
+delegation, deterministic skipped reasons, Scheduler job delegation, and
+fresh-session selection.
+
+The full EPIC 17 verifier set passed against the same isolated database:
+integration persistence and credential boundary `18/18`, seller integration API
+`16/16`, and Scheduler integration selection `10/10`.
+
+Quality verification passed:
+
+- focused marketplace integration, seller API, and execution tests: `18 passed`;
+- full Pytest: `336 passed, 58 skipped`;
+- full MyPy: `335 source files`;
+- Ruff and Ruff format checks for EPIC 17 touched files;
+- Alembic current/check, downgrade to `0012_marketplace_integrations`, upgrade
+  back to head, and offline `upgrade head --sql`.

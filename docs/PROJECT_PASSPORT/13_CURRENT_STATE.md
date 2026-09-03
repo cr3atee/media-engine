@@ -66,10 +66,9 @@ tenant-scoped routes allow authorized seller users to list, read, create,
 update, disable, and rotate credential references for marketplace integrations
 without exposing raw credential material.
 EPIC 17 Task 4 Scheduler integration selection is implemented and
-offline-verified: enabled tenant-owned marketplace integrations are selected,
+live-verified: enabled tenant-owned marketplace integrations are selected,
 inactive tenants are excluded, and Scheduler delegates to the selection service.
-Live PostgreSQL verification is still blocked by missing Docker daemon and
-missing isolated `EPIC17_DATABASE_URL`.
+EPIC 17 is functionally complete.
 
 ## Active Capabilities
 
@@ -250,9 +249,13 @@ missing isolated `EPIC17_DATABASE_URL`.
   `EnabledMarketplaceIntegrationsJob` for orchestration-only execution of
   enabled tenant-owned integrations.
 - EPIC 17 Task 4 offline verification passed: focused execution tests
-  `2 passed`, focused execution/repository tests `13 passed`, full Pytest
-  `336 passed, 58 skipped`, full MyPy `335` source files, Ruff, Ruff format,
-  demo execution, and offline Alembic SQL generation.
+  `2 passed`; live PostgreSQL Scheduler integration selection verifier passed
+  `10/10`.
+- EPIC 17 final verification passed: integration persistence/credential boundary
+  `18/18`, seller integration API `16/16`, Scheduler integration selection
+  `10/10`, focused tests `18 passed`, full Pytest `336 passed, 58 skipped`,
+  full MyPy `335` source files, Ruff, Ruff format, demo execution, Alembic
+  current/check, downgrade/upgrade, and offline Alembic SQL generation.
 
 ## Known Gaps
 
@@ -265,8 +268,6 @@ missing isolated `EPIC17_DATABASE_URL`.
   confirmation, live flags, and PostgreSQL verification database were not
   supplied.
 - No production AI provider is wired into the marketplace pipeline.
-- EPIC 17 Task 4 live PostgreSQL verification is blocked until Docker Desktop or
-  an isolated `EPIC17_DATABASE_URL` is available.
 - Live marketplace credential storage and execution-time credential retrieval are
   not implemented yet.
 - Password hashing currently uses a standard-library PBKDF2 boundary so Task 2
@@ -299,6 +300,6 @@ marketplace integration persistence foundation. EPIC 17 Task 2 adds the
 credential metadata and redaction boundary without live credential use. EPIC 17
 Task 3 adds tenant-scoped seller integration routes with permission checks and
 redacted credential responses. EPIC 17 Task 4 adds Scheduler-facing integration
-selection without moving marketplace business logic into Scheduler. The next
-work should run the Task 4 PostgreSQL verifier against an isolated database
-before final EPIC 17 verification.
+selection without moving marketplace business logic into Scheduler. EPIC 17 is
+functionally complete; live marketplace credential storage and execution-time
+credential retrieval require a new explicitly approved EPIC.

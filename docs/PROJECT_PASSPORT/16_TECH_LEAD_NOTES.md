@@ -137,8 +137,10 @@ This document captures architecture notes that are important for future reviews.
   tenant-owned integrations. It must stay an orchestration boundary: parsers,
   marketplace fetchers, matching, comparison, credential retrieval, and Telegram
   delivery remain outside Scheduler.
-- Task 4 PostgreSQL verification is still pending because no isolated
-  PostgreSQL runtime was available in the current environment.
+- EPIC 17 final verification passed against isolated PostgreSQL 17.10:
+  integration persistence/credential boundary `18/18`, seller integration API
+  `16/16`, Scheduler integration selection `10/10`, full Pytest, MyPy, Ruff,
+  Ruff format, and Alembic lifecycle.
 - Live marketplace credential material remains out of scope. Do not add
   plaintext credential columns or execution-time credential retrieval without an
   explicit secret-storage design.

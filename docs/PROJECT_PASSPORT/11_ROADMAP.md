@@ -140,10 +140,11 @@ This document tracks only work that is reflected by the current repository state
 - EPIC 17 Task 4 Scheduler integration selection implementation:
   orchestration-only enabled integration selection, inactive tenant exclusion,
   injected marketplace runner factories, and `EnabledMarketplaceIntegrationsJob`.
-- EPIC 17 Task 4 offline verification: focused tests, full Pytest
-  `336 passed, 58 skipped`, MyPy `335` source files, Ruff, Ruff format, demo,
-  and offline Alembic SQL generation. Live PostgreSQL verification is blocked
-  until Docker Desktop or an isolated `EPIC17_DATABASE_URL` is available.
+- EPIC 17 final verification: integration persistence/credential boundary
+  `18/18`, seller integration API `16/16`, Scheduler integration selection
+  `10/10`, focused tests `18 passed`, full Pytest `336 passed, 58 skipped`,
+  MyPy `335` source files, Ruff, Ruff format, demo, Alembic lifecycle, and
+  offline Alembic SQL generation against isolated PostgreSQL 17.10.
 
 ## Current Status
 
@@ -156,10 +157,9 @@ live-test tooling, Scheduler delegation, a PostgreSQL-verified read-only
 immutable audit history, and PostgreSQL-verified operational dashboard/readiness
 hardening. EPIC 16 is functionally complete for tenant identity, authentication,
 authorization, tenant-scoped seller workflows, and final PostgreSQL isolation
-readiness. EPIC 17 Task 4 has introduced Scheduler-facing selection for
-tenant-owned marketplace integrations without enabling live credential use.
-PostgreSQL live verification for Task 4 remains blocked by environment
-availability.
+readiness. EPIC 17 is functionally complete for tenant-owned marketplace
+integration metadata, credential-reference redaction, seller integration API, and
+Scheduler-facing integration selection without enabling live credential use.
 
 ## Not Present Yet
 
@@ -167,8 +167,7 @@ availability.
 - Scheduler overlap and multi-process coordination.
 - Optional guarded live Telegram test-chat message.
 - Production AI provider integration in the pipeline.
-- EPIC 17 Task 4 live PostgreSQL verification.
 - Live marketplace credential storage and credential retrieval for execution.
 ## Recommended Next EPIC
 
-**Continue EPIC 17 with Task 4 live PostgreSQL verification.**
+**Start the next explicitly approved EPIC.**

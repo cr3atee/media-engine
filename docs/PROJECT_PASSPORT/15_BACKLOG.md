@@ -2,17 +2,14 @@
 
 ## Purpose
 
-This document lists only confirmed work remaining after EPIC 17 Task 4 offline
-implementation.
+This document lists only confirmed work remaining after EPIC 17 completion.
 
 ## Immediate
 
-- Run EPIC 17 Task 4 live PostgreSQL verification once Docker Desktop or an
-  isolated `EPIC17_DATABASE_URL` is available.
-- Verify disabled integration exclusion, inactive tenant exclusion, fresh-session
-  persistence, and Scheduler delegation against PostgreSQL.
-- Complete EPIC 17 final verification after Task 4 PostgreSQL verification
-  passes.
+- Define the next EPIC before implementing live marketplace credential storage
+  or execution-time credential retrieval.
+- Keep tenant-owned marketplace integrations redacted and metadata-only until a
+  secret-storage design is explicitly approved.
 - If explicitly approved credentials and a test chat are available, run exactly
   one guarded live Telegram test-chat verification.
 
