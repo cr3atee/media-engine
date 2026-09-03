@@ -92,7 +92,7 @@ The verifier reports:
 1. Stabilize GGSEL modular mapping so normalized offers contain absolute URLs
    when the raw payload provides relative slugs. Done.
 2. Add focused tests for GGSEL extractor and normalizer against a small
-   representative payload.
+   representative payload. Done.
 3. Capture and document one real Playerok category/listing response.
 4. Harden Playerok extraction only after the response shape is confirmed.
 5. Research FunPay data access and document the selected source.
