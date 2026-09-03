@@ -69,6 +69,9 @@ Existing implementation:
 - `PlayerokNormalizer`;
 - `PlayerokPipeline`.
 
+Contract coverage verifies structured JSON and `__NEXT_DATA__` mapping behavior,
+but this is not a substitute for captured live marketplace data.
+
 Required proof:
 
 - capture one real public listing/category response;

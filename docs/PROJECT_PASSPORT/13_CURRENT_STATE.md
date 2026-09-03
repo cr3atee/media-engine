@@ -261,8 +261,9 @@ EPIC 17 is functionally complete.
 
 - GGSEL saved-response extraction now produces 60 snapshot-ready `ParsedOffer`
   objects with absolute catalog URLs.
-- Playerok has fetch/extract/normalize infrastructure, but no captured real
-  Playerok listing response is present in the workspace.
+- Playerok has fetch/extract/normalize infrastructure and structured-response
+  contract coverage, but no captured real Playerok listing response is present
+  in the workspace.
 - FunPay has fetch/extract/normalize/pipeline boundaries and representative
   parser coverage, but no captured real FunPay response is present in the
   workspace.

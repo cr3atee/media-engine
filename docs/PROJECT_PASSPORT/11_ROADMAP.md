@@ -147,8 +147,9 @@ This document tracks only work that is reflected by the current repository state
   offline Alembic SQL generation against isolated PostgreSQL 17.10.
 - EPIC 18 marketplace data readiness foundation: offline readiness verifier,
   marketplace capture checklist, GGSEL absolute URL normalization, GGSEL
-  extractor/normalizer contract coverage, Playerok response analyzer, and FunPay
-  fetch/extract/normalize/analyzer boundaries.
+  extractor/normalizer contract coverage, Playerok response analyzer and
+  extractor contract coverage, and FunPay fetch/extract/normalize/analyzer
+  boundaries.
 
 ## Current Status
 

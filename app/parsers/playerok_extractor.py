@@ -60,8 +60,9 @@ class PlayerokExtractor:
 
     def _looks_like_offer(self, item: JsonObject) -> bool:
         has_identifier = any(key in item for key in ("id", "slug"))
-        has_offer_data = any(key in item for key in ("name", "title", "price", "url"))
-        return has_identifier and has_offer_data
+        has_title = any(key in item for key in ("name", "title"))
+        has_marketplace_data = any(key in item for key in ("price", "url", "slug"))
+        return has_identifier and has_title and has_marketplace_data
 
     def _to_parsed_offer(self, item: JsonObject) -> ParsedOffer:
         slug = self._as_str(item.get("slug"))
@@ -124,10 +125,7 @@ class PlayerokExtractor:
         if seller is None:
             return None
 
-        name = (
-            self._as_str(seller.get("username"))
-            or self._as_str(seller.get("name"))
-        )
+        name = self._as_str(seller.get("username")) or self._as_str(seller.get("name"))
         return name.strip() if name is not None else None
 
     def _nested_object(self, item: JsonObject, *keys: str) -> JsonObject | None:

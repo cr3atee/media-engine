@@ -51,6 +51,10 @@ and `PlayerokPipeline`, but a saved real Playerok marketplace response is not
 present in the current workspace. Existing documentation states that the exact
 Playerok public listing response shape is not confirmed yet.
 
+The extractor has focused contract coverage for structured JSON and
+`__NEXT_DATA__` payloads and avoids treating nested seller/user objects as
+offers.
+
 Remaining gaps:
 
 - capture a real public listing response or approved API response;
