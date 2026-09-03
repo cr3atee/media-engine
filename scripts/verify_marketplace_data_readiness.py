@@ -19,6 +19,7 @@ PLAYEROK_RESPONSE_PATHS = (
     TMP_DIR / "playerok_response.html",
     TMP_DIR / "playerok_response.txt",
 )
+FUNPAY_RESPONSE_PATH = TMP_DIR / "funpay_response.html"
 
 
 @dataclass(slots=True, frozen=True)
@@ -146,13 +147,29 @@ def verify_playerok() -> MarketplaceReadiness:
 
 def verify_funpay() -> MarketplaceReadiness:
     """Report FunPay readiness from the current repository state."""
+    if FUNPAY_RESPONSE_PATH.exists():
+        return MarketplaceReadiness(
+            marketplace="funpay",
+            status="raw_only",
+            raw_items=0,
+            parsed_offers=0,
+            snapshot_ready_offers=0,
+            notes=(
+                "Saved FunPay raw response exists.",
+                "FunPay extractor and normalizer are not implemented yet.",
+            ),
+        )
+
     return MarketplaceReadiness(
         marketplace="funpay",
         status="not_implemented",
         raw_items=0,
         parsed_offers=0,
         snapshot_ready_offers=0,
-        notes=("FunPay has adapter scaffolding only; no fetcher/extractor exists.",),
+        notes=(
+            "FunPay raw fetcher exists, but no saved raw response is available.",
+            "FunPay extractor and normalizer are not implemented yet.",
+        ),
     )
 
 

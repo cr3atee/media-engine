@@ -61,16 +61,18 @@ Remaining gaps:
 
 ### FunPay
 
-Status: not implemented.
+Status: raw fetch boundary prepared.
 
 The repository currently contains empty adapter scaffolding for FunPay only.
-There is no FunPay fetcher, extractor, normalizer, or pipeline.
+`FunPayFetcher` can download raw marketplace responses through the shared
+`HttpClient`, and `scripts/demo_funpay_fetch.py` can save raw HTML diagnostics to
+`tmp/funpay_response.html`.
 
 Remaining gaps:
 
 - complete technical source investigation;
 - choose allowed data access strategy;
-- implement fetch/extract/normalize boundaries;
+- implement extractor and normalizer boundaries;
 - prove conversion into `ParsedOffer`.
 
 ## Verification
