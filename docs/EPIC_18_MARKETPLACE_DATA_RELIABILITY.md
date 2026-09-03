@@ -89,6 +89,9 @@ The verifier reports:
 - current blockers;
 - representative parsed offers.
 
+See `docs/EPIC_18_MARKETPLACE_CAPTURE_CHECKLIST.md` for the evidence required
+before a marketplace can be marked ready.
+
 ## Implementation Order
 
 1. Stabilize GGSEL modular mapping so normalized offers contain absolute URLs
