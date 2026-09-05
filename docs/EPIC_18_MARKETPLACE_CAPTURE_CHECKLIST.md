@@ -60,7 +60,7 @@ Remaining proof needed:
 
 ## Playerok
 
-Current status: blocked by missing captured source response.
+Current status: blocked by missing captured offer payload.
 
 Existing implementation:
 
@@ -69,8 +69,10 @@ Existing implementation:
 - `PlayerokNormalizer`;
 - `PlayerokPipeline`.
 
-Contract coverage verifies structured JSON and `__NEXT_DATA__` mapping behavior,
-but this is not a substitute for captured live marketplace data.
+Contract coverage verifies structured JSON and `__NEXT_DATA__` mapping behavior.
+A real public HTML response has been captured, but its hydration payload does not
+contain extractable offers, so this is not a substitute for the actual listing
+or API payload.
 
 Required proof:
 
@@ -97,7 +99,7 @@ documentation first.
 
 ## FunPay
 
-Current status: extraction boundary prepared.
+Current status: ready from captured listing response.
 
 Existing implementation:
 
@@ -107,12 +109,12 @@ Existing implementation:
 - `FunPayPipeline`;
 - `scripts/demo_funpay_fetch.py`.
 
-Required proof:
+Completed proof:
 
-- capture one real public listing/category response;
-- save it as `tmp/funpay_response.html`;
-- review the payload structure before implementing extraction;
-- prove conversion into snapshot-ready `ParsedOffer`.
+- captured one real public listing/category response;
+- saved it as `tmp/funpay_response.html`;
+- reviewed the payload structure with `scripts/analyze_funpay_response.py`;
+- proved conversion into one snapshot-ready `ParsedOffer`.
 
 Verification commands:
 
@@ -122,7 +124,8 @@ Verification commands:
 .venv\Scripts\python.exe scripts/verify_marketplace_data_readiness.py
 ```
 
-Until an extractor exists, FunPay must not be represented as marketplace-ready.
+Before scheduled production ingestion, add payload drift monitoring and capture
+additional categories.
 
 ## Failure Handling
 

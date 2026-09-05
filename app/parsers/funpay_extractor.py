@@ -11,17 +11,17 @@ from app.parsers.models import ParsedOffer
 _BASE_URL = "https://funpay.com/"
 _PRICE_RE = re.compile(
     r"(?P<amount>\d+(?:[\s\u00a0]\d{3})*(?:[,.]\d+)?)\s*"
-    r"(?P<currency>₽|руб\.?|rub|usd|\$|eur|€)",
+    r"(?P<currency>\u20bd|\u0440\u0443\u0431\.?|rub|usd|\$|eur|\u20ac)",
     flags=re.IGNORECASE,
 )
 _CURRENCY_ALIASES = {
-    "₽": "RUB",
-    "руб": "RUB",
-    "руб.": "RUB",
+    "\u20bd": "RUB",
+    "\u0440\u0443\u0431": "RUB",
+    "\u0440\u0443\u0431.": "RUB",
     "rub": "RUB",
     "$": "USD",
     "usd": "USD",
-    "€": "EUR",
+    "\u20ac": "EUR",
     "eur": "EUR",
 }
 

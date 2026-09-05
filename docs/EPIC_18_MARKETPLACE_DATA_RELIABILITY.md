@@ -26,7 +26,7 @@ to feed:
 
 ### GGSEL
 
-Status: partial.
+Status: ready from saved response.
 
 Current implementation can extract real GGSEL products from the saved
 `tmp/ggsel_response.html` payload. The extractor produces typed raw marketplace
@@ -47,9 +47,10 @@ Remaining gaps:
 Status: blocked.
 
 The project has `PlayerokFetcher`, `PlayerokExtractor`, `PlayerokNormalizer`,
-and `PlayerokPipeline`, but a saved real Playerok marketplace response is not
-present in the current workspace. Existing documentation states that the exact
-Playerok public listing response shape is not confirmed yet.
+and `PlayerokPipeline`. A real public Playerok HTML response was captured and
+analyzed, but its `__NEXT_DATA__` hydration payload does not contain extractable
+offers. Existing documentation states that the exact Playerok public listing or
+API response shape is not confirmed yet.
 
 The extractor has focused contract coverage for structured JSON and
 `__NEXT_DATA__` payloads and avoids treating nested seller/user objects as
@@ -66,20 +67,20 @@ Remaining gaps:
 
 ### FunPay
 
-Status: extraction boundary prepared.
+Status: ready from saved listing response.
 
 `FunPayFetcher` can download raw marketplace responses through the shared
 `HttpClient`, `FunPayExtractor` can read public offer anchors from listing HTML,
 and `FunPayNormalizer` can produce normalized `ParsedOffer` objects. The
-implementation is covered by representative parser tests, but it is not yet
-proven against a captured real FunPay response in the current workspace.
+implementation is covered by representative parser tests and has been proven
+against a captured real FunPay listing response saved in `tmp/funpay_response.html`.
+The readiness verifier reports one raw offer, one parsed offer, and one
+snapshot-ready offer from that response.
 
 Remaining gaps:
 
-- complete technical source investigation;
-- choose allowed data access strategy;
-- analyze the captured response with `scripts/analyze_funpay_response.py`;
-- prove conversion into `ParsedOffer`.
+- add payload drift monitoring before scheduled production ingestion;
+- capture additional categories before expanding marketplace coverage.
 
 ## Verification
 
@@ -104,10 +105,10 @@ before a marketplace can be marked ready.
    when the raw payload provides relative slugs. Done.
 2. Add focused tests for GGSEL extractor and normalizer against a small
    representative payload. Done.
-3. Capture and document one real Playerok category/listing response.
+3. Capture and document one real Playerok category/listing or API response.
 4. Harden Playerok extraction only after the response shape is confirmed.
-5. Research FunPay data access and document the selected source.
-6. Prove FunPay extractor and normalizer against a captured real response.
+5. Prove FunPay extractor and normalizer against a captured real response. Done.
+6. Add payload drift monitoring for ready marketplaces.
 7. Add a live-optional marketplace data verifier guarded by explicit flags.
 8. Wire verified marketplace integrations into Scheduler execution with
    tenant-owned integration configuration.

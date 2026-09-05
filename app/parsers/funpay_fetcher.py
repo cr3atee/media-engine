@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from urllib.parse import urljoin
+
 import httpx
 
 from app.core.http_client import HttpClient
@@ -12,7 +14,9 @@ class FunPayFetchError(RuntimeError):
 class FunPayFetcher:
     """Downloads raw FunPay marketplace responses without parsing them."""
 
-    DEFAULT_URL = "https://funpay.com/"
+    CATALOG_URL = "https://funpay.com/"
+    DEFAULT_URL = "https://funpay.com/en/lots/3486/"
+    MAX_REDIRECTS = 3
 
     DEFAULT_HEADERS = {
         "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
@@ -35,17 +39,39 @@ class FunPayFetcher:
         self.last_status_code = None
         self.last_content_type = None
 
-        try:
-            response = await self._http_client.get(url, headers=self.DEFAULT_HEADERS)
-        except httpx.RequestError as exc:
-            msg = f"FunPay request failed: {exc}"
-            raise FunPayFetchError(msg) from exc
+        current_url = url
+        for _ in range(self.MAX_REDIRECTS + 1):
+            try:
+                response = await self._http_client.get(
+                    current_url,
+                    headers=self.DEFAULT_HEADERS,
+                )
+            except httpx.RequestError as exc:
+                msg = f"FunPay request failed: {type(exc).__name__}: {exc}"
+                raise FunPayFetchError(msg) from exc
 
-        self.last_status_code = response.status_code
-        self.last_content_type = response.headers.get("content-type")
+            self.last_status_code = response.status_code
+            self.last_content_type = response.headers.get("content-type")
+
+            if not 300 <= response.status_code < 400:
+                break
+
+            location = response.headers.get("location")
+            if location is None:
+                msg = f"FunPay returned HTTP {response.status_code} without Location"
+                raise FunPayFetchError(msg)
+
+            current_url = urljoin(current_url, location)
+        else:
+            msg = f"FunPay exceeded {self.MAX_REDIRECTS} redirects"
+            raise FunPayFetchError(msg)
 
         if response.status_code >= 400:
             msg = f"FunPay returned HTTP {response.status_code}"
+            raise FunPayFetchError(msg)
+
+        if not response.text.strip():
+            msg = "FunPay returned an empty response body"
             raise FunPayFetchError(msg)
 
         return response.text

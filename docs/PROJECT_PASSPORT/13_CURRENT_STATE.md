@@ -78,11 +78,18 @@ configuration from `SchedulerSettings`.
 The first isolated PostgreSQL 17 Scheduler lease verification passed `11/11`
 checks; Alembic current/check, downgrade/upgrade, and offline SQL generation
 passed at revision `0014_scheduler_leases`.
+EPIC 18 marketplace data reliability has live proof for FunPay listing access:
+`FunPayFetcher` follows marketplace redirects through the shared `HttpClient`,
+and the saved real listing response produces one snapshot-ready `ParsedOffer`.
 
 ## Active Capabilities
 
 - GGSEL catalog HTML can be fetched through the shared HTTP client.
 - GGSEL raw product objects can be extracted from embedded payloads.
+- FunPay listing HTML can be fetched through the shared HTTP client with
+  marketplace-local redirect handling.
+- FunPay public offer anchors can be extracted and normalized into
+  snapshot-ready `ParsedOffer` objects from a real captured listing response.
 - Raw marketplace offers are represented by `RawMarketplaceOffer`.
 - Raw offers can be normalized into `ParsedOffer`.
 - Parsed offers can be persisted through `RepositoryProvider.offers`.
@@ -281,11 +288,11 @@ passed at revision `0014_scheduler_leases`.
 - GGSEL saved-response extraction now produces 60 snapshot-ready `ParsedOffer`
   objects with absolute catalog URLs.
 - Playerok has fetch/extract/normalize infrastructure and structured-response
-  contract coverage, but no captured real Playerok listing response is present
-  in the workspace.
-- FunPay has fetch/extract/normalize/pipeline boundaries and representative
-  parser coverage, but no captured real FunPay response is present in the
-  workspace.
+  contract coverage. A real public HTML response was captured, but it does not
+  contain offer data in hydration, so Playerok remains blocked until the actual
+  listing/API response is identified.
+- FunPay saved-response extraction now produces one snapshot-ready `ParsedOffer`
+  from a real public listing response.
 - Snapshot creation is skipped when parsed offers from any marketplace do not
   contain normalized price and currency.
 - Ingestion, scoring, and durable content processing are separate services and
@@ -330,7 +337,7 @@ Task 3 adds tenant-scoped seller integration routes with permission checks and
 redacted credential responses. EPIC 17 Task 4 adds Scheduler-facing integration
 selection without moving marketplace business logic into Scheduler. EPIC 17 is
 functionally complete; live marketplace credential storage and execution-time
-credential retrieval require a new explicitly approved EPIC. EPIC 18 begins the
-marketplace data reliability closure: GGSEL is verified from saved real payloads,
-while Playerok and FunPay must pass captured-response proof gates before they can
-be marked marketplace-ready.
+credential retrieval require a new explicitly approved EPIC. EPIC 18 continues
+marketplace data reliability closure: GGSEL and FunPay are verified from saved
+real payloads, while Playerok must still pass a captured listing/API proof gate
+before it can be marked marketplace-ready.

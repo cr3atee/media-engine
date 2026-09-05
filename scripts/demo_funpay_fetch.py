@@ -13,6 +13,7 @@ OUTPUT_PATH = PROJECT_ROOT / "tmp" / "funpay_response.html"
 
 async def main() -> None:
     """Download one raw FunPay response and print response diagnostics."""
+    _configure_stdout()
     from app.core.http_client import HttpClient
     from app.parsers.funpay_fetcher import FunPayFetcher, FunPayFetchError
 
@@ -34,6 +35,11 @@ async def main() -> None:
     print("first 500 characters:")
     print(response[:500])
     print(f"saved to: {OUTPUT_PATH}")
+
+
+def _configure_stdout() -> None:
+    if hasattr(sys.stdout, "reconfigure"):
+        sys.stdout.reconfigure(encoding="utf-8", errors="backslashreplace")
 
 
 if __name__ == "__main__":

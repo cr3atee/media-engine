@@ -11,6 +11,7 @@ if str(PROJECT_ROOT) not in sys.path:
 
 async def main() -> None:
     """Run the FunPay pipeline and print extracted offer diagnostics."""
+    _configure_stdout()
     from app.core.http_client import HttpClient
     from app.parsers.funpay_extractor import FunPayExtractor
     from app.parsers.funpay_fetcher import FunPayFetcher, FunPayFetchError
@@ -38,6 +39,11 @@ async def main() -> None:
         print(f"Price: {offer.price or 'unknown'} {offer.currency or ''}".strip())
         print(f"URL: {offer.url or 'unknown'}")
         print(f"Seller: {offer.seller_name or 'unknown'}")
+
+
+def _configure_stdout() -> None:
+    if hasattr(sys.stdout, "reconfigure"):
+        sys.stdout.reconfigure(encoding="utf-8", errors="backslashreplace")
 
 
 if __name__ == "__main__":

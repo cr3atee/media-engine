@@ -37,6 +37,7 @@ class MarketplaceReadiness:
 
 def main() -> None:
     """Print the current marketplace data readiness without network calls."""
+    _configure_stdout()
     results = (
         verify_ggsel(),
         verify_playerok(),
@@ -186,6 +187,11 @@ def snapshot_ready(offers: tuple[ParsedOffer, ...]) -> int:
         and offer.currency is not None
         for offer in offers
     )
+
+
+def _configure_stdout() -> None:
+    if hasattr(sys.stdout, "reconfigure"):
+        sys.stdout.reconfigure(encoding="utf-8", errors="backslashreplace")
 
 
 if __name__ == "__main__":

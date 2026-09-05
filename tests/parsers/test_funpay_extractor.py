@@ -14,7 +14,7 @@ def test_funpay_extractor_reads_offer_anchor() -> None:
         <div class="tc-desc-text">Minecraft Premium Account</div>
       </div>
       <div class="media-user-name">BestSeller</div>
-      <div class="tc-price">790 ₽</div>
+      <div class="tc-price">790 \u20bd</div>
     </a>
     """
 

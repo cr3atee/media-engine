@@ -150,6 +150,9 @@ This document tracks only work that is reflected by the current repository state
   extractor/normalizer contract coverage, Playerok response analyzer and
   extractor contract coverage, and FunPay fetch/extract/normalize/analyzer
   boundaries.
+- FunPay live listing verification: marketplace redirect handling, real listing
+  capture, analyzer proof, pipeline proof, and one snapshot-ready `ParsedOffer`
+  from the saved response.
 - Scheduler same-job overlap guard foundation: scheduler lease domain contract,
   repository interface, memory/PostgreSQL implementations, provider wiring,
   migration `0014_scheduler_leases`, focused tests, demo, and isolated
@@ -172,12 +175,12 @@ readiness. EPIC 17 is functionally complete for tenant-owned marketplace
 integration metadata, credential-reference redaction, seller integration API, and
 Scheduler-facing integration selection without enabling live credential use.
 EPIC 18 is in progress to close marketplace data reliability before calling the
-multi-marketplace ingestion core complete.
+multi-marketplace ingestion core complete. GGSEL and FunPay have real saved
+payload proof; Playerok still needs the actual listing/API payload proof.
 
 ## Not Present Yet
 
 - Captured real Playerok listing response and proven `ParsedOffer` conversion.
-- Captured real FunPay listing response and proven `ParsedOffer` conversion.
 - Production deployment entrypoint using PostgreSQL scheduler factory.
 - Optional guarded live Telegram test-chat message.
 - Production AI provider integration in the pipeline.

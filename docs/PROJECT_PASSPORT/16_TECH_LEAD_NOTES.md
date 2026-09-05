@@ -145,8 +145,11 @@ This document captures architecture notes that are important for future reviews.
   plaintext credential columns or execution-time credential retrieval without an
   explicit secret-storage design.
 - GGSEL saved-response extraction now reaches snapshot-ready `ParsedOffer`
-  objects. Keep Playerok and FunPay behind captured-response proof gates; do not
-  mark either marketplace ready from heuristic extraction or empty live results.
+  objects. FunPay has also passed captured real-listing proof with one
+  snapshot-ready `ParsedOffer`. Keep Playerok behind a captured listing/API proof
+  gate; do not mark it ready from homepage hydration or empty live results.
+- FunPay fetcher follows marketplace-local redirects because the shared
+  `HttpClient` intentionally remains generic and redirect-neutral.
 - Scheduler same-job overlap is now guarded by optional scheduler leases.
   Production multi-node deployments must create Scheduler through the PostgreSQL
   scheduler factory and provide a stable `SCHEDULER_OWNER_ID` per node.

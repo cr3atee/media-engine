@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import re
+import sys
 from dataclasses import dataclass
 from html.parser import HTMLParser
 from pathlib import Path
@@ -51,6 +52,7 @@ class FunPayHtmlCollector(HTMLParser):
 
 def main() -> None:
     """Analyze a saved FunPay response before product extraction is implemented."""
+    _configure_stdout()
     if not HTML_PATH.exists():
         print(f"Missing FunPay response: {HTML_PATH}")
         print("Run scripts/demo_funpay_fetch.py or provide a captured response first.")
@@ -137,6 +139,11 @@ def snippet(text: str, position: int) -> str:
     start = max(0, position - SNIPPET_RADIUS)
     end = min(len(text), position + SNIPPET_RADIUS)
     return " ".join(text[start:end].split())
+
+
+def _configure_stdout() -> None:
+    if hasattr(sys.stdout, "reconfigure"):
+        sys.stdout.reconfigure(encoding="utf-8", errors="backslashreplace")
 
 
 if __name__ == "__main__":

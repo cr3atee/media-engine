@@ -16,6 +16,10 @@ This document records notable Project Passport updates.
   files, and focused Ruff/Ruff format checks.
 - Added Scheduler bootstrap settings and factory helpers for memory/PostgreSQL
   lease configuration.
+- Verified FunPay live listing ingestion through the existing HTTP stack:
+  marketplace-local redirect handling now prevents empty `302` captures, the
+  saved real listing response analyzes correctly, and readiness reports one
+  snapshot-ready `ParsedOffer`.
 - Started EPIC 18 marketplace data reliability work: added offline readiness
   verification, marketplace capture checklist, GGSEL absolute URL normalization,
   GGSEL extractor/normalizer contract coverage, Playerok response analysis
