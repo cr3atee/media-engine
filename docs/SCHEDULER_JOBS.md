@@ -22,6 +22,8 @@ This document describes the reusable job layer used by `SchedulerService`.
 - Retry count, retry delay, and execution timeout are configured in the scheduler.
 - Job failures do not stop the scheduler.
 - Scheduler logs `START`, `SUCCESS`, `FAILURE`, `RETRY`, `TIMEOUT`, and `STOP` lifecycle messages.
+- When configured with a lease repository, Scheduler skips execution while
+  another active owner holds the same job lease.
 
 ## Demo
 
@@ -30,3 +32,6 @@ The demo starts the scheduler, registers `GGSELJob` and `PlayerokJob`, executes 
 `scripts/demo_scheduler_periodic.py` demonstrates periodic execution with different job intervals and graceful shutdown.
 
 `scripts/demo_scheduler_retry.py` demonstrates retry handling with one successful job and one intentionally failing job.
+
+`scripts/demo_scheduler_leases.py` demonstrates same-job overlap prevention with
+two Scheduler instances sharing one lease repository.

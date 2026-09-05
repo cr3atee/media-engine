@@ -69,6 +69,13 @@ EPIC 17 Task 4 Scheduler integration selection is implemented and
 live-verified: enabled tenant-owned marketplace integrations are selected,
 inactive tenants are excluded, and Scheduler delegates to the selection service.
 EPIC 17 is functionally complete.
+Scheduler multi-node lease primitives are implemented: Scheduler can optionally
+acquire infrastructure leases before job execution, memory lease behavior is
+covered by focused tests, and PostgreSQL lease persistence is prepared by
+migration `0014_scheduler_leases`.
+The first isolated PostgreSQL 17 Scheduler lease verification passed `11/11`
+checks; Alembic current/check, downgrade/upgrade, and offline SQL generation
+passed at revision `0014_scheduler_leases`.
 
 ## Active Capabilities
 
@@ -256,6 +263,13 @@ EPIC 17 is functionally complete.
   `10/10`, focused tests `18 passed`, full Pytest `336 passed, 58 skipped`,
   full MyPy `335` source files, Ruff, Ruff format, demo execution, Alembic
   current/check, downgrade/upgrade, and offline Alembic SQL generation.
+- Scheduler can optionally use `SchedulerLeaseRepository` to prevent same-job
+  overlap across multiple scheduler nodes without changing job implementations.
+- Memory scheduler leases are implemented and PostgreSQL scheduler lease
+  persistence is prepared by `0014_scheduler_leases`.
+- Scheduler lease verification passed: PostgreSQL `11/11`, focused tests
+  `4 passed`, full Pytest `355 passed, 58 skipped`, full MyPy `342` source
+  files, and focused Ruff/format checks.
 
 ## Known Gaps
 
@@ -271,7 +285,7 @@ EPIC 17 is functionally complete.
   contain normalized price and currency.
 - Ingestion, scoring, and durable content processing are separate services and
   still require production process/bootstrap configuration.
-- Scheduler has no explicit overlap or multi-process coordination policy.
+- Scheduler multi-node leases require explicit production bootstrap wiring.
 - Live Telegram delivery is not yet verified; credentials, exact test-chat
   confirmation, live flags, and PostgreSQL verification database were not
   supplied.

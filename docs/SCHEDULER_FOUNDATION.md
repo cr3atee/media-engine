@@ -11,6 +11,8 @@ The scheduler layer coordinates execution of existing marketplace pipelines. It 
 - `JobExecutionStatus` reports the latest state, run count, failure count, timestamps, and error message.
 - Scheduler retry handling is configured per job and remains outside business logic.
 - Scheduler statistics track total executions, successful executions, failed executions, retry attempts, last error, and last successful run.
+- Scheduler can optionally acquire infrastructure leases before job execution to
+  prevent same-job overlap across nodes.
 
 ## Verified Flow
 
@@ -24,4 +26,5 @@ The scheduler starts, executes both jobs, prints execution statuses, and shuts d
 ## Current Limitations
 
 - Marketplace pipeline success still depends on the underlying marketplace fetchers and network access.
-- Scheduler integration with PostgreSQL-backed providers is intentionally left for a later story.
+- Production bootstrap must explicitly configure a PostgreSQL scheduler lease
+  repository on every scheduler node.

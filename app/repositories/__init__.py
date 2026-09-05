@@ -15,6 +15,7 @@ from app.repositories.memberships import MembershipRepository
 from app.repositories.offers import OfferRepository
 from app.repositories.price_history import PriceHistoryRepository
 from app.repositories.publications import PublicationRepository
+from app.repositories.scheduler_leases import SchedulerLeaseRepository
 from app.repositories.tenants import TenantRepository
 from app.repositories.users import UserRepository
 
@@ -33,6 +34,7 @@ __all__ = (
     "PriceHistoryRepository",
     "PublicationRepository",
     "RepositoryIdentityConflictError",
+    "SchedulerLeaseRepository",
     "TenantRepository",
     "UserRepository",
 )

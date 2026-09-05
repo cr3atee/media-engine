@@ -6,6 +6,14 @@ This document records notable Project Passport updates.
 
 ## Unreleased
 
+- Added Scheduler multi-node lease foundation: domain contract, repository
+  interface, memory/PostgreSQL lease repositories, provider wiring, migration
+  `0014_scheduler_leases`, focused tests, PostgreSQL verifier, demo, and
+  Scheduler documentation updates.
+- Verified Scheduler lease foundation against isolated PostgreSQL 17: verifier
+  `11/11`, Alembic current/check/downgrade/upgrade/offline SQL, focused tests
+  `4 passed`, full Pytest `355 passed, 58 skipped`, full MyPy `342` source
+  files, and focused Ruff/Ruff format checks.
 - Started EPIC 18 marketplace data reliability work: added offline readiness
   verification, marketplace capture checklist, GGSEL absolute URL normalization,
   GGSEL extractor/normalizer contract coverage, Playerok response analysis

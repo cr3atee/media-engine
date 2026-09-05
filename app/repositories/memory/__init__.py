@@ -20,6 +20,9 @@ from app.repositories.memory.memory_memberships import MemoryMembershipRepositor
 from app.repositories.memory.memory_offers import MemoryOfferRepository
 from app.repositories.memory.memory_price_history import MemoryPriceHistoryRepository
 from app.repositories.memory.memory_publications import MemoryPublicationRepository
+from app.repositories.memory.memory_scheduler_leases import (
+    MemorySchedulerLeaseRepository,
+)
 from app.repositories.memory.memory_tenants import MemoryTenantRepository
 from app.repositories.memory.memory_users import MemoryUserRepository
 
@@ -36,6 +39,7 @@ __all__ = (
     "MemoryPasswordResetTokenRepository",
     "MemoryPriceHistoryRepository",
     "MemoryPublicationRepository",
+    "MemorySchedulerLeaseRepository",
     "MemoryTenantRepository",
     "MemoryUserRepository",
 )

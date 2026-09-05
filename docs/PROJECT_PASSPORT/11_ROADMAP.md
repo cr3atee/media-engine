@@ -150,6 +150,10 @@ This document tracks only work that is reflected by the current repository state
   extractor/normalizer contract coverage, Playerok response analyzer and
   extractor contract coverage, and FunPay fetch/extract/normalize/analyzer
   boundaries.
+- Scheduler same-job overlap guard foundation: scheduler lease domain contract,
+  repository interface, memory/PostgreSQL implementations, provider wiring,
+  migration `0014_scheduler_leases`, focused tests, demo, and isolated
+  PostgreSQL verification `11/11`.
 
 ## Current Status
 
@@ -172,7 +176,7 @@ multi-marketplace ingestion core complete.
 
 - Captured real Playerok listing response and proven `ParsedOffer` conversion.
 - Captured real FunPay listing response and proven `ParsedOffer` conversion.
-- Scheduler overlap and multi-process coordination.
+- Production bootstrap wiring for PostgreSQL scheduler leases.
 - Optional guarded live Telegram test-chat message.
 - Production AI provider integration in the pipeline.
 - Live marketplace credential storage and credential retrieval for execution.

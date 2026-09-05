@@ -29,6 +29,7 @@ from app.repositories.memory import (
     MemoryPasswordResetTokenRepository,
     MemoryPriceHistoryRepository,
     MemoryPublicationRepository,
+    MemorySchedulerLeaseRepository,
     MemoryTenantRepository,
     MemoryUserRepository,
 )
@@ -51,6 +52,7 @@ from app.repositories.postgres import (
 )
 from app.repositories.price_history import PriceHistoryRepository
 from app.repositories.publications import PublicationRepository
+from app.repositories.scheduler_leases import SchedulerLeaseRepository
 from app.repositories.tenants import TenantRepository
 from app.repositories.users import UserRepository
 
@@ -67,6 +69,7 @@ class RepositoryProvider:
     events: MarketEventRepository
     generated_contents: GeneratedContentRepository
     publications: PublicationRepository
+    scheduler_leases: SchedulerLeaseRepository | None = None
     marketplace_integrations: MarketplaceIntegrationRepository = field(
         default_factory=MemoryMarketplaceIntegrationRepository,
     )
@@ -99,6 +102,7 @@ def create_memory_provider() -> RepositoryProvider:
         events=MemoryMarketEventRepository(),
         generated_contents=MemoryGeneratedContentRepository(),
         publications=MemoryPublicationRepository(),
+        scheduler_leases=MemorySchedulerLeaseRepository(),
         marketplace_integrations=MemoryMarketplaceIntegrationRepository(),
         users=MemoryUserRepository(),
         tenants=MemoryTenantRepository(),
@@ -109,7 +113,11 @@ def create_memory_provider() -> RepositoryProvider:
     )
 
 
-def create_postgres_provider(session: AsyncSession) -> RepositoryProvider:
+def create_postgres_provider(
+    session: AsyncSession,
+    *,
+    scheduler_leases: SchedulerLeaseRepository | None = None,
+) -> RepositoryProvider:
     """Create a repository provider backed by PostgreSQL implementations."""
     return RepositoryProvider(
         admin_actions=PostgresAdminActionRepository(session),
@@ -119,6 +127,7 @@ def create_postgres_provider(session: AsyncSession) -> RepositoryProvider:
         events=PostgresMarketEventRepository(session),
         generated_contents=PostgresGeneratedContentRepository(session),
         publications=PostgresPublicationRepository(session),
+        scheduler_leases=scheduler_leases,
         marketplace_integrations=PostgresMarketplaceIntegrationRepository(session),
         users=PostgresUserRepository(session),
         tenants=PostgresTenantRepository(session),
@@ -140,12 +149,14 @@ def create_repository_provider(
 def create_repository_provider(
     backend: Literal["postgres"],
     session: AsyncSession,
+    scheduler_leases: SchedulerLeaseRepository | None = None,
 ) -> RepositoryProvider: ...
 
 
 def create_repository_provider(
     backend: RepositoryBackend = "memory",
     session: AsyncSession | None = None,
+    scheduler_leases: SchedulerLeaseRepository | None = None,
 ) -> RepositoryProvider:
     """Create a repository provider for the selected storage backend."""
     if backend == "memory":
@@ -155,4 +166,4 @@ def create_repository_provider(
         msg = "AsyncSession is required for postgres repositories."
         raise ValueError(msg)
 
-    return create_postgres_provider(session)
+    return create_postgres_provider(session, scheduler_leases=scheduler_leases)

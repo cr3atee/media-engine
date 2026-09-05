@@ -26,6 +26,9 @@ from app.repositories.postgres.postgres_price_history import (
 from app.repositories.postgres.postgres_publications import (
     PostgresPublicationRepository,
 )
+from app.repositories.postgres.postgres_scheduler_leases import (
+    PostgresSchedulerLeaseRepository,
+)
 from app.repositories.postgres.postgres_tenants import PostgresTenantRepository
 from app.repositories.postgres.postgres_users import PostgresUserRepository
 
@@ -42,6 +45,7 @@ __all__ = [
     "PostgresPasswordResetTokenRepository",
     "PostgresPriceHistoryRepository",
     "PostgresPublicationRepository",
+    "PostgresSchedulerLeaseRepository",
     "PostgresTenantRepository",
     "PostgresUserRepository",
 ]

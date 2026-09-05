@@ -7,7 +7,9 @@ from dataclasses import dataclass, replace
 from datetime import UTC, datetime, timedelta
 from importlib import import_module
 from typing import Any
+from uuid import uuid4
 
+from app.repositories.scheduler_leases import SchedulerLeaseRepository
 from app.scheduler.jobs import BaseJob, JobExecutionState, JobExecutionStatus
 
 logger = logging.getLogger(__name__)
@@ -42,6 +44,7 @@ class JobRuntimeStatistics:
     successful_executions: int = 0
     failed_executions: int = 0
     retry_attempts: int = 0
+    lease_skips: int = 0
     last_error: str | None = None
     last_successful_run: datetime | None = None
 
@@ -49,8 +52,19 @@ class JobRuntimeStatistics:
 class SchedulerService:
     """Coordinates scheduled execution of existing application jobs."""
 
-    def __init__(self, *, tick_seconds: float = 0.25) -> None:
+    def __init__(
+        self,
+        *,
+        tick_seconds: float = 0.25,
+        lease_repository: SchedulerLeaseRepository | None = None,
+        owner_id: str | None = None,
+        lease_ttl_seconds: float = 300.0,
+    ) -> None:
         """Initialize an empty scheduler service."""
+        if lease_ttl_seconds <= 0:
+            msg = "Lease TTL must be greater than zero seconds."
+            raise ValueError(msg)
+
         self._scheduler: Any = self._create_scheduler()
         self._jobs: dict[str, BaseJob] = {}
         self._statuses: dict[str, JobExecutionStatus] = {}
@@ -59,6 +73,9 @@ class SchedulerService:
         self._statistics: dict[str, JobRuntimeStatistics] = {}
         self._tick_seconds = tick_seconds
         self._periodic_task: asyncio.Task[None] | None = None
+        self._lease_repository = lease_repository
+        self._owner_id = owner_id or f"scheduler-{uuid4()}"
+        self._lease_ttl_seconds = lease_ttl_seconds
 
     def register_job(
         self,
@@ -131,38 +148,57 @@ class SchedulerService:
         job = self._jobs[name]
         settings = self._retry_settings[name]
         max_attempts = settings.retry_count + 1
-
-        for attempt in range(1, max_attempts + 1):
+        if not await self._acquire_execution_lease(name, settings):
+            self._record_lease_skip(name)
+            self._refresh_schedule_after_execution(name)
             logger.info(
-                "START",
-                extra={"job": name, "attempt": attempt, "max_attempts": max_attempts},
+                "SKIP_ACTIVE_LEASE",
+                extra={"job": name, "owner_id": self._owner_id},
             )
-            timed_out = await self._execute_once(name, job, settings)
-            status = self._statuses[name]
-            if status.state is JobExecutionState.SUCCEEDED:
-                self._record_success(name)
-                logger.info("SUCCESS", extra={"job": name, "attempt": attempt})
-                break
+            return
 
-            if timed_out:
-                logger.info("TIMEOUT", extra={"job": name, "attempt": attempt})
-            else:
+        try:
+            for attempt in range(1, max_attempts + 1):
                 logger.info(
-                    "FAILURE",
-                    extra={"job": name, "attempt": attempt, "error": status.last_error},
+                    "START",
+                    extra={
+                        "job": name,
+                        "attempt": attempt,
+                        "max_attempts": max_attempts,
+                    },
                 )
+                timed_out = await self._execute_once(name, job, settings)
+                status = self._statuses[name]
+                if status.state is JobExecutionState.SUCCEEDED:
+                    self._record_success(name)
+                    logger.info("SUCCESS", extra={"job": name, "attempt": attempt})
+                    break
 
-            if attempt < max_attempts:
-                self._record_retry(name)
-                logger.info(
-                    "RETRY",
-                    extra={"job": name, "next_attempt": attempt + 1},
-                )
-                if settings.retry_delay_seconds > 0:
-                    await asyncio.sleep(settings.retry_delay_seconds)
-                continue
+                if timed_out:
+                    logger.info("TIMEOUT", extra={"job": name, "attempt": attempt})
+                else:
+                    logger.info(
+                        "FAILURE",
+                        extra={
+                            "job": name,
+                            "attempt": attempt,
+                            "error": status.last_error,
+                        },
+                    )
 
-            self._record_failure(name)
+                if attempt < max_attempts:
+                    self._record_retry(name)
+                    logger.info(
+                        "RETRY",
+                        extra={"job": name, "next_attempt": attempt + 1},
+                    )
+                    if settings.retry_delay_seconds > 0:
+                        await asyncio.sleep(settings.retry_delay_seconds)
+                    continue
+
+                self._record_failure(name)
+        finally:
+            await self._release_execution_lease(name)
 
         self._refresh_schedule_after_execution(name)
 
@@ -228,6 +264,48 @@ class SchedulerService:
         for name in due_jobs:
             await self.execute_job(name)
 
+    async def _acquire_execution_lease(
+        self,
+        name: str,
+        settings: JobRetrySettings,
+    ) -> bool:
+        if self._lease_repository is None:
+            return True
+
+        acquired_at = datetime.now(UTC)
+        expires_at = acquired_at + timedelta(
+            seconds=self._lease_duration_seconds(settings),
+        )
+        return await self._lease_repository.acquire(
+            job_name=name,
+            owner_id=self._owner_id,
+            acquired_at=acquired_at,
+            expires_at=expires_at,
+        )
+
+    async def _release_execution_lease(self, name: str) -> None:
+        if self._lease_repository is None:
+            return
+
+        try:
+            await self._lease_repository.release(
+                job_name=name,
+                owner_id=self._owner_id,
+            )
+        except Exception:
+            logger.exception(
+                "FAILURE",
+                extra={"job": name, "component": "scheduler_lease_release"},
+            )
+
+    def _lease_duration_seconds(self, settings: JobRetrySettings) -> float:
+        if settings.timeout_seconds is None:
+            return self._lease_ttl_seconds
+
+        retry_delay = settings.retry_delay_seconds * settings.retry_count
+        timeout_budget = settings.timeout_seconds * (settings.retry_count + 1)
+        return max(self._lease_ttl_seconds, timeout_budget + retry_delay)
+
     async def _execute_once(
         self,
         name: str,
@@ -260,6 +338,13 @@ class SchedulerService:
             statistics,
             retry_attempts=statistics.retry_attempts + 1,
             last_error=self._statuses[name].last_error,
+        )
+
+    def _record_lease_skip(self, name: str) -> None:
+        statistics = self._statistics[name]
+        self._statistics[name] = replace(
+            statistics,
+            lease_skips=statistics.lease_skips + 1,
         )
 
     def _record_success(self, name: str) -> None:

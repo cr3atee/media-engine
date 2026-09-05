@@ -52,10 +52,26 @@ Telegram publication delivery through the orchestration-only Scheduler job.
 - Publication recovery jobs never call a delivery adapter and never return an
   ambiguous publication to pending.
 
+## Multi-Node Lease Update
+
+Scheduler now supports an optional same-job overlap guard through
+`SchedulerLeaseRepository`. The memory implementation is covered by focused
+tests and `scripts/demo_scheduler_leases.py`. The PostgreSQL implementation is
+available through `PostgresSchedulerLeaseRepository` and migration
+`0014_scheduler_leases`.
+
+`scripts/verify_scheduler_leases_postgres.py` verifies PostgreSQL acquire,
+conflict, release, expired recovery, and concurrent acquisition when
+`SCHEDULER_LEASE_DATABASE_URL` targets an isolated `scheduler_*` database.
+
+The first isolated PostgreSQL 17 run passed `11/11` checks. Alembic current/check,
+downgrade to `0013_marketplace_credentials`, upgrade back to head, and offline
+SQL generation passed at revision `0014_scheduler_leases`.
+
 ## Remaining Limits
 
-- There is no explicit same-job overlap guard.
-- Multiple Scheduler processes are not coordinated.
+- Production bootstrap must explicitly provide the PostgreSQL lease repository to
+  every Scheduler node.
 - Telegram publication delivery and its Scheduler job are implemented and
   verified with mocked transport; guarded live test-chat delivery is not
   verified.
