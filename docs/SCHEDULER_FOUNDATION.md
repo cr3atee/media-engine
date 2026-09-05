@@ -13,6 +13,8 @@ The scheduler layer coordinates execution of existing marketplace pipelines. It 
 - Scheduler statistics track total executions, successful executions, failed executions, retry attempts, last error, and last successful run.
 - Scheduler can optionally acquire infrastructure leases before job execution to
   prevent same-job overlap across nodes.
+- Scheduler factories create memory or PostgreSQL-backed Scheduler instances
+  from explicit `SchedulerSettings`.
 
 ## Verified Flow
 
@@ -26,5 +28,5 @@ The scheduler starts, executes both jobs, prints execution statuses, and shuts d
 ## Current Limitations
 
 - Marketplace pipeline success still depends on the underlying marketplace fetchers and network access.
-- Production bootstrap must explicitly configure a PostgreSQL scheduler lease
-  repository on every scheduler node.
+- Production entrypoints must use the PostgreSQL scheduler factory when running
+  multiple Scheduler nodes.

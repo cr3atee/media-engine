@@ -1,5 +1,10 @@
 from __future__ import annotations
 
+from app.scheduler.factory import (
+    create_memory_scheduler_service,
+    create_postgres_scheduler_service,
+    create_scheduler_service,
+)
 from app.scheduler.jobs import (
     BaseJob,
     GGSELJob,
@@ -38,4 +43,7 @@ __all__ = [
     "StaleContentClaimRecoveryJob",
     "StalePublicationClaimRecoveryJob",
     "StaleScoringClaimRecoveryJob",
+    "create_memory_scheduler_service",
+    "create_postgres_scheduler_service",
+    "create_scheduler_service",
 ]

@@ -15,6 +15,8 @@ business rules.
 - `PostgresSchedulerLeaseRepository` performs short atomic lease transactions
   through a caller-provided async session factory.
 - `SchedulerService` can optionally acquire a lease before executing a job.
+- `create_memory_scheduler_service()` and `create_postgres_scheduler_service()`
+  build Scheduler instances from `SchedulerSettings`.
 
 ## PostgreSQL Schema
 
@@ -39,10 +41,22 @@ When a lease repository is configured, `SchedulerService.execute_job()`:
 
 Without a configured lease repository, Scheduler behavior remains unchanged.
 
+## Configuration
+
+Scheduler settings are loaded from the `SCHEDULER_` environment namespace:
+
+- `SCHEDULER_TICK_SECONDS` controls periodic loop polling.
+- `SCHEDULER_LEASE_ENABLED` enables or disables lease guarding.
+- `SCHEDULER_OWNER_ID` sets the process/node owner identifier.
+- `SCHEDULER_LEASE_TTL_SECONDS` controls lease expiry duration.
+
+When `SCHEDULER_LEASE_ENABLED=true`, the generic scheduler factory refuses to
+create a scheduler without a lease repository.
+
 ## Current Limits
 
-- Production bootstrap must explicitly provide a PostgreSQL lease repository to
-  every Scheduler node.
+- Production entrypoints must use the PostgreSQL scheduler factory when running
+  multiple Scheduler nodes.
 - Lease TTL is fixed per `SchedulerService` instance and should be configured
   longer than the expected job retry/timeout budget.
 - The lease guard prevents same-job overlap; it does not provide distributed
@@ -69,7 +83,7 @@ The first isolated PostgreSQL 17 verification passed:
 - Alembic upgrade back to head: passed.
 - Offline `upgrade head --sql`: generated successfully and includes
   `scheduler_leases`.
-- Focused tests: `4 passed`.
-- Full Pytest: `355 passed, 58 skipped, 1 warning`.
-- Full MyPy: `342` source files, no issues.
+- Focused tests: `8 passed`.
+- Full Pytest: `359 passed, 58 skipped, 1 warning`.
+- Full MyPy: `344` source files, no issues.
 - Focused Ruff and Ruff format check: passed.

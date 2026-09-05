@@ -73,6 +73,8 @@ Scheduler multi-node lease primitives are implemented: Scheduler can optionally
 acquire infrastructure leases before job execution, memory lease behavior is
 covered by focused tests, and PostgreSQL lease persistence is prepared by
 migration `0014_scheduler_leases`.
+Scheduler factory helpers are implemented for memory and PostgreSQL lease
+configuration from `SchedulerSettings`.
 The first isolated PostgreSQL 17 Scheduler lease verification passed `11/11`
 checks; Alembic current/check, downgrade/upgrade, and offline SQL generation
 passed at revision `0014_scheduler_leases`.
@@ -267,8 +269,11 @@ passed at revision `0014_scheduler_leases`.
   overlap across multiple scheduler nodes without changing job implementations.
 - Memory scheduler leases are implemented and PostgreSQL scheduler lease
   persistence is prepared by `0014_scheduler_leases`.
+- Scheduler factory helpers refuse unsafe lease-enabled construction without an
+  explicit lease repository and can create PostgreSQL-backed Scheduler instances
+  from an async session factory.
 - Scheduler lease verification passed: PostgreSQL `11/11`, focused tests
-  `4 passed`, full Pytest `355 passed, 58 skipped`, full MyPy `342` source
+  `8 passed`, full Pytest `359 passed, 58 skipped`, full MyPy `344` source
   files, and focused Ruff/format checks.
 
 ## Known Gaps
@@ -285,7 +290,8 @@ passed at revision `0014_scheduler_leases`.
   contain normalized price and currency.
 - Ingestion, scoring, and durable content processing are separate services and
   still require production process/bootstrap configuration.
-- Scheduler multi-node leases require explicit production bootstrap wiring.
+- Production deployment entrypoints still need to use the PostgreSQL scheduler
+  factory.
 - Live Telegram delivery is not yet verified; credentials, exact test-chat
   confirmation, live flags, and PostgreSQL verification database were not
   supplied.

@@ -25,7 +25,8 @@ This document lists only confirmed work remaining after EPIC 17 completion.
 
 ## Operational
 
-- Define Scheduler overlap and multi-process coordination before production.
+- Wire production Scheduler entrypoints through the PostgreSQL scheduler factory
+  when the deployment process is introduced.
 - Add production monitoring and alerting for exhausted content attempts and
   ambiguous publications.
 

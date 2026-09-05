@@ -147,6 +147,9 @@ This document captures architecture notes that are important for future reviews.
 - GGSEL saved-response extraction now reaches snapshot-ready `ParsedOffer`
   objects. Keep Playerok and FunPay behind captured-response proof gates; do not
   mark either marketplace ready from heuristic extraction or empty live results.
+- Scheduler same-job overlap is now guarded by optional scheduler leases.
+  Production multi-node deployments must create Scheduler through the PostgreSQL
+  scheduler factory and provide a stable `SCHEDULER_OWNER_ID` per node.
 
 ## Review Notes
 

@@ -77,6 +77,8 @@ class OpenRouterSettings(BaseSettings):
 
 
 class SchedulerSettings(BaseSettings):
+    """Configuration for scheduler orchestration and optional lease guarding."""
+
     model_config = SettingsConfigDict(
         env_file=".env",
         env_file_encoding="utf-8",
@@ -85,6 +87,10 @@ class SchedulerSettings(BaseSettings):
     )
 
     timezone: str = "UTC"
+    tick_seconds: float = Field(default=0.25, gt=0)
+    lease_enabled: bool = False
+    owner_id: str = Field(default="", max_length=255)
+    lease_ttl_seconds: float = Field(default=300.0, gt=0)
 
 
 class EventProcessingSettings(BaseSettings):

@@ -154,6 +154,8 @@ This document tracks only work that is reflected by the current repository state
   repository interface, memory/PostgreSQL implementations, provider wiring,
   migration `0014_scheduler_leases`, focused tests, demo, and isolated
   PostgreSQL verification `11/11`.
+- Scheduler bootstrap configuration: `SchedulerSettings` lease fields and
+  memory/PostgreSQL scheduler factory helpers.
 
 ## Current Status
 
@@ -176,7 +178,7 @@ multi-marketplace ingestion core complete.
 
 - Captured real Playerok listing response and proven `ParsedOffer` conversion.
 - Captured real FunPay listing response and proven `ParsedOffer` conversion.
-- Production bootstrap wiring for PostgreSQL scheduler leases.
+- Production deployment entrypoint using PostgreSQL scheduler factory.
 - Optional guarded live Telegram test-chat message.
 - Production AI provider integration in the pipeline.
 - Live marketplace credential storage and credential retrieval for execution.
