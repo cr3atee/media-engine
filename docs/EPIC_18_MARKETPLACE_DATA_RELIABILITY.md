@@ -44,26 +44,39 @@ Remaining gaps:
 
 ### Playerok
 
-Status: blocked.
+Status: partial from live GraphQL response.
 
 The project has `PlayerokFetcher`, `PlayerokExtractor`, `PlayerokNormalizer`,
-and `PlayerokPipeline`. A real public Playerok HTML response was captured and
-analyzed, but its `__NEXT_DATA__` hydration payload does not contain extractable
-offers. Existing documentation states that the exact Playerok public listing or
-API response shape is not confirmed yet.
+and `PlayerokPipeline`. The public homepage and product-page HTML responses were
+captured and analyzed, but their `__NEXT_DATA__` hydration payloads do not
+contain extractable offers.
+
+The marketplace frontend exposes a public GraphQL `/graphql` `items` operation.
+`PlayerokFetcher` now uses that operation with an `APPROVED` status filter and
+returns the raw JSON response without parsing it inside the fetcher. A live
+capture saved as `tmp/playerok_response.json` produced 20 real item offers
+through `PlayerokPipeline`.
 
 The extractor has focused contract coverage for structured JSON and
-`__NEXT_DATA__` payloads and avoids treating nested seller/user objects as
-offers.
+`__NEXT_DATA__` payloads and avoids treating nested seller/user/category/game
+objects as offers.
+
+Current verifier result:
+
+- raw items: 20;
+- parsed offers: 20;
+- snapshot-ready offers: 0.
 
 Remaining gaps:
 
-- capture a real public listing response or approved API response;
-- analyze the captured response with `scripts/analyze_playerok_response.py`;
-- confirm the exact source fields for id, title, price, currency, URL and
-  seller;
-- prove extraction into `ParsedOffer`;
-- prove snapshot readiness.
+- GraphQL item profiles expose id, slug, title, price, raw price, status,
+  seller, category, game, and attachment URL.
+- GraphQL validation rejects a direct `currency` field on both `MyItemProfile`
+  and `ForeignItemProfile`.
+- No currency value is present in the captured JSON response.
+- Do not default Playerok prices to RUB until that product or source decision is
+  approved and documented.
+- Prove snapshot readiness after currency semantics are confirmed.
 
 ### FunPay
 
@@ -106,7 +119,9 @@ before a marketplace can be marked ready.
 2. Add focused tests for GGSEL extractor and normalizer against a small
    representative payload. Done.
 3. Capture and document one real Playerok category/listing or API response.
-4. Harden Playerok extraction only after the response shape is confirmed.
+   Done through the public GraphQL `items` operation.
+4. Harden Playerok extraction only after the response shape is confirmed. Done
+   for item offers; currency remains unresolved.
 5. Prove FunPay extractor and normalizer against a captured real response. Done.
 6. Add payload drift monitoring for ready marketplaces.
 7. Add a live-optional marketplace data verifier guarded by explicit flags.

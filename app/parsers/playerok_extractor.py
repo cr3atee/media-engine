@@ -61,8 +61,8 @@ class PlayerokExtractor:
     def _looks_like_offer(self, item: JsonObject) -> bool:
         has_identifier = any(key in item for key in ("id", "slug"))
         has_title = any(key in item for key in ("name", "title"))
-        has_marketplace_data = any(key in item for key in ("price", "url", "slug"))
-        return has_identifier and has_title and has_marketplace_data
+        has_price = any(key in item for key in ("price", "rawPrice"))
+        return has_identifier and has_title and has_price
 
     def _to_parsed_offer(self, item: JsonObject) -> ParsedOffer:
         slug = self._as_str(item.get("slug"))

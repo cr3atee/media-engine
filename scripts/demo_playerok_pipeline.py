@@ -8,15 +8,16 @@ PROJECT_ROOT = Path(__file__).resolve().parents[1]
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
-from app.core.http_client import HttpClient
-from app.parsers.playerok_extractor import PlayerokExtractor
-from app.parsers.playerok_fetcher import PlayerokFetchError, PlayerokFetcher
-from app.parsers.playerok_normalizer import PlayerokNormalizer
-from app.services.playerok_pipeline import PlayerokPipeline
-
 
 async def main() -> None:
     """Run the Playerok pipeline and print its real extraction result."""
+    _configure_stdout()
+    from app.core.http_client import HttpClient
+    from app.parsers.playerok_extractor import PlayerokExtractor
+    from app.parsers.playerok_fetcher import PlayerokFetcher, PlayerokFetchError
+    from app.parsers.playerok_normalizer import PlayerokNormalizer
+    from app.services.playerok_pipeline import PlayerokPipeline
+
     try:
         async with HttpClient() as http_client:
             pipeline = PlayerokPipeline(
@@ -34,6 +35,11 @@ async def main() -> None:
         print(f"First offer: {offers[0]}")
     else:
         print("First offer: unavailable; no offers were extracted.")
+
+
+def _configure_stdout() -> None:
+    if hasattr(sys.stdout, "reconfigure"):
+        sys.stdout.reconfigure(encoding="utf-8", errors="backslashreplace")
 
 
 if __name__ == "__main__":

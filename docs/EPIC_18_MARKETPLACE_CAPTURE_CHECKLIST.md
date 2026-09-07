@@ -60,7 +60,7 @@ Remaining proof needed:
 
 ## Playerok
 
-Current status: blocked by missing captured offer payload.
+Current status: partial from live GraphQL response.
 
 Existing implementation:
 
@@ -70,18 +70,25 @@ Existing implementation:
 - `PlayerokPipeline`.
 
 Contract coverage verifies structured JSON and `__NEXT_DATA__` mapping behavior.
-A real public HTML response has been captured, but its hydration payload does not
-contain extractable offers, so this is not a substitute for the actual listing
-or API payload.
+Real public HTML responses were captured, but their hydration payloads do not
+contain extractable offers. The selected source is the public GraphQL
+`https://playerok.com/graphql` `items` operation with an `APPROVED` status
+filter.
 
-Required proof:
+Completed proof:
 
-- capture one real public listing/category response;
-- save it as `tmp/playerok_response.html`, `tmp/playerok_response.json`, or
-  `tmp/playerok_response.txt`;
-- run the extractor demo;
-- run the marketplace readiness verifier;
-- confirm exact fields for id, title, price, currency, URL, and seller.
+- captured one real GraphQL item-list response as `tmp/playerok_response.json`;
+- `scripts/demo_playerok_fetch.py` returned HTTP 200 with JSON content;
+- `scripts/demo_playerok_pipeline.py` produced 20 real `ParsedOffer` objects;
+- `scripts/verify_marketplace_data_readiness.py` reports 20 raw items, 20 parsed
+  offers, and 0 snapshot-ready offers.
+
+Remaining proof:
+
+- confirm Playerok currency semantics from an explicit source or product
+  decision;
+- do not default to RUB until that decision exists;
+- prove at least one snapshot-ready `ParsedOffer` after currency is confirmed.
 
 Verification commands:
 
@@ -92,10 +99,10 @@ Verification commands:
 .venv\Scripts\python.exe scripts/verify_marketplace_data_readiness.py
 ```
 
-If the public homepage or category response does not contain offers, do not
-broaden the extractor heuristics. Capture the actual GraphQL, REST, BFF, or
-hydration response used by the browser and update the Playerok source
-documentation first.
+If the public GraphQL response shape changes, do not broaden extractor
+heuristics until the new payload is captured and reviewed. Nested category/game
+objects must not be treated as offers unless they expose offer-level pricing
+fields.
 
 ## FunPay
 

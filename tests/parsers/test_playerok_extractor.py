@@ -1,8 +1,14 @@
 from __future__ import annotations
 
+import asyncio
 from decimal import Decimal
+from typing import cast
 
+import httpx
+
+from app.core.http_client import HttpClient
 from app.parsers.playerok_extractor import PlayerokExtractor
+from app.parsers.playerok_fetcher import PlayerokFetcher, PlayerokFetchError
 from app.parsers.playerok_normalizer import PlayerokNormalizer
 
 
@@ -78,6 +84,43 @@ def test_playerok_extractor_ignores_payload_without_identifier() -> None:
     assert PlayerokExtractor().extract(raw_response) == []
 
 
+def test_playerok_extractor_ignores_catalog_nodes_without_price() -> None:
+    """Catalog and game nodes are not marketplace offers."""
+    raw_response = """
+    {
+      "data": {
+        "items": {
+          "edges": [
+            {
+              "node": {
+                "id": "offer-1",
+                "slug": "minecraft-premium",
+                "name": "Minecraft Premium",
+                "price": 790,
+                "category": {
+                  "id": "category-1",
+                  "slug": "keys",
+                  "name": "Keys"
+                },
+                "game": {
+                  "id": "game-1",
+                  "slug": "minecraft",
+                  "name": "Minecraft"
+                }
+              }
+            }
+          ]
+        }
+      }
+    }
+    """
+
+    offers = PlayerokExtractor().extract(raw_response)
+
+    assert len(offers) == 1
+    assert offers[0].external_id == "offer-1"
+
+
 def test_playerok_normalizer_preserves_snapshot_ready_fields() -> None:
     """Playerok normalizer keeps universal fields required by SnapshotBuilder."""
     raw_response = """
@@ -107,3 +150,52 @@ def test_playerok_normalizer_preserves_snapshot_ready_fields() -> None:
     assert normalized[0].currency == "RUB"
     assert normalized[0].seller_id == "456"
     assert normalized[0].seller_name == "Seller"
+
+
+def test_playerok_fetcher_uses_graphql_items_by_default() -> None:
+    """Playerok fetcher uses the discovered GraphQL items operation by default."""
+    fake_client = _FakeHttpClient(
+        httpx.Response(200, json={"data": {"items": {"edges": []}}}),
+    )
+    fetcher = PlayerokFetcher(cast(HttpClient, fake_client))
+
+    response = asyncio.run(fetcher.fetch())
+
+    assert response == '{"data":{"items":{"edges":[]}}}'
+    assert fake_client.posts[0]["url"] == PlayerokFetcher.GRAPHQL_URL
+    payload = fake_client.posts[0]["json"]
+    assert isinstance(payload, dict)
+    assert payload["operationName"] == "items"
+    assert "query items" in str(payload["query"])
+    assert payload["variables"] == {
+        "filter": {"status": ["APPROVED"]},
+        "pagination": {"first": 20, "after": None},
+        "showForbiddenImage": True,
+    }
+
+
+def test_playerok_fetcher_rejects_empty_response() -> None:
+    """Playerok fetcher does not treat empty marketplace responses as data."""
+    fetcher = PlayerokFetcher(
+        cast(HttpClient, _FakeHttpClient(httpx.Response(200, text="  "))),
+    )
+
+    try:
+        asyncio.run(fetcher.fetch())
+    except PlayerokFetchError as exc:
+        assert "empty response" in str(exc)
+        assert fetcher.last_diagnostic == "Playerok returned an empty response body"
+    else:
+        raise AssertionError("Expected PlayerokFetchError")
+
+
+class _FakeHttpClient:
+    """Small test double for the shared project HTTP client."""
+
+    def __init__(self, response: httpx.Response) -> None:
+        self._response = response
+        self.posts: list[dict[str, object]] = []
+
+    async def post(self, url: str, **kwargs: object) -> httpx.Response:
+        self.posts.append({"url": url, **kwargs})
+        return self._response

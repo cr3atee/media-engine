@@ -12,7 +12,57 @@ class PlayerokFetchError(RuntimeError):
 class PlayerokFetcher:
     """Downloads raw Playerok marketplace responses without parsing them."""
 
-    DEFAULT_URL = "https://playerok.com/"
+    GRAPHQL_URL = "https://playerok.com/graphql"
+    HOMEPAGE_URL = "https://playerok.com/"
+    DEFAULT_URL = GRAPHQL_URL
+
+    ITEMS_QUERY = """
+query items(
+  $filter: ItemFilter,
+  $pagination: Pagination,
+  $sort: Sort,
+  $showForbiddenImage: Boolean
+) {
+  items(filter: $filter, pagination: $pagination, sort: $sort) {
+    edges {
+      cursor
+      node {
+        ... on MyItemProfile {
+          id
+          slug
+          name
+          price
+          rawPrice
+          status
+          user { id username }
+          category { id name slug }
+          game { id name slug }
+          attachment(showForbiddenImage: $showForbiddenImage) { url }
+        }
+        ... on ForeignItemProfile {
+          id
+          slug
+          name
+          price
+          rawPrice
+          status
+          user { id username }
+          category { id name slug }
+          game { id name slug }
+          attachment(showForbiddenImage: $showForbiddenImage) { url }
+        }
+      }
+    }
+    pageInfo {
+      startCursor
+      endCursor
+      hasPreviousPage
+      hasNextPage
+    }
+    totalCount
+  }
+}
+""".strip()
 
     DEFAULT_HEADERS = {
         "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
@@ -29,23 +79,76 @@ class PlayerokFetcher:
         self._http_client = http_client
         self.last_status_code: int | None = None
         self.last_content_type: str | None = None
+        self.last_diagnostic: str | None = None
 
     async def fetch(self, url: str = DEFAULT_URL) -> str:
         """Download and return the raw Playerok response body as text."""
         self.last_status_code = None
         self.last_content_type = None
+        self.last_diagnostic = None
+
+        if url == self.GRAPHQL_URL:
+            return await self.fetch_items()
 
         try:
             response = await self._http_client.get(url, headers=self.DEFAULT_HEADERS)
         except httpx.RequestError as exc:
-            msg = f"Playerok request failed: {exc}"
+            msg = f"Playerok request failed: {type(exc).__name__}: {exc}"
             raise PlayerokFetchError(msg) from exc
 
+        return self._read_response(response)
+
+    async def fetch_items(
+        self,
+        *,
+        first: int = 20,
+        after: str | None = None,
+    ) -> str:
+        """Download raw Playerok GraphQL item-list data without parsing it."""
+        variables: dict[str, object] = {
+            "filter": {"status": ["APPROVED"]},
+            "pagination": {"first": first, "after": after},
+            "showForbiddenImage": True,
+        }
+        payload = {
+            "operationName": "items",
+            "query": self.ITEMS_QUERY,
+            "variables": variables,
+        }
+        headers = {
+            "Accept": "application/json",
+            "Content-Type": "application/json",
+            "Origin": "https://playerok.com",
+            "Referer": "https://playerok.com/",
+            "User-Agent": self.DEFAULT_HEADERS["User-Agent"],
+        }
+
+        try:
+            response = await self._http_client.post(
+                self.GRAPHQL_URL,
+                json=payload,
+                headers=headers,
+            )
+        except httpx.RequestError as exc:
+            msg = f"Playerok request failed: {type(exc).__name__}: {exc}"
+            raise PlayerokFetchError(msg) from exc
+
+        return self._read_response(response)
+
+    def _read_response(self, response: httpx.Response) -> str:
+        """Validate transport-level response details and return raw text."""
         self.last_status_code = response.status_code
         self.last_content_type = response.headers.get("content-type")
 
         if response.status_code >= 400:
-            msg = f"Playerok returned HTTP {response.status_code}"
+            response_snippet = " ".join(response.text[:300].split())
+            msg = f"Playerok returned HTTP {response.status_code}: {response_snippet}"
+            self.last_diagnostic = msg
+            raise PlayerokFetchError(msg)
+
+        if not response.text.strip():
+            msg = "Playerok returned an empty response body"
+            self.last_diagnostic = msg
             raise PlayerokFetchError(msg)
 
         return response.text

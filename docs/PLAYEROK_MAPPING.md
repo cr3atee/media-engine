@@ -3,6 +3,7 @@
 ## Status
 
 Document date: 2026-07-22.
+Last verified update: 2026-09-07.
 
 This document defines how Playerok marketplace data should map to the existing MediaEngine `ParsedOffer` contract. It is documentation only and does not modify application code.
 
@@ -14,7 +15,27 @@ Playerok data should be taken from the structured source selected in `docs/PLAYE
 - fallback source: public REST/BFF endpoint if browser network research confirms one;
 - HTML should not be the primary source for field extraction.
 
-The exact Playerok response shape is not fully confirmed yet. Source field names below are expected names based on current research and must be verified against a captured real response before implementation.
+The public Playerok GraphQL `items` response has been verified. The current
+response shape uses `data.items.edges[].node` for item offers and exposes
+`pageInfo` for cursor pagination.
+
+Confirmed item fields:
+
+- `id`
+- `slug`
+- `name`
+- `price`
+- `rawPrice`
+- `status`
+- `user.id`
+- `user.username`
+- `category`
+- `game`
+- `attachment.url`
+
+The response does not expose an explicit currency field. A direct GraphQL
+`currency` field query was rejected by schema validation for both
+`MyItemProfile` and `ForeignItemProfile`.
 
 ## ParsedOffer Contract
 
@@ -37,13 +58,13 @@ Current `ParsedOffer` fields:
 | ParsedOffer field | Playerok source field | Source data type | Transformation | Required / Optional | Default if missing |
 | --- | --- | --- | --- | --- | --- |
 | `marketplace` | constant | `str` | Set to `"playerok"` | Required | `"playerok"` |
-| `external_id` | `item.id`, `product.id`; fallback `item.slug` | `str` or `int` | Convert to `str` | Required when available | `None` |
-| `title` | `item.name`, `product.name`, `item.title` | `str` | Trim surrounding whitespace; keep original meaning and casing unless normalizer requires otherwise | Required when available | `None` |
-| `url` | `item.slug`, `product.slug`, `item.url` | `str` | If slug is present, build `https://playerok.com/products/{slug}`; if absolute URL is present, keep it | Required when available | `None` |
-| `price` | `item.price`, `product.price`, current effective price field | `str`, `int`, or decimal-like value | Convert to `Decimal` from string/int; do not use float arithmetic | Required when available | `None` |
-| `currency` | `item.currency`, `price.currency` | `str` | Normalize to uppercase currency code if explicit in response | Optional | `None`; use `"RUB"` only after endpoint confirms RUB |
-| `seller_id` | `seller.id`, `user.id`, `owner.id` | `str` or `int` | Convert to `str` | Optional | `None` |
-| `seller_name` | `seller.username`, `seller.name`, `user.username`, `user.name` | `str` | Trim surrounding whitespace | Optional | `None` |
+| `external_id` | `node.id`; fallback `node.slug` | `str` or `int` | Convert to `str` | Required when available | `None` |
+| `title` | `node.name`; fallback `node.title` | `str` | Trim surrounding whitespace; keep original meaning and casing unless normalizer requires otherwise | Required when available | `None` |
+| `url` | `node.slug`, `node.url` | `str` | If slug is present, build `https://playerok.com/products/{slug}`; if absolute URL is present, keep it | Required when available | `None` |
+| `price` | `node.price` | `str`, `int`, or decimal-like value | Convert to `Decimal` from string/int; do not use float arithmetic | Required when available | `None` |
+| `currency` | not present in verified `items` response | `str` | Normalize to uppercase currency code only if explicit in response | Optional | `None`; do not default to `"RUB"` until separately approved |
+| `seller_id` | `node.user.id`; fallback `seller.id`, `owner.id` | `str` or `int` | Convert to `str` | Optional | `None` |
+| `seller_name` | `node.user.username`; fallback `seller.username`, `seller.name`, `user.name` | `str` | Trim surrounding whitespace | Optional | `None` |
 | `canonical_product_id` | no Playerok source | `UUID | None` | Not populated by marketplace extraction; filled later by matching engine | Optional | `None` |
 
 ## Domain Field Notes
@@ -142,11 +163,19 @@ Preferred source:
 
 - explicit currency field from response.
 
+Current verified source:
+
+- the public GraphQL `items` response does not include currency;
+- direct `currency` field selection is rejected by the GraphQL schema.
+
 Fallback:
 
 - `None`.
 
-Do not assume `"RUB"` unless the captured endpoint response or product page context confirms that the price is RUB. If confirmed, the Playerok normalizer may default missing currency to `"RUB"` with a documented reason.
+Do not assume `"RUB"` unless a source-backed or product-approved decision
+confirms that this endpoint always returns RUB prices. If confirmed later, the
+Playerok normalizer may default missing currency to `"RUB"` with the documented
+reason.
 
 ### Image
 
@@ -179,15 +208,13 @@ Initial extraction should include only offers returned by the public listing end
 
 ## Fields Not Currently Obtainable or Not Confirmed
 
-The following fields cannot currently be guaranteed because no final real Playerok response sample is captured in the project documentation:
+The following fields cannot currently be guaranteed from the verified public
+GraphQL item-list response:
 
-- exact current price field name;
-- exact currency field name;
-- exact seller display field name;
-- exact category/game object structure;
-- exact availability/status field name;
-- whether description is included in listing responses or only detail responses;
-- whether image data is included in listing responses.
+- explicit currency;
+- description;
+- availability beyond the requested `APPROVED` status filter;
+- whether image data is always present.
 
 The following fields are outside the current `ParsedOffer` contract even if Playerok provides them:
 
@@ -204,8 +231,8 @@ The following fields are outside the current `ParsedOffer` contract even if Play
 
 ## Implementation Guidance
 
-1. Capture one real Playerok listing response before coding the normalizer.
-2. Confirm exact field names for id, title, price, currency, URL and seller.
+1. Continue using the verified public GraphQL `items` response for item lists.
+2. Confirm currency semantics before making Playerok snapshot-ready.
 3. Map only universal fields into `ParsedOffer`.
 4. Leave missing values as `None`; do not invent values.
 5. Keep Playerok-specific fields in a raw adapter model if they are needed later.

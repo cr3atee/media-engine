@@ -3,6 +3,7 @@
 ## Status
 
 Document date: 2026-07-22.
+Last verified update: 2026-09-07.
 
 This document describes the technical approach for extracting public marketplace offers from Playerok into the MediaEngine pipeline. It is a research specification only. No application code is changed by this document.
 
@@ -65,9 +66,28 @@ Client bundle observations:
 - The client uses `credentials: "include"`.
 - If a `token` cookie exists, the client adds `Authorization: Bearer <token>`.
 
-Basic unauthenticated health-check against `https://playerok.com/graphql` returned `500 Internal Server Error` for a minimal `{ __typename }` query. This does not disprove endpoint usage; it suggests the endpoint may require the exact client request shape, persisted queries, valid operation names, session context, anti-bot headers, or a non-trivial GraphQL document.
+Basic unauthenticated health-check against `https://playerok.com/graphql`
+returned `500 Internal Server Error` for a minimal `{ __typename }` query. This
+does not disprove endpoint usage; it shows that the endpoint expects a real
+frontend operation shape.
 
-Conclusion: GraphQL is the most likely native data source, but the exact list/search operation must be captured from browser network traffic before implementation.
+Verified source:
+
+- endpoint: `https://playerok.com/graphql`;
+- operation: `items`;
+- variables: `filter.status = ["APPROVED"]`, cursor-style `pagination`, and
+  `showForbiddenImage`;
+- response shape: `data.items.edges[].node`, `pageInfo`, and `totalCount`;
+- verified public fields: `id`, `slug`, `name`, `price`, `rawPrice`, `status`,
+  `user`, `category`, `game`, and `attachment.url`.
+
+A direct `currency` field was tested against `MyItemProfile` and
+`ForeignItemProfile`; GraphQL validation rejected it. The captured response also
+does not contain any explicit currency value.
+
+Conclusion: GraphQL is the selected native data source for public Playerok item
+lists. Playerok remains partially ready until currency semantics are confirmed
+outside the current item-list response.
 
 ### Public REST/BFF Endpoints
 
@@ -105,7 +125,8 @@ Conclusion: unofficial libraries support the finding that Playerok uses GraphQL,
 
 ## 2. Preferred Extraction Strategy
 
-Preferred strategy: use Playerok native GraphQL over HTTPS after capturing the exact public product listing operation from browser DevTools.
+Preferred strategy: use Playerok native GraphQL over HTTPS through the verified
+public `items` operation.
 
 Why:
 
@@ -113,10 +134,12 @@ Why:
 - It is the closest available structured data source.
 - It avoids fragile HTML parsing.
 - It maps cleanly into `ParsedOffer`.
-- It can support cursor pagination if the query follows the same connection model observed in external references.
+- It supports cursor pagination through the observed `pageInfo` connection
+  model.
 - It keeps MediaEngine architecture aligned with existing marketplace adapters: fetch raw data, normalize to `ParsedOffer`, then pass downstream.
 
-Initial implementation should not attempt account automation. It should first target only public marketplace listings that are visible without login.
+The current implementation does not attempt account automation and targets only
+public marketplace listings visible without login.
 
 ## 3. Fallback Strategy
 
@@ -177,7 +200,9 @@ Expected strategy: cursor-based pagination.
 
 Reasons:
 
-- External Playerok API references expose `page_info.has_next_page`, `page_info.end_cursor`, `page_info.start_cursor`, and `page_info.has_previous_page`.
+- The verified GraphQL response exposes `pageInfo.hasNextPage`,
+  `pageInfo.endCursor`, `pageInfo.startCursor`, and
+  `pageInfo.hasPreviousPage`.
 - Client bundle contains Apollo cache logic that ignores or handles a `pagination` variable.
 - Product-list APIs for marketplaces commonly use GraphQL connection-style pagination.
 
@@ -306,7 +331,7 @@ Recommended mapping:
 | `title` | product `name` or `title` |
 | `url` | `https://playerok.com/products/{slug}` when `slug` is present; otherwise public product URL from response |
 | `price` | current effective `price`, converted to `Decimal` from string/int, never float arithmetic |
-| `currency` | response currency if present; otherwise `"RUB"` only if verified for the endpoint |
+| `currency` | response currency if present; otherwise `None` until a source-backed or product-approved default is recorded |
 | `seller_id` | `seller.id` if present |
 | `seller_name` | `seller.username`, `seller.name`, or equivalent public seller display field |
 | `canonical_product_id` | leave `None`; matching engine fills this later |
@@ -340,11 +365,11 @@ These fields may be preserved in a raw typed Playerok model or `extra` structure
 
 ## Open Questions
 
-- Exact GraphQL operation name for public item listing.
-- Whether Playerok requires persisted query hashes for listing requests.
-- Whether unauthenticated listing requests are stable outside browser context.
+- Whether Playerok prices from the public `items` response can be safely treated
+  as RUB.
 - Exact category/game filters for initial MVP monitoring.
-- Whether `price` always represents RUB or whether explicit currency exists in response.
+- Whether the unauthenticated `items` response remains stable across frontend
+  deployments.
 
 ## Sources
 
