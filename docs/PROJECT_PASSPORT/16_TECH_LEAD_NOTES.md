@@ -155,10 +155,6 @@ This document captures architecture notes that are important for future reviews.
 - Keep the Playerok `RUB` fallback inside the Playerok adapter boundary only.
   Shared `ParsedOffer`, `SnapshotBuilder`, repositories, analytics, and events
   must not assume a currency for other marketplaces.
-- Marketplace saved-payload readiness is now guarded by
-  `scripts/verify_marketplace_payload_contracts.py`. This is a core regression
-  guard for captured real payloads, not a substitute for production live polling
-  monitoring.
 - FunPay fetcher follows marketplace-local redirects because the shared
   `HttpClient` intentionally remains generic and redirect-neutral.
 - Scheduler same-job overlap is now guarded by optional scheduler leases.
