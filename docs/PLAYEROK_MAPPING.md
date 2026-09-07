@@ -35,9 +35,7 @@ Confirmed item fields:
 
 The response does not expose an explicit currency field. A direct GraphQL
 `currency` field query was rejected by schema validation for both
-`MyItemProfile` and `ForeignItemProfile`. The frontend product-page bundle
-formats item `price`/`rawPrice` ecommerce events with `currency: "RUB"`, so the
-Playerok normalizer applies `RUB` as a documented source-backed fallback.
+`MyItemProfile` and `ForeignItemProfile`.
 
 ## ParsedOffer Contract
 
@@ -64,7 +62,7 @@ Current `ParsedOffer` fields:
 | `title` | `node.name`; fallback `node.title` | `str` | Trim surrounding whitespace; keep original meaning and casing unless normalizer requires otherwise | Required when available | `None` |
 | `url` | `node.slug`, `node.url` | `str` | If slug is present, build `https://playerok.com/products/{slug}`; if absolute URL is present, keep it | Required when available | `None` |
 | `price` | `node.price` | `str`, `int`, or decimal-like value | Convert to `Decimal` from string/int; do not use float arithmetic | Required when available | `None` |
-| `currency` | not present in verified `items` response; frontend bundle uses `currency: "RUB"` for item price tracking | `str` | Normalize explicit currency when present; otherwise use documented Playerok `RUB` fallback | Required for snapshot readiness | `"RUB"` |
+| `currency` | not present in verified `items` response | `str` | Normalize to uppercase currency code only if explicit in response | Optional | `None`; do not default to `"RUB"` until separately approved |
 | `seller_id` | `node.user.id`; fallback `seller.id`, `owner.id` | `str` or `int` | Convert to `str` | Optional | `None` |
 | `seller_name` | `node.user.username`; fallback `seller.username`, `seller.name`, `user.name` | `str` | Trim surrounding whitespace | Optional | `None` |
 | `canonical_product_id` | no Playerok source | `UUID | None` | Not populated by marketplace extraction; filled later by matching engine | Optional | `None` |
@@ -169,15 +167,15 @@ Current verified source:
 
 - the public GraphQL `items` response does not include currency;
 - direct `currency` field selection is rejected by the GraphQL schema.
-- the Playerok frontend product-page bundle uses `currency: "RUB"` for item
-  price/raw-price ecommerce tracking.
 
 Fallback:
 
-- `RUB`.
+- `None`.
 
-Keep this fallback at the Playerok adapter boundary. Do not move it into shared
-`ParsedOffer`, `SnapshotBuilder`, or repository code.
+Do not assume `"RUB"` unless a source-backed or product-approved decision
+confirms that this endpoint always returns RUB prices. If confirmed later, the
+Playerok normalizer may default missing currency to `"RUB"` with the documented
+reason.
 
 ### Image
 
@@ -213,6 +211,7 @@ Initial extraction should include only offers returned by the public listing end
 The following fields cannot currently be guaranteed from the verified public
 GraphQL item-list response:
 
+- explicit currency;
 - description;
 - availability beyond the requested `APPROVED` status filter;
 - whether image data is always present.
@@ -233,8 +232,7 @@ The following fields are outside the current `ParsedOffer` contract even if Play
 ## Implementation Guidance
 
 1. Continue using the verified public GraphQL `items` response for item lists.
-2. Keep the documented `RUB` fallback covered by tests and readiness
-   verification.
+2. Confirm currency semantics before making Playerok snapshot-ready.
 3. Map only universal fields into `ParsedOffer`.
 4. Leave missing values as `None`; do not invent values.
 5. Keep Playerok-specific fields in a raw adapter model if they are needed later.

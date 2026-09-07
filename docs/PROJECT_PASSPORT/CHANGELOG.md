@@ -23,10 +23,9 @@ This document records notable Project Passport updates.
 - Verified Playerok live item-list ingestion through the public GraphQL
   `items` operation: the fetcher now downloads raw JSON, the pipeline produces
   20 real `ParsedOffer` objects, and extractor filtering excludes nested
-  category/game objects. The Playerok adapter now applies a documented
-  source-backed `RUB` fallback because the GraphQL item schema rejects a direct
-  `currency` field while the official frontend bundle formats item price events
-  as RUB; readiness now reports 20 snapshot-ready Playerok offers.
+  category/game objects. Playerok remains partial because the GraphQL item schema
+  rejects a direct `currency` field and the captured response contains no
+  currency value.
 - Started EPIC 18 marketplace data reliability work: added offline readiness
   verification, marketplace capture checklist, GGSEL absolute URL normalization,
   GGSEL extractor/normalizer contract coverage, Playerok response analysis

@@ -147,14 +147,13 @@ This document captures architecture notes that are important for future reviews.
 - GGSEL saved-response extraction now reaches snapshot-ready `ParsedOffer`
   objects. FunPay has also passed captured real-listing proof with one
   snapshot-ready `ParsedOffer`. Playerok has live GraphQL `items` proof and
-  snapshot-ready parsed-offer conversion through a documented source-backed
-  `RUB` fallback.
+  parsed-offer conversion, but must stay partial until currency semantics are
+  explicitly confirmed.
 - Playerok GraphQL item-list requests must include an `APPROVED` status filter;
   an unfiltered request produced a backend validation/runtime error during
   source investigation.
-- Keep the Playerok `RUB` fallback inside the Playerok adapter boundary only.
-  Shared `ParsedOffer`, `SnapshotBuilder`, repositories, analytics, and events
-  must not assume a currency for other marketplaces.
+- Do not default Playerok prices to RUB inside parser or normalizer code unless
+  a separate source-backed or product-approved currency decision is recorded.
 - FunPay fetcher follows marketplace-local redirects because the shared
   `HttpClient` intentionally remains generic and redirect-neutral.
 - Scheduler same-job overlap is now guarded by optional scheduler leases.

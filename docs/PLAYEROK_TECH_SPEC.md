@@ -83,14 +83,11 @@ Verified source:
 
 A direct `currency` field was tested against `MyItemProfile` and
 `ForeignItemProfile`; GraphQL validation rejected it. The captured response also
-does not contain any explicit currency value. The frontend product-page bundle
-formats item `price`/`rawPrice` ecommerce events with `currency: "RUB"`, so the
-Playerok adapter applies a documented source-backed `RUB` fallback when the
-GraphQL item-list response omits currency.
+does not contain any explicit currency value.
 
 Conclusion: GraphQL is the selected native data source for public Playerok item
-lists. Playerok is ready for snapshot creation under the documented `RUB`
-fallback, while production polling should monitor source drift.
+lists. Playerok remains partially ready until currency semantics are confirmed
+outside the current item-list response.
 
 ### Public REST/BFF Endpoints
 
@@ -334,7 +331,7 @@ Recommended mapping:
 | `title` | product `name` or `title` |
 | `url` | `https://playerok.com/products/{slug}` when `slug` is present; otherwise public product URL from response |
 | `price` | current effective `price`, converted to `Decimal` from string/int, never float arithmetic |
-| `currency` | response currency if present; otherwise documented Playerok `RUB` fallback |
+| `currency` | response currency if present; otherwise `None` until a source-backed or product-approved default is recorded |
 | `seller_id` | `seller.id` if present |
 | `seller_name` | `seller.username`, `seller.name`, or equivalent public seller display field |
 | `canonical_product_id` | leave `None`; matching engine fills this later |
@@ -368,11 +365,11 @@ These fields may be preserved in a raw typed Playerok model or `extra` structure
 
 ## Open Questions
 
+- Whether Playerok prices from the public `items` response can be safely treated
+  as RUB.
 - Exact category/game filters for initial MVP monitoring.
 - Whether the unauthenticated `items` response remains stable across frontend
   deployments.
-- Whether future Playerok frontend/backend deployments keep the same RUB price
-  semantics.
 
 ## Sources
 

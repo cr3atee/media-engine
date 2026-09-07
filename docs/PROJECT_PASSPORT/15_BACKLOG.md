@@ -6,8 +6,9 @@ This document lists only confirmed work remaining after EPIC 17 completion.
 
 ## Immediate
 
-- Add marketplace payload/source drift monitoring before relying on GGSEL,
-  Playerok, or FunPay for scheduled production ingestion.
+- Confirm Playerok currency semantics from an explicit source or product
+  decision, then prove snapshot-ready `ParsedOffer` conversion without inventing
+  defaults.
 - Keep FunPay extraction guarded by captured-response verification and add drift
   monitoring before relying on it for scheduled production ingestion.
 - Define the next EPIC before implementing live marketplace credential storage
@@ -32,6 +33,7 @@ This document lists only confirmed work remaining after EPIC 17 completion.
 
 ## Known Marketplace Gap
 
-- GGSEL, Playerok, and FunPay are ready from current real captured-response
-  proof, but should still have payload drift monitoring before production
-  scheduling.
+- Playerok cannot be marked marketplace-ready until real parsed offers include a
+  confirmed currency and at least one snapshot-ready `ParsedOffer`.
+- FunPay is ready from the current captured listing proof, but should still have
+  payload drift monitoring before production scheduling.
