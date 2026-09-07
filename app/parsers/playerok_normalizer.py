@@ -10,6 +10,7 @@ class PlayerokNormalizer:
     """Normalizes extracted Playerok offers using shared parser rules."""
 
     MARKETPLACE = "playerok"
+    DEFAULT_CURRENCY = "RUB"
 
     def normalize(self, offers: list[ParsedOffer]) -> list[ParsedOffer]:
         """Return normalized copies of the supplied Playerok offers."""
@@ -22,7 +23,7 @@ class PlayerokNormalizer:
             external_id=normalize_text(offer.external_id),
             title=normalize_text(offer.title),
             url=normalize_text(offer.url),
-            currency=normalize_currency(offer.currency),
+            currency=normalize_currency(offer.currency) or self.DEFAULT_CURRENCY,
             seller_id=normalize_text(offer.seller_id),
             seller_name=normalize_text(offer.seller_name),
         )

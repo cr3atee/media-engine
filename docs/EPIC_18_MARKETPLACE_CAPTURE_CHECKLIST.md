@@ -60,7 +60,7 @@ Remaining proof needed:
 
 ## Playerok
 
-Current status: partial from live GraphQL response.
+Current status: ready from live GraphQL response.
 
 Existing implementation:
 
@@ -80,15 +80,16 @@ Completed proof:
 - captured one real GraphQL item-list response as `tmp/playerok_response.json`;
 - `scripts/demo_playerok_fetch.py` returned HTTP 200 with JSON content;
 - `scripts/demo_playerok_pipeline.py` produced 20 real `ParsedOffer` objects;
+- Playerok frontend bundle verification confirms item price tracking with
+  `currency: "RUB"`;
+- `PlayerokNormalizer` applies the documented source-backed `RUB` default;
 - `scripts/verify_marketplace_data_readiness.py` reports 20 raw items, 20 parsed
-  offers, and 0 snapshot-ready offers.
+  offers, and 20 snapshot-ready offers.
 
 Remaining proof:
 
-- confirm Playerok currency semantics from an explicit source or product
-  decision;
-- do not default to RUB until that decision exists;
-- prove at least one snapshot-ready `ParsedOffer` after currency is confirmed.
+- add payload/source drift monitoring before scheduled production ingestion;
+- capture additional categories before expanding marketplace coverage.
 
 Verification commands:
 
@@ -155,8 +156,9 @@ The next core acceptance gate is:
 
 ```text
 GGSEL   -> ready
-Playerok -> ready or explicitly blocked by documented source restriction
-FunPay  -> ready or explicitly blocked by documented source restriction
+Playerok -> ready
+FunPay  -> ready
 ```
 
-The core should not be called marketplace-complete until this gate is satisfied.
+The current saved-response gate is satisfied. The production scheduling gate
+still requires drift monitoring and explicit runtime marketplace configuration.

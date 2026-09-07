@@ -151,8 +151,9 @@ This document tracks only work that is reflected by the current repository state
   extractor contract coverage, and FunPay fetch/extract/normalize/analyzer
   boundaries.
 - Playerok live GraphQL source verification: public `items` operation fetches
-  real item-list JSON, `PlayerokPipeline` produces 20 real `ParsedOffer`
-  objects, and extractor filtering avoids nested category/game false positives.
+  real item-list JSON, `PlayerokPipeline` produces 20 real snapshot-ready
+  `ParsedOffer` objects through the documented `RUB` fallback, and extractor
+  filtering avoids nested category/game false positives.
 - FunPay live listing verification: marketplace redirect handling, real listing
   capture, analyzer proof, pipeline proof, and one snapshot-ready `ParsedOffer`
   from the saved response.
@@ -177,14 +178,14 @@ authorization, tenant-scoped seller workflows, and final PostgreSQL isolation
 readiness. EPIC 17 is functionally complete for tenant-owned marketplace
 integration metadata, credential-reference redaction, seller integration API, and
 Scheduler-facing integration selection without enabling live credential use.
-EPIC 18 is in progress to close marketplace data reliability before calling the
-multi-marketplace ingestion core complete. GGSEL and FunPay have real saved
-payload proof. Playerok has real GraphQL item-list proof and parsed-offer
-conversion, but still needs an explicit currency/snapshot-readiness decision.
+EPIC 18 is functionally complete for saved/live marketplace data readiness:
+GGSEL, Playerok, and FunPay all produce snapshot-ready `ParsedOffer` objects
+from real captured marketplace responses. The remaining work before production
+polling is drift monitoring and explicit runtime integration configuration.
 
 ## Not Present Yet
 
-- Playerok currency/snapshot-readiness proof.
+- Marketplace payload/source drift monitoring for scheduled production polling.
 - Production deployment entrypoint using PostgreSQL scheduler factory.
 - Optional guarded live Telegram test-chat message.
 - Production AI provider integration in the pipeline.

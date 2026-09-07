@@ -141,7 +141,10 @@ def verify_playerok() -> MarketplaceReadiness:
         raw_items=len(extracted),
         parsed_offers=len(parsed_offers),
         snapshot_ready_offers=ready_offers,
-        notes=(f"Verified saved Playerok response: {response_path.name}.",),
+        notes=(
+            f"Verified saved Playerok response: {response_path.name}.",
+            "Playerok normalizer applies the source-backed RUB default.",
+        ),
         examples=parsed_offers[:3],
     )
 

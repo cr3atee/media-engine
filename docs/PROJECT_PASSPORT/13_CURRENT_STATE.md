@@ -83,8 +83,10 @@ EPIC 18 marketplace data reliability has live proof for FunPay listing access:
 and the saved real listing response produces one snapshot-ready `ParsedOffer`.
 Playerok now has live GraphQL item-list proof: the public `items` operation
 returns real offers and `PlayerokPipeline` converts them into `ParsedOffer`
-objects, but the response does not expose currency, so Playerok is not yet
-snapshot-ready.
+objects. Because the GraphQL item-list response omits currency while the
+Playerok frontend bundle formats the same item price values as RUB, the
+Playerok normalizer applies a documented source-backed `RUB` fallback and the
+readiness verifier reports snapshot-ready offers.
 
 ## Active Capabilities
 
@@ -95,7 +97,8 @@ snapshot-ready.
 - FunPay public offer anchors can be extracted and normalized into
   snapshot-ready `ParsedOffer` objects from a real captured listing response.
 - Playerok public GraphQL `items` responses can be fetched and normalized into
-  real `ParsedOffer` objects with id, title, price, URL, and seller data.
+  real snapshot-ready `ParsedOffer` objects with id, title, price, RUB currency,
+  URL, and seller data.
 - Raw marketplace offers are represented by `RawMarketplaceOffer`.
 - Raw offers can be normalized into `ParsedOffer`.
 - Parsed offers can be persisted through `RepositoryProvider.offers`.
@@ -293,10 +296,9 @@ snapshot-ready.
 
 - GGSEL saved-response extraction now produces 60 snapshot-ready `ParsedOffer`
   objects with absolute catalog URLs.
-- Playerok has live GraphQL item-list proof and produces real parsed offers, but
-  GraphQL validation rejects a direct `currency` field and the captured response
-  contains no currency value. Playerok remains partial until currency semantics
-  are confirmed without inventing defaults.
+- Playerok has live GraphQL item-list proof and produces real snapshot-ready
+  parsed offers. The GraphQL response itself contains no `currency` field, so
+  the `RUB` fallback must remain documented and covered by drift monitoring.
 - FunPay saved-response extraction now produces one snapshot-ready `ParsedOffer`
   from a real public listing response.
 - Snapshot creation is skipped when parsed offers from any marketplace do not
@@ -344,7 +346,7 @@ redacted credential responses. EPIC 17 Task 4 adds Scheduler-facing integration
 selection without moving marketplace business logic into Scheduler. EPIC 17 is
 functionally complete; live marketplace credential storage and execution-time
 credential retrieval require a new explicitly approved EPIC. EPIC 18 continues
-marketplace data reliability closure: GGSEL and FunPay are verified from saved
-real payloads, while Playerok has a verified GraphQL item source but must still
-pass a currency/snapshot-readiness proof gate before it can be marked
-marketplace-ready.
+marketplace data reliability closure: GGSEL, Playerok, and FunPay are verified
+from real saved/live payloads as snapshot-ready. Production scheduling should
+still wait for payload/source drift monitoring and explicit runtime integration
+configuration.

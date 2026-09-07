@@ -152,6 +152,30 @@ def test_playerok_normalizer_preserves_snapshot_ready_fields() -> None:
     assert normalized[0].seller_name == "Seller"
 
 
+def test_playerok_normalizer_defaults_missing_currency_to_rub() -> None:
+    """Playerok item-list prices are normalized to the source-backed RUB default."""
+    raw_response = """
+    {
+      "items": [
+        {
+          "id": "offer-3",
+          "slug": "minecraft-premium",
+          "name": "Minecraft Premium",
+          "price": 790,
+          "user": {"id": "seller-1", "username": "Seller"}
+        }
+      ]
+    }
+    """
+
+    normalized = PlayerokNormalizer().normalize(
+        PlayerokExtractor().extract(raw_response)
+    )
+
+    assert len(normalized) == 1
+    assert normalized[0].currency == "RUB"
+
+
 def test_playerok_fetcher_uses_graphql_items_by_default() -> None:
     """Playerok fetcher uses the discovered GraphQL items operation by default."""
     fake_client = _FakeHttpClient(
