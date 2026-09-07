@@ -154,6 +154,9 @@ This document tracks only work that is reflected by the current repository state
   real item-list JSON, `PlayerokPipeline` produces 20 real snapshot-ready
   `ParsedOffer` objects through the documented `RUB` fallback, and extractor
   filtering avoids nested category/game false positives.
+- Marketplace saved-payload drift guard: strict verifier fails if GGSEL,
+  Playerok, or FunPay no longer produce ready, snapshot-compatible data from the
+  captured real responses.
 - FunPay live listing verification: marketplace redirect handling, real listing
   capture, analyzer proof, pipeline proof, and one snapshot-ready `ParsedOffer`
   from the saved response.
@@ -180,12 +183,13 @@ integration metadata, credential-reference redaction, seller integration API, an
 Scheduler-facing integration selection without enabling live credential use.
 EPIC 18 is functionally complete for saved/live marketplace data readiness:
 GGSEL, Playerok, and FunPay all produce snapshot-ready `ParsedOffer` objects
-from real captured marketplace responses. The remaining work before production
-polling is drift monitoring and explicit runtime integration configuration.
+from real captured marketplace responses, and a strict saved-payload drift guard
+is available. The remaining work before production polling is live operational
+monitoring and explicit runtime integration configuration.
 
 ## Not Present Yet
 
-- Marketplace payload/source drift monitoring for scheduled production polling.
+- Live marketplace polling monitoring for scheduled production ingestion.
 - Production deployment entrypoint using PostgreSQL scheduler factory.
 - Optional guarded live Telegram test-chat message.
 - Production AI provider integration in the pipeline.

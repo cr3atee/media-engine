@@ -115,6 +115,11 @@ The verifier reports:
 - current blockers;
 - representative parsed offers.
 
+`scripts/verify_marketplace_payload_contracts.py` is the strict saved-payload
+drift guard. It reuses the readiness checks and exits with a non-zero status
+when any supported marketplace is no longer `ready` or no longer produces at
+least one raw item, one parsed offer, and one snapshot-ready offer.
+
 See `docs/EPIC_18_MARKETPLACE_CAPTURE_CHECKLIST.md` for the evidence required
 before a marketplace can be marked ready.
 
@@ -129,7 +134,8 @@ before a marketplace can be marked ready.
 4. Harden Playerok extraction only after the response shape is confirmed. Done
    for item offers.
 5. Prove FunPay extractor and normalizer against a captured real response. Done.
-6. Add payload drift monitoring for ready marketplaces.
+6. Add payload drift monitoring for ready marketplaces. Done for saved real
+   payloads through `scripts/verify_marketplace_payload_contracts.py`.
 7. Add a live-optional marketplace data verifier guarded by explicit flags.
 8. Wire verified marketplace integrations into Scheduler execution with
    tenant-owned integration configuration.

@@ -6,8 +6,9 @@ This document lists only confirmed work remaining after EPIC 17 completion.
 
 ## Immediate
 
-- Add marketplace payload/source drift monitoring before relying on GGSEL,
-  Playerok, or FunPay for scheduled production ingestion.
+- Add live marketplace polling monitoring and production runtime integration
+  configuration before relying on GGSEL, Playerok, or FunPay for scheduled
+  ingestion.
 - Keep FunPay extraction guarded by captured-response verification and add drift
   monitoring before relying on it for scheduled production ingestion.
 - Define the next EPIC before implementing live marketplace credential storage
@@ -33,5 +34,5 @@ This document lists only confirmed work remaining after EPIC 17 completion.
 ## Known Marketplace Gap
 
 - GGSEL, Playerok, and FunPay are ready from current real captured-response
-  proof, but should still have payload drift monitoring before production
-  scheduling.
+  proof and strict saved-payload verification. Production scheduling still needs
+  live polling monitoring.

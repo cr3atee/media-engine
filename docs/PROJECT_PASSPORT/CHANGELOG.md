@@ -27,6 +27,9 @@ This document records notable Project Passport updates.
   source-backed `RUB` fallback because the GraphQL item schema rejects a direct
   `currency` field while the official frontend bundle formats item price events
   as RUB; readiness now reports 20 snapshot-ready Playerok offers.
+- Added strict marketplace saved-payload contract verification. The guard reuses
+  the readiness checks and currently confirms GGSEL `60/60/60`, Playerok
+  `20/20/20`, and FunPay `1/1/1` raw/parsed/snapshot-ready counts.
 - Started EPIC 18 marketplace data reliability work: added offline readiness
   verification, marketplace capture checklist, GGSEL absolute URL normalization,
   GGSEL extractor/normalizer contract coverage, Playerok response analysis

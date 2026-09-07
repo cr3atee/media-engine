@@ -49,6 +49,7 @@ Verification command:
 
 ```powershell
 .venv\Scripts\python.exe scripts/verify_marketplace_data_readiness.py
+.venv\Scripts\python.exe scripts/verify_marketplace_payload_contracts.py
 ```
 
 Remaining proof needed:
@@ -98,6 +99,7 @@ Verification commands:
 .venv\Scripts\python.exe scripts/analyze_playerok_response.py
 .venv\Scripts\python.exe scripts/demo_playerok_extractor.py
 .venv\Scripts\python.exe scripts/verify_marketplace_data_readiness.py
+.venv\Scripts\python.exe scripts/verify_marketplace_payload_contracts.py
 ```
 
 If the public GraphQL response shape changes, do not broaden extractor
@@ -130,6 +132,7 @@ Verification commands:
 .venv\Scripts\python.exe scripts/demo_funpay_fetch.py
 .venv\Scripts\python.exe scripts/analyze_funpay_response.py
 .venv\Scripts\python.exe scripts/verify_marketplace_data_readiness.py
+.venv\Scripts\python.exe scripts/verify_marketplace_payload_contracts.py
 ```
 
 Before scheduled production ingestion, add payload drift monitoring and capture
@@ -162,3 +165,11 @@ FunPay  -> ready
 
 The current saved-response gate is satisfied. The production scheduling gate
 still requires drift monitoring and explicit runtime marketplace configuration.
+
+Current strict saved-payload verifier result:
+
+```text
+ggsel: ready, raw=60, parsed=60, snapshot_ready=60
+playerok: ready, raw=20, parsed=20, snapshot_ready=20
+funpay: ready, raw=1, parsed=1, snapshot_ready=1
+```
