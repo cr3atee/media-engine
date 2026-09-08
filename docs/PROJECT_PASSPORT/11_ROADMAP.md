@@ -157,6 +157,8 @@ This document tracks only work that is reflected by the current repository state
 - Marketplace saved-payload drift guard: strict verifier fails if GGSEL,
   Playerok, or FunPay no longer produce ready, snapshot-compatible data from the
   captured real responses.
+- Core readiness review: MediaEngine is accepted as a reusable backend core,
+  with remaining gaps limited to production runtime and operational integration.
 - FunPay live listing verification: marketplace redirect handling, real listing
   capture, analyzer proof, pipeline proof, and one snapshot-ready `ParsedOffer`
   from the saved response.
@@ -196,4 +198,8 @@ monitoring and explicit runtime integration configuration.
 - Live marketplace credential storage and credential retrieval for execution.
 ## Recommended Next EPIC
 
-**Start the next explicitly approved EPIC.**
+**Production Runtime Bootstrap.**
+
+Wire PostgreSQL repository scopes, Scheduler factory construction, enabled
+marketplace integration execution, safe shutdown, and guarded live operational
+verification without redesigning the core domain.

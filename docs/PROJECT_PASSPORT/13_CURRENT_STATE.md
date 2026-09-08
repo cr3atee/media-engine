@@ -90,6 +90,10 @@ readiness verifier reports snapshot-ready offers.
 The strict saved-payload drift guard now verifies GGSEL, Playerok, and FunPay
 with non-zero exit behavior and confirms all three sources are currently
 snapshot-ready from saved real payloads.
+The core readiness review is recorded in `docs/CORE_READINESS_REVIEW.md`:
+MediaEngine is ready as a reusable backend core, while public production launch
+still requires runtime bootstrap, live polling monitoring, secret retrieval,
+production AI wiring, and guarded live Telegram verification.
 
 ## Active Capabilities
 
@@ -306,6 +310,8 @@ snapshot-ready from saved real payloads.
   the `RUB` fallback must remain documented and covered by drift monitoring.
 - Saved-payload drift monitoring exists; live scheduled marketplace polling
   still needs production runtime configuration and operational monitoring.
+- Core readiness is no longer blocked by domain architecture; remaining work is
+  production runtime and operational integration.
 - FunPay saved-response extraction now produces one snapshot-ready `ParsedOffer`
   from a real public listing response.
 - Snapshot creation is skipped when parsed offers from any marketplace do not

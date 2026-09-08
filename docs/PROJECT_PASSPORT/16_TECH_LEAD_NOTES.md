@@ -159,6 +159,10 @@ This document captures architecture notes that are important for future reviews.
   `scripts/verify_marketplace_payload_contracts.py`. This is a core regression
   guard for captured real payloads, not a substitute for production live polling
   monitoring.
+- The core readiness review concludes that the next valuable work is production
+  runtime bootstrap, not another domain redesign. Preserve the existing
+  repository, Scheduler, event, content, and tenant boundaries unless a concrete
+  production integration issue requires a targeted change.
 - FunPay fetcher follows marketplace-local redirects because the shared
   `HttpClient` intentionally remains generic and redirect-neutral.
 - Scheduler same-job overlap is now guarded by optional scheduler leases.
