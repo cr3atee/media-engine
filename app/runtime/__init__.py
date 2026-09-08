@@ -6,13 +6,21 @@ from app.runtime.bootstrap import (
     create_memory_runtime_components,
     create_postgres_runtime_components,
 )
+from app.runtime.marketplaces import (
+    create_marketplace_processing_pipeline,
+    create_marketplace_runner_factories,
+)
 from app.runtime.process import RuntimeJobConfig, RuntimeProcess
+from app.runtime.worker import register_enabled_marketplace_integrations_job
 
 __all__ = [
     "RuntimeComponents",
     "RuntimeJobConfig",
     "RuntimeProcess",
     "create_default_runtime_components",
+    "create_marketplace_processing_pipeline",
+    "create_marketplace_runner_factories",
     "create_memory_runtime_components",
     "create_postgres_runtime_components",
+    "register_enabled_marketplace_integrations_job",
 ]

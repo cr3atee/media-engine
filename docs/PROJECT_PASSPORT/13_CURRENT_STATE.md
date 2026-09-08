@@ -96,10 +96,11 @@ process entrypoints.
 `RuntimeProcess` now provides a thin lifecycle boundary for registering existing
 jobs, executing bounded jobs, starting/stopping Scheduler execution, and reading
 status/statistics.
+`scripts/run_mediaengine_worker.py` now provides the first worker command for
+enabled marketplace integration execution in one-shot or periodic Scheduler mode.
 The core readiness review is recorded in `docs/CORE_READINESS_REVIEW.md`:
 MediaEngine is ready as a reusable backend core, while public production launch
-still requires a deployment worker command, live polling monitoring,
-secret retrieval,
+still requires live polling monitoring, secret retrieval,
 production AI wiring, and guarded live Telegram verification.
 
 ## Active Capabilities
@@ -312,6 +313,9 @@ production AI wiring, and guarded live Telegram verification.
 - `RuntimeProcess` can register existing `BaseJob` objects with interval,
   enabled, retry, delay, and timeout settings while keeping business work inside
   the jobs and services.
+- The worker command can create default PostgreSQL runtime components, create
+  supported marketplace runner factories, register enabled integration
+  execution, execute once, or run periodically.
 
 ## Known Gaps
 
@@ -330,8 +334,9 @@ production AI wiring, and guarded live Telegram verification.
   contain normalized price and currency.
 - Ingestion, scoring, and durable content processing are separate services and
   still require production process/bootstrap configuration.
-- Production deployment worker commands still need to use the runtime bootstrap
-  and process lifecycle foundation.
+- Production deployment can now start from `scripts/run_mediaengine_worker.py`;
+  operational monitoring and live source diagnostics still need explicit
+  hardening.
 - Live Telegram delivery is not yet verified; credentials, exact test-chat
   confirmation, live flags, and PostgreSQL verification database were not
   supplied.
@@ -373,7 +378,7 @@ functionally complete; live marketplace credential storage and execution-time
 credential retrieval require a new explicitly approved EPIC. EPIC 18 continues
 marketplace data reliability closure: GGSEL, Playerok, and FunPay are verified
 from real saved/live payloads as snapshot-ready, and a strict saved-payload
-drift guard is present. Runtime bootstrap/process helpers now centralize
-repository scope, Scheduler construction, job registration, and safe shutdown.
-Production scheduling should still wait for live polling monitoring and an
-explicit worker command.
+drift guard is present. Runtime bootstrap/process helpers and the worker command
+now centralize repository scope, Scheduler construction, job registration, and
+safe shutdown. Production scheduling should still wait for live polling
+monitoring.

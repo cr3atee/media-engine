@@ -102,8 +102,8 @@ class MarketplacePipeline:
         snapshot_builder: SnapshotBuilder,
         price_change_detector: PriceChangeDetector,
         event_builder: EventBuilder,
-        event_scorer: EventScorer,
-        content_generator: ContentGenerator,
+        event_scorer: EventScorer | None = None,
+        content_generator: ContentGenerator | None = None,
         repository_provider: RepositoryProvider | None = None,
         comparison_grouping: OfferGroupingService | None = None,
         comparison_selector: BestOfferSelector | None = None,
@@ -213,8 +213,7 @@ class MarketplacePipeline:
                 current_snapshot.external_id,
             )
             snapshot_inserted = await repository_provider.price_history.add(
-                current_snapshot.tenant_id,
-                current_snapshot
+                current_snapshot.tenant_id, current_snapshot
             )
             if snapshot_inserted:
                 snapshots_persisted += 1

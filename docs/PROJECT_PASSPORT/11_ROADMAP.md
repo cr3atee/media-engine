@@ -174,6 +174,10 @@ This document tracks only work that is reflected by the current repository state
 - Runtime process lifecycle foundation: `RuntimeProcess` registers existing
   Scheduler jobs, executes bounded jobs, starts/stops periodic execution, and
   exposes statuses/statistics without owning business logic.
+- Production worker command foundation: `scripts/run_mediaengine_worker.py`
+  builds default runtime components, registers enabled marketplace integration
+  execution, supports one-shot and periodic modes, and prints Scheduler status
+  without owning marketplace business logic.
 
 ## Current Status
 
@@ -192,24 +196,23 @@ Scheduler-facing integration selection without enabling live credential use.
 EPIC 18 is functionally complete for saved/live marketplace data readiness:
 GGSEL, Playerok, and FunPay all produce snapshot-ready `ParsedOffer` objects
 from real captured marketplace responses, and a strict saved-payload drift guard
-is available. Runtime bootstrap and process lifecycle helpers now centralize
-memory/PostgreSQL repository scope, Scheduler construction, job registration,
-and safe Scheduler shutdown. The remaining work before production polling is a
-deployment worker command, live operational monitoring, and explicit runtime
+is available. Runtime bootstrap, process lifecycle helpers, and the worker
+command now centralize memory/PostgreSQL repository scope, Scheduler
+construction, enabled integration job registration, one-shot execution,
+periodic execution, and safe Scheduler shutdown. The remaining work before
+production polling is live operational monitoring and explicit runtime
 integration configuration.
 
 ## Not Present Yet
 
 - Live marketplace polling monitoring for scheduled production ingestion.
-- Production deployment worker command using the runtime bootstrap and process
-  lifecycle foundation.
 - Optional guarded live Telegram test-chat message.
 - Production AI provider integration in the pipeline.
 - Live marketplace credential storage and credential retrieval for execution.
 ## Recommended Next EPIC
 
-**Production Worker Command.**
+**Live Polling Monitoring.**
 
-Wire the deployment process around the runtime bootstrap/process lifecycle
-foundation, enabled marketplace integration execution, safe shutdown, and
-guarded live operational verification without redesigning the core domain.
+Add guarded operational monitoring around scheduled marketplace polling,
+including exact diagnostics, failure visibility, and safe execution limits
+without redesigning the core domain.
