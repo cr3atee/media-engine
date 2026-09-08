@@ -44,7 +44,7 @@ Remaining gaps:
 
 ### Playerok
 
-Status: partial from live GraphQL response.
+Status: ready from live GraphQL response.
 
 The project has `PlayerokFetcher`, `PlayerokExtractor`, `PlayerokNormalizer`,
 and `PlayerokPipeline`. The public homepage and product-page HTML responses were
@@ -61,11 +61,18 @@ The extractor has focused contract coverage for structured JSON and
 `__NEXT_DATA__` payloads and avoids treating nested seller/user/category/game
 objects as offers.
 
+The GraphQL item profile does not expose `currency` directly. During source
+verification, the Playerok frontend bundle was checked and item ecommerce
+tracking formats the same item `price`/`rawPrice` values with
+`currency: "RUB"`. The Playerok normalizer therefore applies a source-backed
+`RUB` default at the marketplace adapter boundary instead of changing shared
+domain, snapshot, or business services.
+
 Current verifier result:
 
 - raw items: 20;
 - parsed offers: 20;
-- snapshot-ready offers: 0.
+- snapshot-ready offers: 20.
 
 Remaining gaps:
 
@@ -73,10 +80,9 @@ Remaining gaps:
   seller, category, game, and attachment URL.
 - GraphQL validation rejects a direct `currency` field on both `MyItemProfile`
   and `ForeignItemProfile`.
-- No currency value is present in the captured JSON response.
-- Do not default Playerok prices to RUB until that product or source decision is
-  approved and documented.
-- Prove snapshot readiness after currency semantics are confirmed.
+- No currency value is present in the captured JSON response itself.
+- Keep the `RUB` fallback documented and monitor Playerok frontend/source drift
+  before scheduled production ingestion.
 
 ### FunPay
 
@@ -121,7 +127,7 @@ before a marketplace can be marked ready.
 3. Capture and document one real Playerok category/listing or API response.
    Done through the public GraphQL `items` operation.
 4. Harden Playerok extraction only after the response shape is confirmed. Done
-   for item offers; currency remains unresolved.
+   for item offers.
 5. Prove FunPay extractor and normalizer against a captured real response. Done.
 6. Add payload drift monitoring for ready marketplaces.
 7. Add a live-optional marketplace data verifier guarded by explicit flags.
