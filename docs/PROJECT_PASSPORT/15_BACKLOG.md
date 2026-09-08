@@ -6,8 +6,8 @@ This document lists only confirmed work remaining after EPIC 17 completion.
 
 ## Immediate
 
-- Define the production process entrypoint on top of the runtime bootstrap
-  foundation.
+- Define the production worker command on top of the runtime bootstrap and
+  process lifecycle foundation.
 - Add live marketplace polling monitoring and production runtime integration
   configuration before relying on GGSEL, Playerok, or FunPay for scheduled
   ingestion.
@@ -26,8 +26,8 @@ This document lists only confirmed work remaining after EPIC 17 completion.
 
 ## Operational
 
-- Wire production Scheduler entrypoints through the runtime bootstrap foundation
-  when the deployment process is introduced.
+- Wire production Scheduler entrypoints through the runtime bootstrap/process
+  lifecycle foundation when the deployment process is introduced.
 - Add production monitoring and alerting for exhausted content attempts and
   ambiguous publications.
 

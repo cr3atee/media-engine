@@ -8,6 +8,9 @@ This document records notable Project Passport updates.
 
 - Added runtime bootstrap foundation for memory/PostgreSQL repository scope and
   Scheduler construction without changing business services.
+- Added `RuntimeProcess` lifecycle foundation for registering existing Scheduler
+  jobs, executing bounded jobs, starting/stopping Scheduler execution, and
+  exposing status/statistics without moving business logic.
 - Verified runtime bootstrap with focused tests, full Pytest, full MyPy, and
   focused Ruff/Ruff format checks; repository-wide Ruff debt remains unrelated.
 - Added Scheduler multi-node lease foundation: domain contract, repository
