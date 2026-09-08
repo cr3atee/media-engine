@@ -87,6 +87,9 @@ objects. Because the GraphQL item-list response omits currency while the
 Playerok frontend bundle formats the same item price values as RUB, the
 Playerok normalizer applies a documented source-backed `RUB` fallback and the
 readiness verifier reports snapshot-ready offers.
+The strict saved-payload drift guard now verifies GGSEL, Playerok, and FunPay
+with non-zero exit behavior and confirms all three sources are currently
+snapshot-ready from saved real payloads.
 
 ## Active Capabilities
 
@@ -99,6 +102,8 @@ readiness verifier reports snapshot-ready offers.
 - Playerok public GraphQL `items` responses can be fetched and normalized into
   real snapshot-ready `ParsedOffer` objects with id, title, price, RUB currency,
   URL, and seller data.
+- `scripts/verify_marketplace_payload_contracts.py` fails fast if any supported
+  saved marketplace payload no longer produces ready, snapshot-compatible data.
 - Raw marketplace offers are represented by `RawMarketplaceOffer`.
 - Raw offers can be normalized into `ParsedOffer`.
 - Parsed offers can be persisted through `RepositoryProvider.offers`.
@@ -299,6 +304,8 @@ readiness verifier reports snapshot-ready offers.
 - Playerok has live GraphQL item-list proof and produces real snapshot-ready
   parsed offers. The GraphQL response itself contains no `currency` field, so
   the `RUB` fallback must remain documented and covered by drift monitoring.
+- Saved-payload drift monitoring exists; live scheduled marketplace polling
+  still needs production runtime configuration and operational monitoring.
 - FunPay saved-response extraction now produces one snapshot-ready `ParsedOffer`
   from a real public listing response.
 - Snapshot creation is skipped when parsed offers from any marketplace do not
@@ -347,6 +354,6 @@ selection without moving marketplace business logic into Scheduler. EPIC 17 is
 functionally complete; live marketplace credential storage and execution-time
 credential retrieval require a new explicitly approved EPIC. EPIC 18 continues
 marketplace data reliability closure: GGSEL, Playerok, and FunPay are verified
-from real saved/live payloads as snapshot-ready. Production scheduling should
-still wait for payload/source drift monitoring and explicit runtime integration
-configuration.
+from real saved/live payloads as snapshot-ready, and a strict saved-payload
+drift guard is present. Production scheduling should still wait for live polling
+monitoring and explicit runtime integration configuration.
