@@ -6,6 +6,10 @@ This document records notable Project Passport updates.
 
 ## Unreleased
 
+- Added runtime bootstrap foundation for memory/PostgreSQL repository scope and
+  Scheduler construction without changing business services.
+- Verified runtime bootstrap with focused tests, full Pytest, full MyPy, and
+  focused Ruff/Ruff format checks; repository-wide Ruff debt remains unrelated.
 - Added Scheduler multi-node lease foundation: domain contract, repository
   interface, memory/PostgreSQL lease repositories, provider wiring, migration
   `0014_scheduler_leases`, focused tests, PostgreSQL verifier, demo, and

@@ -27,7 +27,7 @@ product development.
 The core is not yet production-launch ready. The remaining gaps are operational
 and integration-facing rather than core domain architecture blockers:
 
-- production Scheduler bootstrap;
+- production process entrypoint;
 - live marketplace credential retrieval;
 - live polling monitoring;
 - guarded live Telegram test-chat verification;
@@ -143,7 +143,7 @@ Scheduler is orchestration-only:
 - Full repository-wide Ruff is not green because of older unrelated lint issues.
 - Marketplace payload verification is local-payload-based, not CI-portable.
 - Live marketplace polling monitoring is not implemented.
-- Production Scheduler entrypoint is not wired.
+- Production process entrypoint is not wired.
 - Live marketplace credential retrieval is not implemented.
 - Live Telegram delivery has not sent and persisted an approved test-chat
   message.
@@ -189,9 +189,10 @@ MediaEngine is not ready for public production launch until:
 
 ## Recommended Next Work
 
-1. Production runtime bootstrap.
-   Wire process entrypoints for PostgreSQL repository scopes, Scheduler factory,
-   marketplace integration selection, and safe shutdown.
+1. Production process entrypoint.
+   Use the runtime bootstrap foundation to wire PostgreSQL repository scopes,
+   Scheduler factory construction, marketplace integration selection, and safe
+   shutdown in the deployment process.
 
 2. Marketplace live polling verification.
    Add guarded live checks for GGSEL, Playerok, and FunPay with exact diagnostics,
@@ -215,5 +216,5 @@ The MediaEngine core can be considered complete enough to serve as the backend
 kernel for the next product stage.
 
 The next stage should not be another domain redesign. It should be production
-runtime hardening: bootstrap, monitored polling, credentials, and guarded live
-delivery verification.
+runtime hardening: process entrypoint, monitored polling, credentials, and
+guarded live delivery verification.

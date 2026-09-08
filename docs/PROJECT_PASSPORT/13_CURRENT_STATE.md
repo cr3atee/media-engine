@@ -90,9 +90,13 @@ readiness verifier reports snapshot-ready offers.
 The strict saved-payload drift guard now verifies GGSEL, Playerok, and FunPay
 with non-zero exit behavior and confirms all three sources are currently
 snapshot-ready from saved real payloads.
+Runtime bootstrap factories now expose memory/PostgreSQL repository scopes and
+Scheduler construction as a single reusable composition boundary for future
+process entrypoints.
 The core readiness review is recorded in `docs/CORE_READINESS_REVIEW.md`:
 MediaEngine is ready as a reusable backend core, while public production launch
-still requires runtime bootstrap, live polling monitoring, secret retrieval,
+still requires a deployment process entrypoint, live polling monitoring,
+secret retrieval,
 production AI wiring, and guarded live Telegram verification.
 
 ## Active Capabilities
@@ -300,6 +304,8 @@ production AI wiring, and guarded live Telegram verification.
 - Scheduler lease verification passed: PostgreSQL `11/11`, focused tests
   `8 passed`, full Pytest `359 passed, 58 skipped`, full MyPy `344` source
   files, and focused Ruff/format checks.
+- Runtime component factories can now create memory or PostgreSQL runtime
+  wiring with one repository scope factory and one Scheduler instance.
 
 ## Known Gaps
 
@@ -318,8 +324,8 @@ production AI wiring, and guarded live Telegram verification.
   contain normalized price and currency.
 - Ingestion, scoring, and durable content processing are separate services and
   still require production process/bootstrap configuration.
-- Production deployment entrypoints still need to use the PostgreSQL scheduler
-  factory.
+- Production deployment entrypoints still need to use the runtime bootstrap
+  foundation.
 - Live Telegram delivery is not yet verified; credentials, exact test-chat
   confirmation, live flags, and PostgreSQL verification database were not
   supplied.
@@ -361,5 +367,6 @@ functionally complete; live marketplace credential storage and execution-time
 credential retrieval require a new explicitly approved EPIC. EPIC 18 continues
 marketplace data reliability closure: GGSEL, Playerok, and FunPay are verified
 from real saved/live payloads as snapshot-ready, and a strict saved-payload
-drift guard is present. Production scheduling should still wait for live polling
-monitoring and explicit runtime integration configuration.
+drift guard is present. Runtime bootstrap factories now centralize repository
+scope and Scheduler construction. Production scheduling should still wait for
+live polling monitoring and an explicit process entrypoint.

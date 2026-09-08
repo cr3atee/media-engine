@@ -6,7 +6,8 @@ This document lists only confirmed work remaining after EPIC 17 completion.
 
 ## Immediate
 
-- Define production runtime bootstrap for PostgreSQL-backed Scheduler execution.
+- Define the production process entrypoint on top of the runtime bootstrap
+  foundation.
 - Add live marketplace polling monitoring and production runtime integration
   configuration before relying on GGSEL, Playerok, or FunPay for scheduled
   ingestion.
@@ -25,7 +26,7 @@ This document lists only confirmed work remaining after EPIC 17 completion.
 
 ## Operational
 
-- Wire production Scheduler entrypoints through the PostgreSQL scheduler factory
+- Wire production Scheduler entrypoints through the runtime bootstrap foundation
   when the deployment process is introduced.
 - Add production monitoring and alerting for exhausted content attempts and
   ambiguous publications.

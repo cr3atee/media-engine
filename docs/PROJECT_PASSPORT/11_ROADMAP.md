@@ -168,6 +168,9 @@ This document tracks only work that is reflected by the current repository state
   PostgreSQL verification `11/11`.
 - Scheduler bootstrap configuration: `SchedulerSettings` lease fields and
   memory/PostgreSQL scheduler factory helpers.
+- Runtime bootstrap foundation: memory/PostgreSQL runtime component factories
+  expose repository scope and Scheduler construction without changing business
+  services.
 
 ## Current Status
 
@@ -186,20 +189,22 @@ Scheduler-facing integration selection without enabling live credential use.
 EPIC 18 is functionally complete for saved/live marketplace data readiness:
 GGSEL, Playerok, and FunPay all produce snapshot-ready `ParsedOffer` objects
 from real captured marketplace responses, and a strict saved-payload drift guard
-is available. The remaining work before production polling is live operational
-monitoring and explicit runtime integration configuration.
+is available. Runtime bootstrap factories now centralize memory/PostgreSQL
+repository scope and Scheduler construction. The remaining work before
+production polling is a deployment process entrypoint, live operational
+monitoring, and explicit runtime integration configuration.
 
 ## Not Present Yet
 
 - Live marketplace polling monitoring for scheduled production ingestion.
-- Production deployment entrypoint using PostgreSQL scheduler factory.
+- Production deployment entrypoint using the runtime bootstrap foundation.
 - Optional guarded live Telegram test-chat message.
 - Production AI provider integration in the pipeline.
 - Live marketplace credential storage and credential retrieval for execution.
 ## Recommended Next EPIC
 
-**Production Runtime Bootstrap.**
+**Production Runtime Entrypoint.**
 
-Wire PostgreSQL repository scopes, Scheduler factory construction, enabled
+Wire the deployment process around the runtime bootstrap foundation, enabled
 marketplace integration execution, safe shutdown, and guarded live operational
 verification without redesigning the core domain.
