@@ -27,6 +27,7 @@ class RuntimeProcess:
     def __init__(self, components: RuntimeComponents) -> None:
         """Initialize the process with prebuilt runtime components."""
         self._components = components
+        self._jobs: dict[str, BaseJob] = {}
 
     @property
     def components(self) -> RuntimeComponents:
@@ -40,6 +41,7 @@ class RuntimeProcess:
     ) -> None:
         """Register an existing Scheduler job without owning its work."""
         job_config = config or RuntimeJobConfig()
+        self._jobs[job.name] = job
         self._components.scheduler.register_job(
             job,
             interval_seconds=job_config.interval_seconds,
@@ -52,6 +54,10 @@ class RuntimeProcess:
     async def execute_once(self, job_name: str) -> None:
         """Execute one registered job through the configured Scheduler."""
         await self._components.scheduler.execute_job(job_name)
+
+    def get_last_result(self, job_name: str) -> object | None:
+        """Return the last result produced by a registered job."""
+        return self._jobs[job_name].last_result
 
     def start(self) -> None:
         """Start periodic execution through the configured Scheduler."""

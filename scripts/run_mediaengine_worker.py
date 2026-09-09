@@ -17,8 +17,12 @@ from app.config.settings import settings
 from app.core.http_client import HttpClient
 from app.runtime.bootstrap import create_default_runtime_components
 from app.runtime.marketplaces import create_marketplace_runner_factories
+from app.runtime.monitoring import RuntimeMonitor
 from app.runtime.process import RuntimeJobConfig, RuntimeProcess
 from app.runtime.worker import register_enabled_marketplace_integrations_job
+from app.services.marketplace_integration_execution import (
+    MarketplaceIntegrationExecutionBatch,
+)
 
 
 def parse_args() -> argparse.Namespace:
@@ -69,6 +73,7 @@ async def main() -> int:
         job_name = process.list_statuses()[0].name
         if args.once:
             await process.execute_once(job_name)
+            _print_marketplace_result(process, job_name)
             _print_statuses(process)
             return 0
 
@@ -80,6 +85,7 @@ async def main() -> int:
                 await asyncio.sleep(args.duration_seconds)
         finally:
             await process.stop()
+            _print_marketplace_result(process, job_name)
             _print_statuses(process)
 
     return 0
@@ -102,6 +108,34 @@ def _print_statuses(process: RuntimeProcess) -> None:
             f"retries={statistics.retry_attempts} "
             f"lease_skips={statistics.lease_skips}"
         )
+
+
+def _print_marketplace_result(process: RuntimeProcess, job_name: str) -> None:
+    result = process.get_last_result(job_name)
+    if not isinstance(result, MarketplaceIntegrationExecutionBatch):
+        return
+
+    diagnostic = RuntimeMonitor().summarize_marketplace_batch(result)
+    print("=== MARKETPLACE POLLING ===")
+    print(f"Selected integrations: {diagnostic.selected_integrations}")
+    print(f"Executed integrations: {diagnostic.executed_integrations}")
+    print(f"Skipped integrations: {diagnostic.skipped_integrations}")
+    for execution in diagnostic.executions:
+        print(
+            f"{execution.marketplace}: executed={execution.executed} "
+            f"source_url_present={execution.source_url_present} "
+            f"skipped={execution.skipped_reason} result={execution.result_type}"
+        )
+        if execution.run is not None:
+            print(
+                f"  offers={execution.run.offers_received} "
+                f"persisted={execution.run.offers_persisted} "
+                f"snapshots={execution.run.snapshots_persisted}/"
+                f"{execution.run.snapshots_created} "
+                f"price_changes={execution.run.price_changes_detected} "
+                f"events={execution.run.events_created} "
+                f"errors={len(execution.run.errors)}"
+            )
 
 
 if __name__ == "__main__":

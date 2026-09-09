@@ -98,9 +98,12 @@ jobs, executing bounded jobs, starting/stopping Scheduler execution, and reading
 status/statistics.
 `scripts/run_mediaengine_worker.py` now provides the first worker command for
 enabled marketplace integration execution in one-shot or periodic Scheduler mode.
+Scheduler jobs retain their last successful result, and `RuntimeMonitor` can
+summarize enabled marketplace integration polling batches for safe operational
+diagnostics.
 The core readiness review is recorded in `docs/CORE_READINESS_REVIEW.md`:
 MediaEngine is ready as a reusable backend core, while public production launch
-still requires live polling monitoring, secret retrieval,
+still requires guarded live polling verification, secret retrieval,
 production AI wiring, and guarded live Telegram verification.
 
 ## Active Capabilities
@@ -316,6 +319,9 @@ production AI wiring, and guarded live Telegram verification.
 - The worker command can create default PostgreSQL runtime components, create
   supported marketplace runner factories, register enabled integration
   execution, execute once, or run periodically.
+- Runtime polling diagnostics can report selected, executed, skipped
+  integrations, per-marketplace run counts, snapshot counts, price changes,
+  event counts, and sanitized error counts from the existing execution result.
 
 ## Known Gaps
 
@@ -335,8 +341,8 @@ production AI wiring, and guarded live Telegram verification.
 - Ingestion, scoring, and durable content processing are separate services and
   still require production process/bootstrap configuration.
 - Production deployment can now start from `scripts/run_mediaengine_worker.py`;
-  operational monitoring and live source diagnostics still need explicit
-  hardening.
+  guarded live operational verification still needs to be executed before
+  unattended polling.
 - Live Telegram delivery is not yet verified; credentials, exact test-chat
   confirmation, live flags, and PostgreSQL verification database were not
   supplied.
@@ -380,5 +386,5 @@ marketplace data reliability closure: GGSEL, Playerok, and FunPay are verified
 from real saved/live payloads as snapshot-ready, and a strict saved-payload
 drift guard is present. Runtime bootstrap/process helpers and the worker command
 now centralize repository scope, Scheduler construction, job registration, and
-safe shutdown. Production scheduling should still wait for live polling
-monitoring.
+safe shutdown. Production scheduling should still wait for guarded live polling
+verification.

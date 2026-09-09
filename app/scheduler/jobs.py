@@ -126,6 +126,7 @@ class BaseJob(ABC):
     def __init__(self, name: str) -> None:
         """Initialize the job with an execution name."""
         self._name = name
+        self._last_result: object | None = None
         self._status = JobExecutionStatus(
             name=name,
             state=JobExecutionState.REGISTERED,
@@ -140,6 +141,11 @@ class BaseJob(ABC):
     def status(self) -> JobExecutionStatus:
         """Return the last execution status."""
         return self._status
+
+    @property
+    def last_result(self) -> object | None:
+        """Return the last successfully produced job result."""
+        return self._last_result
 
     async def execute(self) -> None:
         """Execute the job, track duration, and store the latest status."""
@@ -157,8 +163,9 @@ class BaseJob(ABC):
         try:
             result = self.run()
             if isawaitable(result):
-                await result
+                result = await result
         except Exception as exc:
+            self._last_result = None
             self._status = replace(
                 self._status,
                 state=JobExecutionState.FAILED,
@@ -170,6 +177,7 @@ class BaseJob(ABC):
             )
             return
 
+        self._last_result = result
         self._status = replace(
             self._status,
             state=JobExecutionState.SUCCEEDED,

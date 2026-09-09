@@ -14,6 +14,9 @@ This document records notable Project Passport updates.
 - Added production worker command foundation: supported marketplace runner
   factories, enabled marketplace integration job registration, one-shot and
   periodic worker modes, and status/statistics output.
+- Added runtime polling diagnostics foundation: Scheduler jobs retain last
+  successful results, `RuntimeProcess` exposes them, and `RuntimeMonitor`
+  summarizes enabled marketplace integration batches without extra I/O.
 - Verified runtime bootstrap with focused tests, full Pytest, full MyPy, and
   focused Ruff/Ruff format checks; repository-wide Ruff debt remains unrelated.
 - Added Scheduler multi-node lease foundation: domain contract, repository

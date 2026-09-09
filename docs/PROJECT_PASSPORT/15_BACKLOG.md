@@ -6,8 +6,8 @@ This document lists only confirmed work remaining after EPIC 17 completion.
 
 ## Immediate
 
-- Add live polling monitoring around the production worker command before
-  unattended scheduled ingestion.
+- Run guarded live polling verification around the production worker command
+  before unattended scheduled ingestion.
 - Add live marketplace polling monitoring and production runtime integration
   configuration before relying on GGSEL, Playerok, or FunPay for scheduled
   ingestion.
@@ -26,8 +26,9 @@ This document lists only confirmed work remaining after EPIC 17 completion.
 
 ## Operational
 
-- Add runtime diagnostics for worker command failures, skipped integrations, and
-  marketplace source drift.
+- Add persisted runtime diagnostics for worker command failures, skipped
+  integrations, and marketplace source drift after the in-process diagnostic
+  boundary is exercised live.
 - Add production monitoring and alerting for exhausted content attempts and
   ambiguous publications.
 

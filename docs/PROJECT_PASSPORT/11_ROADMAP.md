@@ -178,6 +178,9 @@ This document tracks only work that is reflected by the current repository state
   builds default runtime components, registers enabled marketplace integration
   execution, supports one-shot and periodic modes, and prints Scheduler status
   without owning marketplace business logic.
+- Runtime polling diagnostics foundation: Scheduler jobs retain their last
+  successful result and `RuntimeMonitor` summarizes enabled marketplace
+  integration batches without exposing secrets or performing extra I/O.
 
 ## Current Status
 
@@ -199,9 +202,9 @@ from real captured marketplace responses, and a strict saved-payload drift guard
 is available. Runtime bootstrap, process lifecycle helpers, and the worker
 command now centralize memory/PostgreSQL repository scope, Scheduler
 construction, enabled integration job registration, one-shot execution,
-periodic execution, and safe Scheduler shutdown. The remaining work before
-production polling is live operational monitoring and explicit runtime
-integration configuration.
+periodic execution, safe Scheduler shutdown, and safe polling diagnostics. The
+remaining work before production polling is guarded live operational
+verification and explicit runtime integration configuration.
 
 ## Not Present Yet
 
@@ -211,8 +214,8 @@ integration configuration.
 - Live marketplace credential storage and credential retrieval for execution.
 ## Recommended Next EPIC
 
-**Live Polling Monitoring.**
+**Live Polling Verification.**
 
-Add guarded operational monitoring around scheduled marketplace polling,
-including exact diagnostics, failure visibility, and safe execution limits
-without redesigning the core domain.
+Run guarded live marketplace polling through the worker path, record exact
+diagnostics, and verify safe execution limits without redesigning the core
+domain.

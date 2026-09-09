@@ -29,6 +29,18 @@ class CountingJob(BaseJob):
         return None
 
 
+class ResultJob(BaseJob):
+    """Job double that returns a deterministic payload."""
+
+    def __init__(self) -> None:
+        """Initialize the result-producing job."""
+        super().__init__("result")
+
+    def run(self) -> object:
+        """Return a small payload for diagnostics."""
+        return {"ok": True}
+
+
 class SlowJob(BaseJob):
     """Async job double used to verify lifecycle start and stop."""
 
@@ -65,8 +77,23 @@ def test_runtime_process_registers_and_executes_existing_job() -> None:
     statistics = process.list_statistics()
 
     assert job.calls == 1
+    assert process.get_last_result(job.name) is None
     assert statuses[0].state is JobExecutionState.SUCCEEDED
     assert statistics[0].successful_executions == 1
+
+
+def test_runtime_process_exposes_last_job_result() -> None:
+    process = RuntimeProcess(
+        create_memory_runtime_components(
+            SchedulerSettings(lease_enabled=False, tick_seconds=0.1),
+        ),
+    )
+    job = ResultJob()
+
+    process.register_job(job)
+    run_async(process.execute_once(job.name))
+
+    assert process.get_last_result(job.name) == {"ok": True}
 
 
 def test_runtime_process_keeps_scheduler_schedule_metadata() -> None:
