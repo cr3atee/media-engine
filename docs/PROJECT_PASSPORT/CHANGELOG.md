@@ -6,6 +6,12 @@ This document records notable Project Passport updates.
 
 ## Unreleased
 
+- Added Market Terminal integration planning: MediaEngine remains the backend
+  core, while Market Terminal is documented as the public visual product shell.
+- Started EPIC 19 Consumer Read API with public Pydantic DTOs and bounded query
+  parameter schemas for product cards, product details, offer summaries,
+  comparison results, price-history points, latest price changes, and
+  categories.
 - Added runtime bootstrap foundation for memory/PostgreSQL repository scope and
   Scheduler construction without changing business services.
 - Added `RuntimeProcess` lifecycle foundation for registering existing Scheduler

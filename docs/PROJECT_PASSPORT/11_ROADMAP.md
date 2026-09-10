@@ -181,6 +181,11 @@ This document tracks only work that is reflected by the current repository state
 - Runtime polling diagnostics foundation: Scheduler jobs retain their last
   successful result and `RuntimeMonitor` summarizes enabled marketplace
   integration batches without exposing secrets or performing extra I/O.
+- Market Terminal integration planning: MediaEngine is documented as the
+  backend core and Market Terminal as the public visual product shell.
+- EPIC 19 Task 1 public consumer DTO foundation: product cards, product details,
+  offer summaries, comparison results, price-history points, price changes,
+  categories, and bounded public query parameter schemas.
 
 ## Current Status
 
@@ -203,8 +208,11 @@ is available. Runtime bootstrap, process lifecycle helpers, and the worker
 command now centralize memory/PostgreSQL repository scope, Scheduler
 construction, enabled integration job registration, one-shot execution,
 periodic execution, safe Scheduler shutdown, and safe polling diagnostics. The
-remaining work before production polling is guarded live operational
-verification and explicit runtime integration configuration.
+Market Terminal integration plan is documented and EPIC 19 has started with the
+public consumer DTO foundation. The remaining work before production polling is
+guarded live operational verification and explicit runtime integration
+configuration; the remaining work before visual integration is a buyer-facing
+read service and public route layer.
 
 ## Not Present Yet
 
@@ -212,10 +220,10 @@ verification and explicit runtime integration configuration.
 - Optional guarded live Telegram test-chat message.
 - Production AI provider integration in the pipeline.
 - Live marketplace credential storage and credential retrieval for execution.
+- Public consumer read services and routes for Market Terminal UI.
 ## Recommended Next EPIC
 
-**Live Polling Verification.**
+**Consumer Read API continuation.**
 
-Run guarded live marketplace polling through the worker path, record exact
-diagnostics, and verify safe execution limits without redesigning the core
-domain.
+Implement read-side services and routes over the new public DTOs so the visual
+product can consume MediaEngine without importing backend internals.
