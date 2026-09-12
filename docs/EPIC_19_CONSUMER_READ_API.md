@@ -49,8 +49,12 @@ Task 1 is complete: public Pydantic DTOs and bounded query parameter schemas
 exist for product cards, product details, offer summaries, comparison results,
 price-history points, latest price changes, and categories.
 
-No public routes, consumer read services, query adapters, or frontend
-integration have been implemented yet.
+Task 2 is complete: SQLAlchemy-independent public query contracts and immutable
+read projections exist for product discovery, offers, comparison results,
+price-history points, price changes, and categories.
+
+No public routes, consumer read services, query adapter implementations, or
+frontend integration have been implemented yet.
 
 ## Boundary Rules
 
@@ -286,6 +290,10 @@ Acceptance criteria:
 - Contracts are independent from PostgreSQL.
 - Memory and PostgreSQL implementations can share the same API.
 - Existing repository interfaces are not redesigned.
+
+Status:
+
+- Complete.
 
 ### Task 3: Public Product Read Service
 

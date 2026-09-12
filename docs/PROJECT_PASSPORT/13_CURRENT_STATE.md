@@ -326,8 +326,11 @@ production AI wiring, and guarded live Telegram verification.
   backend core, while Market Terminal is the public visual product shell.
 - EPIC 19 has started with public consumer DTOs for product cards, product
   details, offer summaries, comparison results, price-history points, latest
-  price changes, categories, and bounded query parameters. No public consumer
-  read routes or frontend integration are implemented yet.
+  price changes, categories, and bounded query parameters.
+- EPIC 19 Task 2 adds SQLAlchemy-independent public query contracts and
+  immutable read projections for product discovery, offers, comparisons, price
+  history, price changes, and categories. No public consumer read routes or
+  frontend integration are implemented yet.
 
 ## Known Gaps
 
@@ -349,8 +352,8 @@ production AI wiring, and guarded live Telegram verification.
 - Production deployment can now start from `scripts/run_mediaengine_worker.py`;
   guarded live operational verification still needs to be executed before
   unattended polling.
-- Public Market Terminal integration still needs consumer read services and
-  `/api/v1/public` routes over the new DTOs.
+- Public Market Terminal integration still needs query implementations,
+  consumer read services, and `/api/v1/public` routes over the new DTOs.
 - Live Telegram delivery is not yet verified; credentials, exact test-chat
   confirmation, live flags, and PostgreSQL verification database were not
   supplied.

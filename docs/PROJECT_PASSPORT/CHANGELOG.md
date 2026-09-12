@@ -12,6 +12,9 @@ This document records notable Project Passport updates.
   parameter schemas for product cards, product details, offer summaries,
   comparison results, price-history points, latest price changes, and
   categories.
+- Added EPIC 19 public consumer query contracts: SQLAlchemy-independent
+  immutable projections and ABC interfaces for product discovery, offers,
+  comparisons, price history, price changes, and categories.
 - Added runtime bootstrap foundation for memory/PostgreSQL repository scope and
   Scheduler construction without changing business services.
 - Added `RuntimeProcess` lifecycle foundation for registering existing Scheduler

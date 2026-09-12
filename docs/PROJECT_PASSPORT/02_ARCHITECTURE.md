@@ -19,6 +19,8 @@ This document describes the current high-level architecture of MediaEngine as it
   handling, health probes, and read-only administration routes.
 - `app/repositories/queries`: SQLAlchemy-independent read contracts, immutable
   projections, and memory/PostgreSQL query adapters.
+- `app/repositories/public_queries`: SQLAlchemy-independent public consumer read
+  contracts and immutable projections for Market Terminal.
 
 ## Current Data Flow
 
@@ -125,6 +127,8 @@ run inside ingestion or scoring transactions.
   adapters.
 - Read requests open caller-owned short repository scopes and never commit,
   claim, or change lifecycle state.
+- Public consumer query contracts are separate from seller/admin read contracts
+  and currently define no SQLAlchemy adapters or routes.
 
 ## Read Administration Flow
 
