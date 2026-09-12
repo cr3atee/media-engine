@@ -53,8 +53,12 @@ Task 2 is complete: SQLAlchemy-independent public query contracts and immutable
 read projections exist for product discovery, offers, comparison results,
 price-history points, price changes, and categories.
 
-No public routes, consumer read services, query adapter implementations, or
-frontend integration have been implemented yet.
+Task 3 is complete for product reads: `PublicProductReadService` delegates to
+the public product query contract and returns product-card/detail projections
+without depending on FastAPI, SQLAlchemy, or UI code.
+
+No public routes, query adapter implementations, or frontend integration have
+been implemented yet.
 
 ## Boundary Rules
 
@@ -305,6 +309,10 @@ Acceptance criteria:
 - Product cards can include best-offer summary when available.
 - Product details can include aliases and availability metadata.
 - No lifecycle state is mutated.
+
+Status:
+
+- Complete.
 
 ### Task 4: Public Comparison Read Service
 

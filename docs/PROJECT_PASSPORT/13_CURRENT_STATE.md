@@ -331,6 +331,8 @@ production AI wiring, and guarded live Telegram verification.
   immutable read projections for product discovery, offers, comparisons, price
   history, price changes, and categories. No public consumer read routes or
   frontend integration are implemented yet.
+- EPIC 19 Task 3 adds `PublicProductReadService`, a thin application service
+  over the public product query contract for product card/detail projections.
 
 ## Known Gaps
 
@@ -353,7 +355,8 @@ production AI wiring, and guarded live Telegram verification.
   guarded live operational verification still needs to be executed before
   unattended polling.
 - Public Market Terminal integration still needs query implementations,
-  consumer read services, and `/api/v1/public` routes over the new DTOs.
+  additional consumer read services, and `/api/v1/public` routes over the new
+  DTOs.
 - Live Telegram delivery is not yet verified; credentials, exact test-chat
   confirmation, live flags, and PostgreSQL verification database were not
   supplied.

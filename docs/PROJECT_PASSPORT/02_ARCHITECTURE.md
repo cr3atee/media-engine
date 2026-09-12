@@ -10,7 +10,8 @@ This document describes the current high-level architecture of MediaEngine as it
 - `app/matching`: deterministic product title preprocessing, similarity scoring, confidence classification, and matching service.
 - `app/models`: domain-level and persistence-facing models, including `CanonicalProduct`.
 - `app/repositories`: repository contracts, in-memory implementations, and `RepositoryProvider`.
-- `app/services`: orchestration services, including marketplace processing and content generation.
+- `app/services`: orchestration and application services, including marketplace
+  processing, content generation, and public product read delegation.
 - `app/domain`: database-independent events and price snapshots.
 - `app/analytics`: price change detection and related analytics models.
 - `app/insights`: event scoring.

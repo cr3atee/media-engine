@@ -189,6 +189,8 @@ This document tracks only work that is reflected by the current repository state
 - EPIC 19 Task 2 public consumer query contracts: SQLAlchemy-independent
   immutable read projections and ABC interfaces for product discovery, offers,
   comparisons, price history, price changes, and categories.
+- EPIC 19 Task 3 public product read service: application-layer delegation for
+  product card/detail projections without FastAPI, SQLAlchemy, or UI coupling.
 
 ## Current Status
 
@@ -212,10 +214,11 @@ command now centralize memory/PostgreSQL repository scope, Scheduler
 construction, enabled integration job registration, one-shot execution,
 periodic execution, safe Scheduler shutdown, and safe polling diagnostics. The
 Market Terminal integration plan is documented and EPIC 19 has started with the
-public consumer DTO and query-contract foundations. The remaining work before
-production polling is guarded live operational verification and explicit runtime
-integration configuration; the remaining work before visual integration is a
-buyer-facing read service, query implementation, and public route layer.
+public consumer DTO, query-contract, and product read-service foundations. The
+remaining work before production polling is guarded live operational
+verification and explicit runtime integration configuration; the remaining work
+before visual integration is a buyer-facing query implementation and public
+route layer.
 
 ## Not Present Yet
 
@@ -223,8 +226,7 @@ buyer-facing read service, query implementation, and public route layer.
 - Optional guarded live Telegram test-chat message.
 - Production AI provider integration in the pipeline.
 - Live marketplace credential storage and credential retrieval for execution.
-- Public consumer query implementations, read services, and routes for Market
-  Terminal UI.
+- Public consumer query implementations and routes for Market Terminal UI.
 ## Recommended Next EPIC
 
 **Consumer Read API continuation.**

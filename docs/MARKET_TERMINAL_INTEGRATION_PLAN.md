@@ -285,9 +285,9 @@ for those flows is explicitly completed.
 ## Immediate Next Engineering Steps
 
 1. Define consumer-facing read DTOs.
-2. Implement public read services over existing repositories.
-3. Add public read API routes.
-4. Add product summary and comparison aggregation for UI cards.
+2. Define public query contracts for consumer reads.
+3. Implement public read services over existing repositories.
+4. Add public read API routes.
 5. Add price-history read projection for charts.
 6. Add latest price-change feed.
 7. Verify that real GGSEL, Playerok, and FunPay saved payloads can populate the
