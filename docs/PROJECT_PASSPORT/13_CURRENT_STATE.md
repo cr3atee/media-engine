@@ -333,6 +333,9 @@ production AI wiring, and guarded live Telegram verification.
   frontend integration are implemented yet.
 - EPIC 19 Task 3 adds `PublicProductReadService`, a thin application service
   over the public product query contract for product card/detail projections.
+- EPIC 19 Task 4 adds `PublicComparisonReadService`, a thin application service
+  over the public comparison query contract for comparison projections without
+  duplicating comparator behavior.
 
 ## Known Gaps
 

@@ -57,6 +57,10 @@ Task 3 is complete for product reads: `PublicProductReadService` delegates to
 the public product query contract and returns product-card/detail projections
 without depending on FastAPI, SQLAlchemy, or UI code.
 
+Task 4 is complete for comparison reads: `PublicComparisonReadService` delegates
+to the public comparison query contract and returns comparison projections
+without recalculating matching, selection, or differences.
+
 No public routes, query adapter implementations, or frontend integration have
 been implemented yet.
 
@@ -323,6 +327,10 @@ Acceptance criteria:
 - Existing matching and comparator services are reused.
 - No duplicated comparison logic is introduced.
 - Currency mismatch and missing price states remain explicit.
+
+Status:
+
+- Complete.
 
 ### Task 5: Public Price History Read Service
 
