@@ -194,6 +194,8 @@ This document tracks only work that is reflected by the current repository state
 - EPIC 19 Task 4 public comparison read service: application-layer delegation
   for comparison projections without duplicating matching, best-offer selection,
   or price-difference logic.
+- EPIC 19 Task 5 public price-history read service: application-layer
+  delegation for bounded chart points without mutating lifecycle state.
 
 ## Current Status
 
@@ -217,8 +219,8 @@ command now centralize memory/PostgreSQL repository scope, Scheduler
 construction, enabled integration job registration, one-shot execution,
 periodic execution, safe Scheduler shutdown, and safe polling diagnostics. The
 Market Terminal integration plan is documented and EPIC 19 has started with the
-public consumer DTO, query-contract, product read-service, and comparison
-read-service foundations. The
+public consumer DTO, query-contract, product read-service, comparison
+read-service, and price-history read-service foundations. The
 remaining work before production polling is guarded live operational
 verification and explicit runtime integration configuration; the remaining work
 before visual integration is a buyer-facing query implementation and public

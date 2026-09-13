@@ -61,6 +61,10 @@ Task 4 is complete for comparison reads: `PublicComparisonReadService` delegates
 to the public comparison query contract and returns comparison projections
 without recalculating matching, selection, or differences.
 
+Task 5 is complete for price-history reads: `PublicPriceHistoryReadService`
+delegates to the public price-history query contract and returns bounded chart
+points without mutating lifecycle state.
+
 No public routes, query adapter implementations, or frontend integration have
 been implemented yet.
 
@@ -341,6 +345,10 @@ Acceptance criteria:
 - Points use Decimal prices and UTC timestamps.
 - Reads are bounded.
 - Marketplace filtering is supported if available through existing data.
+
+Status:
+
+- Complete.
 
 ### Task 6: Public FastAPI Routes
 

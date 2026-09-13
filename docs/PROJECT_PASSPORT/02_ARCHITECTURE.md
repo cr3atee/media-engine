@@ -11,8 +11,8 @@ This document describes the current high-level architecture of MediaEngine as it
 - `app/models`: domain-level and persistence-facing models, including `CanonicalProduct`.
 - `app/repositories`: repository contracts, in-memory implementations, and `RepositoryProvider`.
 - `app/services`: orchestration and application services, including marketplace
-  processing, content generation, and public product/comparison read
-  delegation.
+  processing, content generation, and public product/comparison/price-history
+  read delegation.
 - `app/domain`: database-independent events and price snapshots.
 - `app/analytics`: price change detection and related analytics models.
 - `app/insights`: event scoring.

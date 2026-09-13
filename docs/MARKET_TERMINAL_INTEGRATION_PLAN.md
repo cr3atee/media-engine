@@ -286,9 +286,9 @@ for those flows is explicitly completed.
 
 1. Define consumer-facing read DTOs.
 2. Define public query contracts for consumer reads.
-3. Implement public read services over existing repositories.
+3. Implement public read services over existing query contracts.
 4. Add public read API routes.
-5. Add price-history read projection for charts.
+5. Add price-history query implementation for charts.
 6. Add latest price-change feed.
 7. Verify that real GGSEL, Playerok, and FunPay saved payloads can populate the
    UI DTOs.

@@ -336,6 +336,8 @@ production AI wiring, and guarded live Telegram verification.
 - EPIC 19 Task 4 adds `PublicComparisonReadService`, a thin application service
   over the public comparison query contract for comparison projections without
   duplicating comparator behavior.
+- EPIC 19 Task 5 adds `PublicPriceHistoryReadService`, a thin application
+  service over the public price-history query contract for bounded chart points.
 
 ## Known Gaps
 

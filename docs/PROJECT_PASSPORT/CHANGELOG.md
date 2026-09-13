@@ -19,6 +19,8 @@ This document records notable Project Passport updates.
   delegation without FastAPI, SQLAlchemy, or UI coupling.
 - Added EPIC 19 public comparison read service for comparison projection
   delegation without duplicating matching, selection, or difference logic.
+- Added EPIC 19 public price-history read service for bounded chart-point
+  delegation without mutating lifecycle state.
 - Added runtime bootstrap foundation for memory/PostgreSQL repository scope and
   Scheduler construction without changing business services.
 - Added `RuntimeProcess` lifecycle foundation for registering existing Scheduler
