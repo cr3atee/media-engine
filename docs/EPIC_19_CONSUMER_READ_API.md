@@ -475,6 +475,24 @@ Status:
 
 - Complete.
 
+### Task 11: Market Terminal Runtime Summary
+
+Expose a compact visual summary of the public catalog response without adding
+new backend contracts or duplicating query logic in the UI.
+
+Acceptance criteria:
+
+- The shell reports products, indexed offers, categories, and recent price
+  drops from the existing public API responses.
+- Search and refresh controls expose a clear busy state while requests run.
+- The summary remains compact and responsive on desktop and mobile.
+- No public API, marketplace, repository, comparator, or domain behavior
+  changes.
+
+Status:
+
+- Complete.
+
 ## Documentation Updates
 
 When this EPIC is implemented, update:

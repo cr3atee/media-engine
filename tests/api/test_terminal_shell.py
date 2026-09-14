@@ -28,6 +28,10 @@ def test_market_terminal_shell_is_served() -> None:
     assert "Market Terminal" in response.text
     assert "/terminal/styles.css" in response.text
     assert "/terminal/app.js" in response.text
+    assert 'id="productCount"' in response.text
+    assert 'id="offerCount"' in response.text
+    assert 'id="categoryCount"' in response.text
+    assert 'id="dropCount"' in response.text
 
 
 def test_market_terminal_static_assets_are_served() -> None:
@@ -42,3 +46,5 @@ def test_market_terminal_static_assets_are_served() -> None:
     assert script.status_code == 200
     assert script.headers["content-type"].startswith("application/javascript")
     assert 'const api = "/api/v1/public";' in script.text
+    assert "function updateSummary()" in script.text
+    assert "function setDashboardBusy(isBusy)" in script.text

@@ -38,6 +38,9 @@ This document records notable Project Passport updates.
 - Added the embedded Market Terminal visual shell at `/terminal` over the
   existing public read API, with dependency-free static assets and focused route
   coverage.
+- Added a compact responsive Market Terminal runtime summary for loaded
+  products, offers, categories, and recent price drops, plus explicit request
+  busy states without changing public API contracts.
 - Added runtime bootstrap foundation for memory/PostgreSQL repository scope and
   Scheduler construction without changing business services.
 - Added `RuntimeProcess` lifecycle foundation for registering existing Scheduler

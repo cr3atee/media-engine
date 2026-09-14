@@ -378,9 +378,12 @@ production AI wiring, and guarded live Telegram verification.
 - Public Market Terminal integration still needs a frontend location decision
   for public launch and a product decision on category exposure. An embedded
   dependency-free `/terminal` shell now consumes `/api/v1/public` routes for
-  backend-to-visual contract validation. Latest price-change and category routes
-  are available, but saved marketplace payloads do not contain historical
-  previous snapshots or category fields retained by `ParsedOffer`.
+  backend-to-visual contract validation. The shell also reports a responsive
+  runtime summary of products, offers, categories, and recent price drops from
+  those existing responses, with explicit request busy states. Latest
+  price-change and category routes are available, but saved marketplace
+  payloads do not contain historical previous snapshots or category fields
+  retained by `ParsedOffer`.
   PostgreSQL-specific public query adapter work can be added later only if direct
   SQL read optimization is approved.
 - Live Telegram delivery is not yet verified; credentials, exact test-chat

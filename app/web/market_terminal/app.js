@@ -4,7 +4,12 @@ const elements = {
   apiStatus: document.querySelector("#apiStatus"),
   searchForm: document.querySelector("#searchForm"),
   searchInput: document.querySelector("#searchInput"),
+  searchButton: document.querySelector("#searchButton"),
   refreshButton: document.querySelector("#refreshButton"),
+  productCount: document.querySelector("#productCount"),
+  offerCount: document.querySelector("#offerCount"),
+  categoryCount: document.querySelector("#categoryCount"),
+  dropCount: document.querySelector("#dropCount"),
   productGrid: document.querySelector("#productGrid"),
   categoryList: document.querySelector("#categoryList"),
   changeList: document.querySelector("#changeList"),
@@ -17,12 +22,14 @@ const elements = {
 
 const state = {
   products: [],
+  categories: [],
+  priceChanges: [],
   selectedProductId: null,
 };
 
 elements.searchForm.addEventListener("submit", (event) => {
   event.preventDefault();
-  void loadProducts(elements.searchInput.value.trim());
+  void runProductSearch(elements.searchInput.value.trim());
 });
 
 elements.refreshButton.addEventListener("click", () => {
@@ -32,8 +39,17 @@ elements.refreshButton.addEventListener("click", () => {
 void loadDashboard();
 
 async function loadDashboard() {
+  setDashboardBusy(true);
   setApiStatus("Connecting");
   await Promise.all([loadProducts(""), loadCategories(), loadPriceChanges()]);
+  setDashboardBusy(false);
+  updateSummary();
+}
+
+async function runProductSearch(search) {
+  setDashboardBusy(true);
+  await loadProducts(search);
+  setDashboardBusy(false);
 }
 
 async function loadProducts(search) {
@@ -45,6 +61,7 @@ async function loadProducts(search) {
     const payload = await getJson(`/products?${query.toString()}`);
     state.products = payload.items ?? [];
     renderProducts(state.products);
+    updateSummary();
     setApiStatus("Online");
 
     if (state.products.length > 0) {
@@ -53,6 +70,8 @@ async function loadProducts(search) {
       clearProductDetails("No products found");
     }
   } catch (error) {
+    state.products = [];
+    updateSummary();
     setApiStatus("API unavailable", true);
     renderEmpty(elements.productGrid, errorMessage(error));
     clearProductDetails("Public API unavailable");
@@ -63,6 +82,8 @@ async function loadCategories() {
   try {
     const payload = await getJson("/categories?limit=10");
     const categories = payload.items ?? [];
+    state.categories = categories;
+    updateSummary();
     if (categories.length === 0) {
       renderEmpty(elements.categoryList, "No categories available yet.");
       return;
@@ -78,6 +99,8 @@ async function loadCategories() {
       )
       .join("");
   } catch (error) {
+    state.categories = [];
+    updateSummary();
     renderEmpty(elements.categoryList, errorMessage(error));
   }
 }
@@ -86,6 +109,8 @@ async function loadPriceChanges() {
   try {
     const payload = await getJson("/price-changes?limit=6");
     const changes = payload.items ?? [];
+    state.priceChanges = changes;
+    updateSummary();
     if (changes.length === 0) {
       renderEmpty(elements.changeList, "No price drops available yet.");
       return;
@@ -104,6 +129,8 @@ async function loadPriceChanges() {
       )
       .join("");
   } catch (error) {
+    state.priceChanges = [];
+    updateSummary();
     renderEmpty(elements.changeList, errorMessage(error));
   }
 }
@@ -273,6 +300,25 @@ async function getJson(path) {
 function setApiStatus(label, isError = false) {
   elements.apiStatus.textContent = label;
   elements.apiStatus.classList.toggle("error", isError);
+}
+
+function setDashboardBusy(isBusy) {
+  document.querySelector(".shell").setAttribute("aria-busy", String(isBusy));
+  elements.refreshButton.disabled = isBusy;
+  elements.searchButton.disabled = isBusy;
+  elements.refreshButton.textContent = isBusy ? "Loading" : "Refresh";
+}
+
+function updateSummary() {
+  const offerCount = state.products.reduce(
+    (total, product) => total + Number(product.offer_count ?? 0),
+    0,
+  );
+
+  elements.productCount.textContent = String(state.products.length);
+  elements.offerCount.textContent = String(offerCount);
+  elements.categoryCount.textContent = String(state.categories.length);
+  elements.dropCount.textContent = String(state.priceChanges.length);
 }
 
 function renderEmpty(target, message) {

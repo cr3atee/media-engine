@@ -275,6 +275,45 @@ h3 {
   border-color: rgba(103, 217, 196, 0.45);
 }
 
+.search button:disabled,
+.ghost-button:disabled {
+  cursor: wait;
+  opacity: 0.58;
+  transform: none;
+}
+
+.metric-strip {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+  margin-bottom: 22px;
+}
+
+.metric {
+  display: flex;
+  min-height: 82px;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 14px;
+  border-radius: 22px;
+  padding: 16px 18px;
+}
+
+.metric-label {
+  max-width: 92px;
+  color: var(--muted);
+  font-size: 0.76rem;
+  font-weight: 750;
+  line-height: 1.25;
+}
+
+.metric strong {
+  color: var(--accent-2);
+  font-size: clamp(1.6rem, 3vw, 2.25rem);
+  line-height: 0.9;
+  letter-spacing: -0.06em;
+}
+
 .grid-layout {
   display: grid;
   grid-template-columns: minmax(0, 1fr) 350px;
@@ -474,6 +513,10 @@ h3 {
   .side-panel {
     position: static;
   }
+
+  .metric-strip {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
 }
 
 @media (max-width: 680px) {
@@ -505,5 +548,10 @@ h3 {
 
   .product-card {
     min-height: 132px;
+  }
+
+  .metric {
+    min-height: 72px;
+    padding: 14px;
   }
 }
