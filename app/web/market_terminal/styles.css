@@ -543,6 +543,72 @@ h3 {
   color: var(--muted);
 }
 
+.change {
+  display: grid;
+  gap: 8px;
+}
+
+.change-action {
+  width: 100%;
+  cursor: pointer;
+  color: var(--text);
+  text-align: left;
+  transition:
+    border-color 180ms ease,
+    background 180ms ease,
+    transform 180ms ease;
+}
+
+.change-action:hover {
+  border-color: rgba(247, 200, 115, 0.5);
+  background: rgba(247, 200, 115, 0.08);
+  transform: translateX(2px);
+}
+
+.change-action:disabled {
+  cursor: wait;
+  opacity: 0.58;
+  transform: none;
+}
+
+.change-topline,
+.change-prices {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.change .change-name,
+.change-prices strong {
+  margin-bottom: 0;
+}
+
+.discount-badge {
+  flex: none;
+  border: 1px solid rgba(103, 217, 196, 0.28);
+  border-radius: 999px;
+  background: rgba(103, 217, 196, 0.1);
+  color: var(--accent);
+  padding: 5px 8px;
+  font-size: 0.72rem;
+  font-weight: 900;
+}
+
+.change-prices {
+  justify-content: flex-start;
+  color: var(--muted);
+  font-size: 0.82rem;
+}
+
+.change-prices del {
+  opacity: 0.8;
+}
+
+.change-prices strong {
+  color: var(--accent);
+}
+
 .detail-panel {
   margin-top: 22px;
 }
@@ -704,5 +770,17 @@ h3 {
 
   .filter-row {
     grid-template-columns: 1fr;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+
+  *,
+  *::before,
+  *::after {
+    transition-duration: 0.01ms !important;
   }
 }

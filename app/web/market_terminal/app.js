@@ -18,6 +18,7 @@ const elements = {
   productGrid: document.querySelector("#productGrid"),
   categoryList: document.querySelector("#categoryList"),
   changeList: document.querySelector("#changeList"),
+  detailPanel: document.querySelector("#details"),
   detailTitle: document.querySelector("#detailTitle"),
   detailMeta: document.querySelector("#detailMeta"),
   offerList: document.querySelector("#offerList"),
@@ -178,19 +179,7 @@ async function loadPriceChanges() {
       renderEmpty(elements.changeList, "No price drops available yet.");
       return;
     }
-    elements.changeList.innerHTML = changes
-      .map(
-        (change) => `
-          <article class="change">
-            <strong>${escapeHtml(change.product_name)}</strong>
-            <small>
-              ${escapeHtml(change.marketplace)} / ${money(change.new_price, change.currency)}
-              / ${formatPercent(change.discount_percent)} down
-            </small>
-          </article>
-        `,
-      )
-      .join("");
+    renderPriceChanges(changes);
   } catch (error) {
     state.priceChanges = [];
     updateSummary();
@@ -307,6 +296,51 @@ function renderCategories(categories) {
     button.addEventListener("click", () => {
       const index = Number(button.dataset.categoryIndex);
       selectCategory(index >= 0 ? categories[index] : null);
+    });
+  }
+}
+
+function renderPriceChanges(changes) {
+  const disabled = state.isBusy ? " disabled" : "";
+  elements.changeList.innerHTML = changes
+    .map((change, index) => {
+      const content = `
+        <span class="change-topline">
+          <strong class="change-name">${escapeHtml(change.product_name)}</strong>
+          <span class="discount-badge">-${formatPercent(change.discount_percent)}</span>
+        </span>
+        <small>${escapeHtml(change.marketplace)} / ${formatDate(change.changed_at)}</small>
+        <span class="change-prices">
+          <del>${escapeHtml(money(change.old_price, change.currency))}</del>
+          <span aria-hidden="true">&rarr;</span>
+          <strong>${escapeHtml(money(change.new_price, change.currency))}</strong>
+        </span>
+      `;
+      if (!change.product_id) {
+        return `<article class="change">${content}</article>`;
+      }
+      return `
+        <button
+          class="change change-action"
+          type="button"
+          data-change-index="${index}"
+          aria-label="View ${escapeHtml(change.product_name)} comparison"
+          ${disabled}
+        >
+          ${content}
+        </button>
+      `;
+    })
+    .join("");
+
+  for (const button of elements.changeList.querySelectorAll(".change-action")) {
+    button.addEventListener("click", () => {
+      const change = changes[Number(button.dataset.changeIndex)];
+      if (!change?.product_id) {
+        return;
+      }
+      void selectProduct(change.product_id);
+      elements.detailPanel.scrollIntoView({ block: "start" });
     });
   }
 }
@@ -466,6 +500,9 @@ function setDashboardBusy(isBusy) {
   elements.minPriceInput.disabled = isBusy;
   elements.maxPriceInput.disabled = isBusy;
   for (const button of elements.categoryList.querySelectorAll(".category-filter")) {
+    button.disabled = isBusy;
+  }
+  for (const button of elements.changeList.querySelectorAll(".change-action")) {
     button.disabled = isBusy;
   }
   elements.refreshButton.textContent = isBusy ? "Loading" : "Refresh";

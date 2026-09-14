@@ -579,6 +579,25 @@ Status:
 
 - Complete.
 
+### Task 17: Price-Drop Detail Navigation
+
+Connect public price-drop cards to the existing product detail flow when a
+canonical product identifier is available.
+
+Acceptance criteria:
+
+- Each price-drop card shows marketplace, date, old price, new price, and
+  discount percentage from the existing response.
+- Entries with `product_id` open the existing comparison/detail panel.
+- Entries without `product_id` remain readable and are not presented as links.
+- Explicit selection reuses shareable product URL state.
+- Reduced-motion preferences are respected for page navigation.
+- No event, comparison, or price-change calculations are duplicated.
+
+Status:
+
+- Complete.
+
 ## Deferred Runtime Constraint
 
 The repository-backed public read adapter currently returns bounded first

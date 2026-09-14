@@ -388,7 +388,9 @@ production AI wiring, and guarded live Telegram verification.
   shareable URL state with browser Back/Forward support. Latest price-change
   and category routes are available. The embedded history view keeps currencies
   in separate visual series and reports low/high/latest values per currency,
-  without performing conversion. Repository-backed public lists remain bounded
+  without performing conversion. Price-drop cards with canonical product IDs
+  now open the existing product comparison flow; unlinked events remain
+  informational. Repository-backed public lists remain bounded
   first pages because the shared cursor cannot yet represent every product sort;
   no synthetic offset workaround is used. Saved marketplace
   payloads do not contain historical previous snapshots or category fields

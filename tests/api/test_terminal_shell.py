@@ -66,3 +66,5 @@ def test_market_terminal_static_assets_are_served() -> None:
     assert 'syncLocationState("push");' in script.text
     assert "function renderHistorySeries(currency, points)" in script.text
     assert "const seriesByCurrency = new Map();" in script.text
+    assert "function renderPriceChanges(changes)" in script.text
+    assert "void selectProduct(change.product_id);" in script.text

@@ -52,6 +52,8 @@ This document records notable Project Passport updates.
   explicit product selection, including browser Back/Forward restoration.
 - Made the embedded price-history view currency-safe by rendering separate
   series with low, high, latest, marketplace, and collection-date context.
+- Connected public price-drop cards to the existing product detail/comparison
+  flow when a canonical product identifier is available.
 - Added runtime bootstrap foundation for memory/PostgreSQL repository scope and
   Scheduler construction without changing business services.
 - Added `RuntimeProcess` lifecycle foundation for registering existing Scheduler
