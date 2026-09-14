@@ -772,6 +772,27 @@ Status:
 
 - Complete.
 
+### Task 27: Keyboard Navigation And Focus Continuity
+
+Keep keyboard and assistive-technology users oriented when bypassing navigation
+or opening product details from the price-drop feed.
+
+Acceptance criteria:
+
+- A visible-on-focus skip link moves directly to the public catalog region.
+- The catalog target is programmatically focusable and named by its visible
+  heading.
+- Opening a linked price drop moves focus to the selected product heading before
+  scrolling the detail panel.
+- Programmatic targets retain an explicit visible focus indicator.
+- Sticky navigation does not obscure fragment targets.
+- Existing reduced-motion handling applies to the new navigation path.
+- No product selection, API, or URL-state behavior changes.
+
+Status:
+
+- Complete.
+
 ## Deferred Runtime Constraint
 
 The repository-backed public read adapter currently returns bounded first

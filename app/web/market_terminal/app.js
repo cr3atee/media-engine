@@ -474,6 +474,7 @@ function renderPriceChanges(changes) {
         return;
       }
       void selectProduct(change.product_id);
+      elements.detailTitle.focus({ preventScroll: true });
       elements.detailPanel.scrollIntoView({ block: "start" });
     });
   }

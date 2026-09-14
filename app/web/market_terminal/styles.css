@@ -68,6 +68,36 @@ a {
   text-decoration: none;
 }
 
+.skip-link {
+  position: fixed;
+  top: 12px;
+  left: 12px;
+  z-index: 100;
+  transform: translateY(-180%);
+  border: 1px solid rgba(103, 217, 196, 0.72);
+  border-radius: 12px;
+  background: var(--bg-1);
+  color: var(--text);
+  padding: 10px 14px;
+  transition: transform 160ms ease;
+}
+
+.skip-link:focus {
+  transform: translateY(0);
+}
+
+#products,
+#changes,
+#details {
+  scroll-margin-top: 96px;
+}
+
+#products:focus-visible,
+#detailTitle:focus-visible {
+  outline: 3px solid rgba(103, 217, 196, 0.64);
+  outline-offset: 6px;
+}
+
 .shell {
   width: min(1440px, 100%);
   margin: 0 auto;

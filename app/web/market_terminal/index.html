@@ -7,6 +7,7 @@
     <link rel="stylesheet" href="/terminal/styles.css" />
   </head>
   <body>
+    <a class="skip-link" href="#products">Skip to product catalog</a>
     <main class="shell">
       <header class="topbar glass">
         <a class="brand" href="/terminal" aria-label="Market Terminal home">
@@ -120,7 +121,12 @@
       </section>
 
       <section class="grid-layout">
-        <section class="panel glass" id="products">
+        <section
+          class="panel glass"
+          id="products"
+          tabindex="-1"
+          aria-labelledby="catalogTitle"
+        >
           <div class="panel-heading">
             <span>
               <p class="eyebrow">Public catalog</p>
@@ -169,7 +175,7 @@
         <div class="panel-heading">
           <span>
             <p class="eyebrow">Selected product</p>
-            <h2 id="detailTitle">Choose a product</h2>
+            <h2 id="detailTitle" tabindex="-1">Choose a product</h2>
           </span>
           <span class="soft-label" id="detailMeta">No selection yet</span>
         </div>

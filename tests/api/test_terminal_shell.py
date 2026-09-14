@@ -45,7 +45,11 @@ def test_market_terminal_shell_is_served() -> None:
         assert 'id="sortFilter"' in response.text
         assert 'id="minPriceInput"' in response.text
         assert 'id="maxPriceInput"' in response.text
+        assert 'class="skip-link" href="#products"' in response.text
+        assert 'id="products"' in response.text
+        assert 'aria-labelledby="catalogTitle"' in response.text
         assert 'aria-labelledby="detailTitle"' in response.text
+        assert 'id="detailTitle" tabindex="-1"' in response.text
         assert 'aria-busy="false"' in response.text
         assert 'id="apiStatus"' in response.text
         assert 'role="status"' in response.text
@@ -94,6 +98,7 @@ def test_market_terminal_static_assets_are_served() -> None:
     assert "const seriesByCurrency = new Map();" in script.text
     assert "function renderPriceChanges(changes)" in script.text
     assert "void selectProduct(change.product_id);" in script.text
+    assert "elements.detailTitle.focus({ preventScroll: true });" in script.text
     assert "function moneyHtml(value, currency)" in script.text
     assert 'rel="noopener noreferrer"' in script.text
     assert "catalogRequestVersion: 0" in script.text
@@ -123,3 +128,5 @@ def test_market_terminal_static_assets_are_served() -> None:
     assert "function publicApiErrorMessage(body, status)" in script.text
     assert "Public API returned an invalid response." in script.text
     assert "response.statusText" not in script.text
+    assert ".skip-link:focus" in styles.text
+    assert "#detailTitle:focus-visible" in styles.text

@@ -74,6 +74,9 @@ This document records notable Project Passport updates.
   and removed `style-src 'unsafe-inline'` from the Market Terminal CSP.
 - Protected category and price-drop dashboard feeds from stale overlapping
   refresh and browser-history responses using independent request versions.
+- Added Market Terminal keyboard continuity through a catalog skip link,
+  focusable named targets, sticky-header offsets, and product-detail focus after
+  price-drop navigation.
 - Added runtime bootstrap foundation for memory/PostgreSQL repository scope and
   Scheduler construction without changing business services.
 - Added `RuntimeProcess` lifecycle foundation for registering existing Scheduler
