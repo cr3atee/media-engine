@@ -229,27 +229,37 @@ async function selectProduct(productId, updateLocation = true) {
   prepareProductDetails(productId);
 
   try {
-    const [detail, offers, comparison, history] = await Promise.all([
-      getJson(`/products/${productId}`),
-      getJson(`/products/${productId}/offers?limit=20`),
-      getJson(`/products/${productId}/comparison`),
-      getJson(`/products/${productId}/price-history?period=all&limit=50`),
-    ]);
+    const [detail, offers, comparison, history] = await Promise.allSettled(
+      [
+        getJson(`/products/${productId}`),
+        getJson(`/products/${productId}/offers?limit=20`),
+        getJson(`/products/${productId}/comparison`),
+        getJson(`/products/${productId}/price-history?period=all&limit=50`),
+      ],
+    );
     if (!isCurrentDetailRequest(requestVersion, productId)) {
       return;
     }
 
-    elements.detailTitle.textContent = detail.name;
-    elements.detailMeta.textContent = [
-      detail.category,
-      `${detail.offer_count} offers`,
-      `${detail.marketplace_count} marketplaces`,
-    ]
-      .filter(Boolean)
-      .join(" / ");
-    renderOffers(offers.items ?? []);
-    renderComparison(comparison);
-    renderHistory(history.items ?? []);
+    renderDetailSummary(detail, productId);
+    renderDetailResult(
+      offers,
+      elements.offerList,
+      (payload) => renderOffers(payload.items ?? []),
+      "Offers unavailable",
+    );
+    renderDetailResult(
+      comparison,
+      elements.comparisonCard,
+      renderComparison,
+      "Comparison unavailable",
+    );
+    renderDetailResult(
+      history,
+      elements.historyCard,
+      (payload) => renderHistory(payload.items ?? []),
+      "Price history unavailable",
+    );
   } catch (error) {
     if (!isCurrentDetailRequest(requestVersion, productId)) {
       return;
@@ -261,6 +271,35 @@ async function selectProduct(productId, updateLocation = true) {
       setProductDetailsBusy(false);
     }
   }
+}
+
+function renderDetailSummary(result, productId) {
+  if (result.status === "fulfilled") {
+    const detail = result.value;
+    elements.detailTitle.textContent = detail.name;
+    elements.detailMeta.textContent = [
+      detail.category,
+      `${detail.offer_count} offers`,
+      `${detail.marketplace_count} marketplaces`,
+    ]
+      .filter(Boolean)
+      .join(" / ");
+    return;
+  }
+
+  const product = state.products.find((item) => item.id === productId);
+  elements.detailTitle.textContent =
+    product?.name ?? "Product details unavailable";
+  elements.detailMeta.textContent =
+    `Product summary unavailable: ${errorMessage(result.reason)}`;
+}
+
+function renderDetailResult(result, target, renderer, unavailableLabel) {
+  if (result.status === "fulfilled") {
+    renderer(result.value);
+    return;
+  }
+  renderEmpty(target, `${unavailableLabel}: ${errorMessage(result.reason)}`);
 }
 
 function prepareProductDetails(productId) {

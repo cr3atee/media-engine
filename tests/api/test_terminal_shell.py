@@ -87,3 +87,9 @@ def test_market_terminal_static_assets_are_served() -> None:
     assert "detailRequestVersion: 0" in script.text
     assert "function isCurrentDetailRequest(requestVersion, productId)" in script.text
     assert "function setProductDetailsBusy(isBusy)" in script.text
+    assert "await Promise.allSettled(" in script.text
+    assert "function renderDetailSummary(result, productId)" in script.text
+    assert (
+        "function renderDetailResult(result, target, renderer, unavailableLabel)"
+        in script.text
+    )

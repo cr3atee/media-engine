@@ -395,7 +395,9 @@ production AI wiring, and guarded live Telegram verification.
   referrer, and MIME-sniffing protections. Product detail rendering rejects
   stale asynchronous responses and exposes an accessible loading state. Catalog
   rendering also rejects stale search/filter responses, and only the latest
-  catalog request may complete the shared busy state.
+  catalog request may complete the shared busy state. Product summary, offers,
+  comparison, and history failures are isolated so successful detail sections
+  remain available during a partial public API failure.
   Repository-backed public lists remain bounded
   first pages because the shared cursor cannot yet represent every product sort;
   no synthetic offset workaround is used. Saved marketplace

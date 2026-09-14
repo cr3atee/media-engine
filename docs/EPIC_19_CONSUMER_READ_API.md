@@ -658,6 +658,24 @@ Status:
 
 - Complete.
 
+### Task 21: Product Detail Partial-Failure Isolation
+
+Keep successfully loaded product information visible when one independent
+detail endpoint is temporarily unavailable.
+
+Acceptance criteria:
+
+- Product summary, offers, comparison, and price history settle independently.
+- A failed request renders a local error only in its corresponding section.
+- Successfully loaded sections remain visible and interactive.
+- Existing stale-response protection applies before any settled result renders.
+- Unexpected rendering failures retain the existing safe whole-panel fallback.
+- No API, retry, persistence, or comparison behavior changes.
+
+Status:
+
+- Complete.
+
 ## Deferred Runtime Constraint
 
 The repository-backed public read adapter currently returns bounded first
