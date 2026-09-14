@@ -34,6 +34,7 @@ const state = {
   selectedCategoryCode: "",
   selectedCategoryName: "",
   isBusy: false,
+  catalogRequestVersion: 0,
   detailRequestVersion: 0,
 };
 
@@ -72,15 +73,18 @@ async function loadDashboard() {
   if (!priceRangeIsValid()) {
     return;
   }
+  const requestVersion = beginCatalogRequest();
   setDashboardBusy(true);
   setApiStatus("Connecting");
   await Promise.all([
-    loadProducts(elements.searchInput.value.trim()),
+    loadProducts(elements.searchInput.value.trim(), requestVersion),
     loadCategories(),
     loadPriceChanges(),
   ]);
-  setDashboardBusy(false);
-  updateSummary();
+  if (isCurrentCatalogRequest(requestVersion)) {
+    setDashboardBusy(false);
+    updateSummary();
+  }
 }
 
 async function runProductSearch(search) {
@@ -91,12 +95,15 @@ async function runProductSearch(search) {
   state.detailRequestVersion += 1;
   state.selectedProductId = null;
   syncLocationState("replace");
+  const requestVersion = beginCatalogRequest();
   setDashboardBusy(true);
-  await loadProducts(search);
-  setDashboardBusy(false);
+  await loadProducts(search, requestVersion);
+  if (isCurrentCatalogRequest(requestVersion)) {
+    setDashboardBusy(false);
+  }
 }
 
-async function loadProducts(search) {
+async function loadProducts(search, requestVersion) {
   try {
     const preferredProductId = state.selectedProductId;
     const query = new URLSearchParams({ limit: "12" });
@@ -123,6 +130,9 @@ async function loadProducts(search) {
     query.set("direction", direction);
 
     const payload = await getJson(`/products?${query.toString()}`);
+    if (!isCurrentCatalogRequest(requestVersion)) {
+      return;
+    }
     state.products = payload.items ?? [];
     elements.catalogTitle.textContent = catalogTitle(
       search,
@@ -141,12 +151,24 @@ async function loadProducts(search) {
       clearProductDetails("No products found");
     }
   } catch (error) {
+    if (!isCurrentCatalogRequest(requestVersion)) {
+      return;
+    }
     state.products = [];
     updateSummary();
     setApiStatus("API unavailable", true);
     renderEmpty(elements.productGrid, errorMessage(error));
     clearProductDetails("Public API unavailable");
   }
+}
+
+function beginCatalogRequest() {
+  state.catalogRequestVersion += 1;
+  return state.catalogRequestVersion;
+}
+
+function isCurrentCatalogRequest(requestVersion) {
+  return requestVersion === state.catalogRequestVersion;
 }
 
 async function loadCategories() {

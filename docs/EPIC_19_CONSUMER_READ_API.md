@@ -638,6 +638,26 @@ Status:
 
 - Complete.
 
+### Task 20: Catalog Request Consistency
+
+Prevent an older asynchronous product-list response from replacing catalog
+results for newer search, filter, refresh, or browser-history state.
+
+Acceptance criteria:
+
+- Each catalog request carries a monotonically increasing local request
+  version.
+- Product results, API errors, default product selection, and catalog summary
+  updates are applied only by the current request.
+- A stale request cannot clear the busy state of a newer request.
+- Dashboard refresh and focused product search share the same consistency
+  boundary.
+- No request cancellation contract, API change, or frontend-owned search logic.
+
+Status:
+
+- Complete.
+
 ## Deferred Runtime Constraint
 
 The repository-backed public read adapter currently returns bounded first

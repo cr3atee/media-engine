@@ -59,6 +59,8 @@ This document records notable Project Passport updates.
   MIME-sniffing response headers.
 - Protected Market Terminal product details from stale asynchronous responses
   and added an accessible loading state for offers, comparison, and history.
+- Protected Market Terminal catalog results and shared busy state from stale
+  asynchronous search, filter, refresh, and browser-history responses.
 - Added runtime bootstrap foundation for memory/PostgreSQL repository scope and
   Scheduler construction without changing business services.
 - Added `RuntimeProcess` lifecycle foundation for registering existing Scheduler
