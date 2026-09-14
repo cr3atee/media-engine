@@ -354,6 +354,10 @@ production AI wiring, and guarded live Telegram verification.
   repository scope using the existing `RepositoryProvider` and
   repository-backed public adapter; explicit unavailable-provider composition is
   still testable.
+- EPIC 19 Task 29 verifies that default PostgreSQL composition end to end:
+  `63/63` checks pass for migrated schema, persisted saved-marketplace examples,
+  terminal delivery, public products, offers, comparisons, price history,
+  marketplace filters, and fresh-pool restart reads.
 
 ## Known Gaps
 
@@ -413,6 +417,9 @@ production AI wiring, and guarded live Telegram verification.
   unified offline UI verifier now passes `42` checks across delivered shell
   assets, strict CSP, all public endpoint bindings, and repository-backed DTOs
   seeded from real saved GGSEL, Playerok, and FunPay responses.
+  The PostgreSQL-backed verifier additionally passes `63/63` checks through the
+  default FastAPI composition root at Alembic head `0014_scheduler_leases`,
+  including committed repository rows and reads after engine-pool recreation.
   Repository-backed public lists remain bounded
   first pages because the shared cursor cannot yet represent every product sort;
   no synthetic offset workaround is used. Saved marketplace

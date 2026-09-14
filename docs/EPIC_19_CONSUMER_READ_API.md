@@ -825,6 +825,40 @@ Verification:
 - This verifier proves offline delivery and binding, not browser layout or live
   marketplace polling.
 
+### Task 29: PostgreSQL-Backed Public UI Verification
+
+Verify the delivered public shell and read API through the default PostgreSQL
+composition root rather than an injected memory provider.
+
+Acceptance criteria:
+
+- An isolated PostgreSQL 17 database upgrades from an empty schema to the
+  current Alembic head.
+- Saved real GGSEL, Playerok, and FunPay examples are persisted through existing
+  repository contracts.
+- The unmodified `create_app()` public read scope returns product, offer,
+  comparison, and price-history DTOs from PostgreSQL.
+- Marketplace filters remain isolated and current payloads do not fabricate
+  unavailable price-change or category data.
+- A disposed engine pool and fresh application client can read the committed
+  records again.
+- No application behavior, public API contract, migration, or dependency
+  changes are introduced.
+
+Status:
+
+- Complete.
+
+Verification:
+
+- `scripts/verify_epic19_public_ui_postgres.py` passed `63/63` checks against a
+  temporary PostgreSQL 17.10 database.
+- `alembic current` reported `0014_scheduler_leases (head)`.
+- `alembic check` reported no new upgrade operations.
+- Offline `upgrade head --sql` generation completed successfully.
+- The same saved marketplace readiness remained GGSEL `60/60/60`, Playerok
+  `20/20/20`, and FunPay `1/1/1` for raw/parsed/snapshot-ready records.
+
 ## Deferred Runtime Constraint
 
 The repository-backed public read adapter currently returns bounded first

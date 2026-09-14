@@ -80,6 +80,10 @@ This document records notable Project Passport updates.
 - Extended the existing public UI readiness verifier through the delivered
   `/terminal` HTML/CSS/JS surface and all public route bindings; `42` offline
   checks pass with real saved GGSEL, Playerok, and FunPay responses.
+- Added EPIC 19 PostgreSQL-backed public UI verification through the default
+  FastAPI composition root. A temporary PostgreSQL 17 database passed `63/63`
+  checks for migrations, persisted saved-marketplace records, terminal/public
+  routes, marketplace filters, comparisons, history, and fresh-pool reads.
 - Added runtime bootstrap foundation for memory/PostgreSQL repository scope and
   Scheduler construction without changing business services.
 - Added `RuntimeProcess` lifecycle foundation for registering existing Scheduler

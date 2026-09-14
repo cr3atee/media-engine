@@ -542,3 +542,30 @@ Quality verification passed:
 - Ruff and Ruff format checks for EPIC 17 touched files;
 - Alembic current/check, downgrade to `0012_marketplace_integrations`, upgrade
   back to head, and offline `upgrade head --sql`.
+
+## EPIC 19 Public UI Read Path
+
+`scripts/verify_epic19_public_ui_postgres.py` was executed against a temporary
+PostgreSQL 17.10 container and isolated database `epic19_public_ui`. No project
+or production database was used.
+
+All `63/63` checks passed. The verifier covers clean migration to the repository
+head, persistence through PostgreSQL repository implementations, the default
+FastAPI public read scope, the embedded terminal assets and strict CSP, product
+cards and details, offers, comparisons, price history, marketplace filters, and
+fresh reads after disposing the engine pool.
+
+The fixtures come from saved real marketplace responses:
+
+- GGSEL: `60` raw, `60` parsed, `60` snapshot-ready offers;
+- Playerok: `20` raw, `20` parsed, `20` snapshot-ready offers;
+- FunPay: `1` raw, `1` parsed, `1` snapshot-ready offer.
+
+Alembic verification passed:
+
+- `alembic current` reported `0014_scheduler_leases (head)`;
+- `alembic check` reported no new upgrade operations;
+- offline `upgrade head --sql` generation completed successfully.
+
+This verification proves the persisted public read path, not live marketplace
+polling, browser layout, historical price changes, or retained category data.

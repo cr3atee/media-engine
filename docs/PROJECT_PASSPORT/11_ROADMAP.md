@@ -212,6 +212,10 @@ This document tracks only work that is reflected by the current repository state
 - EPIC 19 Task 10 embedded Market Terminal shell: FastAPI now serves a
   dependency-free `/terminal` UI that consumes the public read API for product
   cards, offers, comparisons, price history, categories, and price drops.
+- EPIC 19 Task 29 PostgreSQL-backed public UI verification: the default FastAPI
+  composition root serves persisted GGSEL, Playerok, and FunPay examples after
+  clean migration to `0014_scheduler_leases`, including fresh-pool restart
+  reads; `63/63` checks pass.
 
 ## Current Status
 

@@ -8,10 +8,13 @@ import sys
 from collections.abc import Iterable
 from dataclasses import dataclass, replace
 from pathlib import Path
+from typing import TYPE_CHECKING
 from uuid import UUID, uuid5
 
-from fastapi.testclient import TestClient
 from pydantic import SecretStr
+
+if TYPE_CHECKING:
+    from fastapi.testclient import TestClient
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 if str(PROJECT_ROOT) not in sys.path:
@@ -54,12 +57,15 @@ class PublicUiReadiness:
 
 def main() -> int:
     """Verify saved marketplace payloads through public API response DTOs."""
+    from fastapi.testclient import TestClient
+
     _configure_stdout()
     logging.getLogger("httpx").setLevel(logging.WARNING)
     readiness = collect_readiness()
     violations = list(validate_readiness(readiness))
     provider = create_memory_provider()
-    seeded_products, seed_notes = _seed_provider(provider, readiness)
+    seeded_products, seed_notes = build_seeded_products(readiness)
+    asyncio.run(save_seeded_data(provider, seeded_products))
     notes = list(seed_notes)
 
     app = create_app(
@@ -276,10 +282,11 @@ def _verify_terminal_shell(client: TestClient, violations: list[str]) -> int:
     return checks
 
 
-async def _save_seeded_data(
+async def save_seeded_data(
     provider: RepositoryProvider,
     products: Iterable[SeededProduct],
 ) -> None:
+    """Persist deterministic public-read fixtures through repository contracts."""
     builder = SnapshotBuilder()
     for seeded in products:
         await provider.canonical_products.save(seeded.product)
@@ -287,10 +294,10 @@ async def _save_seeded_data(
         await provider.price_history.add(builder.build(seeded.offer))
 
 
-def _seed_provider(
-    provider: RepositoryProvider,
+def build_seeded_products(
     readiness: Iterable[MarketplaceReadiness],
 ) -> tuple[tuple[SeededProduct, ...], tuple[str, ...]]:
+    """Build deterministic public-read fixtures from saved marketplace data."""
     seeded_products: list[SeededProduct] = []
     notes: list[str] = []
     for result in readiness:
@@ -327,7 +334,6 @@ def _seed_provider(
             )
         )
 
-    asyncio.run(_save_seeded_data(provider, seeded_products))
     return tuple(seeded_products), tuple(notes)
 
 
