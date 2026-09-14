@@ -297,17 +297,29 @@ for those flows is explicitly completed.
 
 ## Immediate Next Engineering Steps
 
-1. Define consumer-facing read DTOs.
-2. Define public query contracts for consumer reads.
-3. Implement public read services over existing query contracts.
-4. Add public read API routes.
-5. Decide where the frontend app will live: inside this repository or as a
-   separate sibling project.
-6. Scaffold the visual shell against public product, offer, comparison, and
-   price-history routes.
+1. Define consumer-facing read DTOs. Done.
+2. Define public query contracts for consumer reads. Done.
+3. Implement public read services over existing query contracts. Done.
+4. Add public read API routes. Done.
+5. Serve an embedded `/terminal` visual shell from MediaEngine. Done.
+6. Decide whether the embedded shell remains in this repository or moves to a
+   separate frontend project before public launch.
 7. Decide whether category browse must require parser/category retention before
    public UI launch.
 8. Replace frontend mock data incrementally with MediaEngine API responses.
+
+## Current Embedded Shell
+
+MediaEngine now serves an early Market Terminal shell at `/terminal`.
+
+The shell:
+
+- consumes only `/api/v1/public` routes;
+- shows product cards, offers, comparison, price history, categories, and latest
+  price drops when those read models contain data;
+- uses a dependency-free static HTML/CSS/JS layer;
+- is an integration shell for validating the backend-to-visual contract, not the
+  final production frontend.
 
 ## Architectural Guardrails
 

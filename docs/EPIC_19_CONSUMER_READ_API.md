@@ -87,8 +87,9 @@ scope using the existing `RepositoryProvider` and repository-backed public read
 adapter. Tests can still pass `public_read_repository_scope_factory=None` to
 verify safe `public_read_api_unavailable` behavior explicitly.
 
-No PostgreSQL-specific public query adapter or frontend integration has been
-implemented yet.
+No PostgreSQL-specific direct SQL public query adapter has been implemented.
+An early embedded `/terminal` frontend shell now exists for validating the
+public read API contract, but it is not yet a production frontend commitment.
 
 ## Boundary Rules
 
@@ -456,6 +457,24 @@ Status:
 
 - Complete.
 
+### Task 10: Embedded Market Terminal Shell
+
+Add a minimal embedded visual shell that consumes the public read API without
+introducing a separate frontend build stack.
+
+Acceptance criteria:
+
+- FastAPI serves `/terminal`, `/terminal/styles.css`, and `/terminal/app.js`.
+- The shell uses only `/api/v1/public` routes.
+- No marketplace, repository, comparator, tenant, admin, Telegram, or AI
+  behavior changes.
+- The UI remains an early integration shell, not a production frontend
+  commitment.
+
+Status:
+
+- Complete.
+
 ## Documentation Updates
 
 When this EPIC is implemented, update:
@@ -488,7 +507,7 @@ Before marking the EPIC complete, run:
 
 ## First Frontend-Ready Milestone
 
-The frontend can start replacing mock data when these outputs are available:
+The embedded `/terminal` shell can now consume these public outputs directly:
 
 - product cards;
 - product details;
@@ -498,5 +517,6 @@ The frontend can start replacing mock data when these outputs are available:
 - latest price changes;
 - category list.
 
-Until then, visual work should either remain mock-backed or use explicitly
-marked partial API data.
+The next visual step is production UX hardening and deciding whether the
+embedded shell remains in MediaEngine or moves into a dedicated frontend
+repository.

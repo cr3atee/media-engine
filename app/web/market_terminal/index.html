@@ -1,0 +1,111 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Market Terminal</title>
+    <link rel="stylesheet" href="/terminal/styles.css" />
+  </head>
+  <body>
+    <main class="shell">
+      <header class="topbar glass">
+        <a class="brand" href="/terminal" aria-label="Market Terminal home">
+          <span class="brand-mark">MT</span>
+          <span>
+            <strong>Market Terminal</strong>
+            <small>Digital goods price intelligence</small>
+          </span>
+        </a>
+        <nav class="nav" aria-label="Primary navigation">
+          <a href="#products">Products</a>
+          <a href="#changes">Drops</a>
+          <a href="#details">Details</a>
+        </nav>
+        <span class="api-status" id="apiStatus">Connecting</span>
+      </header>
+
+      <section class="hero">
+        <div class="hero-copy">
+          <p class="eyebrow">GGSEL / Playerok / FunPay</p>
+          <h1>Find the best marketplace price without tab hopping.</h1>
+          <p class="lead">
+            Market Terminal reads MediaEngine public routes and turns normalized
+            marketplace offers into a calm buyer-facing comparison view.
+          </p>
+        </div>
+        <form class="search glass" id="searchForm">
+          <label for="searchInput">Search product</label>
+          <div class="search-row">
+            <input
+              id="searchInput"
+              name="q"
+              type="search"
+              placeholder="Minecraft Premium"
+              autocomplete="off"
+            />
+            <button type="submit">Search</button>
+          </div>
+        </form>
+      </section>
+
+      <section class="grid-layout">
+        <section class="panel glass" id="products">
+          <div class="panel-heading">
+            <span>
+              <p class="eyebrow">Public catalog</p>
+              <h2>Product cards</h2>
+            </span>
+            <button class="ghost-button" id="refreshButton" type="button">
+              Refresh
+            </button>
+          </div>
+          <div class="product-grid" id="productGrid" aria-live="polite"></div>
+        </section>
+
+        <aside class="panel glass side-panel">
+          <div class="panel-heading">
+            <span>
+              <p class="eyebrow">Browse</p>
+              <h2>Categories</h2>
+            </span>
+          </div>
+          <div class="pill-list" id="categoryList"></div>
+
+          <div class="panel-heading compact" id="changes">
+            <span>
+              <p class="eyebrow">Latest</p>
+              <h2>Price drops</h2>
+            </span>
+          </div>
+          <div class="change-list" id="changeList"></div>
+        </aside>
+      </section>
+
+      <section class="panel glass detail-panel" id="details">
+        <div class="panel-heading">
+          <span>
+            <p class="eyebrow">Selected product</p>
+            <h2 id="detailTitle">Choose a product</h2>
+          </span>
+          <span class="soft-label" id="detailMeta">No selection yet</span>
+        </div>
+        <div class="detail-grid">
+          <div>
+            <h3>Marketplace offers</h3>
+            <div class="offer-list" id="offerList"></div>
+          </div>
+          <div>
+            <h3>Comparison</h3>
+            <div class="comparison-card" id="comparisonCard"></div>
+          </div>
+          <div>
+            <h3>Price history</h3>
+            <div class="history-card" id="historyCard"></div>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <script src="/terminal/app.js" defer></script>
+  </body>
+</html>

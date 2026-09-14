@@ -35,6 +35,9 @@ This document records notable Project Passport updates.
 - Wired default FastAPI public reads to a PostgreSQL-backed repository scope
   through the existing `RepositoryProvider` and repository-backed public adapter,
   while preserving explicit unavailable-provider tests.
+- Added the embedded Market Terminal visual shell at `/terminal` over the
+  existing public read API, with dependency-free static assets and focused route
+  coverage.
 - Added runtime bootstrap foundation for memory/PostgreSQL repository scope and
   Scheduler construction without changing business services.
 - Added `RuntimeProcess` lifecycle foundation for registering existing Scheduler

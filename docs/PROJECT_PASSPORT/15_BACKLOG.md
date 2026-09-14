@@ -6,8 +6,8 @@ This document lists only confirmed work remaining after EPIC 17 completion.
 
 ## Immediate
 
-- Decide where the Market Terminal frontend will live: inside this repository or
-  as a separate sibling project.
+- Decide whether the embedded Market Terminal shell remains inside this
+  repository or moves to a separate frontend project before public launch.
 - Decide whether public category browse must require parser/category retention
   before launch; saved marketplace payloads currently do not populate category
   DTOs.

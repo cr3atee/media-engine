@@ -209,6 +209,9 @@ This document tracks only work that is reflected by the current repository state
 - EPIC 19 Task 9 application bootstrap wiring: default FastAPI composition now
   provides a PostgreSQL-backed public read scope through the existing
   `RepositoryProvider` and repository-backed public adapter.
+- EPIC 19 Task 10 embedded Market Terminal shell: FastAPI now serves a
+  dependency-free `/terminal` UI that consumes the public read API for product
+  cards, offers, comparisons, price history, categories, and price drops.
 
 ## Current Status
 
@@ -237,10 +240,11 @@ read-service, price-history read-service, FastAPI route, and repository-backed
 public query adapter foundations. Default FastAPI bootstrap now wires public
 reads to a PostgreSQL-backed repository scope. Saved marketplace payloads verify
 through the public route/DTO layer for product cards, details, offers,
-comparisons, and price history. The remaining work before production polling is
-guarded live operational verification and explicit runtime integration
-configuration; the remaining work before visual integration is frontend
-placement plus a product decision on category data exposure.
+comparisons, and price history. The first embedded `/terminal` visual shell is
+available for API contract validation. The remaining work before production
+polling is guarded live operational verification and explicit runtime
+integration configuration; the remaining work before public visual launch is
+frontend hardening plus a product decision on category data exposure.
 
 ## Not Present Yet
 
@@ -248,7 +252,8 @@ placement plus a product decision on category data exposure.
 - Optional guarded live Telegram test-chat message.
 - Production AI provider integration in the pipeline.
 - Live marketplace credential storage and credential retrieval for execution.
-- PostgreSQL-specific public consumer query adapters for Market Terminal UI.
+- Production-hardened public Market Terminal frontend.
+
 ## Recommended Next EPIC
 
 **Consumer Read API continuation.**

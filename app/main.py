@@ -39,6 +39,7 @@ from app.api.routes.seller_marketplace_integrations import (
     router as seller_marketplace_integrations_router,
 )
 from app.api.routes.seller_workflows import router as seller_workflows_router
+from app.api.routes.terminal import router as terminal_router
 from app.config.settings import AdminApiSettings, AuthSettings, settings
 from app.core.logging import setup_logging
 from app.database.public_read_scope import create_postgres_public_read_repository_scope
@@ -105,6 +106,7 @@ def create_app(
     application.add_exception_handler(Exception, unexpected_error_handler)
     application.include_router(health_router)
     application.include_router(public_router)
+    application.include_router(terminal_router)
     application.include_router(admin_mutations_router)
     application.include_router(admin_dashboard_router)
     application.include_router(admin_events_router)
