@@ -87,6 +87,9 @@ This document records notable Project Passport updates.
 - Localized the embedded Market Terminal consumer shell into Russian, including
   navigation, filters, runtime states, comparison labels, count pluralization,
   date formatting, and accessibility copy without changing API behavior.
+- Added a loopback-only Market Terminal preview runner over saved real
+  marketplace payloads and memory repositories, including explicit readiness
+  diagnostics and a non-blocking `--check` mode.
 - Added runtime bootstrap foundation for memory/PostgreSQL repository scope and
   Scheduler construction without changing business services.
 - Added `RuntimeProcess` lifecycle foundation for registering existing Scheduler

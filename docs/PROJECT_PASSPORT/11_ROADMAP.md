@@ -220,6 +220,9 @@ This document tracks only work that is reflected by the current repository state
   Russian navigation, search, filters, summaries, states, comparison labels,
   history labels, dates, and accessibility copy while preserving source-owned
   marketplace and product names.
+- EPIC 19 Task 31 local real-data preview: a loopback-only Uvicorn runner serves
+  the embedded terminal from saved real marketplace payloads through memory
+  repositories, with explicit diagnostics and a non-blocking `--check` mode.
 
 ## Current Status
 

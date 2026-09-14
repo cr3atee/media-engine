@@ -361,6 +361,9 @@ production AI wiring, and guarded live Telegram verification.
 - EPIC 19 Task 30 localizes the embedded consumer shell into Russian, including
   dynamic loading, empty, failure, comparison, count, date, and accessibility
   copy without changing public API or marketplace data.
+- EPIC 19 Task 31 adds a loopback-only local preview command backed by saved
+  real GGSEL, Playerok, and FunPay payloads. It requires neither PostgreSQL nor
+  mock product data and includes a non-blocking verification mode.
 
 ## Known Gaps
 

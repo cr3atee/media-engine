@@ -324,6 +324,24 @@ The shell:
 - is an integration shell for validating the backend-to-visual contract, not the
   final production frontend.
 
+## Local Saved-Payload Preview
+
+Run the current shell with saved real GGSEL, Playerok, and FunPay payloads:
+
+```powershell
+.venv\Scripts\python.exe scripts/run_market_terminal_preview.py
+```
+
+Then open `http://127.0.0.1:8000/terminal`. The runner uses memory
+repositories, binds only to loopback, disables the admin surface, and fails
+clearly if saved payloads are unavailable or no longer satisfy their contracts.
+
+For a non-blocking readiness check:
+
+```powershell
+.venv\Scripts\python.exe scripts/run_market_terminal_preview.py --check
+```
+
 ## Architectural Guardrails
 
 - Keep marketplace parsing out of the frontend.

@@ -887,6 +887,37 @@ Verification:
 - Focused terminal shell tests passed: `2 passed`.
 - Saved-payload public UI readiness remained `42/42`.
 
+### Task 31: Local Real-Data Preview Entrypoint
+
+Make the embedded Market Terminal directly reviewable in a browser without
+requiring a local PostgreSQL service or introducing mock product data.
+
+Acceptance criteria:
+
+- One command builds a preview from the existing saved real GGSEL, Playerok, and
+  FunPay payloads.
+- Existing normalizers, repository contracts, public read adapter, and FastAPI
+  application factory are reused.
+- The preview uses memory repositories only and binds Uvicorn to
+  `127.0.0.1`.
+- Admin API and API documentation are disabled in the preview composition.
+- Missing or drifted saved payloads produce a clear failure instead of fake
+  successful data.
+- A `--check` mode verifies shell and product routes without starting a
+  long-running server.
+- Production composition and application behavior remain unchanged.
+
+Status:
+
+- Complete.
+
+Verification:
+
+- `python scripts/run_market_terminal_preview.py --check` passed with three
+  products built from saved marketplace payloads.
+- A real loopback Uvicorn run returned HTTP 200 for `/terminal` and
+  `/api/v1/public/products`; the delivered document retained `lang="ru"`.
+
 ## Deferred Runtime Constraint
 
 The repository-backed public read adapter currently returns bounded first
