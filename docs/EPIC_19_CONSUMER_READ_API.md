@@ -562,6 +562,32 @@ Status:
 
 - Complete.
 
+### Task 16: Currency-Safe Price History View
+
+Improve the existing history presentation without changing price-history data
+or introducing client-owned analytics.
+
+Acceptance criteria:
+
+- History points are never plotted in one numeric series across currencies.
+- Each currency series reports its own low, high, and latest displayed value.
+- Point labels identify marketplace, price, and collection date.
+- The UI uses only the existing public price-history response.
+- No conversion rates, persisted aggregates, or backend behavior changes.
+
+Status:
+
+- Complete.
+
+## Deferred Runtime Constraint
+
+The repository-backed public read adapter currently returns bounded first
+pages with `next_cursor=None`. The shared cursor position carries a timestamp
+and UUID, which is insufficient for stable continuation of every public
+product sort, including name and price. Cursor pagination should be completed
+only through an explicit contract design; the embedded shell does not add an
+offset or synthetic-cursor workaround.
+
 ## Documentation Updates
 
 When this EPIC is implemented, update:

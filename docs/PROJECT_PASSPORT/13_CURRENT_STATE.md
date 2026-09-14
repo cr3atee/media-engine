@@ -386,7 +386,11 @@ production AI wiring, and guarded live Telegram verification.
   category summaries and optional price bounds are actionable filters through
   the same contract. Catalog filters and explicit product selection now use
   shareable URL state with browser Back/Forward support. Latest price-change
-  and category routes are available, but saved marketplace
+  and category routes are available. The embedded history view keeps currencies
+  in separate visual series and reports low/high/latest values per currency,
+  without performing conversion. Repository-backed public lists remain bounded
+  first pages because the shared cursor cannot yet represent every product sort;
+  no synthetic offset workaround is used. Saved marketplace
   payloads do not contain historical previous snapshots or category fields
   retained by `ParsedOffer`.
   PostgreSQL-specific public query adapter work can be added later only if direct

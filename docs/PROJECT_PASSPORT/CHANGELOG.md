@@ -50,6 +50,8 @@ This document records notable Project Passport updates.
   product filters, retaining API ownership of exact decimal validation.
 - Added shareable Market Terminal URL state for public catalog filters and
   explicit product selection, including browser Back/Forward restoration.
+- Made the embedded price-history view currency-safe by rendering separate
+  series with low, high, latest, marketplace, and collection-date context.
 - Added runtime bootstrap foundation for memory/PostgreSQL repository scope and
   Scheduler construction without changing business services.
 - Added `RuntimeProcess` lifecycle foundation for registering existing Scheduler

@@ -377,19 +377,56 @@ function renderHistory(points) {
     return;
   }
 
-  const prices = points.map((point) => Number(point.price));
-  const max = Math.max(...prices, 1);
-  const latest = points[points.length - 1];
-  elements.historyCard.innerHTML = `
-    <div class="history-bars" aria-label="Price history chart">
-      ${points
-        .map((point) => {
-          const height = Math.max((Number(point.price) / max) * 100, 8);
-          return `<span class="history-bar" style="height: ${height}%" title="${money(point.price, point.currency)}"></span>`;
-        })
-        .join("")}
-    </div>
-    <p class="soft-label">${points.length} points / latest ${money(latest.price, latest.currency)}</p>
+  const seriesByCurrency = new Map();
+  for (const point of points) {
+    const currency = point.currency || "Unknown";
+    const series = seriesByCurrency.get(currency) ?? [];
+    series.push(point);
+    seriesByCurrency.set(currency, series);
+  }
+
+  elements.historyCard.innerHTML = Array.from(seriesByCurrency.entries())
+    .map(([currency, series]) => renderHistorySeries(currency, series))
+    .join("");
+}
+
+function renderHistorySeries(currency, points) {
+  const ordered = [...points].sort(
+    (left, right) =>
+      new Date(left.collected_at).getTime() -
+      new Date(right.collected_at).getTime(),
+  );
+  const prices = ordered.map((point) => Number(point.price));
+  const lowest = Math.min(...prices);
+  const highest = Math.max(...prices);
+  const lowestPoint = ordered[prices.indexOf(lowest)];
+  const highestPoint = ordered[prices.indexOf(highest)];
+  const range = highest - lowest;
+  const latest = ordered[ordered.length - 1];
+  const marketplaces = new Set(ordered.map((point) => point.marketplace)).size;
+
+  return `
+    <section class="history-series">
+      <header class="history-heading">
+        <strong>${escapeHtml(currency)}</strong>
+        <small>${ordered.length} points / ${marketplaces} markets</small>
+      </header>
+      <div class="history-bars" aria-label="${escapeHtml(`${currency} price history`)}">
+        ${ordered
+          .map((point) => {
+            const price = Number(point.price);
+            const height = range === 0 ? 58 : 20 + ((price - lowest) / range) * 80;
+            const label = `${point.marketplace} / ${money(point.price, point.currency)} / ${formatDate(point.collected_at)}`;
+            return `<span class="history-bar" style="height: ${height}%" title="${escapeHtml(label)}" aria-label="${escapeHtml(label)}"></span>`;
+          })
+          .join("")}
+      </div>
+      <div class="history-stats">
+        <span><small>Low</small><strong>${money(lowestPoint.price, currency)}</strong></span>
+        <span><small>High</small><strong>${money(highestPoint.price, currency)}</strong></span>
+        <span><small>Latest</small><strong>${money(latest.price, currency)}</strong></span>
+      </div>
+    </section>
   `;
 }
 
@@ -562,6 +599,18 @@ function money(value, currency) {
 
 function formatPercent(value) {
   return `${Number(value).toFixed(1)}%`;
+}
+
+function formatDate(value) {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    return "Unknown date";
+  }
+  return new Intl.DateTimeFormat(undefined, {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+  }).format(date);
 }
 
 function initials(value) {
