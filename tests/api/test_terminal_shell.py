@@ -34,6 +34,8 @@ def test_market_terminal_shell_is_served() -> None:
     assert 'id="dropCount"' in response.text
     assert 'id="marketplaceFilter"' in response.text
     assert 'id="sortFilter"' in response.text
+    assert 'id="minPriceInput"' in response.text
+    assert 'id="maxPriceInput"' in response.text
 
 
 def test_market_terminal_static_assets_are_served() -> None:
@@ -52,6 +54,9 @@ def test_market_terminal_static_assets_are_served() -> None:
     assert "function setDashboardBusy(isBusy)" in script.text
     assert 'query.set("marketplace", marketplace);' in script.text
     assert 'query.set("category", state.selectedCategoryName);' in script.text
+    assert 'query.set("min_price", minPrice);' in script.text
+    assert 'query.set("max_price", maxPrice);' in script.text
     assert 'query.set("sort", sort);' in script.text
     assert "function renderCategories(categories)" in script.text
     assert "function selectCategory(category)" in script.text
+    assert "function priceRangeIsValid()" in script.text

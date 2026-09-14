@@ -64,6 +64,30 @@
                 <option value="name:asc">Product name</option>
               </select>
             </label>
+            <label class="filter-control" for="minPriceInput">
+              <span>Minimum price</span>
+              <input
+                id="minPriceInput"
+                name="min_price"
+                type="number"
+                inputmode="decimal"
+                min="0"
+                step="0.01"
+                placeholder="0"
+              />
+            </label>
+            <label class="filter-control" for="maxPriceInput">
+              <span>Maximum price</span>
+              <input
+                id="maxPriceInput"
+                name="max_price"
+                type="number"
+                inputmode="decimal"
+                min="0"
+                step="0.01"
+                placeholder="Any"
+              />
+            </label>
           </div>
         </form>
       </section>

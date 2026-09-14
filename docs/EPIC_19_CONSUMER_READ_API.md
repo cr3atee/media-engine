@@ -527,6 +527,23 @@ Status:
 
 - Complete.
 
+### Task 14: Public Price Range Control
+
+Connect minimum and maximum price controls to the existing public product
+query contract.
+
+Acceptance criteria:
+
+- Buyers can submit optional non-negative minimum and maximum prices.
+- The UI prevents a reversed explicit range before making a request.
+- Exact decimal validation remains owned by the public API schema.
+- Controls share the existing accessible request busy state.
+- No currency conversion or frontend-owned price comparison logic.
+
+Status:
+
+- Complete.
+
 ## Documentation Updates
 
 When this EPIC is implemented, update:

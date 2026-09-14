@@ -7,6 +7,8 @@ const elements = {
   searchButton: document.querySelector("#searchButton"),
   marketplaceFilter: document.querySelector("#marketplaceFilter"),
   sortFilter: document.querySelector("#sortFilter"),
+  minPriceInput: document.querySelector("#minPriceInput"),
+  maxPriceInput: document.querySelector("#maxPriceInput"),
   refreshButton: document.querySelector("#refreshButton"),
   catalogTitle: document.querySelector("#catalogTitle"),
   productCount: document.querySelector("#productCount"),
@@ -50,9 +52,18 @@ elements.sortFilter.addEventListener("change", () => {
   void runProductSearch(elements.searchInput.value.trim());
 });
 
+for (const input of [elements.minPriceInput, elements.maxPriceInput]) {
+  input.addEventListener("input", () => {
+    elements.maxPriceInput.setCustomValidity("");
+  });
+}
+
 void loadDashboard();
 
 async function loadDashboard() {
+  if (!priceRangeIsValid()) {
+    return;
+  }
   setDashboardBusy(true);
   setApiStatus("Connecting");
   await Promise.all([loadProducts(""), loadCategories(), loadPriceChanges()]);
@@ -61,6 +72,9 @@ async function loadDashboard() {
 }
 
 async function runProductSearch(search) {
+  if (!priceRangeIsValid()) {
+    return;
+  }
   setDashboardBusy(true);
   await loadProducts(search);
   setDashboardBusy(false);
@@ -70,6 +84,8 @@ async function loadProducts(search) {
   try {
     const query = new URLSearchParams({ limit: "12" });
     const marketplace = elements.marketplaceFilter.value;
+    const minPrice = elements.minPriceInput.value.trim();
+    const maxPrice = elements.maxPriceInput.value.trim();
     const [sort, direction] = elements.sortFilter.value.split(":", 2);
     if (search) {
       query.set("q", search);
@@ -79,6 +95,12 @@ async function loadProducts(search) {
     }
     if (state.selectedCategoryName) {
       query.set("category", state.selectedCategoryName);
+    }
+    if (minPrice) {
+      query.set("min_price", minPrice);
+    }
+    if (maxPrice) {
+      query.set("max_price", maxPrice);
     }
     query.set("sort", sort);
     query.set("direction", direction);
@@ -381,6 +403,8 @@ function setDashboardBusy(isBusy) {
   elements.searchButton.disabled = isBusy;
   elements.marketplaceFilter.disabled = isBusy;
   elements.sortFilter.disabled = isBusy;
+  elements.minPriceInput.disabled = isBusy;
+  elements.maxPriceInput.disabled = isBusy;
   for (const button of elements.categoryList.querySelectorAll(".category-filter")) {
     button.disabled = isBusy;
   }
@@ -401,6 +425,28 @@ function updateSummary() {
 
 function renderEmpty(target, message) {
   target.innerHTML = `<p class="empty-state">${escapeHtml(message)}</p>`;
+}
+
+function priceRangeIsValid() {
+  const minPrice = elements.minPriceInput.value;
+  const maxPrice = elements.maxPriceInput.value;
+  elements.maxPriceInput.setCustomValidity("");
+
+  for (const input of [elements.minPriceInput, elements.maxPriceInput]) {
+    if (!input.checkValidity()) {
+      input.reportValidity();
+      return false;
+    }
+  }
+
+  if (minPrice && maxPrice && Number(minPrice) > Number(maxPrice)) {
+    elements.maxPriceInput.setCustomValidity(
+      "Maximum price must be greater than or equal to minimum price.",
+    );
+    elements.maxPriceInput.reportValidity();
+    return false;
+  }
+  return true;
 }
 
 function catalogTitle(search, marketplace, category) {

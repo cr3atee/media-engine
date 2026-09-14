@@ -46,6 +46,8 @@ This document records notable Project Passport updates.
   comparison logic.
 - Connected category summary controls to the existing public product category
   filter with accessible active and reset states.
+- Connected optional minimum and maximum price controls to the existing public
+  product filters, retaining API ownership of exact decimal validation.
 - Added runtime bootstrap foundation for memory/PostgreSQL repository scope and
   Scheduler construction without changing business services.
 - Added `RuntimeProcess` lifecycle foundation for registering existing Scheduler

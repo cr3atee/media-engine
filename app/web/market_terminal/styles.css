@@ -238,6 +238,10 @@ h3 {
   margin-top: 14px;
 }
 
+.search .filter-control {
+  margin-bottom: 0;
+}
+
 .filter-control span {
   display: block;
   margin-bottom: 7px;
@@ -246,10 +250,17 @@ h3 {
   font-weight: 750;
 }
 
+.search .filter-control input,
 .filter-control select {
   width: 100%;
   border: 1px solid rgba(255, 255, 255, 0.16);
   border-radius: 14px;
+  background: rgba(3, 9, 16, 0.54);
+  color: var(--soft);
+  padding: 11px 12px;
+}
+
+.filter-control select {
   appearance: none;
   background:
     linear-gradient(45deg, transparent 50%, var(--muted) 50%)
@@ -257,11 +268,11 @@ h3 {
     linear-gradient(135deg, var(--muted) 50%, transparent 50%)
       calc(100% - 11px) 50% / 5px 5px no-repeat,
     rgba(3, 9, 16, 0.54);
-  color: var(--soft);
   cursor: pointer;
-  padding: 11px 34px 11px 12px;
+  padding-right: 34px;
 }
 
+.search .filter-control input:focus,
 .filter-control select:focus {
   border-color: rgba(103, 217, 196, 0.62);
   box-shadow: 0 0 0 4px rgba(103, 217, 196, 0.12);
@@ -320,6 +331,7 @@ h3 {
 
 .search button:disabled,
 .ghost-button:disabled,
+.filter-control input:disabled,
 .filter-control select:disabled {
   cursor: wait;
   opacity: 0.58;
