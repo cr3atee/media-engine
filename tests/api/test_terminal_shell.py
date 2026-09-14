@@ -21,21 +21,28 @@ def _client() -> TestClient:
 def test_market_terminal_shell_is_served() -> None:
     client = _client()
 
-    response = client.get("/terminal")
+    for path in ("/terminal", "/terminal/"):
+        response = client.get(path)
 
-    assert response.status_code == 200
-    assert response.headers["content-type"].startswith("text/html")
-    assert "Market Terminal" in response.text
-    assert "/terminal/styles.css" in response.text
-    assert "/terminal/app.js" in response.text
-    assert 'id="productCount"' in response.text
-    assert 'id="offerCount"' in response.text
-    assert 'id="categoryCount"' in response.text
-    assert 'id="dropCount"' in response.text
-    assert 'id="marketplaceFilter"' in response.text
-    assert 'id="sortFilter"' in response.text
-    assert 'id="minPriceInput"' in response.text
-    assert 'id="maxPriceInput"' in response.text
+        assert response.status_code == 200
+        assert response.headers["content-type"].startswith("text/html")
+        assert response.headers["x-content-type-options"] == "nosniff"
+        assert "default-src 'self'" in response.headers["content-security-policy"]
+        assert "frame-ancestors 'none'" in response.headers["content-security-policy"]
+        assert response.headers["permissions-policy"] == (
+            "camera=(), geolocation=(), microphone=()"
+        )
+        assert "Market Terminal" in response.text
+        assert "/terminal/styles.css" in response.text
+        assert "/terminal/app.js" in response.text
+        assert 'id="productCount"' in response.text
+        assert 'id="offerCount"' in response.text
+        assert 'id="categoryCount"' in response.text
+        assert 'id="dropCount"' in response.text
+        assert 'id="marketplaceFilter"' in response.text
+        assert 'id="sortFilter"' in response.text
+        assert 'id="minPriceInput"' in response.text
+        assert 'id="maxPriceInput"' in response.text
 
 
 def test_market_terminal_static_assets_are_served() -> None:
@@ -46,9 +53,11 @@ def test_market_terminal_static_assets_are_served() -> None:
 
     assert styles.status_code == 200
     assert styles.headers["content-type"].startswith("text/css")
+    assert styles.headers["x-content-type-options"] == "nosniff"
     assert "backdrop-filter" in styles.text
     assert script.status_code == 200
     assert script.headers["content-type"].startswith("application/javascript")
+    assert script.headers["x-content-type-options"] == "nosniff"
     assert 'const api = "/api/v1/public";' in script.text
     assert "function updateSummary()" in script.text
     assert "function setDashboardBusy(isBusy)" in script.text
@@ -68,3 +77,5 @@ def test_market_terminal_static_assets_are_served() -> None:
     assert "const seriesByCurrency = new Map();" in script.text
     assert "function renderPriceChanges(changes)" in script.text
     assert "void selectProduct(change.product_id);" in script.text
+    assert "function moneyHtml(value, currency)" in script.text
+    assert 'rel="noopener noreferrer"' in script.text

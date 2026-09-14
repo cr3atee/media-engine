@@ -598,6 +598,26 @@ Status:
 
 - Complete.
 
+### Task 18: Embedded Shell Security Boundary
+
+Harden the dependency-free browser shell at its HTML rendering and response
+boundaries without changing public API data.
+
+Acceptance criteria:
+
+- Dynamic money, currency, product, category, and comparison labels are escaped
+  before insertion through `innerHTML`.
+- External marketplace links accept only HTTP(S), use an escaped attribute, and
+  isolate opened tabs with `noopener noreferrer`.
+- The terminal document sets a same-origin Content Security Policy, denies
+  framing and unused browser permissions, and enables MIME sniffing protection.
+- Static CSS and JavaScript responses enable MIME sniffing protection.
+- No global middleware, authentication, API DTO, or marketplace behavior changes.
+
+Status:
+
+- Complete.
+
 ## Deferred Runtime Constraint
 
 The repository-backed public read adapter currently returns bounded first

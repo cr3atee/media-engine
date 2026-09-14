@@ -235,14 +235,14 @@ function renderProducts(products) {
       const active = product.id === state.selectedProductId ? " active" : "";
       const bestOffer = product.best_offer;
       return `
-        <button class="product-card${active}" type="button" data-product-id="${product.id}">
+        <button class="product-card${active}" type="button" data-product-id="${escapeHtml(product.id)}">
           <span>
-            <span class="tile-mark">${initials(product.name)}</span>
+            <span class="tile-mark">${escapeHtml(initials(product.name))}</span>
             <strong>${escapeHtml(product.name)}</strong>
           </span>
           <span>
-            <span class="price">${bestOffer ? money(bestOffer.price, bestOffer.currency) : "No price"}</span>
-            <small>${product.offer_count} offers / ${product.marketplace_count} markets</small>
+            <span class="price">${bestOffer ? moneyHtml(bestOffer.price, bestOffer.currency) : "No price"}</span>
+            <small>${escapeHtml(product.offer_count)} offers / ${escapeHtml(product.marketplace_count)} markets</small>
           </span>
         </button>
       `;
@@ -272,7 +272,7 @@ function renderCategories(categories) {
           ${disabled}
         >
           <strong>${escapeHtml(category.name)}</strong>
-          <small>${category.product_count}</small>
+          <small>${escapeHtml(category.product_count)}</small>
         </button>
       `;
     })
@@ -311,9 +311,9 @@ function renderPriceChanges(changes) {
         </span>
         <small>${escapeHtml(change.marketplace)} / ${formatDate(change.changed_at)}</small>
         <span class="change-prices">
-          <del>${escapeHtml(money(change.old_price, change.currency))}</del>
+          <del>${moneyHtml(change.old_price, change.currency)}</del>
           <span aria-hidden="true">&rarr;</span>
-          <strong>${escapeHtml(money(change.new_price, change.currency))}</strong>
+          <strong>${moneyHtml(change.new_price, change.currency)}</strong>
         </span>
       `;
       if (!change.product_id) {
@@ -361,13 +361,13 @@ function renderOffers(offers) {
   elements.offerList.innerHTML = offers
     .map(
       (offer) => `
-        <a class="offer-row" href="${escapeAttribute(offer.url ?? "#")}" target="_blank" rel="noreferrer">
+        <a class="offer-row" href="${escapeAttribute(offer.url ?? "#")}" target="_blank" rel="noopener noreferrer">
           <span>
             <span class="marketplace">${escapeHtml(offer.marketplace)}</span>
             <strong>${escapeHtml(offer.title ?? "Untitled offer")}</strong>
             <small>${escapeHtml(offer.seller_name ?? "Seller unknown")}</small>
           </span>
-          <span class="price">${money(offer.price, offer.currency)}</span>
+          <span class="price">${moneyHtml(offer.price, offer.currency)}</span>
         </a>
       `,
     )
@@ -384,7 +384,7 @@ function renderComparison(comparison) {
   elements.comparisonCard.innerHTML = `
     <p class="eyebrow">${escapeHtml(comparison.status)}</p>
     <h3>Best offer</h3>
-    <p class="price">${money(comparison.best_offer.price, comparison.best_offer.currency)}</p>
+    <p class="price">${moneyHtml(comparison.best_offer.price, comparison.best_offer.currency)}</p>
     <p>${escapeHtml(comparison.best_offer.marketplace)} / ${escapeHtml(comparison.best_offer.title ?? "")}</p>
     ${
       differences.length
@@ -394,7 +394,7 @@ function renderComparison(comparison) {
                 (difference) => `
                   <span class="pill">
                     <strong>${escapeHtml(difference.offer.marketplace)}</strong>
-                    <small>${difference.absolute_difference ? `+${money(difference.absolute_difference, difference.offer.currency)}` : escapeHtml(difference.reason ?? "n/a")}</small>
+                    <small>${escapeHtml(differenceLabel(difference))}</small>
                   </span>
                 `,
               )
@@ -443,7 +443,7 @@ function renderHistorySeries(currency, points) {
     <section class="history-series">
       <header class="history-heading">
         <strong>${escapeHtml(currency)}</strong>
-        <small>${ordered.length} points / ${marketplaces} markets</small>
+        <small>${escapeHtml(ordered.length)} points / ${escapeHtml(marketplaces)} markets</small>
       </header>
       <div class="history-bars" aria-label="${escapeHtml(`${currency} price history`)}">
         ${ordered
@@ -456,9 +456,9 @@ function renderHistorySeries(currency, points) {
           .join("")}
       </div>
       <div class="history-stats">
-        <span><small>Low</small><strong>${money(lowestPoint.price, currency)}</strong></span>
-        <span><small>High</small><strong>${money(highestPoint.price, currency)}</strong></span>
-        <span><small>Latest</small><strong>${money(latest.price, currency)}</strong></span>
+        <span><small>Low</small><strong>${moneyHtml(lowestPoint.price, currency)}</strong></span>
+        <span><small>High</small><strong>${moneyHtml(highestPoint.price, currency)}</strong></span>
+        <span><small>Latest</small><strong>${moneyHtml(latest.price, currency)}</strong></span>
       </div>
     </section>
   `;
@@ -632,6 +632,23 @@ function money(value, currency) {
     return "No price";
   }
   return `${String(value)} ${currency ?? ""}`.trim();
+}
+
+function moneyHtml(value, currency) {
+  return escapeHtml(money(value, currency));
+}
+
+function differenceLabel(difference) {
+  if (
+    difference.absolute_difference !== null &&
+    difference.absolute_difference !== undefined
+  ) {
+    return `+${money(
+      difference.absolute_difference,
+      difference.offer.currency,
+    )}`;
+  }
+  return difference.reason ?? "n/a";
 }
 
 function formatPercent(value) {

@@ -54,6 +54,9 @@ This document records notable Project Passport updates.
   series with low, high, latest, marketplace, and collection-date context.
 - Connected public price-drop cards to the existing product detail/comparison
   flow when a canonical product identifier is available.
+- Hardened the embedded Market Terminal HTML boundary with escaped dynamic
+  labels, isolated outbound links, CSP, anti-framing, permission, referrer, and
+  MIME-sniffing response headers.
 - Added runtime bootstrap foundation for memory/PostgreSQL repository scope and
   Scheduler construction without changing business services.
 - Added `RuntimeProcess` lifecycle foundation for registering existing Scheduler
