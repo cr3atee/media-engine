@@ -397,7 +397,9 @@ production AI wiring, and guarded live Telegram verification.
   rendering also rejects stale search/filter responses, and only the latest
   catalog request may complete the shared busy state. Product summary, offers,
   comparison, and history failures are isolated so successful detail sections
-  remain available during a partial public API failure.
+  remain available during a partial public API failure. All browser requests to
+  the public API now share a bounded timeout with deterministic cleanup and a
+  readable retry-oriented error instead of allowing indefinite loading.
   Repository-backed public lists remain bounded
   first pages because the shared cursor cannot yet represent every product sort;
   no synthetic offset workaround is used. Saved marketplace

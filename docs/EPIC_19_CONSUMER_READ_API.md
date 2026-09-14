@@ -676,6 +676,26 @@ Status:
 
 - Complete.
 
+### Task 22: Bounded Browser API Requests
+
+Prevent an unavailable public endpoint from leaving the embedded terminal in an
+indefinite loading state.
+
+Acceptance criteria:
+
+- Every browser request through the shared public JSON boundary has one explicit
+  timeout.
+- Timeout cancellation covers response-body reading as well as connection setup.
+- Buyers receive a stable retry-oriented timeout message.
+- The timeout resource is released after success, HTTP failure, parse failure,
+  or cancellation.
+- Existing stale-response and partial-failure handling remains unchanged.
+- No automatic retries, backend timeout changes, or new dependencies.
+
+Status:
+
+- Complete.
+
 ## Deferred Runtime Constraint
 
 The repository-backed public read adapter currently returns bounded first

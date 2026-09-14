@@ -1,4 +1,5 @@
 const api = "/api/v1/public";
+const requestTimeoutMs = 15_000;
 
 const elements = {
   apiStatus: document.querySelector("#apiStatus"),
@@ -573,16 +574,32 @@ function clearProductDetails(message) {
 }
 
 async function getJson(path) {
-  const response = await fetch(`${api}${path}`, {
-    headers: { Accept: "application/json" },
-  });
-  const text = await response.text();
-  const body = text ? JSON.parse(text) : {};
-  if (!response.ok) {
-    const detail = body.error?.message ?? body.detail ?? response.statusText;
-    throw new Error(detail);
+  const controller = new AbortController();
+  const timeoutId = window.setTimeout(
+    () => controller.abort(),
+    requestTimeoutMs,
+  );
+
+  try {
+    const response = await fetch(`${api}${path}`, {
+      headers: { Accept: "application/json" },
+      signal: controller.signal,
+    });
+    const text = await response.text();
+    const body = text ? JSON.parse(text) : {};
+    if (!response.ok) {
+      const detail = body.error?.message ?? body.detail ?? response.statusText;
+      throw new Error(detail);
+    }
+    return body;
+  } catch (error) {
+    if (controller.signal.aborted) {
+      throw new Error("Request timed out. Please try again.");
+    }
+    throw error;
+  } finally {
+    window.clearTimeout(timeoutId);
   }
-  return body;
 }
 
 function setApiStatus(label, isError = false) {

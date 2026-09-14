@@ -63,6 +63,8 @@ This document records notable Project Passport updates.
   asynchronous search, filter, refresh, and browser-history responses.
 - Isolated Market Terminal product summary, offer, comparison, and price-history
   request failures so one unavailable endpoint no longer hides successful data.
+- Bounded all embedded Market Terminal public API requests with a shared browser
+  timeout, deterministic timer cleanup, and a stable retry-oriented error.
 - Added runtime bootstrap foundation for memory/PostgreSQL repository scope and
   Scheduler construction without changing business services.
 - Added `RuntimeProcess` lifecycle foundation for registering existing Scheduler

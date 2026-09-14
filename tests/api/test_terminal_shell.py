@@ -61,6 +61,7 @@ def test_market_terminal_static_assets_are_served() -> None:
     assert script.headers["content-type"].startswith("application/javascript")
     assert script.headers["x-content-type-options"] == "nosniff"
     assert 'const api = "/api/v1/public";' in script.text
+    assert "const requestTimeoutMs = 15_000;" in script.text
     assert "function updateSummary()" in script.text
     assert "function setDashboardBusy(isBusy)" in script.text
     assert 'query.set("marketplace", marketplace);' in script.text
@@ -93,3 +94,7 @@ def test_market_terminal_static_assets_are_served() -> None:
         "function renderDetailResult(result, target, renderer, unavailableLabel)"
         in script.text
     )
+    assert "const controller = new AbortController();" in script.text
+    assert "signal: controller.signal" in script.text
+    assert "window.clearTimeout(timeoutId);" in script.text
+    assert "Request timed out. Please try again." in script.text
