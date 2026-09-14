@@ -98,8 +98,14 @@ Important gaps:
 
 - Dedicated public/consumer route contracts and a repository-backed public read
   adapter exist for homepage/search/product pages.
+- Saved GGSEL, Playerok, and FunPay payloads pass public DTO/route readiness for
+  product cards, product details, offer summaries, comparison results, and
+  price-history points.
 - PostgreSQL-specific public query adapters are not implemented yet; the current
   public adapter reads through the existing repository provider boundary.
+- Saved marketplace payloads do not provide historical price-change inputs or a
+  category field retained by `ParsedOffer`, so latest price-change and category
+  feeds are route-ready but empty in saved-payload verification.
 - Existing administration APIs are not the same as buyer-facing product APIs.
 - UI account/favorites/notifications from the brief are not implemented as a
   consumer product feature.
@@ -202,12 +208,13 @@ explicitly decides that sellers are the first target audience of the visual UI.
 
 | UI Concept | Backend Source | Status |
 | --- | --- | --- |
-| Product card | `CanonicalProduct` plus cheapest `ParsedOffer` or comparison result | Public DTO, route, service, and repository-backed adapter exist |
+| Product card | `CanonicalProduct` plus cheapest `ParsedOffer` or comparison result | Verified through public routes from saved marketplace offers |
 | Marketplace offer row | `ParsedOffer` | Exists |
 | Best offer | Comparator selector result | Exists |
 | Price difference | Comparator difference result | Exists |
-| Price history chart | `PriceSnapshot` history | Public DTO, route, service, and repository-backed adapter exist |
-| Latest price changes | Durable price-drop market events | Public DTO, route, service, and repository-backed adapter exist for eligible events |
+| Price history chart | `PriceSnapshot` history | Verified through public routes from saved marketplace offers |
+| Latest price changes | Durable price-drop market events | Route-ready; saved payloads do not contain historical change inputs |
+| Category list | `CanonicalProduct.category` | Route-ready; saved payloads do not retain category data in `ParsedOffer` |
 | Telegram-ready post | generated content attempts | Exists |
 | User favorites | not yet implemented for consumer UI | Future |
 | Price tracking | not yet implemented as consumer notification workflow | Future |
@@ -292,13 +299,13 @@ for those flows is explicitly completed.
 2. Define public query contracts for consumer reads.
 3. Implement public read services over existing query contracts.
 4. Add public read API routes.
-5. Verify latest price-change feed data through the public route layer.
-6. Verify that real GGSEL, Playerok, and FunPay saved payloads can populate the
-   UI DTOs.
-7. Decide where the frontend app will live: inside this repository or as a
+5. Decide where the frontend app will live: inside this repository or as a
    separate sibling project.
-8. Scaffold the visual shell only after API contracts are stable.
-9. Replace frontend mock data incrementally with MediaEngine API responses.
+6. Scaffold the visual shell against public product, offer, comparison, and
+   price-history routes.
+7. Decide whether category browse must require parser/category retention before
+   public UI launch.
+8. Replace frontend mock data incrementally with MediaEngine API responses.
 
 ## Architectural Guardrails
 

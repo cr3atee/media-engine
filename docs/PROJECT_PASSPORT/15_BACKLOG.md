@@ -6,8 +6,11 @@ This document lists only confirmed work remaining after EPIC 17 completion.
 
 ## Immediate
 
-- Continue EPIC 19 by verifying saved GGSEL, Playerok, and FunPay payloads
-  through the public DTO/query-service/route layer for Market Terminal.
+- Decide where the Market Terminal frontend will live: inside this repository or
+  as a separate sibling project.
+- Decide whether public category browse must require parser/category retention
+  before launch; saved marketplace payloads currently do not populate category
+  DTOs.
 - Add PostgreSQL-specific public query adapters only if direct SQL read
   optimization is explicitly approved after the repository-backed adapter is
   exercised.

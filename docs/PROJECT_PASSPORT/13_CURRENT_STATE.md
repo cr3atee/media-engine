@@ -346,6 +346,10 @@ production AI wiring, and guarded live Telegram verification.
   `RepositoryProvider`, projecting product cards, offers, comparison results,
   price-history points, latest eligible price changes, and categories without
   mutating lifecycle state.
+- EPIC 19 Task 8 verifies saved GGSEL, Playerok, and FunPay marketplace payloads
+  through the public DTO/route layer: product cards, product details, offer
+  summaries, comparison results, and price-history points are populated from
+  real saved offers.
 
 ## Known Gaps
 
@@ -367,9 +371,12 @@ production AI wiring, and guarded live Telegram verification.
 - Production deployment can now start from `scripts/run_mediaengine_worker.py`;
   guarded live operational verification still needs to be executed before
   unattended polling.
-- Public Market Terminal integration still needs saved-payload UI readiness
-  verification through the public DTO/route layer and PostgreSQL-specific public
-  query adapter work if direct SQL read optimization is approved later.
+- Public Market Terminal integration still needs a frontend location decision
+  and a product decision on category exposure. Latest price-change and category
+  routes are available, but saved marketplace payloads do not contain
+  historical previous snapshots or category fields retained by `ParsedOffer`.
+  PostgreSQL-specific public query adapter work can be added later only if
+  direct SQL read optimization is approved.
 - Live Telegram delivery is not yet verified; credentials, exact test-chat
   confirmation, live flags, and PostgreSQL verification database were not
   supplied.

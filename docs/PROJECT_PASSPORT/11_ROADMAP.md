@@ -202,6 +202,10 @@ This document tracks only work that is reflected by the current repository state
 - EPIC 19 Task 7 repository-backed public query adapter: product cards, offers,
   comparison results, price-history points, latest price changes, and
   categories can be projected from an existing `RepositoryProvider`.
+- EPIC 19 Task 8 saved-payload UI readiness verification: GGSEL, Playerok, and
+  FunPay saved marketplace payloads populate public product cards, details,
+  offer summaries, comparison results, and price-history points through the
+  public route/DTO layer.
 
 ## Current Status
 
@@ -227,10 +231,12 @@ periodic execution, safe Scheduler shutdown, and safe polling diagnostics. The
 Market Terminal integration plan is documented and EPIC 19 has started with the
 public consumer DTO, query-contract, product read-service, comparison
 read-service, price-history read-service, FastAPI route, and repository-backed
-public query adapter foundations. The remaining work before production polling
-is guarded live operational verification and explicit runtime integration
-configuration; the remaining work before visual integration is saved-payload UI
-readiness verification and frontend placement.
+public query adapter foundations. Saved marketplace payloads now verify through
+the public route/DTO layer for product cards, details, offers, comparisons, and
+price history. The remaining work before production polling is guarded live
+operational verification and explicit runtime integration configuration; the
+remaining work before visual integration is frontend placement plus a product
+decision on category data exposure.
 
 ## Not Present Yet
 

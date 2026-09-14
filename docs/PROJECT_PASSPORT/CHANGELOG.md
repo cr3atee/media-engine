@@ -27,6 +27,11 @@ This document records notable Project Passport updates.
 - Added EPIC 19 repository-backed public read adapter over `RepositoryProvider`
   for product cards, offers, comparison results, price-history points, latest
   eligible price changes, and categories, plus focused test and demo coverage.
+- Added EPIC 19 saved-payload public UI readiness verifier. GGSEL, Playerok,
+  and FunPay saved payloads now pass public route/DTO checks for product cards,
+  product details, offer summaries, comparison results, and price-history
+  points; missing historical price-change inputs and retained category data are
+  documented instead of fabricated.
 - Added runtime bootstrap foundation for memory/PostgreSQL repository scope and
   Scheduler construction without changing business services.
 - Added `RuntimeProcess` lifecycle foundation for registering existing Scheduler

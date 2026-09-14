@@ -75,6 +75,14 @@ Task 7 is complete: a repository-backed public read adapter can project product
 cards, offer lists, comparison results, price-history points, latest price
 changes, and categories from an existing `RepositoryProvider`.
 
+Task 8 is complete: saved GGSEL, Playerok, and FunPay payloads were verified
+through the public DTO/route layer. Product cards, product details, offer
+summaries, comparison results, and price-history points can be populated from
+saved real marketplace offers. Latest price changes and categories were
+route-verified as empty because the saved payloads contain current offers only
+and the current `ParsedOffer` contract does not retain marketplace category
+fields.
+
 No PostgreSQL-specific public query adapter or frontend integration has been
 implemented yet.
 
@@ -410,6 +418,21 @@ Acceptance criteria:
 - Offer summary DTOs can be created.
 - Comparison DTOs can be created when canonical product candidates are present.
 - Any missing data is documented rather than invented.
+
+Status:
+
+- Complete.
+
+Verification:
+
+- `scripts/verify_public_ui_readiness.py` passed `25` public DTO/route checks.
+- GGSEL saved payload: `60` raw, `60` parsed, `60` snapshot-ready offers.
+- Playerok saved payload: `20` raw, `20` parsed, `20` snapshot-ready offers.
+- FunPay saved payload: `1` raw, `1` parsed, `1` snapshot-ready offer.
+- Latest price-change feed remains empty from saved payloads because no previous
+  snapshot/durable scored event is present in those payloads.
+- Category feed remains empty from saved payloads because category data is not
+  retained by the current `ParsedOffer` contract.
 
 ## Documentation Updates
 
