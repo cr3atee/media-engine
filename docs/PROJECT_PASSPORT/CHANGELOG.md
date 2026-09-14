@@ -57,6 +57,8 @@ This document records notable Project Passport updates.
 - Hardened the embedded Market Terminal HTML boundary with escaped dynamic
   labels, isolated outbound links, CSP, anti-framing, permission, referrer, and
   MIME-sniffing response headers.
+- Protected Market Terminal product details from stale asynchronous responses
+  and added an accessible loading state for offers, comparison, and history.
 - Added runtime bootstrap foundation for memory/PostgreSQL repository scope and
   Scheduler construction without changing business services.
 - Added `RuntimeProcess` lifecycle foundation for registering existing Scheduler

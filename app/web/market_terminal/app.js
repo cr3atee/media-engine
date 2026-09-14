@@ -34,6 +34,7 @@ const state = {
   selectedCategoryCode: "",
   selectedCategoryName: "",
   isBusy: false,
+  detailRequestVersion: 0,
 };
 
 elements.searchForm.addEventListener("submit", (event) => {
@@ -87,6 +88,7 @@ async function runProductSearch(search) {
     return;
   }
   elements.searchInput.value = search;
+  state.detailRequestVersion += 1;
   state.selectedProductId = null;
   syncLocationState("replace");
   setDashboardBusy(true);
@@ -189,15 +191,20 @@ async function loadPriceChanges() {
 
 async function selectProduct(productId, updateLocation = true) {
   if (!productId) {
+    state.detailRequestVersion += 1;
+    state.selectedProductId = null;
     clearProductDetails("No product selected");
     return;
   }
 
+  const requestVersion = state.detailRequestVersion + 1;
+  state.detailRequestVersion = requestVersion;
   state.selectedProductId = productId;
   if (updateLocation) {
     syncLocationState("push");
   }
   renderProducts(state.products);
+  prepareProductDetails(productId);
 
   try {
     const [detail, offers, comparison, history] = await Promise.all([
@@ -206,6 +213,9 @@ async function selectProduct(productId, updateLocation = true) {
       getJson(`/products/${productId}/comparison`),
       getJson(`/products/${productId}/price-history?period=all&limit=50`),
     ]);
+    if (!isCurrentDetailRequest(requestVersion, productId)) {
+      return;
+    }
 
     elements.detailTitle.textContent = detail.name;
     elements.detailMeta.textContent = [
@@ -219,9 +229,37 @@ async function selectProduct(productId, updateLocation = true) {
     renderComparison(comparison);
     renderHistory(history.items ?? []);
   } catch (error) {
+    if (!isCurrentDetailRequest(requestVersion, productId)) {
+      return;
+    }
     clearProductDetails("Product details unavailable");
     renderEmpty(elements.offerList, errorMessage(error));
+  } finally {
+    if (isCurrentDetailRequest(requestVersion, productId)) {
+      setProductDetailsBusy(false);
+    }
   }
+}
+
+function prepareProductDetails(productId) {
+  const product = state.products.find((item) => item.id === productId);
+  elements.detailTitle.textContent = product?.name ?? "Loading product";
+  elements.detailMeta.textContent = "Loading marketplace data";
+  renderEmpty(elements.offerList, "Loading offers...");
+  renderEmpty(elements.comparisonCard, "Loading comparison...");
+  renderEmpty(elements.historyCard, "Loading price history...");
+  setProductDetailsBusy(true);
+}
+
+function isCurrentDetailRequest(requestVersion, productId) {
+  return (
+    requestVersion === state.detailRequestVersion &&
+    productId === state.selectedProductId
+  );
+}
+
+function setProductDetailsBusy(isBusy) {
+  elements.detailPanel.setAttribute("aria-busy", String(isBusy));
 }
 
 function renderProducts(products) {
@@ -470,6 +508,7 @@ function clearProductDetails(message) {
   renderEmpty(elements.offerList, "Select a product when data is available.");
   renderEmpty(elements.comparisonCard, "Comparison will appear here.");
   renderEmpty(elements.historyCard, "History will appear here.");
+  setProductDetailsBusy(false);
 }
 
 async function getJson(path) {

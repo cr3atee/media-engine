@@ -392,7 +392,9 @@ production AI wiring, and guarded live Telegram verification.
   now open the existing product comparison flow; unlinked events remain
   informational. The embedded shell now escapes all dynamic labels at its
   `innerHTML` boundary and serves document-level CSP, anti-framing, permission,
-  referrer, and MIME-sniffing protections. Repository-backed public lists remain bounded
+  referrer, and MIME-sniffing protections. Product detail rendering rejects
+  stale asynchronous responses and exposes an accessible loading state.
+  Repository-backed public lists remain bounded
   first pages because the shared cursor cannot yet represent every product sort;
   no synthetic offset workaround is used. Saved marketplace
   payloads do not contain historical previous snapshots or category fields

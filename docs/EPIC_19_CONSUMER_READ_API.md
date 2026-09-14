@@ -618,6 +618,26 @@ Status:
 
 - Complete.
 
+### Task 19: Product Detail Request Consistency
+
+Prevent an older asynchronous product response from replacing the detail view
+for a newer buyer selection.
+
+Acceptance criteria:
+
+- Each detail selection carries a monotonically increasing local request
+  version.
+- Offers, comparison, and history render only when both request version and
+  selected product still match.
+- Stale success and failure responses are ignored.
+- The detail region exposes an accessible busy state and clear loading copy.
+- Product cards remain available so the buyer can change selection.
+- No API cancellation contract, backend state, or product behavior changes.
+
+Status:
+
+- Complete.
+
 ## Deferred Runtime Constraint
 
 The repository-backed public read adapter currently returns bounded first

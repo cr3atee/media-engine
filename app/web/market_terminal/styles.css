@@ -611,12 +611,22 @@ h3 {
 
 .detail-panel {
   margin-top: 22px;
+  transition: border-color 180ms ease;
+}
+
+.detail-panel[aria-busy="true"] {
+  border-color: rgba(103, 217, 196, 0.42);
+}
+
+.detail-panel[aria-busy="true"] .detail-grid {
+  opacity: 0.68;
 }
 
 .detail-grid {
   display: grid;
   grid-template-columns: 1.1fr 0.95fr 0.95fr;
   gap: 18px;
+  transition: opacity 180ms ease;
 }
 
 .offer-row {

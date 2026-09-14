@@ -43,6 +43,8 @@ def test_market_terminal_shell_is_served() -> None:
         assert 'id="sortFilter"' in response.text
         assert 'id="minPriceInput"' in response.text
         assert 'id="maxPriceInput"' in response.text
+        assert 'aria-labelledby="detailTitle"' in response.text
+        assert 'aria-busy="false"' in response.text
 
 
 def test_market_terminal_static_assets_are_served() -> None:
@@ -79,3 +81,6 @@ def test_market_terminal_static_assets_are_served() -> None:
     assert "void selectProduct(change.product_id);" in script.text
     assert "function moneyHtml(value, currency)" in script.text
     assert 'rel="noopener noreferrer"' in script.text
+    assert "detailRequestVersion: 0" in script.text
+    assert "function isCurrentDetailRequest(requestVersion, productId)" in script.text
+    assert "function setProductDetailsBusy(isBusy)" in script.text
