@@ -45,6 +45,26 @@
             />
             <button id="searchButton" type="submit">Search</button>
           </div>
+          <div class="filter-row">
+            <label class="filter-control" for="marketplaceFilter">
+              <span>Marketplace</span>
+              <select id="marketplaceFilter" name="marketplace">
+                <option value="">All marketplaces</option>
+                <option value="ggsel">GGSEL</option>
+                <option value="playerok">Playerok</option>
+                <option value="funpay">FunPay</option>
+              </select>
+            </label>
+            <label class="filter-control" for="sortFilter">
+              <span>Sort</span>
+              <select id="sortFilter" name="sort">
+                <option value="recently_updated:desc">Recently updated</option>
+                <option value="price_asc:asc">Lowest price</option>
+                <option value="price_desc:desc">Highest price</option>
+                <option value="name:asc">Product name</option>
+              </select>
+            </label>
+          </div>
         </form>
       </section>
 
@@ -72,7 +92,7 @@
           <div class="panel-heading">
             <span>
               <p class="eyebrow">Public catalog</p>
-              <h2>Product cards</h2>
+              <h2 id="catalogTitle">Product cards</h2>
             </span>
             <button class="ghost-button" id="refreshButton" type="button">
               Refresh

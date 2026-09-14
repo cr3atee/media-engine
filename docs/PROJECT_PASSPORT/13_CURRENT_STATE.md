@@ -380,7 +380,9 @@ production AI wiring, and guarded live Telegram verification.
   dependency-free `/terminal` shell now consumes `/api/v1/public` routes for
   backend-to-visual contract validation. The shell also reports a responsive
   runtime summary of products, offers, categories, and recent price drops from
-  those existing responses, with explicit request busy states. Latest
+  those existing responses, with explicit request busy states. Marketplace
+  filtering and catalog sorting now delegate to the existing public product
+  query contract instead of duplicating those rules in the browser. Latest
   price-change and category routes are available, but saved marketplace
   payloads do not contain historical previous snapshots or category fields
   retained by `ParsedOffer`.

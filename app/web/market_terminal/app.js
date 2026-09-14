@@ -5,7 +5,10 @@ const elements = {
   searchForm: document.querySelector("#searchForm"),
   searchInput: document.querySelector("#searchInput"),
   searchButton: document.querySelector("#searchButton"),
+  marketplaceFilter: document.querySelector("#marketplaceFilter"),
+  sortFilter: document.querySelector("#sortFilter"),
   refreshButton: document.querySelector("#refreshButton"),
+  catalogTitle: document.querySelector("#catalogTitle"),
   productCount: document.querySelector("#productCount"),
   offerCount: document.querySelector("#offerCount"),
   categoryCount: document.querySelector("#categoryCount"),
@@ -36,6 +39,14 @@ elements.refreshButton.addEventListener("click", () => {
   void loadDashboard();
 });
 
+elements.marketplaceFilter.addEventListener("change", () => {
+  void runProductSearch(elements.searchInput.value.trim());
+});
+
+elements.sortFilter.addEventListener("change", () => {
+  void runProductSearch(elements.searchInput.value.trim());
+});
+
 void loadDashboard();
 
 async function loadDashboard() {
@@ -55,11 +66,20 @@ async function runProductSearch(search) {
 async function loadProducts(search) {
   try {
     const query = new URLSearchParams({ limit: "12" });
+    const marketplace = elements.marketplaceFilter.value;
+    const [sort, direction] = elements.sortFilter.value.split(":", 2);
     if (search) {
       query.set("q", search);
     }
+    if (marketplace) {
+      query.set("marketplace", marketplace);
+    }
+    query.set("sort", sort);
+    query.set("direction", direction);
+
     const payload = await getJson(`/products?${query.toString()}`);
     state.products = payload.items ?? [];
+    elements.catalogTitle.textContent = catalogTitle(search, marketplace);
     renderProducts(state.products);
     updateSummary();
     setApiStatus("Online");
@@ -306,6 +326,8 @@ function setDashboardBusy(isBusy) {
   document.querySelector(".shell").setAttribute("aria-busy", String(isBusy));
   elements.refreshButton.disabled = isBusy;
   elements.searchButton.disabled = isBusy;
+  elements.marketplaceFilter.disabled = isBusy;
+  elements.sortFilter.disabled = isBusy;
   elements.refreshButton.textContent = isBusy ? "Loading" : "Refresh";
 }
 
@@ -323,6 +345,24 @@ function updateSummary() {
 
 function renderEmpty(target, message) {
   target.innerHTML = `<p class="empty-state">${escapeHtml(message)}</p>`;
+}
+
+function catalogTitle(search, marketplace) {
+  if (search) {
+    return `Results for "${search}"`;
+  }
+  if (marketplace) {
+    return `${marketplaceLabel(marketplace)} products`;
+  }
+  return "Product cards";
+}
+
+function marketplaceLabel(value) {
+  return {
+    ggsel: "GGSEL",
+    playerok: "Playerok",
+    funpay: "FunPay",
+  }[value] ?? value;
 }
 
 function money(value, currency) {

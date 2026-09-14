@@ -493,6 +493,23 @@ Status:
 
 - Complete.
 
+### Task 12: Public Catalog Controls
+
+Connect the embedded catalog controls to filtering and sorting capabilities
+already exposed by the public product endpoint.
+
+Acceptance criteria:
+
+- Buyers can filter visible products by GGSEL, Playerok, or FunPay.
+- Buyers can sort by latest update, lowest price, highest price, or product name.
+- The shell sends only documented public product query parameters.
+- Controls remain accessible, responsive, and disabled while requests run.
+- No backend query, marketplace, matching, or comparator behavior changes.
+
+Status:
+
+- Complete.
+
 ## Documentation Updates
 
 When this EPIC is implemented, update:

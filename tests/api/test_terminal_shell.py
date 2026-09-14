@@ -32,6 +32,8 @@ def test_market_terminal_shell_is_served() -> None:
     assert 'id="offerCount"' in response.text
     assert 'id="categoryCount"' in response.text
     assert 'id="dropCount"' in response.text
+    assert 'id="marketplaceFilter"' in response.text
+    assert 'id="sortFilter"' in response.text
 
 
 def test_market_terminal_static_assets_are_served() -> None:
@@ -48,3 +50,5 @@ def test_market_terminal_static_assets_are_served() -> None:
     assert 'const api = "/api/v1/public";' in script.text
     assert "function updateSummary()" in script.text
     assert "function setDashboardBusy(isBusy)" in script.text
+    assert 'query.set("marketplace", marketplace);' in script.text
+    assert 'query.set("sort", sort);' in script.text

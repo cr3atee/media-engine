@@ -50,12 +50,14 @@ body::before {
 }
 
 button,
-input {
+input,
+select {
   font: inherit;
 }
 
 button:focus-visible,
 input:focus-visible,
+select:focus-visible,
 a:focus-visible {
   outline: 3px solid rgba(103, 217, 196, 0.64);
   outline-offset: 3px;
@@ -229,6 +231,47 @@ h3 {
   font-weight: 800;
 }
 
+.filter-row {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  margin-top: 14px;
+}
+
+.filter-control span {
+  display: block;
+  margin-bottom: 7px;
+  color: var(--muted);
+  font-size: 0.72rem;
+  font-weight: 750;
+}
+
+.filter-control select {
+  width: 100%;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 14px;
+  appearance: none;
+  background:
+    linear-gradient(45deg, transparent 50%, var(--muted) 50%)
+      calc(100% - 16px) 50% / 5px 5px no-repeat,
+    linear-gradient(135deg, var(--muted) 50%, transparent 50%)
+      calc(100% - 11px) 50% / 5px 5px no-repeat,
+    rgba(3, 9, 16, 0.54);
+  color: var(--soft);
+  cursor: pointer;
+  padding: 11px 34px 11px 12px;
+}
+
+.filter-control select:focus {
+  border-color: rgba(103, 217, 196, 0.62);
+  box-shadow: 0 0 0 4px rgba(103, 217, 196, 0.12);
+}
+
+.filter-control option {
+  background: var(--bg-1);
+  color: var(--text);
+}
+
 .search-row {
   display: flex;
   gap: 10px;
@@ -276,7 +319,8 @@ h3 {
 }
 
 .search button:disabled,
-.ghost-button:disabled {
+.ghost-button:disabled,
+.filter-control select:disabled {
   cursor: wait;
   opacity: 0.58;
   transform: none;
@@ -553,5 +597,9 @@ h3 {
   .metric {
     min-height: 72px;
     padding: 14px;
+  }
+
+  .filter-row {
+    grid-template-columns: 1fr;
   }
 }
