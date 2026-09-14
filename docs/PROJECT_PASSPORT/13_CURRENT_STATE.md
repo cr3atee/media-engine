@@ -402,6 +402,8 @@ production AI wiring, and guarded live Telegram verification.
   readable retry-oriented error instead of allowing indefinite loading. The
   browser response boundary accepts only non-empty JSON objects and replaces
   malformed, HTML, or structurally unknown responses with stable safe errors.
+  Dynamic API status, category, price-drop, offer, comparison, and history
+  updates are exposed as polite, named assistive-technology regions.
   Repository-backed public lists remain bounded
   first pages because the shared cursor cannot yet represent every product sort;
   no synthetic offset workaround is used. Saved marketplace

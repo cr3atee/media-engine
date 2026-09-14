@@ -45,6 +45,15 @@ def test_market_terminal_shell_is_served() -> None:
         assert 'id="maxPriceInput"' in response.text
         assert 'aria-labelledby="detailTitle"' in response.text
         assert 'aria-busy="false"' in response.text
+        assert 'id="apiStatus"' in response.text
+        assert 'role="status"' in response.text
+        assert 'aria-atomic="true"' in response.text
+        assert 'id="categoryList"' in response.text
+        assert 'id="changeList"' in response.text
+        assert 'aria-labelledby="offerListTitle"' in response.text
+        assert 'aria-labelledby="comparisonTitle"' in response.text
+        assert 'aria-labelledby="historyTitle"' in response.text
+        assert response.text.count('aria-live="polite"') == 7
 
 
 def test_market_terminal_static_assets_are_served() -> None:

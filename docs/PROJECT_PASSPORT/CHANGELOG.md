@@ -68,6 +68,8 @@ This document records notable Project Passport updates.
 - Hardened the Market Terminal public JSON response boundary against malformed,
   empty, primitive, array, and non-JSON responses without reflecting proxy HTML
   or browser status text.
+- Added polite accessible announcements for Market Terminal API status, category
+  and price-drop results, plus named offer, comparison, and history regions.
 - Added runtime bootstrap foundation for memory/PostgreSQL repository scope and
   Scheduler construction without changing business services.
 - Added `RuntimeProcess` lifecycle foundation for registering existing Scheduler

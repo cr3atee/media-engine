@@ -718,6 +718,24 @@ Status:
 
 - Complete.
 
+### Task 24: Accessible Async Result Announcements
+
+Expose asynchronous terminal updates to assistive technology without changing
+the visual hierarchy or request behavior.
+
+Acceptance criteria:
+
+- API connectivity is exposed through one polite atomic status region.
+- Product, category, and price-drop result containers announce updates politely.
+- Offer, comparison, and price-history outputs are separate named regions tied
+  to their visible headings.
+- Detail result regions announce loading, success, empty, and local failure copy.
+- No assertive announcement, focus theft, visual redesign, or API change.
+
+Status:
+
+- Complete.
+
 ## Deferred Runtime Constraint
 
 The repository-backed public read adapter currently returns bounded first

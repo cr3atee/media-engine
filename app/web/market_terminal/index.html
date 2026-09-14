@@ -21,7 +21,15 @@
           <a href="#changes">Drops</a>
           <a href="#details">Details</a>
         </nav>
-        <span class="api-status" id="apiStatus">Connecting</span>
+        <span
+          class="api-status"
+          id="apiStatus"
+          role="status"
+          aria-live="polite"
+          aria-atomic="true"
+        >
+          Connecting
+        </span>
       </header>
 
       <section class="hero">
@@ -132,7 +140,11 @@
               <h2>Categories</h2>
             </span>
           </div>
-          <div class="pill-list" id="categoryList"></div>
+          <div
+            class="pill-list"
+            id="categoryList"
+            aria-live="polite"
+          ></div>
 
           <div class="panel-heading compact" id="changes">
             <span>
@@ -140,7 +152,11 @@
               <h2>Price drops</h2>
             </span>
           </div>
-          <div class="change-list" id="changeList"></div>
+          <div
+            class="change-list"
+            id="changeList"
+            aria-live="polite"
+          ></div>
         </aside>
       </section>
 
@@ -159,16 +175,34 @@
         </div>
         <div class="detail-grid">
           <div>
-            <h3>Marketplace offers</h3>
-            <div class="offer-list" id="offerList"></div>
+            <h3 id="offerListTitle">Marketplace offers</h3>
+            <div
+              class="offer-list"
+              id="offerList"
+              role="region"
+              aria-labelledby="offerListTitle"
+              aria-live="polite"
+            ></div>
           </div>
           <div>
-            <h3>Comparison</h3>
-            <div class="comparison-card" id="comparisonCard"></div>
+            <h3 id="comparisonTitle">Comparison</h3>
+            <div
+              class="comparison-card"
+              id="comparisonCard"
+              role="region"
+              aria-labelledby="comparisonTitle"
+              aria-live="polite"
+            ></div>
           </div>
           <div>
-            <h3>Price history</h3>
-            <div class="history-card" id="historyCard"></div>
+            <h3 id="historyTitle">Price history</h3>
+            <div
+              class="history-card"
+              id="historyCard"
+              role="region"
+              aria-labelledby="historyTitle"
+              aria-live="polite"
+            ></div>
           </div>
         </div>
       </section>
