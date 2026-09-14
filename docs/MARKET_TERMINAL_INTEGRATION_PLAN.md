@@ -96,8 +96,8 @@ consumer-facing read boundary.
 
 Important gaps:
 
-- No dedicated public/consumer API for homepage/search/product pages is
-  documented as complete.
+- Dedicated public/consumer route contracts exist for homepage/search/product
+  pages, but public query adapter implementations are not complete yet.
 - Existing administration APIs are not the same as buyer-facing product APIs.
 - UI account/favorites/notifications from the brief are not implemented as a
   consumer product feature.
@@ -288,8 +288,9 @@ for those flows is explicitly completed.
 2. Define public query contracts for consumer reads.
 3. Implement public read services over existing query contracts.
 4. Add public read API routes.
-5. Add price-history query implementation for charts.
-6. Add latest price-change feed.
+5. Add public query implementations for product cards, offers, comparisons,
+   price history, price changes, and categories.
+6. Verify latest price-change feed data through the public route layer.
 7. Verify that real GGSEL, Playerok, and FunPay saved payloads can populate the
    UI DTOs.
 8. Decide where the frontend app will live: inside this repository or as a

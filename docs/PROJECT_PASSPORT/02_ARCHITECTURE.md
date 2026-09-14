@@ -18,7 +18,8 @@ This document describes the current high-level architecture of MediaEngine as it
 - `app/insights`: event scoring.
 - `app/ai`: AI provider abstractions, fake provider, and prompt builders.
 - `app/api`: FastAPI transport schemas, authentication, correlation, stable error
-  handling, health probes, and read-only administration routes.
+  handling, health probes, read-only administration routes, and public consumer
+  read routes.
 - `app/repositories/queries`: SQLAlchemy-independent read contracts, immutable
   projections, and memory/PostgreSQL query adapters.
 - `app/repositories/public_queries`: SQLAlchemy-independent public consumer read
@@ -129,8 +130,8 @@ run inside ingestion or scoring transactions.
   adapters.
 - Read requests open caller-owned short repository scopes and never commit,
   claim, or change lifecycle state.
-- Public consumer query contracts are separate from seller/admin read contracts
-  and currently define no SQLAlchemy adapters or routes.
+- Public consumer routes are separate from seller/admin routes and depend on a
+  dedicated public read provider. They currently define no SQLAlchemy adapters.
 
 ## Read Administration Flow
 

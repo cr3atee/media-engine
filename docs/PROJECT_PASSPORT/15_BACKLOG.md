@@ -6,9 +6,8 @@ This document lists only confirmed work remaining after EPIC 17 completion.
 
 ## Immediate
 
-- Continue EPIC 19 by implementing public query adapters, remaining consumer
-  read boundaries where needed, and `/api/v1/public` routes for Market Terminal
-  over the new DTO/query-contract/read-service foundations.
+- Continue EPIC 19 by implementing public query adapters for Market Terminal
+  over the new DTO/query-contract/read-service/route foundations.
 - Run guarded live polling verification around the production worker command
   before unattended scheduled ingestion.
 - Add live marketplace polling monitoring and production runtime integration

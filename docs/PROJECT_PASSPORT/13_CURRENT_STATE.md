@@ -338,6 +338,10 @@ production AI wiring, and guarded live Telegram verification.
   duplicating comparator behavior.
 - EPIC 19 Task 5 adds `PublicPriceHistoryReadService`, a thin application
   service over the public price-history query contract for bounded chart points.
+- EPIC 19 Task 6 adds read-only `/api/v1/public` routes for products, product
+  details, offers, comparisons, price history, price changes, and categories.
+  Routes use explicit public DTOs, require no seller/admin authentication, and
+  fail safely until a public read provider is wired.
 
 ## Known Gaps
 
@@ -359,9 +363,8 @@ production AI wiring, and guarded live Telegram verification.
 - Production deployment can now start from `scripts/run_mediaengine_worker.py`;
   guarded live operational verification still needs to be executed before
   unattended polling.
-- Public Market Terminal integration still needs query implementations,
-  additional consumer read services, and `/api/v1/public` routes over the new
-  DTOs.
+- Public Market Terminal integration still needs public query implementations
+  over the new DTOs and routes.
 - Live Telegram delivery is not yet verified; credentials, exact test-chat
   confirmation, live flags, and PostgreSQL verification database were not
   supplied.

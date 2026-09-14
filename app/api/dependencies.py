@@ -12,6 +12,10 @@ from app.api.auth import get_admin_settings
 from app.api.errors import ApiError
 from app.config.settings import AuthSettings
 from app.domain.auth import AuthenticatedPrincipal, Permission, TenantContext
+from app.repositories.public_queries.provider import (
+    PublicReadRepositoryProvider,
+    PublicReadRepositoryScopeFactory,
+)
 from app.repositories.queries.provider import (
     ReadRepositoryProvider,
     ReadRepositoryScopeFactory,
@@ -29,6 +33,12 @@ from app.services.authentication import AuthenticationError, AuthenticationServi
 from app.services.authorization import AuthorizationError, AuthorizationService
 from app.services.marketplace_integrations import MarketplaceIntegrationService
 from app.services.passwords import PasswordHasher
+from app.services.public_categories import PublicCategoryReadService
+from app.services.public_comparisons import PublicComparisonReadService
+from app.services.public_offers import PublicOfferReadService
+from app.services.public_price_changes import PublicPriceChangeReadService
+from app.services.public_price_history import PublicPriceHistoryReadService
+from app.services.public_products import PublicProductReadService
 from app.services.repository_scope import RepositoryScopeFactory
 
 _seller_bearer = HTTPBearer(
@@ -95,6 +105,89 @@ async def get_dashboard_query_service(
 ) -> AdminDashboardQueryService:
     """Build a dashboard query service from a request-scoped provider."""
     return AdminDashboardQueryService(repositories.dashboard)
+
+
+async def get_public_read_repositories(
+    request: Request,
+) -> AsyncIterator[PublicReadRepositoryProvider]:
+    """Yield one caller-owned public read repository scope for an API request."""
+    factory = getattr(request.app.state, "public_read_repository_scope_factory", None)
+    if factory is None:
+        raise ApiError(
+            503,
+            "public_read_api_unavailable",
+            "Public read repositories are not configured.",
+        )
+    scope_factory = cast(PublicReadRepositoryScopeFactory, factory)
+    context = scope_factory()
+    if not isinstance(context, AbstractAsyncContextManager):
+        raise ApiError(
+            500,
+            "internal_error",
+            "Public read repository composition is invalid.",
+        )
+    async with context as provider:
+        yield provider
+
+
+async def get_public_product_read_service(
+    repositories: Annotated[
+        PublicReadRepositoryProvider,
+        Depends(get_public_read_repositories),
+    ],
+) -> PublicProductReadService:
+    """Build a public product read service from a request-scoped provider."""
+    return PublicProductReadService(repositories.products)
+
+
+async def get_public_offer_read_service(
+    repositories: Annotated[
+        PublicReadRepositoryProvider,
+        Depends(get_public_read_repositories),
+    ],
+) -> PublicOfferReadService:
+    """Build a public offer read service from a request-scoped provider."""
+    return PublicOfferReadService(repositories.offers)
+
+
+async def get_public_comparison_read_service(
+    repositories: Annotated[
+        PublicReadRepositoryProvider,
+        Depends(get_public_read_repositories),
+    ],
+) -> PublicComparisonReadService:
+    """Build a public comparison read service from a request-scoped provider."""
+    return PublicComparisonReadService(repositories.comparisons)
+
+
+async def get_public_price_history_read_service(
+    repositories: Annotated[
+        PublicReadRepositoryProvider,
+        Depends(get_public_read_repositories),
+    ],
+) -> PublicPriceHistoryReadService:
+    """Build a public price-history read service from a request-scoped provider."""
+    return PublicPriceHistoryReadService(repositories.price_history)
+
+
+async def get_public_price_change_read_service(
+    repositories: Annotated[
+        PublicReadRepositoryProvider,
+        Depends(get_public_read_repositories),
+    ],
+) -> PublicPriceChangeReadService:
+    """Build a public price-change read service from a request-scoped provider."""
+    return PublicPriceChangeReadService(repositories.price_changes)
+
+
+async def get_public_category_read_service(
+    repositories: Annotated[
+        PublicReadRepositoryProvider,
+        Depends(get_public_read_repositories),
+    ],
+) -> PublicCategoryReadService:
+    """Build a public category read service from a request-scoped provider."""
+    return PublicCategoryReadService(repositories.categories)
 
 
 async def get_admin_mutation_service(request: Request) -> AdminMutationService:

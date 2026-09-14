@@ -196,6 +196,9 @@ This document tracks only work that is reflected by the current repository state
   or price-difference logic.
 - EPIC 19 Task 5 public price-history read service: application-layer
   delegation for bounded chart points without mutating lifecycle state.
+- EPIC 19 Task 6 public FastAPI route surface: read-only `/api/v1/public`
+  routes for products, offers, comparisons, price history, price changes, and
+  categories with safe unavailable-provider handling.
 
 ## Current Status
 
@@ -220,11 +223,10 @@ construction, enabled integration job registration, one-shot execution,
 periodic execution, safe Scheduler shutdown, and safe polling diagnostics. The
 Market Terminal integration plan is documented and EPIC 19 has started with the
 public consumer DTO, query-contract, product read-service, comparison
-read-service, and price-history read-service foundations. The
+read-service, price-history read-service, and FastAPI route foundations. The
 remaining work before production polling is guarded live operational
 verification and explicit runtime integration configuration; the remaining work
-before visual integration is a buyer-facing query implementation and public
-route layer.
+before visual integration is a buyer-facing query implementation layer.
 
 ## Not Present Yet
 
@@ -232,7 +234,7 @@ route layer.
 - Optional guarded live Telegram test-chat message.
 - Production AI provider integration in the pipeline.
 - Live marketplace credential storage and credential retrieval for execution.
-- Public consumer query implementations and routes for Market Terminal UI.
+- Public consumer query implementations for Market Terminal UI.
 ## Recommended Next EPIC
 
 **Consumer Read API continuation.**

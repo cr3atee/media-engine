@@ -18,6 +18,11 @@ ProductSort = Literal[
     "recently_updated",
 ]
 PriceHistoryPeriod = Literal["7d", "30d", "90d", "1y", "all"]
+OfferSort = Literal["price", "marketplace", "title"]
+PriceHistorySort = Literal["collected_at"]
+PriceChangeSort = Literal["changed_at"]
+CategorySort = Literal["name", "product_count"]
+SortDirection = Literal["asc", "desc"]
 
 
 def _optional_utc_datetime(value: datetime | None) -> datetime | None:
@@ -61,6 +66,7 @@ class PublicProductsQueryParams(ApiModel):
     min_price: Decimal | None = Field(default=None, ge=0)
     max_price: Decimal | None = Field(default=None, ge=0)
     sort: ProductSort = "recently_updated"
+    direction: SortDirection = "desc"
     limit: int | None = Field(default=None, ge=1, le=100)
     cursor: str | None = Field(default=None, max_length=2048)
 
@@ -71,12 +77,33 @@ class PublicProductsQueryParams(ApiModel):
         return self
 
 
+class PublicOffersQueryParams(ApiModel):
+    """Validated filters for public product marketplace offers."""
+
+    marketplace: str | None = Field(default=None, max_length=64)
+    min_price: Decimal | None = Field(default=None, ge=0)
+    max_price: Decimal | None = Field(default=None, ge=0)
+    sort: OfferSort = "price"
+    direction: SortDirection = "asc"
+    limit: int | None = Field(default=None, ge=1, le=100)
+    cursor: str | None = Field(default=None, max_length=2048)
+
+    @model_validator(mode="after")
+    def validate_price_range(self) -> PublicOffersQueryParams:
+        """Reject reversed explicit price ranges."""
+        _validate_decimal_range(self.min_price, self.max_price, "price")
+        return self
+
+
 class PublicPriceHistoryQueryParams(ApiModel):
     """Validated filters for public product price-history charts."""
 
     period: PriceHistoryPeriod = "30d"
     marketplace: str | None = Field(default=None, max_length=64)
+    sort: PriceHistorySort = "collected_at"
+    direction: SortDirection = "asc"
     limit: int | None = Field(default=None, ge=1, le=1000)
+    cursor: str | None = Field(default=None, max_length=2048)
 
 
 class PublicPriceChangesQueryParams(ApiModel):
@@ -86,6 +113,8 @@ class PublicPriceChangesQueryParams(ApiModel):
     product_id: UUID | None = None
     changed_from: datetime | None = None
     changed_to: datetime | None = None
+    sort: PriceChangeSort = "changed_at"
+    direction: SortDirection = "desc"
     limit: int | None = Field(default=None, ge=1, le=100)
     cursor: str | None = Field(default=None, max_length=2048)
 
@@ -97,6 +126,20 @@ class PublicPriceChangesQueryParams(ApiModel):
         """Reject reversed explicit changed-at windows."""
         _validate_datetime_range(self.changed_from, self.changed_to, "changed")
         return self
+
+
+class PublicCategoriesQueryParams(ApiModel):
+    """Validated filters for public category browse lists."""
+
+    search: str | None = Field(
+        default=None,
+        max_length=120,
+        validation_alias=AliasChoices("search", "q"),
+    )
+    sort: CategorySort = "name"
+    direction: SortDirection = "asc"
+    limit: int | None = Field(default=None, ge=1, le=100)
+    cursor: str | None = Field(default=None, max_length=2048)
 
 
 class PublicOfferSummary(ApiModel):

@@ -21,6 +21,9 @@ This document records notable Project Passport updates.
   delegation without duplicating matching, selection, or difference logic.
 - Added EPIC 19 public price-history read service for bounded chart-point
   delegation without mutating lifecycle state.
+- Added EPIC 19 read-only `/api/v1/public` route surface for products, offers,
+  comparisons, price history, latest price changes, and categories, with safe
+  unavailable-provider handling when public query adapters are not wired.
 - Added runtime bootstrap foundation for memory/PostgreSQL repository scope and
   Scheduler construction without changing business services.
 - Added `RuntimeProcess` lifecycle foundation for registering existing Scheduler

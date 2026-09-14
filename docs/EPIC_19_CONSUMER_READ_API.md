@@ -65,8 +65,14 @@ Task 5 is complete for price-history reads: `PublicPriceHistoryReadService`
 delegates to the public price-history query contract and returns bounded chart
 points without mutating lifecycle state.
 
-No public routes, query adapter implementations, or frontend integration have
-been implemented yet.
+Task 6 is complete: read-only `/api/v1/public` routes exist for products,
+product details, product offers, product comparison, product price history,
+latest price changes, and categories. Routes require no seller/admin
+authentication, return explicit public DTOs, and fail safely with
+`public_read_api_unavailable` until a public read repository provider is wired.
+
+No public query adapter implementations or frontend integration have been
+implemented yet.
 
 ## Boundary Rules
 
@@ -362,6 +368,10 @@ Acceptance criteria:
 - Pagination and sorting are bounded.
 - Routes do not require seller/admin authentication unless explicitly changed in
   a future product decision.
+
+Status:
+
+- Complete.
 
 ### Task 7: Saved-Payload UI Readiness Verification
 

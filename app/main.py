@@ -34,12 +34,14 @@ from app.api.routes.admin_publications import (
 )
 from app.api.routes.auth import router as auth_router
 from app.api.routes.health import router as health_router
+from app.api.routes.public import router as public_router
 from app.api.routes.seller_marketplace_integrations import (
     router as seller_marketplace_integrations_router,
 )
 from app.api.routes.seller_workflows import router as seller_workflows_router
 from app.config.settings import AdminApiSettings, AuthSettings, settings
 from app.core.logging import setup_logging
+from app.repositories.public_queries.provider import PublicReadRepositoryScopeFactory
 from app.repositories.queries.provider import (
     ReadRepositoryScopeFactory,
     create_postgres_read_repository_scope,
@@ -55,6 +57,9 @@ def create_app(
     admin_api_settings: AdminApiSettings | None = None,
     auth_settings: AuthSettings | None = None,
     read_repository_scope_factory: ReadRepositoryScopeFactory | None = None,
+    public_read_repository_scope_factory: (
+        PublicReadRepositoryScopeFactory | None
+    ) = None,
     repository_scope_factory: RepositoryScopeFactory | None = None,
 ) -> FastAPI:
     """Create the application with explicit read and command composition roots."""
@@ -68,6 +73,9 @@ def create_app(
     application.state.auth_settings = auth_settings or settings.auth
     application.state.read_repository_scope_factory = (
         read_repository_scope_factory or create_postgres_read_repository_scope()
+    )
+    application.state.public_read_repository_scope_factory = (
+        public_read_repository_scope_factory
     )
     if repository_scope_factory is None:
         from app.database.repository_scope import create_postgres_repository_scope
@@ -89,6 +97,7 @@ def create_app(
     application.add_exception_handler(StarletteHTTPException, http_error_handler)
     application.add_exception_handler(Exception, unexpected_error_handler)
     application.include_router(health_router)
+    application.include_router(public_router)
     application.include_router(admin_mutations_router)
     application.include_router(admin_dashboard_router)
     application.include_router(admin_events_router)

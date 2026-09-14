@@ -23,6 +23,10 @@ from app.repositories.public_queries.models import (
     PublicPriceHistoryQuery,
     PublicProductQuery,
 )
+from app.repositories.public_queries.provider import (
+    PublicReadRepositoryProvider,
+    PublicReadRepositoryScopeFactory,
+)
 
 __all__ = [
     "CategoryRead",
@@ -44,4 +48,6 @@ __all__ = [
     "PublicPriceHistoryQueryRepository",
     "PublicProductQuery",
     "PublicProductQueryRepository",
+    "PublicReadRepositoryProvider",
+    "PublicReadRepositoryScopeFactory",
 ]
