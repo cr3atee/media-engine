@@ -60,3 +60,7 @@ def test_market_terminal_static_assets_are_served() -> None:
     assert "function renderCategories(categories)" in script.text
     assert "function selectCategory(category)" in script.text
     assert "function priceRangeIsValid()" in script.text
+    assert 'window.addEventListener("popstate"' in script.text
+    assert "function restoreLocationState()" in script.text
+    assert "function syncLocationState(mode)" in script.text
+    assert 'syncLocationState("push");' in script.text

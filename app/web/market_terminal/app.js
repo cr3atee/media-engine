@@ -58,6 +58,12 @@ for (const input of [elements.minPriceInput, elements.maxPriceInput]) {
   });
 }
 
+window.addEventListener("popstate", () => {
+  restoreLocationState();
+  void loadDashboard();
+});
+
+restoreLocationState();
 void loadDashboard();
 
 async function loadDashboard() {
@@ -66,7 +72,11 @@ async function loadDashboard() {
   }
   setDashboardBusy(true);
   setApiStatus("Connecting");
-  await Promise.all([loadProducts(""), loadCategories(), loadPriceChanges()]);
+  await Promise.all([
+    loadProducts(elements.searchInput.value.trim()),
+    loadCategories(),
+    loadPriceChanges(),
+  ]);
   setDashboardBusy(false);
   updateSummary();
 }
@@ -75,6 +85,9 @@ async function runProductSearch(search) {
   if (!priceRangeIsValid()) {
     return;
   }
+  elements.searchInput.value = search;
+  state.selectedProductId = null;
+  syncLocationState("replace");
   setDashboardBusy(true);
   await loadProducts(search);
   setDashboardBusy(false);
@@ -82,6 +95,7 @@ async function runProductSearch(search) {
 
 async function loadProducts(search) {
   try {
+    const preferredProductId = state.selectedProductId;
     const query = new URLSearchParams({ limit: "12" });
     const marketplace = elements.marketplaceFilter.value;
     const minPrice = elements.minPriceInput.value.trim();
@@ -116,8 +130,10 @@ async function loadProducts(search) {
     updateSummary();
     setApiStatus("Online");
 
-    if (state.products.length > 0) {
-      await selectProduct(state.products[0].id);
+    if (preferredProductId) {
+      await selectProduct(preferredProductId, false);
+    } else if (state.products.length > 0) {
+      await selectProduct(state.products[0].id, false);
     } else {
       clearProductDetails("No products found");
     }
@@ -135,6 +151,10 @@ async function loadCategories() {
     const payload = await getJson("/categories?limit=10");
     const categories = payload.items ?? [];
     state.categories = categories;
+    state.selectedCategoryCode =
+      categories.find(
+        (category) => category.name === state.selectedCategoryName,
+      )?.code ?? "";
     updateSummary();
     if (categories.length === 0) {
       renderEmpty(elements.categoryList, "No categories available yet.");
@@ -178,13 +198,16 @@ async function loadPriceChanges() {
   }
 }
 
-async function selectProduct(productId) {
+async function selectProduct(productId, updateLocation = true) {
   if (!productId) {
     clearProductDetails("No product selected");
     return;
   }
 
   state.selectedProductId = productId;
+  if (updateLocation) {
+    syncLocationState("push");
+  }
   renderProducts(state.products);
 
   try {
@@ -246,7 +269,7 @@ function renderProducts(products) {
 
 function renderCategories(categories) {
   const disabled = state.isBusy ? " disabled" : "";
-  const allActive = state.selectedCategoryCode ? "" : " active";
+  const allActive = state.selectedCategoryName ? "" : " active";
   const categoryButtons = categories
     .map((category, index) => {
       const active =
@@ -425,6 +448,65 @@ function updateSummary() {
 
 function renderEmpty(target, message) {
   target.innerHTML = `<p class="empty-state">${escapeHtml(message)}</p>`;
+}
+
+function restoreLocationState() {
+  const params = new URLSearchParams(window.location.search);
+  elements.searchInput.value = params.get("q") ?? "";
+  setSelectValue(
+    elements.marketplaceFilter,
+    params.get("marketplace") ?? "",
+    "",
+  );
+
+  const sort = params.get("sort") ?? "recently_updated";
+  const direction = params.get("direction") ?? "desc";
+  setSelectValue(
+    elements.sortFilter,
+    `${sort}:${direction}`,
+    "recently_updated:desc",
+  );
+
+  elements.minPriceInput.value = params.get("min_price") ?? "";
+  elements.maxPriceInput.value = params.get("max_price") ?? "";
+  elements.maxPriceInput.setCustomValidity("");
+  state.selectedCategoryCode = "";
+  state.selectedCategoryName = params.get("category") ?? "";
+  state.selectedProductId = params.get("product");
+}
+
+function syncLocationState(mode) {
+  const url = new URL(window.location.href);
+  const [sort, direction] = elements.sortFilter.value.split(":", 2);
+
+  setUrlParam(url, "q", elements.searchInput.value.trim());
+  setUrlParam(url, "marketplace", elements.marketplaceFilter.value);
+  setUrlParam(url, "category", state.selectedCategoryName);
+  setUrlParam(url, "min_price", elements.minPriceInput.value.trim());
+  setUrlParam(url, "max_price", elements.maxPriceInput.value.trim());
+  setUrlParam(url, "sort", sort === "recently_updated" ? "" : sort);
+  setUrlParam(url, "direction", direction === "desc" ? "" : direction);
+  setUrlParam(url, "product", state.selectedProductId ?? "");
+
+  if (url.href === window.location.href) {
+    return;
+  }
+  window.history[mode === "push" ? "pushState" : "replaceState"]({}, "", url);
+}
+
+function setSelectValue(select, value, fallback) {
+  const isAllowed = Array.from(select.options).some(
+    (option) => option.value === value,
+  );
+  select.value = isAllowed ? value : fallback;
+}
+
+function setUrlParam(url, name, value) {
+  if (value) {
+    url.searchParams.set(name, value);
+  } else {
+    url.searchParams.delete(name);
+  }
 }
 
 function priceRangeIsValid() {

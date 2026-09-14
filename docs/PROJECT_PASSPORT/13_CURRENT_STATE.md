@@ -384,8 +384,9 @@ production AI wiring, and guarded live Telegram verification.
   filtering and catalog sorting now delegate to the existing public product
   query contract instead of duplicating those rules in the browser. Available
   category summaries and optional price bounds are actionable filters through
-  the same contract. Latest price-change and category routes are available, but
-  saved marketplace
+  the same contract. Catalog filters and explicit product selection now use
+  shareable URL state with browser Back/Forward support. Latest price-change
+  and category routes are available, but saved marketplace
   payloads do not contain historical previous snapshots or category fields
   retained by `ParsedOffer`.
   PostgreSQL-specific public query adapter work can be added later only if direct

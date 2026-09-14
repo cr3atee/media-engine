@@ -544,6 +544,24 @@ Status:
 
 - Complete.
 
+### Task 15: Shareable Terminal State
+
+Keep public catalog filters and explicit product selection in the browser URL
+without introducing a frontend router or new backend contracts.
+
+Acceptance criteria:
+
+- Search, marketplace, category, sort, direction, and price bounds survive a
+  page reload.
+- Explicit product selection is addressable through a URL parameter.
+- Browser Back and Forward restore the corresponding public read state.
+- Unknown select values safely fall back to documented defaults.
+- No server-side session, consumer identity, or persistence changes.
+
+Status:
+
+- Complete.
+
 ## Documentation Updates
 
 When this EPIC is implemented, update:

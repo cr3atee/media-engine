@@ -48,6 +48,8 @@ This document records notable Project Passport updates.
   filter with accessible active and reset states.
 - Connected optional minimum and maximum price controls to the existing public
   product filters, retaining API ownership of exact decimal validation.
+- Added shareable Market Terminal URL state for public catalog filters and
+  explicit product selection, including browser Back/Forward restoration.
 - Added runtime bootstrap foundation for memory/PostgreSQL repository scope and
   Scheduler construction without changing business services.
 - Added `RuntimeProcess` lifecycle foundation for registering existing Scheduler
