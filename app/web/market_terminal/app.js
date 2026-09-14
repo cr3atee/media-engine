@@ -549,9 +549,9 @@ function renderHistorySeries(currency, points) {
         ${ordered
           .map((point) => {
             const price = Number(point.price);
-            const height = range === 0 ? 58 : 20 + ((price - lowest) / range) * 80;
+            const heightClass = historyHeightClass(price, lowest, range);
             const label = `${point.marketplace} / ${money(point.price, point.currency)} / ${formatDate(point.collected_at)}`;
-            return `<span class="history-bar" style="height: ${height}%" title="${escapeHtml(label)}" aria-label="${escapeHtml(label)}"></span>`;
+            return `<span class="history-bar ${heightClass}" title="${escapeHtml(label)}" aria-label="${escapeHtml(label)}"></span>`;
           })
           .join("")}
       </div>
@@ -562,6 +562,12 @@ function renderHistorySeries(currency, points) {
       </div>
     </section>
   `;
+}
+
+function historyHeightClass(price, lowest, range) {
+  const height = range === 0 ? 60 : 20 + ((price - lowest) / range) * 80;
+  const step = Math.round(height / 10) * 10;
+  return `history-height-${Math.min(100, Math.max(20, step))}`;
 }
 
 function clearProductDetails(message) {

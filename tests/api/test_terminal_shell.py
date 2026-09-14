@@ -29,6 +29,8 @@ def test_market_terminal_shell_is_served() -> None:
         assert response.headers["x-content-type-options"] == "nosniff"
         assert "default-src 'self'" in response.headers["content-security-policy"]
         assert "frame-ancestors 'none'" in response.headers["content-security-policy"]
+        assert "style-src 'self'" in response.headers["content-security-policy"]
+        assert "'unsafe-inline'" not in response.headers["content-security-policy"]
         assert response.headers["permissions-policy"] == (
             "camera=(), geolocation=(), microphone=()"
         )
@@ -86,6 +88,9 @@ def test_market_terminal_static_assets_are_served() -> None:
     assert "function syncLocationState(mode)" in script.text
     assert 'syncLocationState("push");' in script.text
     assert "function renderHistorySeries(currency, points)" in script.text
+    assert "function historyHeightClass(price, lowest, range)" in script.text
+    assert 'style="height:' not in script.text
+    assert ".history-height-100" in styles.text
     assert "const seriesByCurrency = new Map();" in script.text
     assert "function renderPriceChanges(changes)" in script.text
     assert "void selectProduct(change.product_id);" in script.text

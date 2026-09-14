@@ -736,6 +736,23 @@ Status:
 
 - Complete.
 
+### Task 25: Strict Style Content Security Policy
+
+Remove the remaining inline-style dependency from the price-history visual so
+the embedded terminal no longer requires `style-src 'unsafe-inline'`.
+
+Acceptance criteria:
+
+- Price-history bar heights use a bounded deterministic CSS class scale.
+- The relative low-to-high visual remains available without style attributes.
+- The terminal CSP permits styles only from the same origin.
+- Static shell verification rejects a future `unsafe-inline` regression.
+- No chart dependency, API change, or price-history calculation change.
+
+Status:
+
+- Complete.
+
 ## Deferred Runtime Constraint
 
 The repository-backed public read adapter currently returns bounded first

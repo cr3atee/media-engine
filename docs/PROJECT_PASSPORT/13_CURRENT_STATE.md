@@ -403,7 +403,9 @@ production AI wiring, and guarded live Telegram verification.
   browser response boundary accepts only non-empty JSON objects and replaces
   malformed, HTML, or structurally unknown responses with stable safe errors.
   Dynamic API status, category, price-drop, offer, comparison, and history
-  updates are exposed as polite, named assistive-technology regions.
+  updates are exposed as polite, named assistive-technology regions. The history
+  visual no longer emits style attributes, allowing the terminal document to
+  enforce same-origin styles without the CSP `unsafe-inline` exception.
   Repository-backed public lists remain bounded
   first pages because the shared cursor cannot yet represent every product sort;
   no synthetic offset workaround is used. Saved marketplace
