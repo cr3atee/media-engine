@@ -84,6 +84,9 @@ This document records notable Project Passport updates.
   FastAPI composition root. A temporary PostgreSQL 17 database passed `63/63`
   checks for migrations, persisted saved-marketplace records, terminal/public
   routes, marketplace filters, comparisons, history, and fresh-pool reads.
+- Localized the embedded Market Terminal consumer shell into Russian, including
+  navigation, filters, runtime states, comparison labels, count pluralization,
+  date formatting, and accessibility copy without changing API behavior.
 - Added runtime bootstrap foundation for memory/PostgreSQL repository scope and
   Scheduler construction without changing business services.
 - Added `RuntimeProcess` lifecycle foundation for registering existing Scheduler

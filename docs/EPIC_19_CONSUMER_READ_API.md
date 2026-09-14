@@ -859,6 +859,34 @@ Verification:
 - The same saved marketplace readiness remained GGSEL `60/60/60`, Playerok
   `20/20/20`, and FunPay `1/1/1` for raw/parsed/snapshot-ready records.
 
+### Task 30: Russian Consumer UI Copy
+
+Align the embedded Market Terminal language with the approved Russian consumer
+product brief without changing its visual hierarchy or behavior.
+
+Acceptance criteria:
+
+- The document language, navigation, search, filters, summaries, product detail,
+  empty states, loading states, and accessibility labels use Russian copy.
+- Comparison statuses and unavailable-difference reasons are translated only at
+  the presentation boundary.
+- Russian plural forms are deterministic for offer, marketplace, and history
+  counts.
+- Dates render explicitly with the `ru-RU` locale.
+- Marketplace, product, currency, and other source-owned names remain unchanged.
+- Public API contracts, request flow, repository behavior, and styling remain
+  unchanged.
+
+Status:
+
+- Complete.
+
+Verification:
+
+- `node --check app/web/market_terminal/app.js` passed.
+- Focused terminal shell tests passed: `2 passed`.
+- Saved-payload public UI readiness remained `42/42`.
+
 ## Deferred Runtime Constraint
 
 The repository-backed public read adapter currently returns bounded first

@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en">
+<html lang="ru">
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
@@ -7,20 +7,20 @@
     <link rel="stylesheet" href="/terminal/styles.css" />
   </head>
   <body>
-    <a class="skip-link" href="#products">Skip to product catalog</a>
+    <a class="skip-link" href="#products">Перейти к каталогу товаров</a>
     <main class="shell">
       <header class="topbar glass">
-        <a class="brand" href="/terminal" aria-label="Market Terminal home">
+        <a class="brand" href="/terminal" aria-label="Главная Market Terminal">
           <span class="brand-mark">MT</span>
           <span>
             <strong>Market Terminal</strong>
-            <small>Digital goods price intelligence</small>
+            <small>Сравнение цен на цифровые товары</small>
           </span>
         </a>
-        <nav class="nav" aria-label="Primary navigation">
-          <a href="#products">Products</a>
-          <a href="#changes">Drops</a>
-          <a href="#details">Details</a>
+        <nav class="nav" aria-label="Основная навигация">
+          <a href="#products">Каталог</a>
+          <a href="#changes">Скидки</a>
+          <a href="#details">О товаре</a>
         </nav>
         <span
           class="api-status"
@@ -29,21 +29,21 @@
           aria-live="polite"
           aria-atomic="true"
         >
-          Connecting
+          Подключение
         </span>
       </header>
 
       <section class="hero">
         <div class="hero-copy">
           <p class="eyebrow">GGSEL / Playerok / FunPay</p>
-          <h1>Find the best marketplace price without tab hopping.</h1>
+          <h1>Найдите цифровой товар по лучшей цене.</h1>
           <p class="lead">
-            Market Terminal reads MediaEngine public routes and turns normalized
-            marketplace offers into a calm buyer-facing comparison view.
+            Сравнивайте предложения популярных площадок в одном месте
+            и выбирайте подходящую цену без лишних вкладок.
           </p>
         </div>
         <form class="search glass" id="searchForm">
-          <label for="searchInput">Search product</label>
+          <label for="searchInput">Поиск товара</label>
           <div class="search-row">
             <input
               id="searchInput"
@@ -52,29 +52,29 @@
               placeholder="Minecraft Premium"
               autocomplete="off"
             />
-            <button id="searchButton" type="submit">Search</button>
+            <button id="searchButton" type="submit">Найти</button>
           </div>
           <div class="filter-row">
             <label class="filter-control" for="marketplaceFilter">
-              <span>Marketplace</span>
+              <span>Площадка</span>
               <select id="marketplaceFilter" name="marketplace">
-                <option value="">All marketplaces</option>
+                <option value="">Все площадки</option>
                 <option value="ggsel">GGSEL</option>
                 <option value="playerok">Playerok</option>
                 <option value="funpay">FunPay</option>
               </select>
             </label>
             <label class="filter-control" for="sortFilter">
-              <span>Sort</span>
+              <span>Сортировка</span>
               <select id="sortFilter" name="sort">
-                <option value="recently_updated:desc">Recently updated</option>
-                <option value="price_asc:asc">Lowest price</option>
-                <option value="price_desc:desc">Highest price</option>
-                <option value="name:asc">Product name</option>
+                <option value="recently_updated:desc">Недавно обновлённые</option>
+                <option value="price_asc:asc">Сначала дешевле</option>
+                <option value="price_desc:desc">Сначала дороже</option>
+                <option value="name:asc">По названию</option>
               </select>
             </label>
             <label class="filter-control" for="minPriceInput">
-              <span>Minimum price</span>
+              <span>Цена от</span>
               <input
                 id="minPriceInput"
                 name="min_price"
@@ -86,7 +86,7 @@
               />
             </label>
             <label class="filter-control" for="maxPriceInput">
-              <span>Maximum price</span>
+              <span>Цена до</span>
               <input
                 id="maxPriceInput"
                 name="max_price"
@@ -94,28 +94,28 @@
                 inputmode="decimal"
                 min="0"
                 step="0.01"
-                placeholder="Any"
+                placeholder="Без ограничения"
               />
             </label>
           </div>
         </form>
       </section>
 
-      <section class="metric-strip" aria-label="Current catalog snapshot">
+      <section class="metric-strip" aria-label="Сводка текущего каталога">
         <article class="metric glass">
-          <span class="metric-label">Products in view</span>
+          <span class="metric-label">Товаров показано</span>
           <strong id="productCount">--</strong>
         </article>
         <article class="metric glass">
-          <span class="metric-label">Offers indexed</span>
+          <span class="metric-label">Предложений</span>
           <strong id="offerCount">--</strong>
         </article>
         <article class="metric glass">
-          <span class="metric-label">Categories</span>
+          <span class="metric-label">Категорий</span>
           <strong id="categoryCount">--</strong>
         </article>
         <article class="metric glass">
-          <span class="metric-label">Recent drops</span>
+          <span class="metric-label">Новых скидок</span>
           <strong id="dropCount">--</strong>
         </article>
       </section>
@@ -129,11 +129,11 @@
         >
           <div class="panel-heading">
             <span>
-              <p class="eyebrow">Public catalog</p>
-              <h2 id="catalogTitle">Product cards</h2>
+              <p class="eyebrow">Открытый каталог</p>
+              <h2 id="catalogTitle">Популярные товары</h2>
             </span>
             <button class="ghost-button" id="refreshButton" type="button">
-              Refresh
+              Обновить
             </button>
           </div>
           <div class="product-grid" id="productGrid" aria-live="polite"></div>
@@ -142,8 +142,8 @@
         <aside class="panel glass side-panel">
           <div class="panel-heading">
             <span>
-              <p class="eyebrow">Browse</p>
-              <h2>Categories</h2>
+              <p class="eyebrow">Навигация</p>
+              <h2>Категории</h2>
             </span>
           </div>
           <div
@@ -154,8 +154,8 @@
 
           <div class="panel-heading compact" id="changes">
             <span>
-              <p class="eyebrow">Latest</p>
-              <h2>Price drops</h2>
+              <p class="eyebrow">Последние</p>
+              <h2>Снижения цен</h2>
             </span>
           </div>
           <div
@@ -174,14 +174,14 @@
       >
         <div class="panel-heading">
           <span>
-            <p class="eyebrow">Selected product</p>
-            <h2 id="detailTitle" tabindex="-1">Choose a product</h2>
+            <p class="eyebrow">Выбранный товар</p>
+            <h2 id="detailTitle" tabindex="-1">Выберите товар</h2>
           </span>
-          <span class="soft-label" id="detailMeta">No selection yet</span>
+          <span class="soft-label" id="detailMeta">Товар пока не выбран</span>
         </div>
         <div class="detail-grid">
           <div>
-            <h3 id="offerListTitle">Marketplace offers</h3>
+            <h3 id="offerListTitle">Предложения площадок</h3>
             <div
               class="offer-list"
               id="offerList"
@@ -191,7 +191,7 @@
             ></div>
           </div>
           <div>
-            <h3 id="comparisonTitle">Comparison</h3>
+            <h3 id="comparisonTitle">Сравнение</h3>
             <div
               class="comparison-card"
               id="comparisonCard"
@@ -201,7 +201,7 @@
             ></div>
           </div>
           <div>
-            <h3 id="historyTitle">Price history</h3>
+            <h3 id="historyTitle">История цены</h3>
             <div
               class="history-card"
               id="historyCard"

@@ -78,7 +78,7 @@ async function loadDashboard() {
   }
   const requestVersion = beginCatalogRequest();
   setDashboardBusy(true);
-  setApiStatus("Connecting");
+  setApiStatus("Подключение");
   await Promise.all([
     loadProducts(elements.searchInput.value.trim(), requestVersion),
     loadCategories(),
@@ -144,14 +144,14 @@ async function loadProducts(search, requestVersion) {
     );
     renderProducts(state.products);
     updateSummary();
-    setApiStatus("Online");
+    setApiStatus("Подключено");
 
     if (preferredProductId) {
       await selectProduct(preferredProductId, false);
     } else if (state.products.length > 0) {
       await selectProduct(state.products[0].id, false);
     } else {
-      clearProductDetails("No products found");
+      clearProductDetails("Товары не найдены");
     }
   } catch (error) {
     if (!isCurrentCatalogRequest(requestVersion)) {
@@ -159,9 +159,9 @@ async function loadProducts(search, requestVersion) {
     }
     state.products = [];
     updateSummary();
-    setApiStatus("API unavailable", true);
+    setApiStatus("API недоступен", true);
     renderEmpty(elements.productGrid, errorMessage(error));
-    clearProductDetails("Public API unavailable");
+    clearProductDetails("Данные временно недоступны");
   }
 }
 
@@ -189,7 +189,7 @@ async function loadCategories() {
       )?.code ?? "";
     updateSummary();
     if (categories.length === 0) {
-      renderEmpty(elements.categoryList, "No categories available yet.");
+      renderEmpty(elements.categoryList, "Категории пока недоступны.");
       return;
     }
     renderCategories(categories);
@@ -223,7 +223,7 @@ async function loadPriceChanges() {
     state.priceChanges = changes;
     updateSummary();
     if (changes.length === 0) {
-      renderEmpty(elements.changeList, "No price drops available yet.");
+      renderEmpty(elements.changeList, "Снижений цены пока нет.");
       return;
     }
     renderPriceChanges(changes);
@@ -250,7 +250,7 @@ async function selectProduct(productId, updateLocation = true) {
   if (!productId) {
     state.detailRequestVersion += 1;
     state.selectedProductId = null;
-    clearProductDetails("No product selected");
+    clearProductDetails("Товар не выбран");
     return;
   }
 
@@ -281,25 +281,25 @@ async function selectProduct(productId, updateLocation = true) {
       offers,
       elements.offerList,
       (payload) => renderOffers(payload.items ?? []),
-      "Offers unavailable",
+      "Предложения недоступны",
     );
     renderDetailResult(
       comparison,
       elements.comparisonCard,
       renderComparison,
-      "Comparison unavailable",
+      "Сравнение недоступно",
     );
     renderDetailResult(
       history,
       elements.historyCard,
       (payload) => renderHistory(payload.items ?? []),
-      "Price history unavailable",
+      "История цены недоступна",
     );
   } catch (error) {
     if (!isCurrentDetailRequest(requestVersion, productId)) {
       return;
     }
-    clearProductDetails("Product details unavailable");
+    clearProductDetails("Информация о товаре недоступна");
     renderEmpty(elements.offerList, errorMessage(error));
   } finally {
     if (isCurrentDetailRequest(requestVersion, productId)) {
@@ -314,8 +314,13 @@ function renderDetailSummary(result, productId) {
     elements.detailTitle.textContent = detail.name;
     elements.detailMeta.textContent = [
       detail.category,
-      `${detail.offer_count} offers`,
-      `${detail.marketplace_count} marketplaces`,
+      countLabel(detail.offer_count, "предложение", "предложения", "предложений"),
+      countLabel(
+        detail.marketplace_count,
+        "площадка",
+        "площадки",
+        "площадок",
+      ),
     ]
       .filter(Boolean)
       .join(" / ");
@@ -324,9 +329,9 @@ function renderDetailSummary(result, productId) {
 
   const product = state.products.find((item) => item.id === productId);
   elements.detailTitle.textContent =
-    product?.name ?? "Product details unavailable";
+    product?.name ?? "Информация о товаре недоступна";
   elements.detailMeta.textContent =
-    `Product summary unavailable: ${errorMessage(result.reason)}`;
+    `Краткая информация недоступна: ${errorMessage(result.reason)}`;
 }
 
 function renderDetailResult(result, target, renderer, unavailableLabel) {
@@ -339,11 +344,11 @@ function renderDetailResult(result, target, renderer, unavailableLabel) {
 
 function prepareProductDetails(productId) {
   const product = state.products.find((item) => item.id === productId);
-  elements.detailTitle.textContent = product?.name ?? "Loading product";
-  elements.detailMeta.textContent = "Loading marketplace data";
-  renderEmpty(elements.offerList, "Loading offers...");
-  renderEmpty(elements.comparisonCard, "Loading comparison...");
-  renderEmpty(elements.historyCard, "Loading price history...");
+  elements.detailTitle.textContent = product?.name ?? "Загрузка товара";
+  elements.detailMeta.textContent = "Загружаем данные площадок";
+  renderEmpty(elements.offerList, "Загружаем предложения...");
+  renderEmpty(elements.comparisonCard, "Готовим сравнение...");
+  renderEmpty(elements.historyCard, "Загружаем историю цены...");
   setProductDetailsBusy(true);
 }
 
@@ -360,7 +365,7 @@ function setProductDetailsBusy(isBusy) {
 
 function renderProducts(products) {
   if (products.length === 0) {
-    renderEmpty(elements.productGrid, "No public products available yet.");
+    renderEmpty(elements.productGrid, "Товары пока недоступны.");
     return;
   }
 
@@ -375,8 +380,8 @@ function renderProducts(products) {
             <strong>${escapeHtml(product.name)}</strong>
           </span>
           <span>
-            <span class="price">${bestOffer ? moneyHtml(bestOffer.price, bestOffer.currency) : "No price"}</span>
-            <small>${escapeHtml(product.offer_count)} offers / ${escapeHtml(product.marketplace_count)} markets</small>
+            <span class="price">${bestOffer ? moneyHtml(bestOffer.price, bestOffer.currency) : "Цена не указана"}</span>
+            <small>${escapeHtml(countLabel(product.offer_count, "предложение", "предложения", "предложений"))} / ${escapeHtml(countLabel(product.marketplace_count, "площадка", "площадки", "площадок"))}</small>
           </span>
         </button>
       `;
@@ -420,8 +425,8 @@ function renderCategories(categories) {
       aria-pressed="${String(Boolean(allActive))}"
       ${disabled}
     >
-      <strong>All products</strong>
-      <small>Reset</small>
+      <strong>Все товары</strong>
+      <small>Сбросить</small>
     </button>
     ${categoryButtons}
   `;
@@ -458,7 +463,7 @@ function renderPriceChanges(changes) {
           class="change change-action"
           type="button"
           data-change-index="${index}"
-          aria-label="View ${escapeHtml(change.product_name)} comparison"
+          aria-label="Открыть сравнение для ${escapeHtml(change.product_name)}"
           ${disabled}
         >
           ${content}
@@ -489,7 +494,7 @@ function selectCategory(category) {
 
 function renderOffers(offers) {
   if (offers.length === 0) {
-    renderEmpty(elements.offerList, "No marketplace offers for this product yet.");
+    renderEmpty(elements.offerList, "Для этого товара пока нет предложений.");
     return;
   }
 
@@ -499,8 +504,8 @@ function renderOffers(offers) {
         <a class="offer-row" href="${escapeAttribute(offer.url ?? "#")}" target="_blank" rel="noopener noreferrer">
           <span>
             <span class="marketplace">${escapeHtml(offer.marketplace)}</span>
-            <strong>${escapeHtml(offer.title ?? "Untitled offer")}</strong>
-            <small>${escapeHtml(offer.seller_name ?? "Seller unknown")}</small>
+            <strong>${escapeHtml(offer.title ?? "Предложение без названия")}</strong>
+            <small>${escapeHtml(offer.seller_name ?? "Продавец не указан")}</small>
           </span>
           <span class="price">${moneyHtml(offer.price, offer.currency)}</span>
         </a>
@@ -511,14 +516,14 @@ function renderOffers(offers) {
 
 function renderComparison(comparison) {
   if (!comparison.best_offer) {
-    renderEmpty(elements.comparisonCard, "No comparable prices for this product yet.");
+    renderEmpty(elements.comparisonCard, "Сопоставимых цен пока нет.");
     return;
   }
 
   const differences = comparison.differences ?? [];
   elements.comparisonCard.innerHTML = `
-    <p class="eyebrow">${escapeHtml(comparison.status)}</p>
-    <h3>Best offer</h3>
+    <p class="eyebrow">${escapeHtml(comparisonStatusLabel(comparison.status))}</p>
+    <h3>Лучшее предложение</h3>
     <p class="price">${moneyHtml(comparison.best_offer.price, comparison.best_offer.currency)}</p>
     <p>${escapeHtml(comparison.best_offer.marketplace)} / ${escapeHtml(comparison.best_offer.title ?? "")}</p>
     ${
@@ -535,20 +540,20 @@ function renderComparison(comparison) {
               )
               .join("")}
           </div>`
-        : '<p class="soft-label">Only one comparable offer.</p>'
+        : '<p class="soft-label">Доступно только одно сопоставимое предложение.</p>'
     }
   `;
 }
 
 function renderHistory(points) {
   if (points.length === 0) {
-    renderEmpty(elements.historyCard, "No price history points yet.");
+    renderEmpty(elements.historyCard, "История цены пока не накоплена.");
     return;
   }
 
   const seriesByCurrency = new Map();
   for (const point of points) {
-    const currency = point.currency || "Unknown";
+    const currency = point.currency || "Валюта не указана";
     const series = seriesByCurrency.get(currency) ?? [];
     series.push(point);
     seriesByCurrency.set(currency, series);
@@ -578,9 +583,9 @@ function renderHistorySeries(currency, points) {
     <section class="history-series">
       <header class="history-heading">
         <strong>${escapeHtml(currency)}</strong>
-        <small>${escapeHtml(ordered.length)} points / ${escapeHtml(marketplaces)} markets</small>
+        <small>${escapeHtml(countLabel(ordered.length, "точка", "точки", "точек"))} / ${escapeHtml(countLabel(marketplaces, "площадка", "площадки", "площадок"))}</small>
       </header>
-      <div class="history-bars" aria-label="${escapeHtml(`${currency} price history`)}">
+      <div class="history-bars" aria-label="${escapeHtml(`История цены в ${currency}`)}">
         ${ordered
           .map((point) => {
             const price = Number(point.price);
@@ -591,9 +596,9 @@ function renderHistorySeries(currency, points) {
           .join("")}
       </div>
       <div class="history-stats">
-        <span><small>Low</small><strong>${moneyHtml(lowestPoint.price, currency)}</strong></span>
-        <span><small>High</small><strong>${moneyHtml(highestPoint.price, currency)}</strong></span>
-        <span><small>Latest</small><strong>${moneyHtml(latest.price, currency)}</strong></span>
+        <span><small>Минимум</small><strong>${moneyHtml(lowestPoint.price, currency)}</strong></span>
+        <span><small>Максимум</small><strong>${moneyHtml(highestPoint.price, currency)}</strong></span>
+        <span><small>Сейчас</small><strong>${moneyHtml(latest.price, currency)}</strong></span>
       </div>
     </section>
   `;
@@ -607,10 +612,10 @@ function historyHeightClass(price, lowest, range) {
 
 function clearProductDetails(message) {
   elements.detailTitle.textContent = message;
-  elements.detailMeta.textContent = "Waiting for public data";
-  renderEmpty(elements.offerList, "Select a product when data is available.");
-  renderEmpty(elements.comparisonCard, "Comparison will appear here.");
-  renderEmpty(elements.historyCard, "History will appear here.");
+  elements.detailMeta.textContent = "Ожидаем данные";
+  renderEmpty(elements.offerList, "Выберите доступный товар.");
+  renderEmpty(elements.comparisonCard, "Здесь появится сравнение.");
+  renderEmpty(elements.historyCard, "Здесь появится история цены.");
   setProductDetailsBusy(false);
 }
 
@@ -635,12 +640,12 @@ async function getJson(path) {
       throw new Error(publicApiErrorMessage(body, response.status));
     }
     if (body === null) {
-      throw new Error("Public API returned an invalid response.");
+      throw new Error("Сервис вернул некорректный ответ.");
     }
     return body;
   } catch (error) {
     if (controller.signal.aborted) {
-      throw new Error("Request timed out. Please try again.");
+      throw new Error("Время ожидания истекло. Попробуйте ещё раз.");
     }
     throw error;
   } finally {
@@ -674,7 +679,7 @@ function publicApiErrorMessage(body, status) {
       return value.trim();
     }
   }
-  return `Public API request failed (${status}).`;
+  return `Не удалось получить данные (ошибка ${status}).`;
 }
 
 function setApiStatus(label, isError = false) {
@@ -697,7 +702,7 @@ function setDashboardBusy(isBusy) {
   for (const button of elements.changeList.querySelectorAll(".change-action")) {
     button.disabled = isBusy;
   }
-  elements.refreshButton.textContent = isBusy ? "Loading" : "Refresh";
+  elements.refreshButton.textContent = isBusy ? "Загрузка" : "Обновить";
 }
 
 function updateSummary() {
@@ -789,7 +794,7 @@ function priceRangeIsValid() {
 
   if (minPrice && maxPrice && Number(minPrice) > Number(maxPrice)) {
     elements.maxPriceInput.setCustomValidity(
-      "Maximum price must be greater than or equal to minimum price.",
+      "Максимальная цена должна быть не меньше минимальной.",
     );
     elements.maxPriceInput.reportValidity();
     return false;
@@ -799,13 +804,13 @@ function priceRangeIsValid() {
 
 function catalogTitle(search, marketplace, category) {
   if (search) {
-    return `Results for "${search}"`;
+    return `Результаты по запросу «${search}»`;
   }
   const filters = [category, marketplaceLabel(marketplace)].filter(Boolean);
   if (filters.length > 0) {
-    return `${filters.join(" / ")} products`;
+    return `Товары: ${filters.join(" / ")}`;
   }
-  return "Product cards";
+  return "Популярные товары";
 }
 
 function marketplaceLabel(value) {
@@ -819,9 +824,43 @@ function marketplaceLabel(value) {
   }[value] ?? value;
 }
 
+function comparisonStatusLabel(status) {
+  return {
+    complete: "Сравнение готово",
+    partial: "Частичное сравнение",
+    currency_mismatch: "Цены в разных валютах",
+    no_valid_prices: "Нет доступных цен",
+    unmatched: "Товар не сопоставлен",
+  }[status] ?? status;
+}
+
+function differenceReasonLabel(reason) {
+  return {
+    "best offer price unavailable": "Цена лучшего предложения недоступна",
+    "best price is zero": "Лучшая цена равна нулю",
+    "currency mismatch": "Цена указана в другой валюте",
+    "price unavailable": "Цена недоступна",
+  }[reason] ?? "Сравнение недоступно";
+}
+
+function countLabel(value, one, few, many) {
+  const count = Number(value);
+  const modulo100 = Math.abs(count) % 100;
+  const modulo10 = modulo100 % 10;
+  let label = many;
+  if (modulo100 < 11 || modulo100 > 14) {
+    if (modulo10 === 1) {
+      label = one;
+    } else if (modulo10 >= 2 && modulo10 <= 4) {
+      label = few;
+    }
+  }
+  return `${count} ${label}`;
+}
+
 function money(value, currency) {
   if (value === null || value === undefined) {
-    return "No price";
+    return "Цена не указана";
   }
   return `${String(value)} ${currency ?? ""}`.trim();
 }
@@ -840,7 +879,7 @@ function differenceLabel(difference) {
       difference.offer.currency,
     )}`;
   }
-  return difference.reason ?? "n/a";
+  return differenceReasonLabel(difference.reason);
 }
 
 function formatPercent(value) {
@@ -850,9 +889,9 @@ function formatPercent(value) {
 function formatDate(value) {
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) {
-    return "Unknown date";
+    return "Дата не указана";
   }
-  return new Intl.DateTimeFormat(undefined, {
+  return new Intl.DateTimeFormat("ru-RU", {
     day: "2-digit",
     month: "short",
     year: "numeric",
@@ -870,7 +909,9 @@ function initials(value) {
 }
 
 function errorMessage(error) {
-  return error instanceof Error ? error.message : "Unexpected public API error.";
+  return error instanceof Error
+    ? error.message
+    : "Не удалось получить данные. Попробуйте ещё раз.";
 }
 
 function escapeHtml(value) {

@@ -34,7 +34,14 @@ def test_market_terminal_shell_is_served() -> None:
         assert response.headers["permissions-policy"] == (
             "camera=(), geolocation=(), microphone=()"
         )
+        assert '<html lang="ru">' in response.text
         assert "Market Terminal" in response.text
+        assert "Найдите цифровой товар по лучшей цене." in response.text
+        assert "Сравнивайте предложения популярных площадок" in response.text
+        assert ">Каталог</a>" in response.text
+        assert ">Скидки</a>" in response.text
+        assert ">Найти</button>" in response.text
+        assert "Find the best marketplace price" not in response.text
         assert "/terminal/styles.css" in response.text
         assert "/terminal/app.js" in response.text
         assert 'id="productCount"' in response.text
@@ -122,11 +129,18 @@ def test_market_terminal_static_assets_are_served() -> None:
     assert "const controller = new AbortController();" in script.text
     assert "signal: controller.signal" in script.text
     assert "window.clearTimeout(timeoutId);" in script.text
-    assert "Request timed out. Please try again." in script.text
+    assert "Время ожидания истекло. Попробуйте ещё раз." in script.text
     assert "function parsePublicJson(text, contentType)" in script.text
     assert "function isJsonContentType(contentType)" in script.text
     assert "function publicApiErrorMessage(body, status)" in script.text
-    assert "Public API returned an invalid response." in script.text
+    assert "Сервис вернул некорректный ответ." in script.text
+    assert "function comparisonStatusLabel(status)" in script.text
+    assert 'complete: "Сравнение готово"' in script.text
+    assert "function differenceReasonLabel(reason)" in script.text
+    assert "function countLabel(value, one, few, many)" in script.text
+    assert 'new Intl.DateTimeFormat("ru-RU"' in script.text
+    assert '"No products found"' not in script.text
+    assert '"Loading offers..."' not in script.text
     assert "response.statusText" not in script.text
     assert ".skip-link:focus" in styles.text
     assert "#detailTitle:focus-visible" in styles.text

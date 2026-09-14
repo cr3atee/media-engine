@@ -216,6 +216,10 @@ This document tracks only work that is reflected by the current repository state
   composition root serves persisted GGSEL, Playerok, and FunPay examples after
   clean migration to `0014_scheduler_leases`, including fresh-pool restart
   reads; `63/63` checks pass.
+- EPIC 19 Task 30 Russian consumer UI copy: the embedded terminal now presents
+  Russian navigation, search, filters, summaries, states, comparison labels,
+  history labels, dates, and accessibility copy while preserving source-owned
+  marketplace and product names.
 
 ## Current Status
 

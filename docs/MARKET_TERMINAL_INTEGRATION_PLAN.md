@@ -307,6 +307,7 @@ for those flows is explicitly completed.
 7. Decide whether category browse must require parser/category retention before
    public UI launch.
 8. Replace frontend mock data incrementally with MediaEngine API responses.
+   Done for the embedded shell.
 
 ## Current Embedded Shell
 
@@ -317,6 +318,8 @@ The shell:
 - consumes only `/api/v1/public` routes;
 - shows product cards, offers, comparison, price history, categories, and latest
   price drops when those read models contain data;
+- presents shell-owned navigation, controls, states, and accessibility copy in
+  Russian while preserving source-owned product and marketplace names;
 - uses a dependency-free static HTML/CSS/JS layer;
 - is an integration shell for validating the backend-to-visual contract, not the
   final production frontend.

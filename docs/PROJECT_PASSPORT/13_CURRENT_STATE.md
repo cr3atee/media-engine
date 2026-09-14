@@ -358,6 +358,9 @@ production AI wiring, and guarded live Telegram verification.
   `63/63` checks pass for migrated schema, persisted saved-marketplace examples,
   terminal delivery, public products, offers, comparisons, price history,
   marketplace filters, and fresh-pool restart reads.
+- EPIC 19 Task 30 localizes the embedded consumer shell into Russian, including
+  dynamic loading, empty, failure, comparison, count, date, and accessibility
+  copy without changing public API or marketplace data.
 
 ## Known Gaps
 
@@ -420,6 +423,8 @@ production AI wiring, and guarded live Telegram verification.
   The PostgreSQL-backed verifier additionally passes `63/63` checks through the
   default FastAPI composition root at Alembic head `0014_scheduler_leases`,
   including committed repository rows and reads after engine-pool recreation.
+  Shell-owned consumer copy is now Russian; marketplace, product, and currency
+  names continue to be rendered exactly as supplied by public data.
   Repository-backed public lists remain bounded
   first pages because the shared cursor cannot yet represent every product sort;
   no synthetic offset workaround is used. Saved marketplace
