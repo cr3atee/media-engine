@@ -399,7 +399,9 @@ production AI wiring, and guarded live Telegram verification.
   comparison, and history failures are isolated so successful detail sections
   remain available during a partial public API failure. All browser requests to
   the public API now share a bounded timeout with deterministic cleanup and a
-  readable retry-oriented error instead of allowing indefinite loading.
+  readable retry-oriented error instead of allowing indefinite loading. The
+  browser response boundary accepts only non-empty JSON objects and replaces
+  malformed, HTML, or structurally unknown responses with stable safe errors.
   Repository-backed public lists remain bounded
   first pages because the shared cursor cannot yet represent every product sort;
   no synthetic offset workaround is used. Saved marketplace

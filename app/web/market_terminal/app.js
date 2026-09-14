@@ -586,10 +586,15 @@ async function getJson(path) {
       signal: controller.signal,
     });
     const text = await response.text();
-    const body = text ? JSON.parse(text) : {};
+    const body = parsePublicJson(
+      text,
+      response.headers.get("content-type") ?? "",
+    );
     if (!response.ok) {
-      const detail = body.error?.message ?? body.detail ?? response.statusText;
-      throw new Error(detail);
+      throw new Error(publicApiErrorMessage(body, response.status));
+    }
+    if (body === null) {
+      throw new Error("Public API returned an invalid response.");
     }
     return body;
   } catch (error) {
@@ -600,6 +605,35 @@ async function getJson(path) {
   } finally {
     window.clearTimeout(timeoutId);
   }
+}
+
+function parsePublicJson(text, contentType) {
+  if (!text || !isJsonContentType(contentType)) {
+    return null;
+  }
+  try {
+    const body = JSON.parse(text);
+    if (!body || typeof body !== "object" || Array.isArray(body)) {
+      return null;
+    }
+    return body;
+  } catch {
+    return null;
+  }
+}
+
+function isJsonContentType(contentType) {
+  const mediaType = contentType.split(";", 1)[0].trim().toLowerCase();
+  return mediaType === "application/json" || mediaType.endsWith("+json");
+}
+
+function publicApiErrorMessage(body, status) {
+  for (const value of [body?.error?.message, body?.detail]) {
+    if (typeof value === "string" && value.trim()) {
+      return value.trim();
+    }
+  }
+  return `Public API request failed (${status}).`;
 }
 
 function setApiStatus(label, isError = false) {

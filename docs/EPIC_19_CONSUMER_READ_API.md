@@ -696,6 +696,28 @@ Status:
 
 - Complete.
 
+### Task 23: Safe Public JSON Response Boundary
+
+Keep proxy failures and malformed public responses from leaking low-level parse
+errors into the buyer interface.
+
+Acceptance criteria:
+
+- Successful public responses must contain a non-empty JSON object and a JSON or
+  structured-suffix JSON content type.
+- Empty, malformed, array, primitive, and non-JSON success responses fail with a
+  stable public-facing message.
+- HTTP errors reuse only non-empty string messages from the documented JSON error
+  shapes.
+- Non-JSON and structurally unknown HTTP errors use a status-based fallback and
+  never reflect an HTML response body or browser status text.
+- Timeout classification and timer cleanup remain unchanged.
+- No response-schema duplication, backend behavior change, or new dependency.
+
+Status:
+
+- Complete.
+
 ## Deferred Runtime Constraint
 
 The repository-backed public read adapter currently returns bounded first

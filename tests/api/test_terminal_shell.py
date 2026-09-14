@@ -98,3 +98,8 @@ def test_market_terminal_static_assets_are_served() -> None:
     assert "signal: controller.signal" in script.text
     assert "window.clearTimeout(timeoutId);" in script.text
     assert "Request timed out. Please try again." in script.text
+    assert "function parsePublicJson(text, contentType)" in script.text
+    assert "function isJsonContentType(contentType)" in script.text
+    assert "function publicApiErrorMessage(body, status)" in script.text
+    assert "Public API returned an invalid response." in script.text
+    assert "response.statusText" not in script.text
