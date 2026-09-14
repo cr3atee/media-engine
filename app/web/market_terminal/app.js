@@ -28,6 +28,9 @@ const state = {
   categories: [],
   priceChanges: [],
   selectedProductId: null,
+  selectedCategoryCode: "",
+  selectedCategoryName: "",
+  isBusy: false,
 };
 
 elements.searchForm.addEventListener("submit", (event) => {
@@ -74,12 +77,19 @@ async function loadProducts(search) {
     if (marketplace) {
       query.set("marketplace", marketplace);
     }
+    if (state.selectedCategoryName) {
+      query.set("category", state.selectedCategoryName);
+    }
     query.set("sort", sort);
     query.set("direction", direction);
 
     const payload = await getJson(`/products?${query.toString()}`);
     state.products = payload.items ?? [];
-    elements.catalogTitle.textContent = catalogTitle(search, marketplace);
+    elements.catalogTitle.textContent = catalogTitle(
+      search,
+      marketplace,
+      state.selectedCategoryName,
+    );
     renderProducts(state.products);
     updateSummary();
     setApiStatus("Online");
@@ -108,16 +118,7 @@ async function loadCategories() {
       renderEmpty(elements.categoryList, "No categories available yet.");
       return;
     }
-    elements.categoryList.innerHTML = categories
-      .map(
-        (category) => `
-          <span class="pill">
-            <strong>${escapeHtml(category.name)}</strong>
-            <small>${category.product_count}</small>
-          </span>
-        `,
-      )
-      .join("");
+    renderCategories(categories);
   } catch (error) {
     state.categories = [];
     updateSummary();
@@ -219,6 +220,57 @@ function renderProducts(products) {
       void selectProduct(card.dataset.productId ?? null);
     });
   }
+}
+
+function renderCategories(categories) {
+  const disabled = state.isBusy ? " disabled" : "";
+  const allActive = state.selectedCategoryCode ? "" : " active";
+  const categoryButtons = categories
+    .map((category, index) => {
+      const active =
+        category.code === state.selectedCategoryCode ? " active" : "";
+      return `
+        <button
+          class="pill category-filter${active}"
+          type="button"
+          data-category-index="${index}"
+          aria-pressed="${String(Boolean(active))}"
+          ${disabled}
+        >
+          <strong>${escapeHtml(category.name)}</strong>
+          <small>${category.product_count}</small>
+        </button>
+      `;
+    })
+    .join("");
+
+  elements.categoryList.innerHTML = `
+    <button
+      class="pill category-filter${allActive}"
+      type="button"
+      data-category-index="-1"
+      aria-pressed="${String(Boolean(allActive))}"
+      ${disabled}
+    >
+      <strong>All products</strong>
+      <small>Reset</small>
+    </button>
+    ${categoryButtons}
+  `;
+
+  for (const button of elements.categoryList.querySelectorAll(".category-filter")) {
+    button.addEventListener("click", () => {
+      const index = Number(button.dataset.categoryIndex);
+      selectCategory(index >= 0 ? categories[index] : null);
+    });
+  }
+}
+
+function selectCategory(category) {
+  state.selectedCategoryCode = category?.code ?? "";
+  state.selectedCategoryName = category?.name ?? "";
+  renderCategories(state.categories);
+  void runProductSearch(elements.searchInput.value.trim());
 }
 
 function renderOffers(offers) {
@@ -323,11 +375,15 @@ function setApiStatus(label, isError = false) {
 }
 
 function setDashboardBusy(isBusy) {
+  state.isBusy = isBusy;
   document.querySelector(".shell").setAttribute("aria-busy", String(isBusy));
   elements.refreshButton.disabled = isBusy;
   elements.searchButton.disabled = isBusy;
   elements.marketplaceFilter.disabled = isBusy;
   elements.sortFilter.disabled = isBusy;
+  for (const button of elements.categoryList.querySelectorAll(".category-filter")) {
+    button.disabled = isBusy;
+  }
   elements.refreshButton.textContent = isBusy ? "Loading" : "Refresh";
 }
 
@@ -347,17 +403,21 @@ function renderEmpty(target, message) {
   target.innerHTML = `<p class="empty-state">${escapeHtml(message)}</p>`;
 }
 
-function catalogTitle(search, marketplace) {
+function catalogTitle(search, marketplace, category) {
   if (search) {
     return `Results for "${search}"`;
   }
-  if (marketplace) {
-    return `${marketplaceLabel(marketplace)} products`;
+  const filters = [category, marketplaceLabel(marketplace)].filter(Boolean);
+  if (filters.length > 0) {
+    return `${filters.join(" / ")} products`;
   }
   return "Product cards";
 }
 
 function marketplaceLabel(value) {
+  if (!value) {
+    return "";
+  }
   return {
     ggsel: "GGSEL",
     playerok: "Playerok",

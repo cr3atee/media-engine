@@ -489,6 +489,37 @@ h3 {
   color: var(--soft);
 }
 
+.category-filter {
+  width: 100%;
+  cursor: pointer;
+  align-items: center;
+  text-align: left;
+  transition:
+    border-color 180ms ease,
+    background 180ms ease,
+    transform 180ms ease;
+}
+
+.category-filter:hover,
+.category-filter.active {
+  border-color: rgba(103, 217, 196, 0.58);
+  background: rgba(103, 217, 196, 0.12);
+}
+
+.category-filter:hover {
+  transform: translateX(2px);
+}
+
+.category-filter:disabled {
+  cursor: wait;
+  opacity: 0.58;
+  transform: none;
+}
+
+.category-filter small {
+  color: var(--muted);
+}
+
 .change strong,
 .offer-row strong {
   display: block;

@@ -382,7 +382,8 @@ production AI wiring, and guarded live Telegram verification.
   runtime summary of products, offers, categories, and recent price drops from
   those existing responses, with explicit request busy states. Marketplace
   filtering and catalog sorting now delegate to the existing public product
-  query contract instead of duplicating those rules in the browser. Latest
+  query contract instead of duplicating those rules in the browser. Available
+  category summaries are actionable filters through the same contract. Latest
   price-change and category routes are available, but saved marketplace
   payloads do not contain historical previous snapshots or category fields
   retained by `ParsedOffer`.

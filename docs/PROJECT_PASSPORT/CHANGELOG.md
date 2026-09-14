@@ -44,6 +44,8 @@ This document records notable Project Passport updates.
 - Connected Market Terminal marketplace filtering and catalog sorting to the
   existing public product query parameters without adding frontend-owned
   comparison logic.
+- Connected category summary controls to the existing public product category
+  filter with accessible active and reset states.
 - Added runtime bootstrap foundation for memory/PostgreSQL repository scope and
   Scheduler construction without changing business services.
 - Added `RuntimeProcess` lifecycle foundation for registering existing Scheduler

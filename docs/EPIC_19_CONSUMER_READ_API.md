@@ -510,6 +510,23 @@ Status:
 
 - Complete.
 
+### Task 13: Category Browse Interaction
+
+Connect category summaries to the existing public product category filter.
+
+Acceptance criteria:
+
+- Available categories are rendered as accessible filter buttons.
+- Selecting a category reloads products through the documented `category`
+  query parameter.
+- The active category is visible and can be reset without a page reload.
+- Category controls share the existing request busy state.
+- No category inference, parser changes, or frontend-owned matching logic.
+
+Status:
+
+- Complete.
+
 ## Documentation Updates
 
 When this EPIC is implemented, update:
