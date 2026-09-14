@@ -96,8 +96,10 @@ consumer-facing read boundary.
 
 Important gaps:
 
-- Dedicated public/consumer route contracts exist for homepage/search/product
-  pages, but public query adapter implementations are not complete yet.
+- Dedicated public/consumer route contracts and a repository-backed public read
+  adapter exist for homepage/search/product pages.
+- PostgreSQL-specific public query adapters are not implemented yet; the current
+  public adapter reads through the existing repository provider boundary.
 - Existing administration APIs are not the same as buyer-facing product APIs.
 - UI account/favorites/notifications from the brief are not implemented as a
   consumer product feature.
@@ -200,12 +202,12 @@ explicitly decides that sellers are the first target audience of the visual UI.
 
 | UI Concept | Backend Source | Status |
 | --- | --- | --- |
-| Product card | `CanonicalProduct` plus cheapest `ParsedOffer` or comparison result | Backend pieces exist; consumer API needed |
+| Product card | `CanonicalProduct` plus cheapest `ParsedOffer` or comparison result | Public DTO, route, service, and repository-backed adapter exist |
 | Marketplace offer row | `ParsedOffer` | Exists |
 | Best offer | Comparator selector result | Exists |
 | Price difference | Comparator difference result | Exists |
-| Price history chart | `PriceSnapshot` history | Exists through repositories; consumer API needed |
-| Latest price changes | `PriceChange` or durable market events | Exists |
+| Price history chart | `PriceSnapshot` history | Public DTO, route, service, and repository-backed adapter exist |
+| Latest price changes | Durable price-drop market events | Public DTO, route, service, and repository-backed adapter exist for eligible events |
 | Telegram-ready post | generated content attempts | Exists |
 | User favorites | not yet implemented for consumer UI | Future |
 | Price tracking | not yet implemented as consumer notification workflow | Future |
@@ -240,9 +242,11 @@ Recommended sequence:
 3. Implement consumer read services using existing repositories and comparison
    components.
 4. Add FastAPI public read routes.
-5. Create or connect a frontend app that consumes only these routes.
-6. Use mock data only for UI areas whose backend endpoints do not exist yet.
-7. Replace each mock section with real API data one by one.
+5. Add a repository-backed public read adapter over existing repository
+   boundaries.
+6. Create or connect a frontend app that consumes only these routes.
+7. Use mock data only for UI areas whose backend endpoints do not exist yet.
+8. Replace each mock section with real API data one by one.
 
 ## What Can Be Shown Publicly Now
 
@@ -288,15 +292,13 @@ for those flows is explicitly completed.
 2. Define public query contracts for consumer reads.
 3. Implement public read services over existing query contracts.
 4. Add public read API routes.
-5. Add public query implementations for product cards, offers, comparisons,
-   price history, price changes, and categories.
-6. Verify latest price-change feed data through the public route layer.
-7. Verify that real GGSEL, Playerok, and FunPay saved payloads can populate the
+5. Verify latest price-change feed data through the public route layer.
+6. Verify that real GGSEL, Playerok, and FunPay saved payloads can populate the
    UI DTOs.
-8. Decide where the frontend app will live: inside this repository or as a
+7. Decide where the frontend app will live: inside this repository or as a
    separate sibling project.
-9. Scaffold the visual shell only after API contracts are stable.
-10. Replace frontend mock data incrementally with MediaEngine API responses.
+8. Scaffold the visual shell only after API contracts are stable.
+9. Replace frontend mock data incrementally with MediaEngine API responses.
 
 ## Architectural Guardrails
 

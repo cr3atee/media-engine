@@ -24,6 +24,9 @@ This document records notable Project Passport updates.
 - Added EPIC 19 read-only `/api/v1/public` route surface for products, offers,
   comparisons, price history, latest price changes, and categories, with safe
   unavailable-provider handling when public query adapters are not wired.
+- Added EPIC 19 repository-backed public read adapter over `RepositoryProvider`
+  for product cards, offers, comparison results, price-history points, latest
+  eligible price changes, and categories, plus focused test and demo coverage.
 - Added runtime bootstrap foundation for memory/PostgreSQL repository scope and
   Scheduler construction without changing business services.
 - Added `RuntimeProcess` lifecycle foundation for registering existing Scheduler

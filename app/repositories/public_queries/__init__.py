@@ -27,6 +27,11 @@ from app.repositories.public_queries.provider import (
     PublicReadRepositoryProvider,
     PublicReadRepositoryScopeFactory,
 )
+from app.repositories.public_queries.repository_backed import (
+    RepositoryBackedPublicReadRepository,
+    create_repository_backed_public_read_provider,
+    create_repository_backed_public_read_scope_factory,
+)
 
 __all__ = [
     "CategoryRead",
@@ -50,4 +55,7 @@ __all__ = [
     "PublicProductQueryRepository",
     "PublicReadRepositoryProvider",
     "PublicReadRepositoryScopeFactory",
+    "RepositoryBackedPublicReadRepository",
+    "create_repository_backed_public_read_provider",
+    "create_repository_backed_public_read_scope_factory",
 ]

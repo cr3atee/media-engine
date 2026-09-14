@@ -71,7 +71,11 @@ latest price changes, and categories. Routes require no seller/admin
 authentication, return explicit public DTOs, and fail safely with
 `public_read_api_unavailable` until a public read repository provider is wired.
 
-No public query adapter implementations or frontend integration have been
+Task 7 is complete: a repository-backed public read adapter can project product
+cards, offer lists, comparison results, price-history points, latest price
+changes, and categories from an existing `RepositoryProvider`.
+
+No PostgreSQL-specific public query adapter or frontend integration has been
 implemented yet.
 
 ## Boundary Rules
@@ -373,7 +377,29 @@ Status:
 
 - Complete.
 
-### Task 7: Saved-Payload UI Readiness Verification
+### Task 7: Repository-Backed Public Query Adapter
+
+Create a public read adapter that uses the existing `RepositoryProvider` and
+repository contracts to populate public read projections.
+
+Acceptance criteria:
+
+- Product cards are derived from `CanonicalProduct`, `ParsedOffer`, and price
+  history repositories.
+- Offer lists are derived from persisted `ParsedOffer` objects.
+- Comparison results reuse the existing selector, difference calculator, and
+  result builder.
+- Latest price changes are projected only from already durable eligible
+  price-drop events.
+- Categories are derived from canonical products.
+- No lifecycle state is mutated.
+- No FastAPI, SQLAlchemy, or UI dependency is introduced into the adapter.
+
+Status:
+
+- Complete.
+
+### Task 8: Saved-Payload UI Readiness Verification
 
 Verify that GGSEL, Playerok, and FunPay saved or verified marketplace payloads
 can populate the public DTOs required by Market Terminal.

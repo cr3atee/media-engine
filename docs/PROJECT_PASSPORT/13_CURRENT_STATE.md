@@ -342,6 +342,10 @@ production AI wiring, and guarded live Telegram verification.
   details, offers, comparisons, price history, price changes, and categories.
   Routes use explicit public DTOs, require no seller/admin authentication, and
   fail safely until a public read provider is wired.
+- EPIC 19 Task 7 adds a repository-backed public read adapter over the existing
+  `RepositoryProvider`, projecting product cards, offers, comparison results,
+  price-history points, latest eligible price changes, and categories without
+  mutating lifecycle state.
 
 ## Known Gaps
 
@@ -363,8 +367,9 @@ production AI wiring, and guarded live Telegram verification.
 - Production deployment can now start from `scripts/run_mediaengine_worker.py`;
   guarded live operational verification still needs to be executed before
   unattended polling.
-- Public Market Terminal integration still needs public query implementations
-  over the new DTOs and routes.
+- Public Market Terminal integration still needs saved-payload UI readiness
+  verification through the public DTO/route layer and PostgreSQL-specific public
+  query adapter work if direct SQL read optimization is approved later.
 - Live Telegram delivery is not yet verified; credentials, exact test-chat
   confirmation, live flags, and PostgreSQL verification database were not
   supplied.

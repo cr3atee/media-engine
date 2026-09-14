@@ -6,8 +6,11 @@ This document lists only confirmed work remaining after EPIC 17 completion.
 
 ## Immediate
 
-- Continue EPIC 19 by implementing public query adapters for Market Terminal
-  over the new DTO/query-contract/read-service/route foundations.
+- Continue EPIC 19 by verifying saved GGSEL, Playerok, and FunPay payloads
+  through the public DTO/query-service/route layer for Market Terminal.
+- Add PostgreSQL-specific public query adapters only if direct SQL read
+  optimization is explicitly approved after the repository-backed adapter is
+  exercised.
 - Run guarded live polling verification around the production worker command
   before unattended scheduled ingestion.
 - Add live marketplace polling monitoring and production runtime integration
