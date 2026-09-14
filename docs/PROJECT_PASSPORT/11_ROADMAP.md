@@ -206,6 +206,9 @@ This document tracks only work that is reflected by the current repository state
   FunPay saved marketplace payloads populate public product cards, details,
   offer summaries, comparison results, and price-history points through the
   public route/DTO layer.
+- EPIC 19 Task 9 application bootstrap wiring: default FastAPI composition now
+  provides a PostgreSQL-backed public read scope through the existing
+  `RepositoryProvider` and repository-backed public adapter.
 
 ## Current Status
 
@@ -231,12 +234,13 @@ periodic execution, safe Scheduler shutdown, and safe polling diagnostics. The
 Market Terminal integration plan is documented and EPIC 19 has started with the
 public consumer DTO, query-contract, product read-service, comparison
 read-service, price-history read-service, FastAPI route, and repository-backed
-public query adapter foundations. Saved marketplace payloads now verify through
-the public route/DTO layer for product cards, details, offers, comparisons, and
-price history. The remaining work before production polling is guarded live
-operational verification and explicit runtime integration configuration; the
-remaining work before visual integration is frontend placement plus a product
-decision on category data exposure.
+public query adapter foundations. Default FastAPI bootstrap now wires public
+reads to a PostgreSQL-backed repository scope. Saved marketplace payloads verify
+through the public route/DTO layer for product cards, details, offers,
+comparisons, and price history. The remaining work before production polling is
+guarded live operational verification and explicit runtime integration
+configuration; the remaining work before visual integration is frontend
+placement plus a product decision on category data exposure.
 
 ## Not Present Yet
 

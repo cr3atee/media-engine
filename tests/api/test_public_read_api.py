@@ -308,7 +308,8 @@ def test_public_read_api_reports_unconfigured_provider_safely() -> None:
         admin_api_settings=AdminApiSettings(
             api_enabled=True,
             api_key=SecretStr("test-secret"),
-        )
+        ),
+        public_read_repository_scope_factory=None,
     )
     client = TestClient(app, raise_server_exceptions=False)
 
@@ -317,3 +318,14 @@ def test_public_read_api_reports_unconfigured_provider_safely() -> None:
     assert response.status_code == 503
     assert response.json()["error"]["code"] == "public_read_api_unavailable"
     assert "test-secret" not in response.text
+
+
+def test_public_read_api_configures_default_provider_scope() -> None:
+    app = create_app(
+        admin_api_settings=AdminApiSettings(
+            api_enabled=True,
+            api_key=SecretStr("test-secret"),
+        ),
+    )
+
+    assert app.state.public_read_repository_scope_factory is not None

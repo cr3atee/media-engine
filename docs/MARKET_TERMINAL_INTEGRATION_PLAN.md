@@ -101,6 +101,8 @@ Important gaps:
 - Saved GGSEL, Playerok, and FunPay payloads pass public DTO/route readiness for
   product cards, product details, offer summaries, comparison results, and
   price-history points.
+- Default FastAPI bootstrap wires public reads to a PostgreSQL-backed
+  `RepositoryProvider` scope through the repository-backed adapter.
 - PostgreSQL-specific public query adapters are not implemented yet; the current
   public adapter reads through the existing repository provider boundary.
 - Saved marketplace payloads do not provide historical price-change inputs or a

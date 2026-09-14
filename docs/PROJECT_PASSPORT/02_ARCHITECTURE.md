@@ -133,7 +133,8 @@ run inside ingestion or scoring transactions.
   claim, or change lifecycle state.
 - Public consumer routes are separate from seller/admin routes and depend on a
   dedicated public read provider. A repository-backed public adapter can project
-  data from the existing `RepositoryProvider`; PostgreSQL-specific public query
+  data from the existing `RepositoryProvider`; default FastAPI bootstrap wires
+  that adapter to a PostgreSQL repository scope. PostgreSQL-specific public query
   adapters are not implemented yet.
 
 ## Read Administration Flow

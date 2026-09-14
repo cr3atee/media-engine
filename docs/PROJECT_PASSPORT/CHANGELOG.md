@@ -32,6 +32,9 @@ This document records notable Project Passport updates.
   product details, offer summaries, comparison results, and price-history
   points; missing historical price-change inputs and retained category data are
   documented instead of fabricated.
+- Wired default FastAPI public reads to a PostgreSQL-backed repository scope
+  through the existing `RepositoryProvider` and repository-backed public adapter,
+  while preserving explicit unavailable-provider tests.
 - Added runtime bootstrap foundation for memory/PostgreSQL repository scope and
   Scheduler construction without changing business services.
 - Added `RuntimeProcess` lifecycle foundation for registering existing Scheduler

@@ -68,8 +68,7 @@ points without mutating lifecycle state.
 Task 6 is complete: read-only `/api/v1/public` routes exist for products,
 product details, product offers, product comparison, product price history,
 latest price changes, and categories. Routes require no seller/admin
-authentication, return explicit public DTOs, and fail safely with
-`public_read_api_unavailable` until a public read repository provider is wired.
+authentication and return explicit public DTOs.
 
 Task 7 is complete: a repository-backed public read adapter can project product
 cards, offer lists, comparison results, price-history points, latest price
@@ -82,6 +81,11 @@ saved real marketplace offers. Latest price changes and categories were
 route-verified as empty because the saved payloads contain current offers only
 and the current `ParsedOffer` contract does not retain marketplace category
 fields.
+
+Task 9 is complete: `create_app()` wires a default PostgreSQL-backed public read
+scope using the existing `RepositoryProvider` and repository-backed public read
+adapter. Tests can still pass `public_read_repository_scope_factory=None` to
+verify safe `public_read_api_unavailable` behavior explicitly.
 
 No PostgreSQL-specific public query adapter or frontend integration has been
 implemented yet.
@@ -433,6 +437,24 @@ Verification:
   snapshot/durable scored event is present in those payloads.
 - Category feed remains empty from saved payloads because category data is not
   retained by the current `ParsedOffer` contract.
+
+### Task 9: Application Bootstrap Wiring
+
+Wire the public read provider into the default FastAPI composition root without
+changing route behavior or adding a separate SQL adapter.
+
+Acceptance criteria:
+
+- `create_app()` configures a default PostgreSQL-backed public read scope.
+- The default scope reuses `RepositoryProvider` and the repository-backed public
+  read adapter.
+- Explicit `public_read_repository_scope_factory=None` remains available for
+  unavailable-provider tests.
+- No marketplace, comparator, admin, Telegram, or tenant behavior changes.
+
+Status:
+
+- Complete.
 
 ## Documentation Updates
 

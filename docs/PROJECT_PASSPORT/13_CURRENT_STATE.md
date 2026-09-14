@@ -350,6 +350,10 @@ production AI wiring, and guarded live Telegram verification.
   through the public DTO/route layer: product cards, product details, offer
   summaries, comparison results, and price-history points are populated from
   real saved offers.
+- EPIC 19 Task 9 wires default FastAPI public reads to a PostgreSQL-backed
+  repository scope using the existing `RepositoryProvider` and
+  repository-backed public adapter; explicit unavailable-provider composition is
+  still testable.
 
 ## Known Gaps
 

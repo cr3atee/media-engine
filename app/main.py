@@ -41,6 +41,7 @@ from app.api.routes.seller_marketplace_integrations import (
 from app.api.routes.seller_workflows import router as seller_workflows_router
 from app.config.settings import AdminApiSettings, AuthSettings, settings
 from app.core.logging import setup_logging
+from app.database.public_read_scope import create_postgres_public_read_repository_scope
 from app.repositories.public_queries.provider import PublicReadRepositoryScopeFactory
 from app.repositories.queries.provider import (
     ReadRepositoryScopeFactory,
@@ -51,6 +52,8 @@ from app.services.repository_scope import RepositoryScopeFactory
 
 setup_logging()
 
+_PUBLIC_READ_SCOPE_FACTORY_UNSET = object()
+
 
 def create_app(
     *,
@@ -58,8 +61,8 @@ def create_app(
     auth_settings: AuthSettings | None = None,
     read_repository_scope_factory: ReadRepositoryScopeFactory | None = None,
     public_read_repository_scope_factory: (
-        PublicReadRepositoryScopeFactory | None
-    ) = None,
+        PublicReadRepositoryScopeFactory | None | object
+    ) = _PUBLIC_READ_SCOPE_FACTORY_UNSET,
     repository_scope_factory: RepositoryScopeFactory | None = None,
 ) -> FastAPI:
     """Create the application with explicit read and command composition roots."""
@@ -74,6 +77,10 @@ def create_app(
     application.state.read_repository_scope_factory = (
         read_repository_scope_factory or create_postgres_read_repository_scope()
     )
+    if public_read_repository_scope_factory is _PUBLIC_READ_SCOPE_FACTORY_UNSET:
+        public_read_repository_scope_factory = (
+            create_postgres_public_read_repository_scope()
+        )
     application.state.public_read_repository_scope_factory = (
         public_read_repository_scope_factory
     )
