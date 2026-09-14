@@ -99,6 +99,12 @@ def test_market_terminal_static_assets_are_served() -> None:
     assert "catalogRequestVersion: 0" in script.text
     assert "function beginCatalogRequest()" in script.text
     assert "function isCurrentCatalogRequest(requestVersion)" in script.text
+    assert "categoryRequestVersion: 0" in script.text
+    assert "function beginCategoryRequest()" in script.text
+    assert "function isCurrentCategoryRequest(requestVersion)" in script.text
+    assert "priceChangeRequestVersion: 0" in script.text
+    assert "function beginPriceChangeRequest()" in script.text
+    assert "function isCurrentPriceChangeRequest(requestVersion)" in script.text
     assert "detailRequestVersion: 0" in script.text
     assert "function isCurrentDetailRequest(requestVersion, productId)" in script.text
     assert "function setProductDetailsBusy(isBusy)" in script.text

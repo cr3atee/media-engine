@@ -405,7 +405,9 @@ production AI wiring, and guarded live Telegram verification.
   Dynamic API status, category, price-drop, offer, comparison, and history
   updates are exposed as polite, named assistive-technology regions. The history
   visual no longer emits style attributes, allowing the terminal document to
-  enforce same-origin styles without the CSP `unsafe-inline` exception.
+  enforce same-origin styles without the CSP `unsafe-inline` exception. Category
+  and price-drop feeds now reject stale refresh success and failure responses
+  through independent local request versions.
   Repository-backed public lists remain bounded
   first pages because the shared cursor cannot yet represent every product sort;
   no synthetic offset workaround is used. Saved marketplace

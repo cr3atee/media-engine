@@ -72,6 +72,8 @@ This document records notable Project Passport updates.
   and price-drop results, plus named offer, comparison, and history regions.
 - Replaced inline price-history bar heights with a deterministic CSS class scale
   and removed `style-src 'unsafe-inline'` from the Market Terminal CSP.
+- Protected category and price-drop dashboard feeds from stale overlapping
+  refresh and browser-history responses using independent request versions.
 - Added runtime bootstrap foundation for memory/PostgreSQL repository scope and
   Scheduler construction without changing business services.
 - Added `RuntimeProcess` lifecycle foundation for registering existing Scheduler

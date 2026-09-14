@@ -753,6 +753,25 @@ Status:
 
 - Complete.
 
+### Task 26: Dashboard Feed Request Consistency
+
+Prevent older category and price-drop responses from replacing fresher dashboard
+feed data after overlapping refresh or browser-history loads.
+
+Acceptance criteria:
+
+- Category and price-drop requests use independent monotonically increasing
+  versions.
+- Only the latest response for each feed may mutate state, summary counts, or
+  rendered content.
+- Stale success and failure results are ignored.
+- Catalog and product-detail request boundaries remain independent.
+- No cancellation contract, polling behavior, API change, or new dependency.
+
+Status:
+
+- Complete.
+
 ## Deferred Runtime Constraint
 
 The repository-backed public read adapter currently returns bounded first

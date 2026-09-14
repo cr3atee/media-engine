@@ -36,6 +36,8 @@ const state = {
   selectedCategoryName: "",
   isBusy: false,
   catalogRequestVersion: 0,
+  categoryRequestVersion: 0,
+  priceChangeRequestVersion: 0,
   detailRequestVersion: 0,
 };
 
@@ -173,8 +175,12 @@ function isCurrentCatalogRequest(requestVersion) {
 }
 
 async function loadCategories() {
+  const requestVersion = beginCategoryRequest();
   try {
     const payload = await getJson("/categories?limit=10");
+    if (!isCurrentCategoryRequest(requestVersion)) {
+      return;
+    }
     const categories = payload.items ?? [];
     state.categories = categories;
     state.selectedCategoryCode =
@@ -188,15 +194,31 @@ async function loadCategories() {
     }
     renderCategories(categories);
   } catch (error) {
+    if (!isCurrentCategoryRequest(requestVersion)) {
+      return;
+    }
     state.categories = [];
     updateSummary();
     renderEmpty(elements.categoryList, errorMessage(error));
   }
 }
 
+function beginCategoryRequest() {
+  state.categoryRequestVersion += 1;
+  return state.categoryRequestVersion;
+}
+
+function isCurrentCategoryRequest(requestVersion) {
+  return requestVersion === state.categoryRequestVersion;
+}
+
 async function loadPriceChanges() {
+  const requestVersion = beginPriceChangeRequest();
   try {
     const payload = await getJson("/price-changes?limit=6");
+    if (!isCurrentPriceChangeRequest(requestVersion)) {
+      return;
+    }
     const changes = payload.items ?? [];
     state.priceChanges = changes;
     updateSummary();
@@ -206,10 +228,22 @@ async function loadPriceChanges() {
     }
     renderPriceChanges(changes);
   } catch (error) {
+    if (!isCurrentPriceChangeRequest(requestVersion)) {
+      return;
+    }
     state.priceChanges = [];
     updateSummary();
     renderEmpty(elements.changeList, errorMessage(error));
   }
+}
+
+function beginPriceChangeRequest() {
+  state.priceChangeRequestVersion += 1;
+  return state.priceChangeRequestVersion;
+}
+
+function isCurrentPriceChangeRequest(requestVersion) {
+  return requestVersion === state.priceChangeRequestVersion;
 }
 
 async function selectProduct(productId, updateLocation = true) {
