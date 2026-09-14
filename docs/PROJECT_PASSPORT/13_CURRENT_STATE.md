@@ -409,7 +409,10 @@ production AI wiring, and guarded live Telegram verification.
   and price-drop feeds now reject stale refresh success and failure responses
   through independent local request versions. Keyboard users can bypass primary
   navigation into the catalog, and price-drop navigation preserves orientation
-  by focusing the selected product heading with a visible focus indicator.
+  by focusing the selected product heading with a visible focus indicator. The
+  unified offline UI verifier now passes `42` checks across delivered shell
+  assets, strict CSP, all public endpoint bindings, and repository-backed DTOs
+  seeded from real saved GGSEL, Playerok, and FunPay responses.
   Repository-backed public lists remain bounded
   first pages because the shared cursor cannot yet represent every product sort;
   no synthetic offset workaround is used. Saved marketplace

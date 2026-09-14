@@ -77,6 +77,9 @@ This document records notable Project Passport updates.
 - Added Market Terminal keyboard continuity through a catalog skip link,
   focusable named targets, sticky-header offsets, and product-detail focus after
   price-drop navigation.
+- Extended the existing public UI readiness verifier through the delivered
+  `/terminal` HTML/CSS/JS surface and all public route bindings; `42` offline
+  checks pass with real saved GGSEL, Playerok, and FunPay responses.
 - Added runtime bootstrap foundation for memory/PostgreSQL repository scope and
   Scheduler construction without changing business services.
 - Added `RuntimeProcess` lifecycle foundation for registering existing Scheduler

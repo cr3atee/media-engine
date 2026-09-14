@@ -793,6 +793,38 @@ Status:
 
 - Complete.
 
+### Task 28: Offline Embedded Shell Integration Verification
+
+Extend the saved-payload readiness proof through the embedded terminal delivery
+surface without adding browser automation or a second verification path.
+
+Acceptance criteria:
+
+- The existing saved-payload verifier serves `/terminal` and both static assets
+  through the real FastAPI application.
+- The delivered script remains bound to every current public product, offer,
+  comparison, history, category, and price-change route.
+- The delivered document retains its strict same-origin CSP without
+  `unsafe-inline`.
+- GGSEL, Playerok, and FunPay saved payloads continue through repository-backed
+  public route DTOs in the same run.
+- Missing historical price changes and retained category data remain explicit
+  notes rather than fabricated UI data.
+- No browser dependency, marketplace behavior, persistence, or API change.
+
+Status:
+
+- Complete.
+
+Verification:
+
+- `scripts/verify_public_ui_readiness.py` passed `42` checks.
+- GGSEL: `60` raw, `60` parsed, `60` snapshot-ready offers.
+- Playerok: `20` raw, `20` parsed, `20` snapshot-ready offers.
+- FunPay: `1` raw, `1` parsed, `1` snapshot-ready offer.
+- This verifier proves offline delivery and binding, not browser layout or live
+  marketplace polling.
+
 ## Deferred Runtime Constraint
 
 The repository-backed public read adapter currently returns bounded first

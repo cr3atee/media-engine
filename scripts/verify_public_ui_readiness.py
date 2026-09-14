@@ -72,7 +72,7 @@ def main() -> int:
         ),
     )
     client = TestClient(app, raise_server_exceptions=False)
-    check_count = 0
+    check_count = _verify_terminal_shell(client, violations)
 
     print("=== PUBLIC UI READINESS ===")
     for result in readiness:
@@ -206,6 +206,76 @@ def main() -> int:
     return 0
 
 
+def _verify_terminal_shell(client: TestClient, violations: list[str]) -> int:
+    """Verify that the embedded shell is wired to every public read surface."""
+    document = client.get("/terminal")
+    styles = client.get("/terminal/styles.css")
+    script = client.get("/terminal/app.js")
+    checks = 0
+    checks += _expect_status(document.status_code, 200, "terminal", violations)
+    checks += _expect_status(styles.status_code, 200, "terminal styles", violations)
+    checks += _expect_status(script.status_code, 200, "terminal script", violations)
+
+    checks += _expect_contains(
+        document.text,
+        "/terminal/styles.css",
+        "terminal stylesheet reference",
+        violations,
+    )
+    checks += _expect_contains(
+        document.text,
+        "/terminal/app.js",
+        "terminal script reference",
+        violations,
+    )
+    checks += _expect_contains(
+        document.text,
+        'id="productGrid"',
+        "terminal product region",
+        violations,
+    )
+    checks += _expect_contains(
+        document.text,
+        'id="details"',
+        "terminal detail region",
+        violations,
+    )
+    checks += _expect_contains(
+        script.text,
+        'const api = "/api/v1/public";',
+        "terminal public API root",
+        violations,
+    )
+    for endpoint in (
+        "/products?",
+        "/categories?",
+        "/price-changes?",
+        "/products/${productId}",
+        "/offers?",
+        "/comparison",
+        "/price-history?",
+    ):
+        checks += _expect_contains(
+            script.text,
+            endpoint,
+            f"terminal endpoint binding {endpoint}",
+            violations,
+        )
+
+    content_security_policy = document.headers.get("content-security-policy", "")
+    checks += _expect_contains(
+        content_security_policy,
+        "default-src 'self'",
+        "terminal content security policy",
+        violations,
+    )
+    if "'unsafe-inline'" in content_security_policy:
+        violations.append("terminal content security policy permits unsafe-inline")
+    else:
+        checks += 1
+    return checks
+
+
 async def _save_seeded_data(
     provider: RepositoryProvider,
     products: Iterable[SeededProduct],
@@ -288,6 +358,18 @@ def _expect_status(
     if actual == expected:
         return 1
     violations.append(f"{label}: expected HTTP {expected}, got {actual}")
+    return 0
+
+
+def _expect_contains(
+    value: str,
+    expected: str,
+    label: str,
+    violations: list[str],
+) -> int:
+    if expected in value:
+        return 1
+    violations.append(f"{label}: missing {expected!r}")
     return 0
 
 
