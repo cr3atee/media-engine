@@ -1013,6 +1013,38 @@ Verification:
   key variants, but category alignment alone is not treated as product identity
   proof.
 
+### Task 35: Curated Canonical Offer Links
+
+Make explicit reviewed offer links effective in the existing comparison flow
+without weakening automatic title matching.
+
+Acceptance criteria:
+
+- A tenant-scoped application service links one existing offer to one existing
+  canonical product through repository scopes.
+- Linking the same pair is idempotent.
+- Missing products/offers, cross-tenant targets, and silent reassignment fail
+  without mutation.
+- `OfferGroupingService` treats a valid persisted `canonical_product_id` as
+  authoritative and uses existing `MatchingService` only for unlinked offers.
+- Automatic matching considers canonical candidates from the offer's tenant
+  only.
+- No schema, matching threshold, marketplace parser, or API change is made.
+
+Status:
+
+- Complete.
+
+Verification:
+
+- Focused tests cover explicit grouping, idempotency, conflicts, missing
+  records, unresolved links, automatic fallback, and tenant isolation.
+- The memory demo links two differently titled marketplace offers and the
+  existing selector/difference/result chain returns one `complete` comparison
+  with the lower-priced offer selected.
+- The linking primitive is internal only. Admin review endpoints, immutable
+  decision audit, and rejected-pair suppression are not claimed by this task.
+
 ## Deferred Runtime Constraint
 
 The repository-backed public read adapter currently returns bounded first

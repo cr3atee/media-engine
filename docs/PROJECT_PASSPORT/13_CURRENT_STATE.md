@@ -377,6 +377,11 @@ production AI wiring, and guarded live Telegram verification.
   offers, and FunPay `1,313/1,313` parsed/snapshot-ready. Existing matching
   classifies all `106,240` cross-source pairs as `NO_MATCH`, with a highest
   similarity of `0.714`, so exact canonical links still require review.
+- EPIC 19 Task 35 adds the internal positive-link boundary for that review:
+  `CanonicalOfferLinkService` persists idempotent same-tenant links and fails
+  closed on missing, cross-tenant, or already-linked records. Comparator
+  grouping honors valid persisted links and retains existing matching only as a
+  same-tenant fallback for unlinked offers.
 
 ## Known Gaps
 
@@ -398,7 +403,9 @@ production AI wiring, and guarded live Telegram verification.
   `AUTO_MATCH`. Aligned live Minecraft key categories improve the strongest
   score to `0.714` across `106,240` pairs but still produce no `REVIEW` or
   `AUTO_MATCH`. A curated canonical catalog and confirmed exact-variant links
-  are needed before presenting that core user value as live-ready.
+  are needed before presenting that core user value as live-ready. The internal
+  positive-link service is ready, but no production reviewed link set or audited
+  match-review API is populated yet.
 - Snapshot creation is skipped when parsed offers from any marketplace do not
   contain normalized price and currency.
 - Ingestion, scoring, and durable content processing are separate services and

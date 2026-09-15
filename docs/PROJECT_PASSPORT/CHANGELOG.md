@@ -6,6 +6,9 @@ This document records notable Project Passport updates.
 
 ## Unreleased
 
+- Added tenant-scoped curated canonical offer linking and made valid persisted
+  links authoritative in comparator grouping. Unlinked offers retain the
+  existing deterministic matcher, now restricted to same-tenant candidates.
 - Added a real aligned-category verifier over existing GGSEL, Playerok, and
   FunPay adapters. It observed `1,393` snapshot-ready Minecraft key offers and
   evaluated `106,240` cross-source title pairs without changing matching; the

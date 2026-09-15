@@ -11,8 +11,9 @@ This document lists only confirmed work remaining after EPIC 17 completion.
   across `1,280` cross-marketplace title pairs, so weakening matching thresholds
   or inventing preview links is not acceptable. Equivalent Minecraft key
   categories are now live-verified for all three sources, but all `106,240`
-  aligned-category pairs remain below `REVIEW`. Curate and confirm exact variants
-  before creating canonical links.
+  aligned-category pairs remain below `REVIEW`. Use the tenant-scoped
+  `CanonicalOfferLinkService` to populate only reviewed exact variants; add
+  audited review/rejection workflow separately before delegating this to admins.
 - Decide whether the embedded Market Terminal shell remains inside this
   repository or moves to a separate frontend project before public launch.
 - Decide whether public category browse must require parser/category retention

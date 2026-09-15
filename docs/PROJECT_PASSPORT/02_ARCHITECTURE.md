@@ -74,6 +74,10 @@ Current matching flow:
 2. `SimilarityEngine` calculates token similarity.
 3. `ConfidenceEngine` classifies the similarity score.
 4. `MatchingService` selects the best canonical product candidate for a `ParsedOffer`.
+5. A valid persisted same-tenant `canonical_product_id` is authoritative during
+   comparator grouping; only unlinked offers use automatic title matching.
+6. `CanonicalOfferLinkService` writes explicit reviewed positive links through
+   a repository scope and rejects cross-tenant or silent reassignment attempts.
 
 ## Repository Boundary
 
@@ -112,6 +116,7 @@ run inside ingestion or scoring transactions.
 - Repository interfaces do not depend on SQLAlchemy or PostgreSQL.
 - Matching does not depend on marketplace-specific code.
 - Matching does not use AI, embeddings, or external services.
+- Curated offer links are tenant-scoped and do not alter matching thresholds.
 - Marketplace pipeline persists parsed offers, price snapshots, and deterministic
   market events only through `RepositoryProvider`.
 - Scheduler jobs delegate to application services and do not own repositories,

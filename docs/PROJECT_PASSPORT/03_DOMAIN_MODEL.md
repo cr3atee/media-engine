@@ -47,9 +47,14 @@ Fields:
 - `currency`: price currency, when available.
 - `seller_id`: optional source seller identifier.
 - `seller_name`: optional source seller display name.
-- `canonical_product_id`: optional link to `CanonicalProduct`.
+- `canonical_product_id`: optional explicit link to a same-tenant
+  `CanonicalProduct`; when present and resolvable, comparator grouping treats it
+  as authoritative instead of re-guessing identity from the title.
 
 `ParsedOffer` is not a database model and does not contain matching logic.
+Explicit positive links are written by `CanonicalOfferLinkService`. The service
+is idempotent for the same pair and rejects implicit reassignment; it does not
+represent an audited administrator decision or a rejected-match record.
 
 ## PriceSnapshot
 

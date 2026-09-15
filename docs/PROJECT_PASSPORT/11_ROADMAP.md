@@ -235,6 +235,10 @@ This document tracks only work that is reflected by the current repository state
   Playerok, and FunPay adapters produce `1,393` real snapshot-ready Minecraft
   key offers. Their `106,240` cross-source title pairs contain no automatic or
   review match under unchanged rules; the highest similarity is `0.714`.
+- EPIC 19 Task 35 curated canonical offer links: explicit same-tenant links are
+  persisted through a transaction-scoped application service and now drive
+  comparator grouping, while unlinked offers retain tenant-scoped deterministic
+  matching.
 
 ## Current Status
 
