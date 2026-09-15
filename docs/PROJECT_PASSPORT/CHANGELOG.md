@@ -90,6 +90,11 @@ This document records notable Project Passport updates.
 - Added a loopback-only Market Terminal preview runner over saved real
   marketplace payloads and memory repositories, including explicit readiness
   diagnostics and a non-blocking `--check` mode.
+- Added deterministic cross-marketplace matching readiness analysis over all
+  `81` saved real offers and `1,280` cross-source pairs. No automatic or review
+  match exists in the current payload set, so the preview now explicitly labels
+  its examples as separate canonical products instead of implying a fabricated
+  comparison.
 - Added runtime bootstrap foundation for memory/PostgreSQL repository scope and
   Scheduler construction without changing business services.
 - Added `RuntimeProcess` lifecycle foundation for registering existing Scheduler

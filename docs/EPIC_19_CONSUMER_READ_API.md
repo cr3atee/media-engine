@@ -918,6 +918,42 @@ Verification:
 - A real loopback Uvicorn run returned HTTP 200 for `/terminal` and
   `/api/v1/public/products`; the delivered document retained `lang="ru"`.
 
+### Task 32: Cross-Marketplace Matching Readiness Evidence
+
+Measure whether the saved real marketplace offers can demonstrate the core
+same-product comparison value without inventing canonical-product links or
+weakening the existing deterministic matching thresholds.
+
+Acceptance criteria:
+
+- Every normalized offer from the saved GGSEL, Playerok, and FunPay payloads is
+  included, not only the examples selected for the UI preview.
+- Only offers from different marketplaces are compared.
+- Existing `MatchingPreprocessor`, `SimilarityEngine`, and `ConfidenceEngine`
+  behavior is reused without threshold or business-logic changes.
+- Empty titles cannot become false exact matches.
+- Results are deterministic and report automatic, review, and no-match counts
+  plus the highest-scoring candidates.
+- The local UI preview explicitly states that its source examples are seeded as
+  separate canonical products and do not prove cross-marketplace identity.
+
+Status:
+
+- Complete.
+
+Verification:
+
+- `81` real saved offers produced `1,280` cross-marketplace title pairs.
+- Current matching classified `0` pairs as `AUTO_MATCH`, `0` as `REVIEW`, and
+  `1,280` as `NO_MATCH`; the highest similarity was `0.294`.
+- The result proves that curated canonical catalog/bootstrap work is required
+  before the saved-payload preview can demonstrate a real same-product price
+  comparison.
+- Matching thresholds and comparator behavior remain unchanged.
+- Focused tests passed: `7 passed`; full Pytest passed: `412 passed, 58
+  skipped`; MyPy passed for `388` source files; focused Ruff and Ruff format
+  checks passed.
+
 ## Deferred Runtime Constraint
 
 The repository-backed public read adapter currently returns bounded first

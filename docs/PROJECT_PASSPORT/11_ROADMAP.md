@@ -223,6 +223,10 @@ This document tracks only work that is reflected by the current repository state
 - EPIC 19 Task 31 local real-data preview: a loopback-only Uvicorn runner serves
   the embedded terminal from saved real marketplace payloads through memory
   repositories, with explicit diagnostics and a non-blocking `--check` mode.
+- EPIC 19 Task 32 cross-marketplace matching readiness: all `81` saved real
+  offers are checked across `1,280` source pairs with the existing deterministic
+  matching components; no automatic or review match currently exists, and the
+  preview now explicitly avoids claiming unverified product identity.
 
 ## Current Status
 

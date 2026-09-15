@@ -334,6 +334,12 @@ def build_seeded_products(
             )
         )
 
+    if len(seeded_products) > 1:
+        notes.append(
+            "Each saved marketplace example is seeded as a separate canonical "
+            "product; this preview does not claim cross-marketplace identity."
+        )
+
     return tuple(seeded_products), tuple(notes)
 
 

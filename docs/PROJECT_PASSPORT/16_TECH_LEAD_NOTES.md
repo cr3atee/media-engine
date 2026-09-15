@@ -174,3 +174,7 @@ This document captures architecture notes that are important for future reviews.
 - Keep repository interfaces free from SQLAlchemy and PostgreSQL details.
 - Keep matching free from AI, embeddings, and marketplace-specific assumptions unless explicitly requested.
 - Keep parser extraction separate from domain matching and persistence decisions.
+- Do not lower deterministic matching thresholds to manufacture a visual demo.
+  The saved real payloads currently produce no cross-marketplace automatic or
+  review match; use curated canonical identities and confirmed offer links before
+  presenting a same-product price comparison.

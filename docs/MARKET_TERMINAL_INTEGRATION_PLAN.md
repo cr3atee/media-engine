@@ -91,8 +91,9 @@ Implemented backend capabilities that can support the visual product:
 
 ## Current Gaps Before Visual Integration
 
-The backend has strong core infrastructure, but the visual product still needs a
-consumer-facing read boundary.
+The backend now has a consumer-facing read boundary and an embedded validation
+shell. The remaining gaps concern trustworthy catalog identity, accumulated
+runtime data, and production launch hardening.
 
 Important gaps:
 
@@ -101,6 +102,10 @@ Important gaps:
 - Saved GGSEL, Playerok, and FunPay payloads pass public DTO/route readiness for
   product cards, product details, offer summaries, comparison results, and
   price-history points.
+- The current saved-payload set has no deterministic cross-marketplace
+  `AUTO_MATCH` or `REVIEW` result across `1,280` title pairs. The local preview
+  therefore seeds one separate canonical product per marketplace example and
+  does not yet demonstrate the same product compared across marketplaces.
 - Default FastAPI bootstrap wires public reads to a PostgreSQL-backed
   `RepositoryProvider` scope through the repository-backed adapter.
 - PostgreSQL-specific public query adapters are not implemented yet; the current
@@ -302,11 +307,14 @@ for those flows is explicitly completed.
 3. Implement public read services over existing query contracts. Done.
 4. Add public read API routes. Done.
 5. Serve an embedded `/terminal` visual shell from MediaEngine. Done.
-6. Decide whether the embedded shell remains in this repository or moves to a
+6. Bootstrap a curated canonical catalog and verified same-product offer links
+   before presenting a real cross-marketplace price comparison. Do not lower
+   deterministic matching thresholds merely to make the preview appear full.
+7. Decide whether the embedded shell remains in this repository or moves to a
    separate frontend project before public launch.
-7. Decide whether category browse must require parser/category retention before
+8. Decide whether category browse must require parser/category retention before
    public UI launch.
-8. Replace frontend mock data incrementally with MediaEngine API responses.
+9. Replace frontend mock data incrementally with MediaEngine API responses.
    Done for the embedded shell.
 
 ## Current Embedded Shell
@@ -335,11 +343,20 @@ Run the current shell with saved real GGSEL, Playerok, and FunPay payloads:
 Then open `http://127.0.0.1:8000/terminal`. The runner uses memory
 repositories, binds only to loopback, disables the admin surface, and fails
 clearly if saved payloads are unavailable or no longer satisfy their contracts.
+Each displayed source example is intentionally assigned to a separate canonical
+product. This preview validates real data delivery and UI contracts, but it does
+not claim that the displayed offers are the same product.
 
 For a non-blocking readiness check:
 
 ```powershell
 .venv\Scripts\python.exe scripts/run_market_terminal_preview.py --check
+```
+
+Inspect current real-payload matching evidence with:
+
+```powershell
+.venv\Scripts\python.exe scripts/analyze_cross_marketplace_matching.py
 ```
 
 ## Architectural Guardrails

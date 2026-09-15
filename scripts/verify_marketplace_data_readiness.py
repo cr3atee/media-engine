@@ -35,6 +35,15 @@ class MarketplaceReadiness:
     examples: tuple[ParsedOffer, ...] = ()
 
 
+@dataclass(slots=True, frozen=True)
+class LoadedMarketplacePayload:
+    """Raw item count and every normalized offer loaded from a saved payload."""
+
+    marketplace: str
+    raw_items: int
+    offers: tuple[ParsedOffer, ...]
+
+
 def main() -> None:
     """Print the current marketplace data readiness without network calls."""
     _configure_stdout()
@@ -68,9 +77,6 @@ def main() -> None:
 
 def verify_ggsel() -> MarketplaceReadiness:
     """Verify the saved real GGSEL response against the parser contract."""
-    from app.parsers.ggsel_extractor import GGSelExtractor
-    from app.parsers.normalizers import OfferNormalizer
-
     if not GGSEL_RESPONSE_PATH.exists():
         return MarketplaceReadiness(
             marketplace="ggsel",
@@ -81,13 +87,11 @@ def verify_ggsel() -> MarketplaceReadiness:
             notes=("Saved GGSEL HTML response is missing.",),
         )
 
-    html = GGSEL_RESPONSE_PATH.read_text(encoding="utf-8")
-    raw_offers = GGSelExtractor().extract(html)
-    normalizer = OfferNormalizer(marketplace="ggsel")
-    parsed_offers = tuple(normalizer.normalize(offer) for offer in raw_offers)
+    payload = load_ggsel_payload()
+    parsed_offers = payload.offers
     notes: list[str] = []
 
-    if raw_offers:
+    if parsed_offers:
         notes.append("Saved real GGSEL payload is extractable.")
     else:
         notes.append("Saved GGSEL payload contains no extractable offers.")
@@ -104,7 +108,7 @@ def verify_ggsel() -> MarketplaceReadiness:
     return MarketplaceReadiness(
         marketplace="ggsel",
         status="ready" if ready_offers and not relative_urls else "partial",
-        raw_items=len(raw_offers),
+        raw_items=payload.raw_items,
         parsed_offers=len(parsed_offers),
         snapshot_ready_offers=ready_offers,
         notes=tuple(notes),
@@ -114,9 +118,6 @@ def verify_ggsel() -> MarketplaceReadiness:
 
 def verify_playerok() -> MarketplaceReadiness:
     """Verify a saved Playerok response if one exists locally."""
-    from app.parsers.playerok_extractor import PlayerokExtractor
-    from app.parsers.playerok_normalizer import PlayerokNormalizer
-
     response_path = next(
         (path for path in PLAYEROK_RESPONSE_PATHS if path.exists()),
         None,
@@ -131,14 +132,13 @@ def verify_playerok() -> MarketplaceReadiness:
             notes=("Saved Playerok response is missing.",),
         )
 
-    raw_response = response_path.read_text(encoding="utf-8")
-    extracted = PlayerokExtractor().extract(raw_response)
-    parsed_offers = tuple(PlayerokNormalizer().normalize(extracted))
+    payload = load_playerok_payload(response_path)
+    parsed_offers = payload.offers
     ready_offers = snapshot_ready(parsed_offers)
     return MarketplaceReadiness(
         marketplace="playerok",
         status="ready" if ready_offers else "partial",
-        raw_items=len(extracted),
+        raw_items=payload.raw_items,
         parsed_offers=len(parsed_offers),
         snapshot_ready_offers=ready_offers,
         notes=(
@@ -151,18 +151,14 @@ def verify_playerok() -> MarketplaceReadiness:
 
 def verify_funpay() -> MarketplaceReadiness:
     """Report FunPay readiness from the current repository state."""
-    from app.parsers.funpay_extractor import FunPayExtractor
-    from app.parsers.funpay_normalizer import FunPayNormalizer
-
     if FUNPAY_RESPONSE_PATH.exists():
-        raw_response = FUNPAY_RESPONSE_PATH.read_text(encoding="utf-8")
-        extracted = FunPayExtractor().extract(raw_response)
-        parsed_offers = tuple(FunPayNormalizer().normalize(extracted))
+        payload = load_funpay_payload()
+        parsed_offers = payload.offers
         ready_offers = snapshot_ready(parsed_offers)
         return MarketplaceReadiness(
             marketplace="funpay",
             status="ready" if ready_offers else "partial",
-            raw_items=len(extracted),
+            raw_items=payload.raw_items,
             parsed_offers=len(parsed_offers),
             snapshot_ready_offers=ready_offers,
             notes=("Saved FunPay raw response exists.",),
@@ -179,6 +175,83 @@ def verify_funpay() -> MarketplaceReadiness:
             "FunPay fetcher/extractor/normalizer exist.",
             "Saved FunPay raw response is not available.",
         ),
+    )
+
+
+def load_saved_marketplace_offers() -> dict[str, tuple[ParsedOffer, ...]]:
+    """Load every offer from the available saved marketplace responses."""
+    playerok_response_path = next(
+        (path for path in PLAYEROK_RESPONSE_PATHS if path.exists()),
+        None,
+    )
+    ggsel = load_ggsel_payload()
+    playerok = (
+        load_playerok_payload(playerok_response_path)
+        if playerok_response_path is not None
+        else LoadedMarketplacePayload(
+            marketplace="playerok",
+            raw_items=0,
+            offers=(),
+        )
+    )
+    funpay = load_funpay_payload()
+    return {
+        payload.marketplace: payload.offers for payload in (ggsel, playerok, funpay)
+    }
+
+
+def load_ggsel_payload() -> LoadedMarketplacePayload:
+    """Extract and normalize the saved GGSEL response with its raw count."""
+    from app.parsers.ggsel_extractor import GGSelExtractor
+    from app.parsers.normalizers import OfferNormalizer
+
+    if not GGSEL_RESPONSE_PATH.exists():
+        return LoadedMarketplacePayload(
+            marketplace="ggsel",
+            raw_items=0,
+            offers=(),
+        )
+    html = GGSEL_RESPONSE_PATH.read_text(encoding="utf-8")
+    raw_offers = GGSelExtractor().extract(html)
+    normalizer = OfferNormalizer(marketplace="ggsel")
+    return LoadedMarketplacePayload(
+        marketplace="ggsel",
+        raw_items=len(raw_offers),
+        offers=tuple(normalizer.normalize(offer) for offer in raw_offers),
+    )
+
+
+def load_playerok_payload(response_path: Path) -> LoadedMarketplacePayload:
+    """Extract and normalize one saved Playerok response with its raw count."""
+    from app.parsers.playerok_extractor import PlayerokExtractor
+    from app.parsers.playerok_normalizer import PlayerokNormalizer
+
+    raw_response = response_path.read_text(encoding="utf-8")
+    extracted = PlayerokExtractor().extract(raw_response)
+    return LoadedMarketplacePayload(
+        marketplace="playerok",
+        raw_items=len(extracted),
+        offers=tuple(PlayerokNormalizer().normalize(extracted)),
+    )
+
+
+def load_funpay_payload() -> LoadedMarketplacePayload:
+    """Extract and normalize the saved FunPay response with its raw count."""
+    from app.parsers.funpay_extractor import FunPayExtractor
+    from app.parsers.funpay_normalizer import FunPayNormalizer
+
+    if not FUNPAY_RESPONSE_PATH.exists():
+        return LoadedMarketplacePayload(
+            marketplace="funpay",
+            raw_items=0,
+            offers=(),
+        )
+    raw_response = FUNPAY_RESPONSE_PATH.read_text(encoding="utf-8")
+    extracted = FunPayExtractor().extract(raw_response)
+    return LoadedMarketplacePayload(
+        marketplace="funpay",
+        raw_items=len(extracted),
+        offers=tuple(FunPayNormalizer().normalize(extracted)),
     )
 
 

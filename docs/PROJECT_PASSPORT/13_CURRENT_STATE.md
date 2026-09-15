@@ -364,6 +364,10 @@ production AI wiring, and guarded live Telegram verification.
 - EPIC 19 Task 31 adds a loopback-only local preview command backed by saved
   real GGSEL, Playerok, and FunPay payloads. It requires neither PostgreSQL nor
   mock product data and includes a non-blocking verification mode.
+- EPIC 19 Task 32 adds deterministic cross-marketplace readiness evidence. All
+  `81` saved real offers produce `1,280` cross-source title pairs, with `0`
+  `AUTO_MATCH`, `0` `REVIEW`, and a highest similarity of `0.294` under the
+  unchanged matching rules.
 
 ## Known Gaps
 
@@ -378,6 +382,10 @@ production AI wiring, and guarded live Telegram verification.
   production runtime and operational integration.
 - FunPay saved-response extraction now produces one snapshot-ready `ParsedOffer`
   from a real public listing response.
+- The current real saved payloads do not yet prove a same-product comparison:
+  none of `1,280` cross-marketplace title pairs reaches `REVIEW` or
+  `AUTO_MATCH`. A curated canonical catalog and confirmed offer links are needed
+  before presenting that core user value as live-ready.
 - Snapshot creation is skipped when parsed offers from any marketplace do not
   contain normalized price and currency.
 - Ingestion, scoring, and durable content processing are separate services and

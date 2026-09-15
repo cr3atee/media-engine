@@ -6,6 +6,10 @@ This document lists only confirmed work remaining after EPIC 17 completion.
 
 ## Immediate
 
+- Bootstrap a curated canonical catalog and confirmed same-product marketplace
+  links. Current saved real payloads have no `AUTO_MATCH` or `REVIEW` result
+  across `1,280` cross-marketplace title pairs, so weakening matching thresholds
+  or inventing preview links is not acceptable.
 - Decide whether the embedded Market Terminal shell remains inside this
   repository or moves to a separate frontend project before public launch.
 - Decide whether public category browse must require parser/category retention
@@ -45,3 +49,6 @@ This document lists only confirmed work remaining after EPIC 17 completion.
 - GGSEL, Playerok, and FunPay are ready from current real captured-response
   proof and strict saved-payload verification. Production scheduling still needs
   live polling monitoring.
+- Real source extraction readiness does not imply same-product comparison
+  readiness. The current saved payloads contain `81` snapshot-ready offers but
+  no deterministic cross-marketplace match under the existing confidence rules.
