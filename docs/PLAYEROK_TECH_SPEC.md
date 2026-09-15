@@ -3,7 +3,7 @@
 ## Status
 
 Document date: 2026-07-22.
-Last verified update: 2026-09-07.
+Last verified update: 2026-09-15.
 
 This document describes the technical approach for extracting public marketplace offers from Playerok into the MediaEngine pipeline. It is a research specification only. No application code is changed by this document.
 
@@ -80,6 +80,14 @@ Verified source:
 - response shape: `data.items.edges[].node`, `pageInfo`, and `totalCount`;
 - verified public fields: `id`, `slug`, `name`, `price`, `rawPrice`, `status`,
   `user`, `category`, `game`, and `attachment.url`.
+
+Category-scoped retrieval is also live-verified with the official frontend
+filter fields `gameId` and `gameCategoryId`. On 2026-09-15, an unauthenticated
+request for the Minecraft `Keys` category returned HTTP 200, reported `208`
+approved source offers, and produced `20/20` snapshot-ready normalized offers
+from the requested first page. The generic fetcher accepts these identifiers as
+optional inputs and preserves the previous all-approved-items request when they
+are omitted.
 
 A direct `currency` field was tested against `MyItemProfile` and
 `ForeignItemProfile`; GraphQL validation rejected it. The captured response also
@@ -368,7 +376,8 @@ These fields may be preserved in a raw typed Playerok model or `extra` structure
 
 ## Open Questions
 
-- Exact category/game filters for initial MVP monitoring.
+- Which exact category set should be enabled for initial MVP monitoring across
+  all supported marketplaces.
 - Whether the unauthenticated `items` response remains stable across frontend
   deployments.
 - Whether future Playerok frontend/backend deployments keep the same RUB price

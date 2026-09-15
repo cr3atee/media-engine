@@ -227,6 +227,10 @@ This document tracks only work that is reflected by the current repository state
   offers are checked across `1,280` source pairs with the existing deterministic
   matching components; no automatic or review match currently exists, and the
   preview now explicitly avoids claiming unverified product identity.
+- EPIC 19 Task 33 Playerok category-scoped source verification: optional
+  `gameId` and `gameCategoryId` filters preserve the generic fetch path while a
+  live Minecraft Keys request returns `20/20` snapshot-ready first-page offers
+  from `208` source results.
 
 ## Current Status
 

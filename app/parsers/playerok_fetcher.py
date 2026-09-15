@@ -103,10 +103,18 @@ query items(
         *,
         first: int = 20,
         after: str | None = None,
+        game_id: str | None = None,
+        game_category_id: str | None = None,
     ) -> str:
-        """Download raw Playerok GraphQL item-list data without parsing it."""
+        """Download optionally category-scoped Playerok item-list data."""
+        item_filter: dict[str, object] = {"status": ["APPROVED"]}
+        if game_id is not None:
+            item_filter["gameId"] = game_id
+        if game_category_id is not None:
+            item_filter["gameCategoryId"] = game_category_id
+
         variables: dict[str, object] = {
-            "filter": {"status": ["APPROVED"]},
+            "filter": item_filter,
             "pagination": {"first": first, "after": after},
             "showForbiddenImage": True,
         }

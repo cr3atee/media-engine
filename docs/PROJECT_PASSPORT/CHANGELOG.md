@@ -6,6 +6,10 @@ This document records notable Project Passport updates.
 
 ## Unreleased
 
+- Added optional Playerok GraphQL `gameId` and `gameCategoryId` source filters
+  without changing the default request. A live Minecraft Keys verification
+  returned HTTP 200, `208` source results, and `20/20` snapshot-ready offers on
+  the first page.
 - Added Market Terminal integration planning: MediaEngine remains the backend
   core, while Market Terminal is documented as the public visual product shell.
 - Started EPIC 19 Consumer Read API with public Pydantic DTOs and bounded query

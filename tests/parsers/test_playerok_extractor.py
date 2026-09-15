@@ -198,6 +198,35 @@ def test_playerok_fetcher_uses_graphql_items_by_default() -> None:
     }
 
 
+def test_playerok_fetcher_scopes_items_to_game_category() -> None:
+    """Playerok fetcher forwards verified game and category filter fields."""
+    fake_client = _FakeHttpClient(
+        httpx.Response(200, json={"data": {"items": {"edges": []}}}),
+    )
+    fetcher = PlayerokFetcher(cast(HttpClient, fake_client))
+
+    asyncio.run(
+        fetcher.fetch_items(
+            first=10,
+            after="next-page",
+            game_id="minecraft-game",
+            game_category_id="minecraft-keys",
+        )
+    )
+
+    payload = fake_client.posts[0]["json"]
+    assert isinstance(payload, dict)
+    assert payload["variables"] == {
+        "filter": {
+            "status": ["APPROVED"],
+            "gameId": "minecraft-game",
+            "gameCategoryId": "minecraft-keys",
+        },
+        "pagination": {"first": 10, "after": "next-page"},
+        "showForbiddenImage": True,
+    }
+
+
 def test_playerok_fetcher_rejects_empty_response() -> None:
     """Playerok fetcher does not treat empty marketplace responses as data."""
     fetcher = PlayerokFetcher(

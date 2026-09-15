@@ -954,6 +954,35 @@ Verification:
   skipped`; MyPy passed for `388` source files; focused Ruff and Ruff format
   checks passed.
 
+### Task 33: Playerok Category-Scoped Source Verification
+
+Add the missing source-selection primitive needed to collect aligned Playerok
+offers without changing matching, comparison, or public read contracts.
+
+Acceptance criteria:
+
+- The existing public GraphQL `items` request optionally accepts verified
+  `gameId` and `gameCategoryId` filters.
+- Omitting both filters preserves the existing all-approved-items payload.
+- A real category demo performs extraction and normalization without persistence
+  or mock data.
+- Empty, invalid, or non-snapshot-ready responses fail visibly.
+- No matching threshold, canonical-product link, or category field is invented.
+
+Status:
+
+- Complete.
+
+Verification:
+
+- The public Minecraft `Keys` request returned HTTP 200 and JSON.
+- Playerok reported `208` source offers; the first page produced `20` extracted
+  and `20` snapshot-ready normalized offers.
+- The response included a real Minecraft Java and Bedrock key offer suitable for
+  later cross-marketplace identity review.
+- Category metadata remains marketplace-source context and is not yet retained
+  by the universal `ParsedOffer` contract.
+
 ## Deferred Runtime Constraint
 
 The repository-backed public read adapter currently returns bounded first

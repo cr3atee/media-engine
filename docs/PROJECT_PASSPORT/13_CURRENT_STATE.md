@@ -368,6 +368,10 @@ production AI wiring, and guarded live Telegram verification.
   `81` saved real offers produce `1,280` cross-source title pairs, with `0`
   `AUTO_MATCH`, `0` `REVIEW`, and a highest similarity of `0.294` under the
   unchanged matching rules.
+- EPIC 19 Task 33 verifies category-scoped Playerok collection through the
+  existing public GraphQL operation. A live Minecraft Keys request reports
+  `208` source offers and produces `20/20` snapshot-ready first-page offers;
+  default unfiltered fetch behavior remains unchanged.
 
 ## Known Gaps
 
@@ -376,6 +380,8 @@ production AI wiring, and guarded live Telegram verification.
 - Playerok has live GraphQL item-list proof and produces real snapshot-ready
   parsed offers. The GraphQL response itself contains no `currency` field, so
   the `RUB` fallback must remain documented and covered by drift monitoring.
+  Optional verified game/category filters now support targeted source batches,
+  but `ParsedOffer` still does not retain category metadata.
 - Saved-payload drift monitoring exists; live scheduled marketplace polling
   still needs production runtime configuration and operational monitoring.
 - Core readiness is no longer blocked by domain architecture; remaining work is

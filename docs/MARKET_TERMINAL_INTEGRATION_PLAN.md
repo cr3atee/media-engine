@@ -310,6 +310,9 @@ for those flows is explicitly completed.
 6. Bootstrap a curated canonical catalog and verified same-product offer links
    before presenting a real cross-marketplace price comparison. Do not lower
    deterministic matching thresholds merely to make the preview appear full.
+   Playerok category-scoped retrieval is now live-verified for Minecraft Keys;
+   collect equivalent GGSEL and FunPay category evidence before linking exact
+   variants.
 7. Decide whether the embedded shell remains in this repository or moves to a
    separate frontend project before public launch.
 8. Decide whether category browse must require parser/category retention before
