@@ -983,6 +983,36 @@ Verification:
 - Category metadata remains marketplace-source context and is not yet retained
   by the universal `ParsedOffer` contract.
 
+### Task 34: Aligned Marketplace Category Evidence
+
+Verify one equivalent public category across GGSEL, Playerok, and FunPay before
+any canonical-product bootstrap or matching adjustment.
+
+Acceptance criteria:
+
+- Existing fetcher, extractor, and normalizer implementations are reused.
+- GGSEL and FunPay use public Minecraft PC key category URLs; Playerok uses the
+  verified Minecraft Keys GraphQL filter.
+- Only real public responses are accepted and no payload is committed.
+- Every source reports parsed and snapshot-ready counts independently.
+- Existing deterministic matching components analyze cross-source titles
+  without threshold changes or invented identity links.
+
+Status:
+
+- Complete.
+
+Verification:
+
+- GGSEL produced `60/60` parsed and snapshot-ready offers.
+- Playerok produced `20/20` first-page offers from a live source total of `209`.
+- FunPay produced `1,313/1,313` parsed and snapshot-ready offers.
+- The `1,393` aligned-category offers produced `106,240` cross-marketplace title
+  pairs: `0` `AUTO_MATCH`, `0` `REVIEW`, and a highest similarity of `0.714`.
+- The strongest candidates are visibly related Minecraft Java and Bedrock PC
+  key variants, but category alignment alone is not treated as product identity
+  proof.
+
 ## Deferred Runtime Constraint
 
 The repository-backed public read adapter currently returns bounded first

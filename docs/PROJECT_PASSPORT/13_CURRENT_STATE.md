@@ -372,6 +372,11 @@ production AI wiring, and guarded live Telegram verification.
   existing public GraphQL operation. A live Minecraft Keys request reports
   `208` source offers and produces `20/20` snapshot-ready first-page offers;
   default unfiltered fetch behavior remains unchanged.
+- EPIC 19 Task 34 verifies aligned real Minecraft key categories through all
+  three existing adapters: GGSEL `60/60`, Playerok `20/20` from `209` source
+  offers, and FunPay `1,313/1,313` parsed/snapshot-ready. Existing matching
+  classifies all `106,240` cross-source pairs as `NO_MATCH`, with a highest
+  similarity of `0.714`, so exact canonical links still require review.
 
 ## Known Gaps
 
@@ -390,8 +395,10 @@ production AI wiring, and guarded live Telegram verification.
   from a real public listing response.
 - The current real saved payloads do not yet prove a same-product comparison:
   none of `1,280` cross-marketplace title pairs reaches `REVIEW` or
-  `AUTO_MATCH`. A curated canonical catalog and confirmed offer links are needed
-  before presenting that core user value as live-ready.
+  `AUTO_MATCH`. Aligned live Minecraft key categories improve the strongest
+  score to `0.714` across `106,240` pairs but still produce no `REVIEW` or
+  `AUTO_MATCH`. A curated canonical catalog and confirmed exact-variant links
+  are needed before presenting that core user value as live-ready.
 - Snapshot creation is skipped when parsed offers from any marketplace do not
   contain normalized price and currency.
 - Ingestion, scoring, and durable content processing are separate services and

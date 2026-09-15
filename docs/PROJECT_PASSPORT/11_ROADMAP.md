@@ -231,6 +231,10 @@ This document tracks only work that is reflected by the current repository state
   `gameId` and `gameCategoryId` filters preserve the generic fetch path while a
   live Minecraft Keys request returns `20/20` snapshot-ready first-page offers
   from `208` source results.
+- EPIC 19 Task 34 aligned marketplace category evidence: existing GGSEL,
+  Playerok, and FunPay adapters produce `1,393` real snapshot-ready Minecraft
+  key offers. Their `106,240` cross-source title pairs contain no automatic or
+  review match under unchanged rules; the highest similarity is `0.714`.
 
 ## Current Status
 

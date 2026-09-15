@@ -9,9 +9,10 @@ This document lists only confirmed work remaining after EPIC 17 completion.
 - Bootstrap a curated canonical catalog and confirmed same-product marketplace
   links. Current saved real payloads have no `AUTO_MATCH` or `REVIEW` result
   across `1,280` cross-marketplace title pairs, so weakening matching thresholds
-  or inventing preview links is not acceptable. Playerok can now fetch an exact
-  game/category batch; capture equivalent GGSEL and FunPay batches and verify
-  exact variants before creating links.
+  or inventing preview links is not acceptable. Equivalent Minecraft key
+  categories are now live-verified for all three sources, but all `106,240`
+  aligned-category pairs remain below `REVIEW`. Curate and confirm exact variants
+  before creating canonical links.
 - Decide whether the embedded Market Terminal shell remains inside this
   repository or moves to a separate frontend project before public launch.
 - Decide whether public category browse must require parser/category retention

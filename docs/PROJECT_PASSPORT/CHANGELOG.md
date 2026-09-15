@@ -6,6 +6,10 @@ This document records notable Project Passport updates.
 
 ## Unreleased
 
+- Added a real aligned-category verifier over existing GGSEL, Playerok, and
+  FunPay adapters. It observed `1,393` snapshot-ready Minecraft key offers and
+  evaluated `106,240` cross-source title pairs without changing matching; the
+  highest similarity was `0.714` and no pair reached `REVIEW`.
 - Added optional Playerok GraphQL `gameId` and `gameCategoryId` source filters
   without changing the default request. A live Minecraft Keys verification
   returned HTTP 200, `208` source results, and `20/20` snapshot-ready offers on
