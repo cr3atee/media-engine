@@ -239,6 +239,10 @@ This document tracks only work that is reflected by the current repository state
   persisted through a transaction-scoped application service and now drive
   comparator grouping, while unlinked offers retain tenant-scoped deterministic
   matching.
+- EPIC 19 Task 36 tenant-safe canonical link persistence: migration
+  `0015_tenant_canonical_links` adds a composite tenant/product foreign key,
+  preflight validation, and partial lookup index. Isolated PostgreSQL 17
+  verification passed `15/15` checks plus the Alembic lifecycle.
 
 ## Current Status
 

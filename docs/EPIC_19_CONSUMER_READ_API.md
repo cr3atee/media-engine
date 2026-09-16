@@ -1045,6 +1045,38 @@ Verification:
 - The linking primitive is internal only. Admin review endpoints, immutable
   decision audit, and rejected-pair suppression are not claimed by this task.
 
+### Task 36: Tenant-Safe Canonical Link Persistence
+
+Protect curated canonical offer links at the PostgreSQL boundary without
+changing repository or comparator contracts.
+
+Acceptance criteria:
+
+- A composite foreign key requires an offer link to reference a canonical
+  product owned by the same tenant.
+- Existing cross-tenant links stop migration `0015_tenant_canonical_links`
+  with a diagnostic instead of being silently rewritten.
+- A partial tenant/canonical-product index supports grouped reads.
+- Existing canonical-product deletion semantics continue to clear optional
+  offer links.
+- The migration is reversible and SQLAlchemy metadata matches PostgreSQL.
+
+Status:
+
+- Complete.
+
+Verification:
+
+- `scripts/verify_canonical_links_postgres.py` passed `15/15` checks against an
+  isolated PostgreSQL 17 test database.
+- Same-tenant linking, idempotent replay, fresh-session persistence, explicit
+  comparator grouping, service-level tenant isolation, database-level tenant
+  isolation, rollback, and `ON DELETE SET NULL` behavior passed.
+- Alembic current/check, downgrade to `0014_scheduler_leases`, upgrade back to
+  `0015_tenant_canonical_links`, and offline upgrade SQL passed.
+- This task protects reviewed links; it does not create catalog records,
+  approve matches automatically, or add an administration workflow.
+
 ## Deferred Runtime Constraint
 
 The repository-backed public read adapter currently returns bounded first

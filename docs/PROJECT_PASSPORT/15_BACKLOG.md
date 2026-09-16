@@ -12,8 +12,10 @@ This document lists only confirmed work remaining after EPIC 17 completion.
   or inventing preview links is not acceptable. Equivalent Minecraft key
   categories are now live-verified for all three sources, but all `106,240`
   aligned-category pairs remain below `REVIEW`. Use the tenant-scoped
-  `CanonicalOfferLinkService` to populate only reviewed exact variants; add
-  audited review/rejection workflow separately before delegating this to admins.
+  `CanonicalOfferLinkService` to populate only reviewed exact variants. The
+  PostgreSQL schema now prevents cross-tenant canonical links; catalog
+  population and an audited review/rejection workflow remain before this can be
+  delegated to admins.
 - Decide whether the embedded Market Terminal shell remains inside this
   repository or moves to a separate frontend project before public launch.
 - Decide whether public category browse must require parser/category retention

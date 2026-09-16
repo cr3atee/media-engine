@@ -6,6 +6,10 @@ This document records notable Project Passport updates.
 
 ## Unreleased
 
+- Added migration `0015_tenant_canonical_links` with cross-tenant preflight,
+  composite tenant/product foreign-key protection, and a partial canonical-link
+  lookup index. Isolated PostgreSQL 17 verification passed `15/15` checks and
+  the complete Alembic downgrade/upgrade/current/check/offline-SQL lifecycle.
 - Added tenant-scoped curated canonical offer linking and made valid persisted
   links authoritative in comparator grouping. Unlinked offers retain the
   existing deterministic matcher, now restricted to same-tenant candidates.

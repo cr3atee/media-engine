@@ -13,6 +13,13 @@ async memory and PostgreSQL repositories, deterministic matching/comparison,
 repository-backed price history, transaction-bounded application execution,
 durable post-commit event scoring, and Scheduler orchestration.
 
+Curated canonical offer links are now protected end to end: the tenant-scoped
+application service drives comparator grouping, while PostgreSQL revision
+`0015_tenant_canonical_links` prevents cross-tenant links at the schema
+boundary. Isolated PostgreSQL 17 verification passed `15/15` checks, including
+fresh-session persistence, rollback, and preserved link-clearing behavior when
+a canonical product is deleted.
+
 EPIC 12 is live-verified and complete against PostgreSQL 17.10.
 EPIC 13 is verified and complete: deterministic price-drop events persist
 atomically, are scored through durable claims, and produce persistent immutable

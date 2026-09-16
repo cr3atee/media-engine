@@ -569,3 +569,29 @@ Alembic verification passed:
 
 This verification proves the persisted public read path, not live marketplace
 polling, browser layout, historical price changes, or retained category data.
+
+## EPIC 19 Tenant-Safe Canonical Links
+
+`scripts/verify_canonical_links_postgres.py` was executed against a temporary
+`postgres:17-alpine` container and isolated database
+`epic19_canonical_verify` on `127.0.0.1:55439`. No project or production
+database was used.
+
+All `15/15` checks passed. The verifier covers revision
+`0015_tenant_canonical_links`, schema constraints and indexes, same-tenant
+link persistence, idempotent replay, fresh-session reads, explicit comparator
+grouping, service-level cross-tenant rejection, database-level cross-tenant
+rejection, transaction rollback, and canonical-product deletion with optional
+offer-link clearing.
+
+Alembic verification passed:
+
+- clean schema upgrade through `0015_tenant_canonical_links`;
+- `alembic current` reported `0015_tenant_canonical_links (head)`;
+- `alembic check` reported no new upgrade operations;
+- downgrade to `0014_scheduler_leases`;
+- upgrade back to head;
+- offline SQL generation containing the migration preflight, composite foreign
+  key, target unique constraint, and partial lookup index.
+
+The temporary container and volume were removed after verification.

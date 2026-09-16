@@ -117,6 +117,10 @@ run inside ingestion or scoring transactions.
 - Matching does not depend on marketplace-specific code.
 - Matching does not use AI, embeddings, or external services.
 - Curated offer links are tenant-scoped and do not alter matching thresholds.
+- PostgreSQL enforces curated offer-link ownership with a composite
+  `(tenant_id, canonical_product_id)` foreign key. The application service
+  remains the policy boundary; the database constraint is a final isolation
+  guard against direct repository or SQL misuse.
 - Marketplace pipeline persists parsed offers, price snapshots, and deterministic
   market events only through `RepositoryProvider`.
 - Scheduler jobs delegate to application services and do not own repositories,

@@ -6,7 +6,7 @@ from datetime import UTC, datetime
 from decimal import Decimal
 from typing import Any, cast
 
-from sqlalchemy import DateTime, Table, UniqueConstraint
+from sqlalchemy import DateTime, ForeignKeyConstraint, Table, UniqueConstraint
 from sqlalchemy.dialects.postgresql.base import PGDialect
 from sqlalchemy.engine import Dialect
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -78,6 +78,7 @@ def test_offer_metadata_defines_identity_and_canonical_integrity() -> None:
     indexes = {str(index.name): index for index in table.indexes}
     identity = indexes["uq_offers_marketplace_external_id_not_null"]
     canonical = indexes["ix_offers_canonical_product_id"]
+    tenant_canonical = indexes["ix_offers_tenant_canonical_product"]
 
     assert identity.unique is True
     assert tuple(column.name for column in identity.columns) == (
@@ -89,14 +90,51 @@ def test_offer_metadata_defines_identity_and_canonical_integrity() -> None:
     assert tuple(column.name for column in canonical.columns) == (
         "canonical_product_id",
     )
+    assert tuple(column.name for column in tenant_canonical.columns) == (
+        "tenant_id",
+        "canonical_product_id",
+    )
+    assert tenant_canonical.dialect_options["postgresql"]["where"] is not None
 
     foreign_key = next(iter(Offer.__table__.c.canonical_product_id.foreign_keys))
     assert foreign_key.name == "fk_offers_canonical_product_id_canonical_products"
     assert foreign_key.target_fullname == "canonical_products.id"
     assert foreign_key.ondelete == "SET NULL"
-    tenant_foreign_key = next(iter(Offer.__table__.c.tenant_id.foreign_keys))
+    tenant_canonical_fk = next(
+        constraint
+        for constraint in table.constraints
+        if constraint.name == "fk_offers_tenant_canonical_product"
+    )
+    assert isinstance(tenant_canonical_fk, ForeignKeyConstraint)
+    assert tuple(column.name for column in tenant_canonical_fk.columns) == (
+        "tenant_id",
+        "canonical_product_id",
+    )
+    assert tuple(
+        element.target_fullname for element in tenant_canonical_fk.elements
+    ) == (
+        "canonical_products.tenant_id",
+        "canonical_products.id",
+    )
+    tenant_foreign_key = next(
+        foreign_key
+        for foreign_key in Offer.__table__.c.tenant_id.foreign_keys
+        if foreign_key.name == "fk_offers_tenant_id_tenants"
+    )
     assert tenant_foreign_key.name == "fk_offers_tenant_id_tenants"
     assert tenant_foreign_key.target_fullname == "tenants.id"
+
+    product_table = cast(Table, CanonicalProductRecord.__table__)
+    tenant_identity = next(
+        constraint
+        for constraint in product_table.constraints
+        if constraint.name == "uq_canonical_products_tenant_id_id"
+    )
+    assert isinstance(tenant_identity, UniqueConstraint)
+    assert tuple(column.name for column in tenant_identity.columns) == (
+        "tenant_id",
+        "id",
+    )
 
 
 def test_snapshot_metadata_defines_exact_identity_and_history_index() -> None:

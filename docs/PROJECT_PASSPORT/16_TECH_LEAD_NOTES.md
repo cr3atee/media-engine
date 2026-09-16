@@ -168,6 +168,11 @@ This document captures architecture notes that are important for future reviews.
 - Scheduler same-job overlap is now guarded by optional scheduler leases.
   Production multi-node deployments must create Scheduler through the PostgreSQL
   scheduler factory and provide a stable `SCHEDULER_OWNER_ID` per node.
+- Curated canonical offer links have defense in depth: service-level tenant
+  checks remain authoritative, and migration `0015_tenant_canonical_links`
+  rejects cross-tenant references at the PostgreSQL boundary. Do not remove the
+  original nullable `ON DELETE SET NULL` foreign key without replacing its
+  product-deletion semantics explicitly.
 
 ## Review Notes
 

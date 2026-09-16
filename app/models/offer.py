@@ -4,7 +4,16 @@ from datetime import UTC, datetime
 from decimal import Decimal
 from uuid import UUID, uuid4
 
-from sqlalchemy import DateTime, ForeignKey, Index, Numeric, String, Uuid, text
+from sqlalchemy import (
+    DateTime,
+    ForeignKey,
+    ForeignKeyConstraint,
+    Index,
+    Numeric,
+    String,
+    Uuid,
+    text,
+)
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.database.base import Base
@@ -26,6 +35,17 @@ class Offer(Base):
         ),
         Index("ix_offers_tenant_created", "tenant_id", "created_at", "id"),
         Index("ix_offers_canonical_product_id", "canonical_product_id"),
+        Index(
+            "ix_offers_tenant_canonical_product",
+            "tenant_id",
+            "canonical_product_id",
+            postgresql_where=text("canonical_product_id IS NOT NULL"),
+        ),
+        ForeignKeyConstraint(
+            ("tenant_id", "canonical_product_id"),
+            ("canonical_products.tenant_id", "canonical_products.id"),
+            name="fk_offers_tenant_canonical_product",
+        ),
     )
 
     id: Mapped[UUID] = mapped_column(Uuid, primary_key=True, default=uuid4)

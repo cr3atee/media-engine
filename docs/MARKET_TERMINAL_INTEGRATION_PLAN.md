@@ -365,6 +365,12 @@ Inspect current real-payload matching evidence with:
 .venv\Scripts\python.exe scripts/analyze_cross_marketplace_matching.py
 ```
 
+Reviewed same-product links can be persisted through
+`CanonicalOfferLinkService`. PostgreSQL revision `0015_tenant_canonical_links`
+ensures that an offer cannot reference a canonical product from another tenant.
+This enables trustworthy curated comparisons, but does not make the current
+real marketplace payloads automatically equivalent products.
+
 ## Architectural Guardrails
 
 - Keep marketplace parsing out of the frontend.

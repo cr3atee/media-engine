@@ -161,6 +161,19 @@ Fields:
 - `REVIEW`
 - `NO_MATCH`
 
+## Curated Canonical Offer Link
+
+`ParsedOffer.canonical_product_id` is an optional reviewed link to a
+`CanonicalProduct`. `CanonicalOfferLinkService` creates the link only when the
+offer and product already exist in the same tenant, treats the same link as an
+idempotent replay, and rejects silent reassignment.
+
+PostgreSQL migration `0015_tenant_canonical_links` enforces the same tenant
+ownership at the schema boundary through a composite foreign key. Deleting a
+canonical product keeps offers and clears their optional link. An absent link
+does not imply a match; existing deterministic title matching remains the
+fallback for unlinked offers.
+
 ## Persistent Lifecycle Verification
 
 The production-shaped PostgreSQL flow verified exact links from `ParsedOffer` to
