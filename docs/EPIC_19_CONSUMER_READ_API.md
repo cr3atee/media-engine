@@ -1111,8 +1111,47 @@ Verification:
   evidence cannot be removed accidentally; failed deletion rolls back.
 - Full Pytest passed `430` tests with `58` expected skips; MyPy checked `402`
   source files; Ruff and Ruff format passed for all touched Python files.
-- Seller/admin routes, a review queue, and filtering rejected pairs from future
-  recommendations remain separate tasks; no automatic matching behavior changed.
+- Seller/admin routes and rejected-pair candidate filtering are implemented by
+  Task 38; no automatic matching behavior changed in this foundation task.
+
+### Task 38: Tenant-Authorized Canonical Offer Review API
+
+Expose the existing deterministic review and immutable decision boundaries to
+authorized seller users without moving matching or persistence policy into
+FastAPI.
+
+Acceptance criteria:
+
+- Owner, administrator, and reviewer roles receive an explicit
+  `catalog_review` permission; viewer and operator roles do not.
+- The tenant review queue reuses `MatchingService` and includes only unresolved
+  candidates already classified as `REVIEW` by the unchanged thresholds.
+- Persisted terminal pairs are removed before matching so a rejected best pair
+  can reveal the next eligible candidate.
+- Terminal decisions are loaded once per tenant rather than queried once per
+  offer, avoiding an N+1 read path for real marketplace batches.
+- Confirm and reject routes delegate to `CanonicalOfferReviewService`, require
+  `Idempotency-Key`, retain request/actor evidence, and return sanitized errors.
+- Confirmation atomically links the offer; rejection leaves it unlinked.
+- The API remains tenant-isolated and does not call marketplace sources, AI, or
+  Telegram.
+
+Status:
+
+- Complete.
+
+Verification:
+
+- New memory service/API tests pass `6/6`; the focused canonical review suite
+  passes `14/14`.
+- `scripts/verify_catalog_review_api_postgres.py` passes `12/12` checks against
+  isolated PostgreSQL 17, including permissions, tenant hiding, rejected-pair
+  fallback, idempotency conflict redaction, linking, replay, and fresh-engine
+  persistence.
+- Alembic current/check, downgrade to `0015_tenant_canonical_links`, upgrade
+  back to `0016_canonical_offer_decisions`, and offline SQL pass.
+- Full Pytest passes `436` tests with `58` expected skips; MyPy checks `408`
+  source files; focused Ruff and Ruff format checks pass.
 
 ## Deferred Runtime Constraint
 

@@ -186,8 +186,10 @@ idempotency key, deterministic request fingerprint, and UTC creation time.
 `CanonicalOfferReviewService` writes a confirmed decision and the existing
 offer link in one repository scope. A rejected decision leaves the offer
 unchanged. One pair has one terminal row, and an accepted replay requires the
-original tenant-scoped idempotency key. This foundation does not yet expose an
-HTTP review queue or feed rejected decisions into candidate generation.
+original tenant-scoped idempotency key. `CanonicalOfferReviewQueueService`
+loads only same-tenant offers/products, excludes products with terminal pair
+decisions, and delegates the remaining candidates to the unchanged
+`MatchingService`. Its API projection is not a new domain entity.
 
 ## Persistent Lifecycle Verification
 

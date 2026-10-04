@@ -78,6 +78,10 @@ Current matching flow:
    comparator grouping; only unlinked offers use automatic title matching.
 6. `CanonicalOfferLinkService` writes explicit reviewed positive links through
    a repository scope and rejects cross-tenant or silent reassignment attempts.
+7. `CanonicalOfferReviewQueueService` removes terminal candidate pairs, then
+   reuses `MatchingService` and exposes only unchanged-threshold `REVIEW`
+   results to the tenant-authorized seller API. Decisions are loaded in one
+   tenant-scoped repository read rather than per offer.
 
 ## Repository Boundary
 
@@ -124,8 +128,9 @@ run inside ingestion or scoring transactions.
   guard against direct repository or SQL misuse.
 - Canonical offer review decisions are immutable, tenant-owned repository
   records. Confirmation and link persistence share one repository scope;
-  rejection records evidence without mutating the offer. HTTP review routes and
-  recommendation filtering remain outside this persistence boundary.
+  rejection records evidence without mutating the offer. The HTTP boundary
+  performs authorization and mapping only; candidate generation remains an
+  application service and excludes terminal pairs before deterministic matching.
 - Marketplace pipeline persists parsed offers, price snapshots, and deterministic
   market events only through `RepositoryProvider`.
 - Scheduler jobs delegate to application services and do not own repositories,

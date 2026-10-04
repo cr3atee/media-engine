@@ -144,6 +144,21 @@ class PostgresCanonicalOfferDecisionRepository(CanonicalOfferDecisionRepository)
         )
         return tuple(_to_domain(record) for record in result.scalars())
 
+    async def list_by_tenant(
+        self,
+        tenant_id: UUID,
+    ) -> Sequence[CanonicalOfferDecision]:
+        """Return tenant-owned decisions in deterministic chronological order."""
+        result = await self._session.execute(
+            select(CanonicalOfferDecisionRecord)
+            .where(CanonicalOfferDecisionRecord.tenant_id == tenant_id)
+            .order_by(
+                CanonicalOfferDecisionRecord.created_at,
+                CanonicalOfferDecisionRecord.id,
+            )
+        )
+        return tuple(_to_domain(record) for record in result.scalars())
+
     async def _acquire_lock(self, key: str) -> None:
         await self._session.execute(
             text("SELECT pg_advisory_xact_lock(hashtextextended(:key, 0))"),

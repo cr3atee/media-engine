@@ -6,6 +6,12 @@ This document records notable Project Passport updates.
 
 ## Unreleased
 
+- Added tenant-authorized canonical offer review candidates and idempotent
+  confirm/reject seller routes over the existing matching and immutable decision
+  services. Rejected pairs are excluded before rematching. Isolated PostgreSQL
+  17 API verification passed `12/12`; full Pytest passed `436` tests with `58`
+  expected skips, MyPy checked `408` source files, and focused Ruff/format
+  checks passed.
 - Added immutable canonical offer confirm/reject decisions, memory/PostgreSQL
   repository parity, atomic review orchestration, and migration
   `0016_canonical_offer_decisions`. Isolated PostgreSQL 17 verification passed

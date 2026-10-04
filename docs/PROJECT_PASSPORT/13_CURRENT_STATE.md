@@ -25,8 +25,9 @@ The canonical review foundation now persists immutable `confirmed` and
 decisions and offer links commit atomically; rejected decisions do not mutate
 offers. PostgreSQL revision `0016_canonical_offer_decisions` and its isolated
 `20/20` verifier cover idempotency, tenant isolation, rollback, concurrency,
-and fresh-session persistence. Review APIs and candidate suppression are not yet
-connected.
+and fresh-session persistence. A tenant-authorized seller API now lists only
+unchanged-threshold `REVIEW` candidates and delegates idempotent confirm/reject
+commands to that service. Its isolated PostgreSQL API verifier passes `12/12`.
 
 EPIC 12 is live-verified and complete against PostgreSQL 17.10.
 EPIC 13 is verified and complete: deterministic price-drop events persist
@@ -419,8 +420,10 @@ production AI wiring, and guarded live Telegram verification.
   score to `0.714` across `106,240` pairs but still produce no `REVIEW` or
   `AUTO_MATCH`. A curated canonical catalog and confirmed exact-variant links
   are needed before presenting that core user value as live-ready. The internal
-  positive-link service is ready, but no production reviewed link set or audited
-  match-review API is populated yet.
+  positive-link service and audited match-review API are ready, but no
+  production reviewed link set is populated yet. The current aligned payloads
+  remain below the unchanged review threshold, so the API correctly returns no
+  real-data candidates for that set.
 - Snapshot creation is skipped when parsed offers from any marketplace do not
   contain normalized price and currency.
 - Ingestion, scoring, and durable content processing are separate services and

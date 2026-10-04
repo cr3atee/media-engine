@@ -127,6 +127,22 @@ class MemoryCanonicalOfferDecisionRepository(CanonicalOfferDecisionRepository):
             )
         )
 
+    async def list_by_tenant(
+        self,
+        tenant_id: UUID,
+    ) -> Sequence[CanonicalOfferDecision]:
+        """Return tenant-owned decisions in deterministic chronological order."""
+        return tuple(
+            sorted(
+                (
+                    decision
+                    for decision in self._decisions_by_id.values()
+                    if decision.tenant_id == tenant_id
+                ),
+                key=lambda decision: (decision.created_at, decision.id.hex),
+            )
+        )
+
 
 def _pair_key(decision: CanonicalOfferDecision) -> DecisionPairKey:
     return (

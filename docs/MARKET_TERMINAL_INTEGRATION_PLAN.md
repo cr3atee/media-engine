@@ -314,8 +314,9 @@ for those flows is explicitly completed.
    equivalent GGSEL and FunPay Minecraft PC key batches are also live-verified.
    Review and link exact variants through a curated canonical bootstrap rather
    than broad category membership. The internal tenant-scoped positive-link
-   primitive now exists and comparator grouping honors it; actual reviewed links
-   and an audited admin workflow still need to be populated.
+   primitive now exists and comparator grouping honors it. The tenant-authorized
+   review queue and audited confirm/reject API also exist; actual production
+   reviewed links still need to be populated from valid candidates.
 7. Decide whether the embedded shell remains in this repository or moves to a
    separate frontend project before public launch.
 8. Decide whether category browse must require parser/category retention before
@@ -373,9 +374,12 @@ real marketplace payloads automatically equivalent products.
 
 Immutable confirm/reject evidence is persisted by
 `CanonicalOfferReviewService` through memory or PostgreSQL repository scopes.
-This is the backend foundation for a future operator review queue. The current
-terminal does not expose review controls, and persisted rejections are not yet
-used to filter a recommendation list because that list does not yet exist.
+The seller API exposes unresolved deterministic `REVIEW` candidates at
+`/api/v1/tenants/{tenant_id}/catalog/review-candidates` and idempotent confirm
+and reject commands under the same catalog boundary. Persisted terminal pairs
+are removed before rematching. The public terminal intentionally does not expose
+seller review controls, and the current real aligned payload set still produces
+no candidate at the unchanged `REVIEW` threshold.
 
 ## Architectural Guardrails
 

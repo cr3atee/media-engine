@@ -59,6 +59,13 @@ class CanonicalOfferDecisionRepository(BaseRepository):
         """Return the terminal decision for one offer/product pair."""
 
     @abstractmethod
+    async def list_by_tenant(
+        self,
+        tenant_id: UUID,
+    ) -> Sequence[CanonicalOfferDecision]:
+        """Return all terminal decisions for one tenant in stable order."""
+
+    @abstractmethod
     async def list_for_offer(
         self,
         tenant_id: UUID,

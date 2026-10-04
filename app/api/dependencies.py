@@ -31,6 +31,10 @@ from app.services.admin_queries import (
 from app.services.auth_tokens import AuthTokenError, SignedAccessTokenService
 from app.services.authentication import AuthenticationError, AuthenticationService
 from app.services.authorization import AuthorizationError, AuthorizationService
+from app.services.canonical_offer_review import CanonicalOfferReviewService
+from app.services.canonical_offer_review_queue import (
+    CanonicalOfferReviewQueueService,
+)
 from app.services.marketplace_integrations import MarketplaceIntegrationService
 from app.services.passwords import PasswordHasher
 from app.services.public_categories import PublicCategoryReadService
@@ -216,6 +220,20 @@ async def get_marketplace_integration_service(
 ) -> MarketplaceIntegrationService:
     """Build the seller marketplace integration service from app repositories."""
     return MarketplaceIntegrationService(_repository_scope_factory(request))
+
+
+async def get_canonical_offer_review_service(
+    request: Request,
+) -> CanonicalOfferReviewService:
+    """Build the tenant-scoped canonical offer command service."""
+    return CanonicalOfferReviewService(_repository_scope_factory(request))
+
+
+async def get_canonical_offer_review_queue_service(
+    request: Request,
+) -> CanonicalOfferReviewQueueService:
+    """Build the deterministic canonical offer review queue service."""
+    return CanonicalOfferReviewQueueService(_repository_scope_factory(request))
 
 
 async def require_idempotency_key(

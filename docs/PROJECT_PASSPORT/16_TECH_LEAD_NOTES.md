@@ -181,6 +181,11 @@ This document captures architecture notes that are important for future reviews.
 - A canonical product referenced by immutable review evidence is delete
   restricted. Introduce explicit archival semantics before adding any product
   deletion command; cascading deletion of review evidence is not acceptable.
+- Canonical offer review authorization uses the dedicated `catalog_review`
+  permission. Candidate generation belongs to the application layer, accepts
+  only the existing `REVIEW` classification, and removes terminal pairs before
+  calling `MatchingService`; do not duplicate similarity or lower thresholds in
+  HTTP or UI code.
 
 ## Review Notes
 

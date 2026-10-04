@@ -246,8 +246,11 @@ This document tracks only work that is reflected by the current repository state
 - EPIC 19 Task 37 persistent canonical offer review foundation: immutable
   tenant-scoped confirm/reject decisions now have memory/PostgreSQL repository
   parity and atomic application orchestration. Isolated PostgreSQL 17
-  verification passed `20/20`; HTTP review and rejected-candidate filtering are
-  intentionally deferred.
+  verification passed `20/20`.
+- EPIC 19 Task 38 tenant-authorized canonical review API: an explicit seller
+  permission protects the deterministic `REVIEW` queue and idempotent
+  confirm/reject routes. Terminal pairs are excluded before matching, and the
+  PostgreSQL API verifier passes `12/12` checks without changing thresholds.
 
 ## Current Status
 

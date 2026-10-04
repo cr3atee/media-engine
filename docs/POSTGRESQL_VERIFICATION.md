@@ -11,7 +11,7 @@ integration persistence, credential metadata redaction, and seller integration
 API boundaries are also live-verified. EPIC 16 and EPIC 17 verification used
 isolated PostgreSQL 17.10 databases without using a project or production
 database. The current verified revision is
-`0013_marketplace_credentials`.
+`0016_canonical_offer_decisions`.
 
 ## Verified Schema
 
@@ -631,4 +631,23 @@ Quality verification passed:
 
 Downgrade removes immutable review rows with the Task 37 table and is therefore
 a development rollback, not a production data-preservation strategy. The
+temporary container and volume were removed after verification.
+
+## EPIC 19 Canonical Offer Review API
+
+`scripts/verify_catalog_review_api_postgres.py` was executed against temporary
+PostgreSQL 17 and isolated database `epic19_catalog_review_verify` on a dynamic
+loopback port. No project or production database was used.
+
+All `12/12` checks passed. The verifier covers seller authentication, explicit
+catalog-review permission, foreign-tenant hiding, unchanged-threshold review
+candidate generation, rejection persistence, rejected-pair suppression before
+rematching, sanitized fingerprint conflicts, confirmed link persistence,
+idempotent replay, queue removal, and fresh-engine persistence of both links and
+immutable decisions.
+
+Alembic verification passed at `0016_canonical_offer_decisions`: current/check,
+downgrade to `0015_tenant_canonical_links`, upgrade back to head, and offline
+upgrade SQL. Full Pytest passed `436` tests with `58` expected skips; MyPy
+checked `408` source files; focused Ruff and Ruff format checks passed. The
 temporary container and volume were removed after verification.

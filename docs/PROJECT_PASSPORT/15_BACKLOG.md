@@ -15,9 +15,9 @@ This document lists only confirmed work remaining after EPIC 17 completion.
   `CanonicalOfferLinkService` to populate only reviewed exact variants. The
   PostgreSQL schema now prevents cross-tenant canonical links; catalog
   population remains. Immutable confirm/reject persistence and atomic review
-  orchestration now exist; add the tenant-authorized HTTP review queue and make
-  candidate generation exclude persisted rejected pairs before delegating this
-  workflow to admins.
+  orchestration now exist. The tenant-authorized HTTP review queue excludes
+  terminal pairs before matching; use it to populate production links only when
+  source candidates reach the unchanged `REVIEW` threshold.
 - Decide whether the embedded Market Terminal shell remains inside this
   repository or moves to a separate frontend project before public launch.
 - Decide whether public category browse must require parser/category retention
