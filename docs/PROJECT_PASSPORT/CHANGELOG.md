@@ -6,6 +6,12 @@ This document records notable Project Passport updates.
 
 ## Unreleased
 
+- Added immutable canonical offer confirm/reject decisions, memory/PostgreSQL
+  repository parity, atomic review orchestration, and migration
+  `0016_canonical_offer_decisions`. Isolated PostgreSQL 17 verification passed
+  `20/20`, including idempotency, tenant isolation, rollback, concurrency,
+  fresh-session persistence, and immutable evidence retention; full Pytest,
+  MyPy, Ruff, and Ruff format passed.
 - Added migration `0015_tenant_canonical_links` with cross-tenant preflight,
   composite tenant/product foreign-key protection, and a partial canonical-link
   lookup index. Isolated PostgreSQL 17 verification passed `15/15` checks and

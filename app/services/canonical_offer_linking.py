@@ -4,6 +4,7 @@ from dataclasses import dataclass, replace
 from uuid import UUID
 
 from app.parsers.models import ParsedOffer
+from app.repositories.provider import RepositoryProvider
 from app.services.repository_scope import RepositoryScopeFactory
 
 
@@ -43,35 +44,43 @@ class CanonicalOfferLinkService:
     async def link(self, command: LinkCanonicalOfferCommand) -> ParsedOffer:
         """Idempotently link an existing offer to a tenant-owned product."""
         async with self._repository_scope_factory() as repositories:
-            product = await repositories.canonical_products.get_by_tenant_and_id(
-                command.tenant_id,
-                command.canonical_product_id,
-            )
-            if product is None:
-                raise CanonicalProductUnavailableError(
-                    "Canonical product is unavailable for this tenant."
-                )
+            return await link_canonical_offer(repositories, command)
 
-            offer = await repositories.offers.get_by_identity(
-                command.tenant_id,
-                command.marketplace,
-                command.external_id,
-            )
-            if offer is None:
-                raise MarketplaceOfferUnavailableError(
-                    "Marketplace offer is unavailable for this tenant."
-                )
 
-            if offer.canonical_product_id == command.canonical_product_id:
-                return offer
-            if offer.canonical_product_id is not None:
-                raise CanonicalOfferLinkConflictError(
-                    "Marketplace offer is already linked to another product."
-                )
+async def link_canonical_offer(
+    repositories: RepositoryProvider,
+    command: LinkCanonicalOfferCommand,
+) -> ParsedOffer:
+    """Link one offer using repositories from an existing transaction scope."""
+    product = await repositories.canonical_products.get_by_tenant_and_id(
+        command.tenant_id,
+        command.canonical_product_id,
+    )
+    if product is None:
+        raise CanonicalProductUnavailableError(
+            "Canonical product is unavailable for this tenant."
+        )
 
-            linked_offer = replace(
-                offer,
-                canonical_product_id=command.canonical_product_id,
-            )
-            await repositories.offers.save(command.tenant_id, linked_offer)
-            return linked_offer
+    offer = await repositories.offers.get_by_identity(
+        command.tenant_id,
+        command.marketplace,
+        command.external_id,
+    )
+    if offer is None:
+        raise MarketplaceOfferUnavailableError(
+            "Marketplace offer is unavailable for this tenant."
+        )
+
+    if offer.canonical_product_id == command.canonical_product_id:
+        return offer
+    if offer.canonical_product_id is not None:
+        raise CanonicalOfferLinkConflictError(
+            "Marketplace offer is already linked to another product."
+        )
+
+    linked_offer = replace(
+        offer,
+        canonical_product_id=command.canonical_product_id,
+    )
+    await repositories.offers.save(command.tenant_id, linked_offer)
+    return linked_offer

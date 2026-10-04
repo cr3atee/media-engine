@@ -170,9 +170,24 @@ idempotent replay, and rejects silent reassignment.
 
 PostgreSQL migration `0015_tenant_canonical_links` enforces the same tenant
 ownership at the schema boundary through a composite foreign key. Deleting a
-canonical product keeps offers and clears their optional link. An absent link
-does not imply a match; existing deterministic title matching remains the
-fallback for unlinked offers.
+canonical product without review evidence keeps offers and clears their optional
+link. Migration `0016_canonical_offer_decisions` restricts deletion once an
+immutable review decision references the product. An absent link does not imply
+a match; existing deterministic title matching remains the fallback for
+unlinked offers.
+
+## CanonicalOfferDecision
+
+`CanonicalOfferDecision` is immutable audit evidence for one tenant-owned
+offer/canonical-product candidate pair. Its terminal outcome is `confirmed` or
+`rejected`; it also records actor identity/type, reason, request correlation,
+idempotency key, deterministic request fingerprint, and UTC creation time.
+
+`CanonicalOfferReviewService` writes a confirmed decision and the existing
+offer link in one repository scope. A rejected decision leaves the offer
+unchanged. One pair has one terminal row, and an accepted replay requires the
+original tenant-scoped idempotency key. This foundation does not yet expose an
+HTTP review queue or feed rejected decisions into candidate generation.
 
 ## Persistent Lifecycle Verification
 

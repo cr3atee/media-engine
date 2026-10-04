@@ -371,6 +371,12 @@ ensures that an offer cannot reference a canonical product from another tenant.
 This enables trustworthy curated comparisons, but does not make the current
 real marketplace payloads automatically equivalent products.
 
+Immutable confirm/reject evidence is persisted by
+`CanonicalOfferReviewService` through memory or PostgreSQL repository scopes.
+This is the backend foundation for a future operator review queue. The current
+terminal does not expose review controls, and persisted rejections are not yet
+used to filter a recommendation list because that list does not yet exist.
+
 ## Architectural Guardrails
 
 - Keep marketplace parsing out of the frontend.

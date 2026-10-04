@@ -8,6 +8,9 @@ from app.repositories.postgres.postgres_auth import (
     PostgresPasswordCredentialRepository,
     PostgresPasswordResetTokenRepository,
 )
+from app.repositories.postgres.postgres_canonical_offer_decisions import (
+    PostgresCanonicalOfferDecisionRepository,
+)
 from app.repositories.postgres.postgres_canonical_products import (
     PostgresCanonicalProductRepository,
 )
@@ -36,6 +39,7 @@ __all__ = [
     "PostgresAdminActionRepository",
     "PostgresAuthSessionRepository",
     "PostgresCanonicalProductRepository",
+    "PostgresCanonicalOfferDecisionRepository",
     "PostgresGeneratedContentRepository",
     "PostgresMarketEventRepository",
     "PostgresMarketplaceIntegrationRepository",

@@ -595,3 +595,40 @@ Alembic verification passed:
   key, target unique constraint, and partial lookup index.
 
 The temporary container and volume were removed after verification.
+
+## EPIC 19 Canonical Offer Review Foundation
+
+`scripts/verify_canonical_offer_review_postgres.py` was executed against a
+temporary `postgres:17-alpine` container and isolated database
+`epic19_review_verify` on `127.0.0.1:55440`. No project or production database
+was used.
+
+All `20/20` checks passed. The verifier covers revision
+`0016_canonical_offer_decisions`, table constraints and indexes, atomic
+confirmation/linking, rejection without offer mutation, exact idempotent replay,
+immutable singular evidence, service and database tenant isolation, rollback
+after a controlled decision-write failure, serialization of concurrent
+confirm/reject commands, concurrent duplicate replay, and fresh-session
+persistence. It also verifies that immutable review evidence restricts canonical
+product deletion and that the failed deletion transaction rolls back.
+
+Alembic verification passed:
+
+- clean schema upgrade through `0016_canonical_offer_decisions`;
+- `alembic current` reported `0016_canonical_offer_decisions (head)`;
+- `alembic check` reported no new upgrade operations;
+- downgrade to `0015_tenant_canonical_links`;
+- upgrade back to head;
+- offline SQL generation containing the decision table, composite product
+  foreign key, pair/idempotency uniqueness, checks, and lookup index.
+
+Quality verification passed:
+
+- focused canonical link/review and metadata tests;
+- full Pytest: `430 passed, 58 skipped`;
+- full MyPy: `402 source files`;
+- Ruff and Ruff format for every touched Python file.
+
+Downgrade removes immutable review rows with the Task 37 table and is therefore
+a development rollback, not a production data-preservation strategy. The
+temporary container and volume were removed after verification.

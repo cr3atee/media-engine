@@ -7,6 +7,9 @@ from app.repositories.auth import (
     PasswordResetTokenRepository,
 )
 from app.repositories.base import BaseRepository, RepositoryIdentityConflictError
+from app.repositories.canonical_offer_decisions import (
+    CanonicalOfferDecisionRepository,
+)
 from app.repositories.canonical_products import CanonicalProductRepository
 from app.repositories.events import MarketEventRepository
 from app.repositories.generated_contents import GeneratedContentRepository
@@ -24,6 +27,7 @@ __all__ = (
     "AuthSessionRepository",
     "BaseRepository",
     "CanonicalProductRepository",
+    "CanonicalOfferDecisionRepository",
     "GeneratedContentRepository",
     "MarketEventRepository",
     "MarketplaceIntegrationRepository",

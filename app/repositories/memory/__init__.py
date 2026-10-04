@@ -6,6 +6,9 @@ from app.repositories.memory.memory_auth import (
     MemoryPasswordCredentialRepository,
     MemoryPasswordResetTokenRepository,
 )
+from app.repositories.memory.memory_canonical_offer_decisions import (
+    MemoryCanonicalOfferDecisionRepository,
+)
 from app.repositories.memory.memory_canonical_products import (
     MemoryCanonicalProductRepository,
 )
@@ -30,6 +33,7 @@ __all__ = (
     "MemoryAdminActionRepository",
     "MemoryAuthSessionRepository",
     "MemoryCanonicalProductRepository",
+    "MemoryCanonicalOfferDecisionRepository",
     "MemoryGeneratedContentRepository",
     "MemoryMarketEventRepository",
     "MemoryMarketplaceIntegrationRepository",

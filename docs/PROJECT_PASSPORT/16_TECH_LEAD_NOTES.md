@@ -173,6 +173,14 @@ This document captures architecture notes that are important for future reviews.
   rejects cross-tenant references at the PostgreSQL boundary. Do not remove the
   original nullable `ON DELETE SET NULL` foreign key without replacing its
   product-deletion semantics explicitly.
+- Canonical review decisions use a dedicated immutable repository instead of
+  overloading `AdminAction` with fake offer versions. Keep confirm/link and
+  decision append in one transaction. A replay is valid only through its
+  original tenant-scoped idempotency key; a new key for a terminal pair must
+  conflict unless an explicit reopen model is designed later.
+- A canonical product referenced by immutable review evidence is delete
+  restricted. Introduce explicit archival semantics before adding any product
+  deletion command; cascading deletion of review evidence is not acceptable.
 
 ## Review Notes
 

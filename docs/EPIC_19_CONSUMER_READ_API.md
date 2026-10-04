@@ -1077,6 +1077,43 @@ Verification:
 - This task protects reviewed links; it does not create catalog records,
   approve matches automatically, or add an administration workflow.
 
+### Task 37: Persistent Canonical Offer Review Foundation
+
+Persist explicit confirm/reject decisions for one tenant-owned offer and
+canonical-product pair without coupling matching to HTTP or PostgreSQL.
+
+Acceptance criteria:
+
+- Immutable decisions record tenant, pair identity, outcome, actor, reason,
+  request correlation, idempotency key, fingerprint, and UTC creation time.
+- Memory and PostgreSQL repositories expose the same append-only contract
+  through `RepositoryProvider`.
+- Confirmation writes the durable decision and existing offer link atomically.
+- Rejection records a terminal pair decision without changing the offer.
+- Replays require the original idempotency key; conflicting keys or outcomes
+  fail without mutation.
+- Cross-tenant references, concurrent conflicting decisions, and partial writes
+  are rejected or rolled back.
+
+Status:
+
+- Complete for domain, repository, and application-service foundations.
+
+Verification:
+
+- Migration `0016_canonical_offer_decisions` adds tenant/product foreign keys,
+  pair and idempotency uniqueness, bounded checks, and offer-history indexing.
+- `scripts/verify_canonical_offer_review_postgres.py` passed `20/20` checks on
+  isolated PostgreSQL 17.
+- Alembic current/check, downgrade to `0015_tenant_canonical_links`, upgrade
+  back to head, and offline SQL passed.
+- Reviewed canonical products are delete-restricted so immutable decision
+  evidence cannot be removed accidentally; failed deletion rolls back.
+- Full Pytest passed `430` tests with `58` expected skips; MyPy checked `402`
+  source files; Ruff and Ruff format passed for all touched Python files.
+- Seller/admin routes, a review queue, and filtering rejected pairs from future
+  recommendations remain separate tasks; no automatic matching behavior changed.
+
 ## Deferred Runtime Constraint
 
 The repository-backed public read adapter currently returns bounded first

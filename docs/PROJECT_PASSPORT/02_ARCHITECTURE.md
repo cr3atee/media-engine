@@ -86,6 +86,7 @@ Repository contracts are defined independently from any database technology.
 Current repository layer includes:
 
 - `CanonicalProductRepository`
+- `CanonicalOfferDecisionRepository`
 - `OfferRepository`
 - `PriceHistoryRepository`
 - `MarketEventRepository`
@@ -121,6 +122,10 @@ run inside ingestion or scoring transactions.
   `(tenant_id, canonical_product_id)` foreign key. The application service
   remains the policy boundary; the database constraint is a final isolation
   guard against direct repository or SQL misuse.
+- Canonical offer review decisions are immutable, tenant-owned repository
+  records. Confirmation and link persistence share one repository scope;
+  rejection records evidence without mutating the offer. HTTP review routes and
+  recommendation filtering remain outside this persistence boundary.
 - Marketplace pipeline persists parsed offers, price snapshots, and deterministic
   market events only through `RepositoryProvider`.
 - Scheduler jobs delegate to application services and do not own repositories,

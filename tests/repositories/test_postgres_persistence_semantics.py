@@ -13,6 +13,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.sql import ClauseElement
 
 from app.domain.price_snapshot import PriceSnapshot
+from app.models.canonical_offer_decision_record import CanonicalOfferDecisionRecord
 from app.models.canonical_product_record import CanonicalProductRecord
 from app.models.offer import Offer
 from app.models.price_snapshot_record import PriceSnapshotRecord
@@ -96,7 +97,11 @@ def test_offer_metadata_defines_identity_and_canonical_integrity() -> None:
     )
     assert tenant_canonical.dialect_options["postgresql"]["where"] is not None
 
-    foreign_key = next(iter(Offer.__table__.c.canonical_product_id.foreign_keys))
+    foreign_key = next(
+        foreign_key
+        for foreign_key in Offer.__table__.c.canonical_product_id.foreign_keys
+        if foreign_key.name == "fk_offers_canonical_product_id_canonical_products"
+    )
     assert foreign_key.name == "fk_offers_canonical_product_id_canonical_products"
     assert foreign_key.target_fullname == "canonical_products.id"
     assert foreign_key.ondelete == "SET NULL"
@@ -163,6 +168,60 @@ def test_snapshot_metadata_defines_exact_identity_and_history_index() -> None:
         "collected_at",
         "id",
     )
+
+
+def test_canonical_offer_decision_metadata_is_tenant_scoped_and_immutable() -> None:
+    table = cast(Table, CanonicalOfferDecisionRecord.__table__)
+    unique_constraints = {
+        constraint.name: constraint
+        for constraint in table.constraints
+        if isinstance(constraint, UniqueConstraint)
+    }
+    assert tuple(
+        column.name
+        for column in unique_constraints[
+            "uq_canonical_offer_decisions_idempotency"
+        ].columns
+    ) == ("tenant_id", "idempotency_key")
+    assert tuple(
+        column.name
+        for column in unique_constraints["uq_canonical_offer_decisions_pair"].columns
+    ) == (
+        "tenant_id",
+        "marketplace",
+        "external_id",
+        "canonical_product_id",
+    )
+
+    product_foreign_key = next(
+        constraint
+        for constraint in table.constraints
+        if constraint.name == "fk_canonical_offer_decisions_product"
+    )
+    assert isinstance(product_foreign_key, ForeignKeyConstraint)
+    assert tuple(column.name for column in product_foreign_key.columns) == (
+        "tenant_id",
+        "canonical_product_id",
+    )
+    assert tuple(
+        element.target_fullname for element in product_foreign_key.elements
+    ) == (
+        "canonical_products.tenant_id",
+        "canonical_products.id",
+    )
+    assert product_foreign_key.ondelete == "RESTRICT"
+
+    index = next(
+        index
+        for index in table.indexes
+        if index.name == "ix_canonical_offer_decisions_offer_created"
+    )
+    assert tuple(column.name for column in tuple(index.columns)[:3]) == (
+        "tenant_id",
+        "marketplace",
+        "external_id",
+    )
+    assert cast(DateTime, table.c.created_at.type).timezone is True
 
 
 def test_active_postgres_timestamps_are_timezone_aware() -> None:

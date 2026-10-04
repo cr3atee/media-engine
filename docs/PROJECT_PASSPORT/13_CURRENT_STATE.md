@@ -20,6 +20,14 @@ boundary. Isolated PostgreSQL 17 verification passed `15/15` checks, including
 fresh-session persistence, rollback, and preserved link-clearing behavior when
 a canonical product is deleted.
 
+The canonical review foundation now persists immutable `confirmed` and
+`rejected` pair decisions through memory or PostgreSQL repositories. Confirmed
+decisions and offer links commit atomically; rejected decisions do not mutate
+offers. PostgreSQL revision `0016_canonical_offer_decisions` and its isolated
+`20/20` verifier cover idempotency, tenant isolation, rollback, concurrency,
+and fresh-session persistence. Review APIs and candidate suppression are not yet
+connected.
+
 EPIC 12 is live-verified and complete against PostgreSQL 17.10.
 EPIC 13 is verified and complete: deterministic price-drop events persist
 atomically, are scored through durable claims, and produce persistent immutable

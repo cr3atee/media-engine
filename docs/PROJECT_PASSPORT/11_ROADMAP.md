@@ -243,6 +243,11 @@ This document tracks only work that is reflected by the current repository state
   `0015_tenant_canonical_links` adds a composite tenant/product foreign key,
   preflight validation, and partial lookup index. Isolated PostgreSQL 17
   verification passed `15/15` checks plus the Alembic lifecycle.
+- EPIC 19 Task 37 persistent canonical offer review foundation: immutable
+  tenant-scoped confirm/reject decisions now have memory/PostgreSQL repository
+  parity and atomic application orchestration. Isolated PostgreSQL 17
+  verification passed `20/20`; HTTP review and rejected-candidate filtering are
+  intentionally deferred.
 
 ## Current Status
 

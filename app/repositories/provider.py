@@ -11,6 +11,9 @@ from app.repositories.auth import (
     PasswordCredentialRepository,
     PasswordResetTokenRepository,
 )
+from app.repositories.canonical_offer_decisions import (
+    CanonicalOfferDecisionRepository,
+)
 from app.repositories.canonical_products import CanonicalProductRepository
 from app.repositories.events import MarketEventRepository
 from app.repositories.generated_contents import GeneratedContentRepository
@@ -19,6 +22,7 @@ from app.repositories.memberships import MembershipRepository
 from app.repositories.memory import (
     MemoryAdminActionRepository,
     MemoryAuthSessionRepository,
+    MemoryCanonicalOfferDecisionRepository,
     MemoryCanonicalProductRepository,
     MemoryGeneratedContentRepository,
     MemoryMarketEventRepository,
@@ -37,6 +41,7 @@ from app.repositories.offers import OfferRepository
 from app.repositories.postgres import (
     PostgresAdminActionRepository,
     PostgresAuthSessionRepository,
+    PostgresCanonicalOfferDecisionRepository,
     PostgresCanonicalProductRepository,
     PostgresGeneratedContentRepository,
     PostgresMarketEventRepository,
@@ -70,6 +75,9 @@ class RepositoryProvider:
     generated_contents: GeneratedContentRepository
     publications: PublicationRepository
     scheduler_leases: SchedulerLeaseRepository | None = None
+    canonical_offer_decisions: CanonicalOfferDecisionRepository = field(
+        default_factory=MemoryCanonicalOfferDecisionRepository,
+    )
     marketplace_integrations: MarketplaceIntegrationRepository = field(
         default_factory=MemoryMarketplaceIntegrationRepository,
     )
@@ -103,6 +111,7 @@ def create_memory_provider() -> RepositoryProvider:
         generated_contents=MemoryGeneratedContentRepository(),
         publications=MemoryPublicationRepository(),
         scheduler_leases=MemorySchedulerLeaseRepository(),
+        canonical_offer_decisions=MemoryCanonicalOfferDecisionRepository(),
         marketplace_integrations=MemoryMarketplaceIntegrationRepository(),
         users=MemoryUserRepository(),
         tenants=MemoryTenantRepository(),
@@ -128,6 +137,7 @@ def create_postgres_provider(
         generated_contents=PostgresGeneratedContentRepository(session),
         publications=PostgresPublicationRepository(session),
         scheduler_leases=scheduler_leases,
+        canonical_offer_decisions=PostgresCanonicalOfferDecisionRepository(session),
         marketplace_integrations=PostgresMarketplaceIntegrationRepository(session),
         users=PostgresUserRepository(session),
         tenants=PostgresTenantRepository(session),
