@@ -195,6 +195,18 @@ loads only same-tenant offers/products, excludes products with terminal pair
 decisions, and delegates the remaining candidates to the unchanged
 `MatchingService`. Its API projection is not a new domain entity.
 
+## CanonicalProductProposal
+
+`CanonicalProductProposal` is a read-only application projection for one
+unlinked offer classified as `NO_MATCH`. It contains a deterministic proposal
+identifier, the source `ParsedOffer`, a source-derived proposed name, and the
+nearest remaining canonical-product context when one exists.
+
+It is not persisted and is not an accepted catalog identity. Its proposed
+aliases are empty, and reading it does not create a `CanonicalProduct` or link
+an offer. An explicit atomic confirmation workflow remains required for those
+mutations.
+
 ## Persistent Lifecycle Verification
 
 The production-shaped PostgreSQL flow verified exact links from `ParsedOffer` to

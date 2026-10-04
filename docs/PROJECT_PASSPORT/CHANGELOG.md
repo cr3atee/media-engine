@@ -6,6 +6,12 @@ This document records notable Project Passport updates.
 
 ## Unreleased
 
+- Added a tenant-authorized, read-only canonical-product proposal queue for
+  unresolved `NO_MATCH` offers. Proposals use stable source identity, expose
+  nearest-candidate context, invent no aliases, and perform no catalog mutation.
+  Isolated PostgreSQL 17 verification passed `16/16`; full Pytest passed `444`
+  tests with `58` expected skips, MyPy checked `409` files, and focused
+  Ruff/format checks passed.
 - Enabled curated `CanonicalProduct.aliases` in the existing deterministic
   matcher by selecting the strongest name-or-alias score without changing
   thresholds or result contracts. Alias-backed review queue coverage, saved

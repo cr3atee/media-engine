@@ -15,12 +15,14 @@ from app.api.errors import ApiError, get_request_id
 from app.api.schemas.canonical_offer_reviews import (
     CanonicalOfferReviewCandidateResponse,
     CanonicalOfferReviewResponse,
+    CanonicalProductProposalResponse,
     ConfirmCanonicalOfferRequest,
     RejectCanonicalOfferRequest,
 )
 from app.domain.admin_actions import AdminActorType
 from app.domain.auth import Permission, TenantContext
 from app.domain.canonical_offer_decisions import CanonicalOfferDecisionType
+from app.matching.confidence import MatchDecision
 from app.services.canonical_offer_linking import (
     CanonicalOfferLinkConflictError,
     CanonicalProductUnavailableError,
@@ -38,6 +40,7 @@ from app.services.canonical_offer_review import (
 from app.services.canonical_offer_review_queue import (
     CanonicalOfferReviewCandidate,
     CanonicalOfferReviewQueueService,
+    CanonicalProductProposal,
 )
 
 router = APIRouter(
@@ -66,6 +69,23 @@ async def list_canonical_offer_review_candidates(
     """List unresolved review-confidence pairs for the authorized tenant."""
     candidates = await service.list_candidates(context.tenant.id)
     return [_candidate_response(candidate) for candidate in candidates[:limit]]
+
+
+@router.get(
+    "/product-proposals",
+    response_model=list[CanonicalProductProposalResponse],
+)
+async def list_canonical_product_proposals(
+    context: CatalogReviewTenant,
+    service: Annotated[
+        CanonicalOfferReviewQueueService,
+        Depends(get_canonical_offer_review_queue_service),
+    ],
+    limit: Annotated[int, Query(ge=1, le=200)] = 100,
+) -> list[CanonicalProductProposalResponse]:
+    """List system proposals derived from unmatched tenant offers."""
+    proposals = await service.list_product_proposals(context.tenant.id)
+    return [_proposal_response(proposal) for proposal in proposals[:limit]]
 
 
 @router.post(
@@ -221,4 +241,28 @@ def _review_response(
         request_id=decision.request_id,
         created_at=decision.created_at,
         replayed=result.replayed,
+    )
+
+
+def _proposal_response(
+    proposal: CanonicalProductProposal,
+) -> CanonicalProductProposalResponse:
+    offer = proposal.offer
+    nearest = proposal.nearest_canonical_product
+    if offer.external_id is None or offer.title is None:
+        raise RuntimeError("Canonical product proposal identity is incomplete.")
+    return CanonicalProductProposalResponse(
+        proposal_id=proposal.proposal_id,
+        marketplace=offer.marketplace,
+        external_id=offer.external_id,
+        offer_title=offer.title,
+        offer_url=offer.url,
+        offer_price=offer.price,
+        currency=offer.currency,
+        proposed_name=proposal.proposed_name,
+        proposed_aliases=(),
+        nearest_canonical_product_id=nearest.id if nearest is not None else None,
+        nearest_canonical_product_name=nearest.name if nearest is not None else None,
+        nearest_similarity=proposal.similarity,
+        match_decision=MatchDecision.NO_MATCH,
     )

@@ -255,6 +255,10 @@ This document tracks only work that is reflected by the current repository state
   strongest score across a canonical name and curated non-empty aliases while
   preserving deterministic ties and all confidence thresholds. Full Pytest
   passes `441` tests with `58` expected skips.
+- EPIC 19 Task 40 read-only canonical product proposals: authorized sellers can
+  inspect stable source-backed proposals for unresolved `NO_MATCH` offers.
+  Reads reuse existing matching and terminal-pair filtering, create no product
+  or link, and pass `16/16` isolated PostgreSQL checks.
 
 ## Current Status
 
@@ -299,7 +303,9 @@ frontend hardening plus a product decision on category data exposure.
 
 ## Recommended Next EPIC
 
-**Consumer Read API continuation.**
+**Canonical product proposal confirmation.**
 
-Implement read-side services and routes over the new public DTOs so the visual
-product can consume MediaEngine without importing backend internals.
+Add one tenant-authorized, idempotent transaction that confirms a system
+proposal by creating the canonical product and linking its source offer. Keep
+the existing read projection, matching thresholds, and immutable audit model
+unchanged.

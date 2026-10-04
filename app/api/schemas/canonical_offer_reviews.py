@@ -67,6 +67,24 @@ class CanonicalOfferReviewCandidateResponse(ApiModel):
     match_decision: MatchDecision
 
 
+class CanonicalProductProposalResponse(ApiModel):
+    """System-proposed canonical product derived from one unmatched offer."""
+
+    proposal_id: UUID
+    marketplace: str
+    external_id: str
+    offer_title: str
+    offer_url: str | None
+    offer_price: Decimal | None
+    currency: str | None
+    proposed_name: str
+    proposed_aliases: tuple[str, ...]
+    nearest_canonical_product_id: UUID | None
+    nearest_canonical_product_name: str | None
+    nearest_similarity: float = Field(ge=0.0, le=1.0)
+    match_decision: MatchDecision
+
+
 class CanonicalOfferReviewResponse(ApiModel):
     """Stable response for one persisted canonical offer review decision."""
 

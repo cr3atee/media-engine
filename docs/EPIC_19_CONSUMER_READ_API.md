@@ -1184,6 +1184,42 @@ Verification:
 - Full Pytest passes `441` tests with `58` expected skips; MyPy checks `409`
   source files; focused Ruff and Ruff format checks pass.
 
+### Task 40: Read-Only Canonical Product Proposal Queue
+
+Expose deterministic system proposals for unmatched tenant offers without
+turning catalog bootstrap into manual CRUD or automatic product creation.
+
+Acceptance criteria:
+
+- The tenant-authorized catalog boundary exposes only unresolved offers already
+  classified as `NO_MATCH` by the unchanged `MatchingService`.
+- Existing terminal offer/product decisions are excluded before selecting the
+  nearest remaining canonical product, using the same bulk tenant read as the
+  review queue.
+- Proposal identity is deterministic for tenant, marketplace, and external
+  offer identity and remains stable across repeated reads and fresh sessions.
+- The proposed name is derived only by collapsing whitespace in the source
+  title; aliases remain empty and no marketplace facts are invented.
+- The endpoint is read-only: it does not create a canonical product, persist a
+  proposal, link an offer, or change confidence thresholds.
+
+Status:
+
+- Complete.
+
+Verification:
+
+- Focused queue and seller API tests pass `10/10`, including tenant isolation,
+  permission checks, stable identity, incomplete/linked offer exclusion, and
+  rematching after terminal evidence.
+- `scripts/verify_catalog_review_api_postgres.py` passes `16/16` checks against
+  an isolated PostgreSQL 17 database, including proposal source facts,
+  deterministic replay, and fresh-engine reproduction.
+- Alembic reports `0016_canonical_offer_decisions (head)` with no metadata
+  drift; no migration is required for this read-only projection.
+- Full Pytest passes `444` tests with `58` expected skips; MyPy checks `409`
+  source files; focused Ruff and Ruff format checks pass.
+
 ## Deferred Runtime Constraint
 
 The repository-backed public read adapter currently returns bounded first

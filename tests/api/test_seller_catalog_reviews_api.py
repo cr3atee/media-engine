@@ -73,6 +73,43 @@ def test_review_queue_requires_catalog_permission_and_scopes_tenant() -> None:
     assert anonymous.status_code == 401
 
 
+def test_product_proposals_are_stable_and_permission_scoped() -> None:
+    provider = _seeded_provider()
+    client = _client(provider)
+    reviewer = _login_headers(client, "reviewer@example.com")
+    viewer = _login_headers(client, "viewer@example.com")
+    url = f"/api/v1/tenants/{TENANT_A_ID}/catalog/product-proposals"
+
+    first = client.get(url, headers=reviewer)
+    repeated = client.get(url, headers=reviewer)
+    limited = client.get(f"{url}?limit=1", headers=reviewer)
+    invalid_limit = client.get(f"{url}?limit=0", headers=reviewer)
+    forbidden = client.get(url, headers=viewer)
+    foreign = client.get(
+        f"/api/v1/tenants/{TENANT_B_ID}/catalog/product-proposals",
+        headers=reviewer,
+    )
+
+    assert first.status_code == 200
+    assert first.json() == repeated.json()
+    assert first.json() == limited.json()
+    assert len(first.json()) == 1
+    proposal = first.json()[0]
+    assert proposal["marketplace"] == "playerok"
+    assert proposal["external_id"] == "offer-proposal"
+    assert proposal["offer_title"] == "Stardew Valley Complete"
+    assert proposal["proposed_name"] == "Stardew Valley Complete"
+    assert proposal["proposed_aliases"] == []
+    assert proposal["nearest_canonical_product_id"] == str(PRODUCT_ID)
+    assert proposal["nearest_similarity"] == 0.0
+    assert proposal["match_decision"] == "no_match"
+    assert invalid_limit.status_code == 422
+    assert forbidden.status_code == 403
+    assert forbidden.json()["error"]["code"] == "permission_denied"
+    assert foreign.status_code == 404
+    assert foreign.json()["error"]["code"] == "tenant_not_found"
+
+
 def test_confirm_links_offer_and_replays_without_duplicate_decision() -> None:
     provider = _seeded_provider()
     client = _client(provider)
@@ -221,6 +258,18 @@ async def _seed(provider: RepositoryProvider) -> None:
             title="Minecraft Java Bedrock Windows Premium",
             url="https://ggsel.net/catalog/product/offer-1",
             price=Decimal("790.00"),
+            currency="RUB",
+        ),
+    )
+    await provider.offers.save(
+        TENANT_A_ID,
+        ParsedOffer(
+            tenant_id=TENANT_A_ID,
+            marketplace="playerok",
+            external_id="offer-proposal",
+            title="Stardew Valley Complete",
+            url="https://playerok.com/products/offer-proposal",
+            price=Decimal("499.00"),
             currency="RUB",
         ),
     )

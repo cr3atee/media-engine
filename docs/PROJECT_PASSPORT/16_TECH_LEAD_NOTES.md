@@ -189,6 +189,10 @@ This document captures architecture notes that are important for future reviews.
 - Canonical aliases are alternative curated names for one known product, not a
   source-title ingestion field. `MatchingService` may score them, but parsers and
   preview tooling must not manufacture aliases to force a comparison result.
+- Canonical-product proposals are deterministic read projections for `NO_MATCH`
+  offers, not persisted catalog entities. Keep proposed aliases empty and make
+  any future accept operation one audited transaction that creates the product
+  and links only the source offer.
 
 ## Review Notes
 

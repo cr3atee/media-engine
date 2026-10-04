@@ -83,6 +83,9 @@ Current matching flow:
    reuses `MatchingService` and exposes only unchanged-threshold `REVIEW`
    results to the tenant-authorized seller API. Decisions are loaded in one
    tenant-scoped repository read rather than per offer.
+8. The same service projects unresolved `NO_MATCH` offers as stable read-only
+   canonical-product proposals. It derives a whitespace-normalized name from
+   source data and does not create products, infer aliases, or persist links.
 
 ## Repository Boundary
 
@@ -132,6 +135,9 @@ run inside ingestion or scoring transactions.
   rejection records evidence without mutating the offer. The HTTP boundary
   performs authorization and mapping only; candidate generation remains an
   application service and excludes terminal pairs before deterministic matching.
+- Canonical-product proposals are read projections, not persisted domain
+  records. Product creation and offer linking require a separate explicit
+  command boundary; reads never mutate the curated catalog.
 - Marketplace pipeline persists parsed offers, price snapshots, and deterministic
   market events only through `RepositoryProvider`.
 - Scheduler jobs delegate to application services and do not own repositories,

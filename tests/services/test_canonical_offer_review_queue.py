@@ -143,7 +143,113 @@ def test_linked_and_incomplete_offers_are_not_review_candidates() -> None:
             _offer(external_id=None, title=_review_title()),
         )
 
-        assert await _queue(provider).list_candidates(TENANT_A_ID) == ()
+        queue = _queue(provider)
+        assert await queue.list_candidates(TENANT_A_ID) == ()
+        assert await queue.list_product_proposals(TENANT_A_ID) == ()
+
+    run_async(scenario())
+
+
+def test_product_proposals_are_stable_and_tenant_scoped() -> None:
+    async def scenario() -> None:
+        provider = create_memory_provider()
+        await provider.canonical_products.save(_product())
+        await provider.canonical_products.save(
+            _product(
+                tenant_id=TENANT_B_ID,
+                product_id=PRODUCT_B_ID,
+                name="Foreign Tenant Product",
+            )
+        )
+        await provider.offers.save(
+            TENANT_A_ID,
+            _offer(
+                external_id="proposal-a",
+                title="  Stardew   Valley Complete  ",
+            ),
+        )
+        await provider.offers.save(
+            TENANT_B_ID,
+            _offer(
+                tenant_id=TENANT_B_ID,
+                external_id="proposal-b",
+                title="Hades Complete",
+            ),
+        )
+
+        queue = _queue(provider)
+        first = await queue.list_product_proposals(TENANT_A_ID)
+        repeated = await queue.list_product_proposals(TENANT_A_ID)
+        foreign = await queue.list_product_proposals(TENANT_B_ID)
+
+        assert len(first) == 1
+        assert first[0].proposal_id == repeated[0].proposal_id
+        assert first[0].offer.external_id == "proposal-a"
+        assert first[0].proposed_name == "Stardew Valley Complete"
+        assert first[0].nearest_canonical_product is not None
+        assert first[0].nearest_canonical_product.id == PRODUCT_A_ID
+        assert first[0].similarity == 0.0
+        assert len(foreign) == 1
+        assert foreign[0].offer.external_id == "proposal-b"
+        assert foreign[0].proposal_id != first[0].proposal_id
+
+    run_async(scenario())
+
+
+def test_terminal_pair_is_excluded_before_building_product_proposal() -> None:
+    async def scenario() -> None:
+        provider = create_memory_provider()
+        await provider.canonical_products.save(_product(name="Minecraft Dungeons"))
+        await provider.canonical_products.save(
+            _product(
+                product_id=PRODUCT_B_ID,
+                name="Minecraft Legends Standard Extra",
+            )
+        )
+        await provider.offers.save(
+            TENANT_A_ID,
+            _offer(
+                external_id="proposal",
+                title="Minecraft Dungeons Deluxe",
+            ),
+        )
+        scope = create_memory_repository_scope(provider)
+        queue = CanonicalOfferReviewQueueService(scope)
+
+        initial = await queue.list_product_proposals(TENANT_A_ID)
+        assert len(initial) == 1
+        assert initial[0].nearest_canonical_product is not None
+        assert initial[0].nearest_canonical_product.id == PRODUCT_A_ID
+
+        review = CanonicalOfferReviewService(
+            scope,
+            clock=lambda: NOW,
+            decision_id_factory=lambda: UUID("39000000-0000-4000-8000-000000003002"),
+        )
+        await review.review(
+            ReviewCanonicalOfferCommand(
+                tenant_id=TENANT_A_ID,
+                marketplace="ggsel",
+                external_id="proposal",
+                canonical_product_id=PRODUCT_A_ID,
+                decision=CanonicalOfferDecisionType.REJECTED,
+                reason="Different game",
+            ),
+            CanonicalOfferReviewContext(
+                actor_id="reviewer-1",
+                actor_type=AdminActorType.USER,
+                request_id="request-2",
+                idempotency_key="reject-proposal-product-a",
+            ),
+        )
+
+        after_rejection = await queue.list_product_proposals(TENANT_A_ID)
+
+        assert len(after_rejection) == 1
+        assert after_rejection[0].proposal_id == initial[0].proposal_id
+        assert after_rejection[0].nearest_canonical_product is not None
+        assert after_rejection[0].nearest_canonical_product.id == PRODUCT_B_ID
+        assert after_rejection[0].similarity < initial[0].similarity
 
     run_async(scenario())
 
@@ -199,9 +305,10 @@ def _offer(
     external_id: str | None,
     title: str | None,
     canonical_product_id: UUID | None = None,
+    tenant_id: UUID = TENANT_A_ID,
 ) -> ParsedOffer:
     return ParsedOffer(
-        tenant_id=TENANT_A_ID,
+        tenant_id=tenant_id,
         marketplace="ggsel",
         external_id=external_id,
         title=title,

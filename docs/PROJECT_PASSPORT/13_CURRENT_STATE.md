@@ -404,6 +404,14 @@ production AI wiring, and guarded live Telegram verification.
   closed on missing, cross-tenant, or already-linked records. Comparator
   grouping honors valid persisted links and retains existing matching only as a
   same-tenant fallback for unlinked offers.
+- EPIC 19 Tasks 36-38 add database-enforced same-tenant links, immutable
+  confirm/reject evidence, and a tenant-authorized seller review API without
+  changing matching thresholds.
+- EPIC 19 Task 39 enables curated canonical aliases as deterministic candidate
+  input; aliases are not inferred from marketplace titles.
+- EPIC 19 Task 40 exposes stable read-only canonical-product proposals for
+  unresolved `NO_MATCH` offers. The projection uses source facts only and does
+  not create products, aliases, or offer links.
 
 ## Known Gaps
 
@@ -428,8 +436,10 @@ production AI wiring, and guarded live Telegram verification.
   are needed before presenting that core user value as live-ready. The internal
   positive-link service and audited match-review API are ready, but no
   production reviewed link set is populated yet. The current aligned payloads
-  remain below the unchanged review threshold, so the API correctly returns no
-  real-data candidates for that set.
+  remain below the unchanged review threshold, so the review queue correctly
+  returns no real-data candidates for that set. The system proposal queue can
+  expose those `NO_MATCH` offers for catalog bootstrap, but its atomic
+  confirmation mutation is not implemented yet.
 - Snapshot creation is skipped when parsed offers from any marketplace do not
   contain normalized price and currency.
 - Ingestion, scoring, and durable content processing are separate services and

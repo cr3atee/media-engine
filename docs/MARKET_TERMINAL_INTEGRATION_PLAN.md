@@ -380,7 +380,12 @@ The seller API exposes unresolved deterministic `REVIEW` candidates at
 and reject commands under the same catalog boundary. Persisted terminal pairs
 are removed before rematching. The public terminal intentionally does not expose
 seller review controls, and the current real aligned payload set still produces
-no candidate at the unchanged `REVIEW` threshold.
+no candidate at the unchanged `REVIEW` threshold. Unmatched `NO_MATCH` offers
+are now exposed to authorized sellers as read-only system proposals at
+`/api/v1/tenants/{tenant_id}/catalog/product-proposals`. These projections use
+only source facts, have stable identities, and do not create catalog records or
+invent aliases. A separate atomic confirmation command is still required before
+any proposal can become a canonical product and offer link.
 
 ## Architectural Guardrails
 

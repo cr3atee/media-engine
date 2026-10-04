@@ -39,6 +39,7 @@ from app.main import create_app
 from app.models.canonical_product import CanonicalProduct
 from app.parsers.models import ParsedOffer
 from app.repositories.provider import create_postgres_provider
+from app.services.canonical_offer_review_queue import CanonicalOfferReviewQueueService
 from app.services.passwords import PasswordHasher
 
 TENANT_A_ID = UUID("3b000000-0000-4000-8000-000000001001")
@@ -97,9 +98,9 @@ async def main() -> int:
             transport=httpx.ASGITransport(app=application),
             base_url="http://catalog-review.test",
         ) as client:
-            await _verify_api(client, verifier)
+            proposal_id = await _verify_api(client, verifier)
         await engine.dispose()
-        await _verify_fresh_engine(database_url, verifier)
+        await _verify_fresh_engine(database_url, proposal_id, verifier)
     finally:
         await engine.dispose()
         await default_engine.dispose()
@@ -114,7 +115,7 @@ async def main() -> int:
 async def _verify_api(
     client: httpx.AsyncClient,
     verifier: Verification,
-) -> None:
+) -> UUID:
     reviewer = await _login(client, "reviewer@example.com")
     viewer = await _login(client, "viewer@example.com")
     queue_url = f"/api/v1/tenants/{TENANT_A_ID}/catalog/review-candidates"
@@ -145,6 +146,36 @@ async def _verify_api(
         and initial.json()[0]["similarity"] == 0.8
         and initial.json()[0]["match_decision"] == "review",
     )
+
+    proposal_url = f"/api/v1/tenants/{TENANT_A_ID}/catalog/product-proposals"
+    proposal_forbidden = await client.get(proposal_url, headers=viewer)
+    proposal_foreign = await client.get(
+        f"/api/v1/tenants/{TENANT_B_ID}/catalog/product-proposals",
+        headers=reviewer,
+    )
+    proposals = await client.get(proposal_url, headers=reviewer)
+    repeated_proposals = await client.get(proposal_url, headers=reviewer)
+    verifier.check(
+        "product proposals enforce tenant catalog permission",
+        proposal_forbidden.status_code == 403 and proposal_foreign.status_code == 404,
+    )
+    proposal_payload = proposals.json()
+    verifier.check(
+        "no-match offer produces source-backed product proposal",
+        proposals.status_code == 200
+        and len(proposal_payload) == 1
+        and proposal_payload[0]["external_id"] == "offer-proposal"
+        and proposal_payload[0]["proposed_name"] == "Stardew Valley Complete"
+        and proposal_payload[0]["proposed_aliases"] == []
+        and proposal_payload[0]["nearest_similarity"] == 0.0
+        and proposal_payload[0]["match_decision"] == "no_match",
+    )
+    verifier.check(
+        "product proposal identity is deterministic",
+        repeated_proposals.status_code == 200
+        and repeated_proposals.json() == proposal_payload,
+    )
+    proposal_id = UUID(proposal_payload[0]["proposal_id"])
 
     reject_headers = {**reviewer, "Idempotency-Key": "reject-product-a"}
     rejected = await client.post(
@@ -206,6 +237,7 @@ async def _verify_api(
         "linked offer leaves review queue",
         empty_queue.status_code == 200 and empty_queue.json() == [],
     )
+    return proposal_id
 
 
 async def _seed_data(
@@ -269,6 +301,18 @@ async def _seed_data(
             ParsedOffer(
                 tenant_id=TENANT_A_ID,
                 marketplace="playerok",
+                external_id="offer-proposal",
+                title="Stardew Valley Complete",
+                url="https://playerok.com/products/offer-proposal",
+                price=Decimal("499.00"),
+                currency="RUB",
+            ),
+        )
+        await repositories.offers.save(
+            TENANT_A_ID,
+            ParsedOffer(
+                tenant_id=TENANT_A_ID,
+                marketplace="playerok",
                 external_id="offer-auto",
                 title="Minecraft Java Bedrock Windows",
                 url="https://playerok.com/products/offer-auto",
@@ -278,7 +322,11 @@ async def _seed_data(
         )
 
 
-async def _verify_fresh_engine(database_url: str, verifier: Verification) -> None:
+async def _verify_fresh_engine(
+    database_url: str,
+    expected_proposal_id: UUID,
+    verifier: Verification,
+) -> None:
     fresh_engine = create_async_engine(database_url)
     fresh_factory = async_sessionmaker(fresh_engine, expire_on_commit=False)
     try:
@@ -306,6 +354,15 @@ async def _verify_fresh_engine(database_url: str, verifier: Verification) -> Non
                 CanonicalOfferDecisionType.CONFIRMED,
                 CanonicalOfferDecisionType.REJECTED,
             },
+        )
+        proposals = await CanonicalOfferReviewQueueService(
+            create_postgres_repository_scope(fresh_factory)
+        ).list_product_proposals(TENANT_A_ID)
+        verifier.check(
+            "fresh engine reproduces stable product proposal",
+            len(proposals) == 1
+            and proposals[0].proposal_id == expected_proposal_id
+            and proposals[0].offer.external_id == "offer-proposal",
         )
     finally:
         await fresh_engine.dispose()

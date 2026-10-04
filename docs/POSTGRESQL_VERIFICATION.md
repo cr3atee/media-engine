@@ -636,18 +636,22 @@ temporary container and volume were removed after verification.
 ## EPIC 19 Canonical Offer Review API
 
 `scripts/verify_catalog_review_api_postgres.py` was executed against temporary
-PostgreSQL 17 and isolated database `epic19_catalog_review_verify` on a dynamic
-loopback port. No project or production database was used.
+PostgreSQL 17 and isolated database
+`epic19_catalog_review_proposal_verify` on a dynamic loopback port. No project
+or production database was used.
 
-All `12/12` checks passed. The verifier covers seller authentication, explicit
+All `16/16` checks passed. The verifier covers seller authentication, explicit
 catalog-review permission, foreign-tenant hiding, unchanged-threshold review
 candidate generation, rejection persistence, rejected-pair suppression before
 rematching, sanitized fingerprint conflicts, confirmed link persistence,
 idempotent replay, queue removal, and fresh-engine persistence of both links and
-immutable decisions.
+immutable decisions. It also verifies tenant-authorized `NO_MATCH` product
+proposals, source-backed fields, deterministic identity on replay, and stable
+fresh-engine reproduction.
 
-Alembic verification passed at `0016_canonical_offer_decisions`: current/check,
-downgrade to `0015_tenant_canonical_links`, upgrade back to head, and offline
-upgrade SQL. Full Pytest passed `436` tests with `58` expected skips; MyPy
-checked `408` source files; focused Ruff and Ruff format checks passed. The
-temporary container and volume were removed after verification.
+Alembic verification passed at `0016_canonical_offer_decisions`: `current`
+reported head and `check` reported no new upgrade operations. Task 40 is a
+read-only projection and requires no migration. Full Pytest passed `444` tests
+with `58` expected skips; MyPy checked `409` source files; focused Ruff and Ruff
+format checks passed. The temporary container and volume were removed after
+verification.
