@@ -52,10 +52,9 @@ class MatchingService:
         best_candidate: CanonicalProduct | None = None
 
         for candidate in candidates:
-            candidate_tokens = self._preprocessor.process(candidate.name)
-            similarity = self._similarity_engine.calculate(
+            similarity = self._candidate_similarity(
                 offer_tokens,
-                candidate_tokens,
+                candidate,
             )
             if best_candidate is None or similarity > best_similarity:
                 best_similarity = similarity
@@ -66,3 +65,22 @@ class MatchingService:
             similarity=best_similarity,
             canonical_product=best_candidate,
         )
+
+    def _candidate_similarity(
+        self,
+        offer_tokens: tuple[str, ...],
+        candidate: CanonicalProduct,
+    ) -> float:
+        """Return the strongest score across a product name and its aliases."""
+        best_similarity = 0.0
+        for title in (candidate.name, *candidate.aliases):
+            candidate_tokens = self._preprocessor.process(title)
+            if not candidate_tokens:
+                continue
+            similarity = self._similarity_engine.calculate(
+                offer_tokens,
+                candidate_tokens,
+            )
+            if similarity > best_similarity:
+                best_similarity = similarity
+        return best_similarity

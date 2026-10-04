@@ -313,10 +313,11 @@ for those flows is explicitly completed.
    Playerok category-scoped retrieval is now live-verified for Minecraft Keys;
    equivalent GGSEL and FunPay Minecraft PC key batches are also live-verified.
    Review and link exact variants through a curated canonical bootstrap rather
-   than broad category membership. The internal tenant-scoped positive-link
-   primitive now exists and comparator grouping honors it. The tenant-authorized
-   review queue and audited confirm/reject API also exist; actual production
-   reviewed links still need to be populated from valid candidates.
+   than broad category membership. Curated `CanonicalProduct.aliases` now
+   participate in the existing matcher without lower thresholds. The internal
+   tenant-scoped positive-link primitive and tenant-authorized review API exist;
+   actual production aliases and reviewed links still need to be populated from
+   verified product evidence.
 7. Decide whether the embedded shell remains in this repository or moves to a
    separate frontend project before public launch.
 8. Decide whether category browse must require parser/category retention before

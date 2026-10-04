@@ -29,6 +29,12 @@ and fresh-session persistence. A tenant-authorized seller API now lists only
 unchanged-threshold `REVIEW` candidates and delegates idempotent confirm/reject
 commands to that service. Its isolated PostgreSQL API verifier passes `12/12`.
 
+Canonical aliases are now active matching inputs. `MatchingService` evaluates a
+product's name and curated non-empty aliases, retains the strongest score, and
+preserves the existing thresholds and candidate-order tie-break. Saved real
+payload evidence remains `0 AUTO_MATCH / 0 REVIEW` because no aliases or product
+identity are inferred from source titles.
+
 EPIC 12 is live-verified and complete against PostgreSQL 17.10.
 EPIC 13 is verified and complete: deterministic price-drop events persist
 atomically, are scored through durable claims, and produce persistent immutable

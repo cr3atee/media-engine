@@ -16,6 +16,10 @@ Fields:
 - `aliases`: immutable tuple of known product aliases.
 
 `CanonicalProduct` is a dataclass and does not depend on a database or marketplace.
+`MatchingService` treats the canonical name and each non-empty curated alias as
+alternative title representations, keeping the strongest score without changing
+confidence thresholds. Aliases are not generated from marketplace offers by the
+domain model.
 
 ## RawMarketplaceOffer
 

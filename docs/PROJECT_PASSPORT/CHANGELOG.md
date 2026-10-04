@@ -6,6 +6,11 @@ This document records notable Project Passport updates.
 
 ## Unreleased
 
+- Enabled curated `CanonicalProduct.aliases` in the existing deterministic
+  matcher by selecting the strongest name-or-alias score without changing
+  thresholds or result contracts. Alias-backed review queue coverage, saved
+  real-data regression checks, full Pytest (`441 passed, 58 skipped`), MyPy
+  (`409` files), Ruff, and Ruff format pass.
 - Added tenant-authorized canonical offer review candidates and idempotent
   confirm/reject seller routes over the existing matching and immutable decision
   services. Rejected pairs are excluded before rematching. Isolated PostgreSQL

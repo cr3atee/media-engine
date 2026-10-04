@@ -1153,6 +1153,37 @@ Verification:
 - Full Pytest passes `436` tests with `58` expected skips; MyPy checks `408`
   source files; focused Ruff and Ruff format checks pass.
 
+### Task 39: Alias-Aware Canonical Matching
+
+Use the aliases already stored on `CanonicalProduct` as curated matching input
+without changing deterministic preprocessing, similarity, confidence, or result
+contracts.
+
+Acceptance criteria:
+
+- `MatchingService` scores each candidate against its canonical name and every
+  non-empty alias, then keeps that candidate's strongest score.
+- Candidate ordering remains the deterministic tie-break across equal scores.
+- Blank aliases cannot turn an empty offer title into a false match.
+- Existing `AUTO_MATCH`, `REVIEW`, and `NO_MATCH` thresholds remain unchanged.
+- The review queue receives alias-backed `REVIEW` candidates through the same
+  `MatchingService`; no API or repository-specific matching logic is added.
+- Aliases remain curated catalog metadata and are not inferred from source
+  titles by this task.
+
+Status:
+
+- Complete.
+
+Verification:
+
+- Focused matching, review-queue, and curated-link tests pass `16/16`.
+- The saved real-data preview still passes with three source products; the
+  existing `81`-offer evidence remains `0 AUTO_MATCH / 0 REVIEW`, proving that
+  this task does not invent aliases or product identity.
+- Full Pytest passes `441` tests with `58` expected skips; MyPy checks `409`
+  source files; focused Ruff and Ruff format checks pass.
+
 ## Deferred Runtime Constraint
 
 The repository-backed public read adapter currently returns bounded first

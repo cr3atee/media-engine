@@ -186,6 +186,9 @@ This document captures architecture notes that are important for future reviews.
   only the existing `REVIEW` classification, and removes terminal pairs before
   calling `MatchingService`; do not duplicate similarity or lower thresholds in
   HTTP or UI code.
+- Canonical aliases are alternative curated names for one known product, not a
+  source-title ingestion field. `MatchingService` may score them, but parsers and
+  preview tooling must not manufacture aliases to force a comparison result.
 
 ## Review Notes
 

@@ -251,6 +251,10 @@ This document tracks only work that is reflected by the current repository state
   permission protects the deterministic `REVIEW` queue and idempotent
   confirm/reject routes. Terminal pairs are excluded before matching, and the
   PostgreSQL API verifier passes `12/12` checks without changing thresholds.
+- EPIC 19 Task 39 alias-aware canonical matching: `MatchingService` now uses the
+  strongest score across a canonical name and curated non-empty aliases while
+  preserving deterministic ties and all confidence thresholds. Full Pytest
+  passes `441` tests with `58` expected skips.
 
 ## Current Status
 

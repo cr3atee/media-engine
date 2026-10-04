@@ -148,6 +148,33 @@ def test_linked_and_incomplete_offers_are_not_review_candidates() -> None:
     run_async(scenario())
 
 
+def test_queue_uses_canonical_aliases_without_changing_thresholds() -> None:
+    async def scenario() -> None:
+        provider = create_memory_provider()
+        await provider.canonical_products.save(
+            CanonicalProduct(
+                id=PRODUCT_A_ID,
+                tenant_id=TENANT_A_ID,
+                name="Minecraft Complete Collection",
+                category="Games",
+                aliases=("Minecraft Java Bedrock Windows",),
+            )
+        )
+        await provider.offers.save(
+            TENANT_A_ID,
+            _offer(external_id="alias-review", title=_review_title()),
+        )
+
+        candidates = await _queue(provider).list_candidates(TENANT_A_ID)
+
+        assert len(candidates) == 1
+        assert candidates[0].canonical_product.id == PRODUCT_A_ID
+        assert candidates[0].similarity == 0.8
+        assert candidates[0].match_decision is MatchDecision.REVIEW
+
+    run_async(scenario())
+
+
 def _queue(provider: RepositoryProvider) -> CanonicalOfferReviewQueueService:
     return CanonicalOfferReviewQueueService(create_memory_repository_scope(provider))
 

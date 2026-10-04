@@ -17,7 +17,9 @@ This document lists only confirmed work remaining after EPIC 17 completion.
   population remains. Immutable confirm/reject persistence and atomic review
   orchestration now exist. The tenant-authorized HTTP review queue excludes
   terminal pairs before matching; use it to populate production links only when
-  source candidates reach the unchanged `REVIEW` threshold.
+  source candidates reach the unchanged `REVIEW` threshold. Curated aliases now
+  participate in matching, so catalog bootstrap should add aliases only from
+  verified product evidence rather than copying arbitrary marketplace titles.
 - Decide whether the embedded Market Terminal shell remains inside this
   repository or moves to a separate frontend project before public launch.
 - Decide whether public category browse must require parser/category retention

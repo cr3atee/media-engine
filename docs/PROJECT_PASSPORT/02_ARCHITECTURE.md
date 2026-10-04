@@ -73,7 +73,8 @@ Current matching flow:
 1. `MatchingPreprocessor` normalizes, tokenizes, removes stop words, and expands aliases.
 2. `SimilarityEngine` calculates token similarity.
 3. `ConfidenceEngine` classifies the similarity score.
-4. `MatchingService` selects the best canonical product candidate for a `ParsedOffer`.
+4. `MatchingService` scores each candidate's canonical name and curated aliases,
+   then selects the candidate with the strongest deterministic score.
 5. A valid persisted same-tenant `canonical_product_id` is authoritative during
    comparator grouping; only unlinked offers use automatic title matching.
 6. `CanonicalOfferLinkService` writes explicit reviewed positive links through
