@@ -1,4 +1,4 @@
-"""Verify atomic canonical-product proposal confirmation on PostgreSQL."""
+"""Verify atomic canonical-product proposal workflows on PostgreSQL."""
 
 # ruff: noqa: E402
 from __future__ import annotations
@@ -38,7 +38,6 @@ from app.domain.admin_actions import AdminActorType
 from app.domain.auth import PasswordCredential
 from app.domain.canonical_offer_decisions import (
     CanonicalOfferDecision,
-    CanonicalOfferDecisionType,
 )
 from app.domain.tenancy import Membership, Tenant, TenantRole, User
 from app.main import create_app
@@ -47,22 +46,20 @@ from app.parsers.models import ParsedOffer
 from app.repositories.postgres import PostgresCanonicalOfferDecisionRepository
 from app.repositories.provider import RepositoryProvider, create_postgres_provider
 from app.services.canonical_offer_linking import (
-    CanonicalOfferLinkConflictError,
     MarketplaceOfferUnavailableError,
 )
 from app.services.canonical_offer_review import (
     CanonicalOfferDecisionConflictError,
     CanonicalOfferReviewContext,
-    CanonicalOfferReviewResult,
-    CanonicalOfferReviewService,
-    ReviewCanonicalOfferCommand,
 )
 from app.services.canonical_offer_review_queue import canonical_product_proposal_id
 from app.services.canonical_product_proposals import (
     CanonicalProductProposalConfirmationResult,
     CanonicalProductProposalConflictError,
+    CanonicalProductProposalResolutionResult,
     CanonicalProductProposalService,
     ConfirmCanonicalProductProposalCommand,
+    ResolveCanonicalProductProposalCommand,
 )
 from app.services.passwords import PasswordHasher
 from app.services.repository_scope import RepositoryScopeFactory
@@ -138,6 +135,7 @@ async def main() -> int:
         concurrent_id = await _verify_concurrency(
             scope_factory, session_factory, verifier
         )
+        await _verify_resolution_rollback(session_factory, verifier)
         await _verify_cross_command_concurrency(
             scope_factory,
             session_factory,
@@ -198,11 +196,14 @@ async def _verify_api(
     api_proposal = next(
         payload for payload in payloads if payload["external_id"] == "offer-api"
     )
+    resolution_proposal = next(
+        payload for payload in payloads if payload["external_id"] == "offer-resolve"
+    )
     verifier.check(
         "proposal API exposes only current no-match offers",
         proposals.status_code == 200
         and {payload["external_id"] for payload in payloads}
-        == {"offer-api", "offer-concurrent", "offer-rollback"}
+        == {"offer-api", "offer-concurrent", "offer-resolve", "offer-rollback"}
         and api_proposal["proposed_name"] == "Stardew Valley Complete",
     )
 
@@ -272,7 +273,68 @@ async def _verify_api(
         "confirmed source leaves proposal queue",
         remaining.status_code == 200
         and {payload["external_id"] for payload in remaining.json()}
-        == {"offer-concurrent", "offer-rollback"},
+        == {"offer-concurrent", "offer-resolve", "offer-rollback"},
+    )
+
+    resolution_id = UUID(resolution_proposal["proposal_id"])
+    resolution_url = f"{proposals_url}/{resolution_id}/resolve-existing"
+    resolution_payload = {
+        "marketplace": "ggsel",
+        "external_id": "offer-resolve",
+        "canonical_product_id": str(EXISTING_PRODUCT_ID),
+        "reason": "Reviewer verified the existing catalog identity",
+    }
+    missing_evidence = await client.post(
+        resolution_url,
+        headers={**reviewer, "Idempotency-Key": "resolution-missing-evidence"},
+        json={**resolution_payload, "reason": "  "},
+    )
+    wrong_target = await client.post(
+        resolution_url,
+        headers={**reviewer, "Idempotency-Key": "resolution-wrong-target"},
+        json={**resolution_payload, "canonical_product_id": str(proposal_id)},
+    )
+    resolution_headers = {
+        **reviewer,
+        "Idempotency-Key": "proposal-resolve-existing",
+    }
+    resolved = await client.post(
+        resolution_url,
+        headers=resolution_headers,
+        json=resolution_payload,
+    )
+    resolution_replay = await client.post(
+        resolution_url,
+        headers=resolution_headers,
+        json=resolution_payload,
+    )
+    resolution_fingerprint_conflict = await client.post(
+        resolution_url,
+        headers=resolution_headers,
+        json={**resolution_payload, "reason": "Different resolution evidence"},
+    )
+    verifier.check(
+        "existing-product resolution requires evidence and current nearest target",
+        missing_evidence.status_code == 422
+        and wrong_target.status_code == 409
+        and wrong_target.json()["error"]["code"] == "canonical_product_proposal_stale",
+    )
+    verifier.check(
+        "existing-product resolution returns current canonical identity",
+        resolved.status_code == 200
+        and resolved.json()["proposal_id"] == str(resolution_id)
+        and resolved.json()["canonical_product_id"] == str(EXISTING_PRODUCT_ID)
+        and resolved.json()["decision"] == "confirmed"
+        and resolved.json()["replayed"] is False,
+    )
+    verifier.check(
+        "existing-product resolution replays and rejects fingerprint reuse",
+        resolution_replay.status_code == 200
+        and resolution_replay.json()["decision_id"] == resolved.json()["decision_id"]
+        and resolution_replay.json()["replayed"] is True
+        and resolution_fingerprint_conflict.status_code == 409
+        and resolution_fingerprint_conflict.json()["error"]["code"]
+        == "idempotency_conflict",
     )
 
     async with session_factory() as session:
@@ -293,6 +355,21 @@ async def _verify_api(
         )
         stale_product = await repositories.canonical_products.get_by_id(stale_id)
         auto_product = await repositories.canonical_products.get_by_id(auto_id)
+        resolution_product = await repositories.canonical_products.get_by_id(
+            resolution_id
+        )
+        resolution_offer = await repositories.offers.get_by_identity(
+            TENANT_A_ID,
+            "ggsel",
+            "offer-resolve",
+        )
+        resolution_decisions = (
+            await repositories.canonical_offer_decisions.list_for_offer(
+                TENANT_A_ID,
+                "ggsel",
+                "offer-resolve",
+            )
+        )
     verifier.check(
         "confirmation atomically persists product link and audit",
         product is not None
@@ -306,6 +383,14 @@ async def _verify_api(
     verifier.check(
         "rejected proposal commands leave no product rows",
         stale_product is None and auto_product is None,
+    )
+    verifier.check(
+        "existing-product resolution avoids duplicate catalog product",
+        resolution_product is None
+        and resolution_offer is not None
+        and resolution_offer.canonical_product_id == EXISTING_PRODUCT_ID
+        and len(resolution_decisions) == 1
+        and resolution_decisions[0].canonical_product_id == EXISTING_PRODUCT_ID,
     )
     return proposal_id
 
@@ -421,12 +506,63 @@ async def _verify_rollback(
     )
 
 
+async def _verify_resolution_rollback(
+    session_factory: async_sessionmaker[AsyncSession],
+    verifier: Verification,
+) -> None:
+    offer = _offer("offer-resolution-rollback", "Minecraft Dungeons Legacy")
+    async with session_factory() as session, session.begin():
+        await create_postgres_provider(session).offers.save(TENANT_A_ID, offer)
+    proposal_id = canonical_product_proposal_id(TENANT_A_ID, offer)
+
+    try:
+        await CanonicalProductProposalService(
+            _failing_scope(session_factory)
+        ).resolve_existing(
+            ResolveCanonicalProductProposalCommand(
+                tenant_id=TENANT_A_ID,
+                proposal_id=proposal_id,
+                marketplace="ggsel",
+                external_id="offer-resolution-rollback",
+                canonical_product_id=EXISTING_PRODUCT_ID,
+                reason="Controlled rollback evidence",
+            ),
+            _context("resolution-rollback"),
+        )
+    except RuntimeError as exc:
+        verifier.check(
+            "controlled existing-product resolution failure surfaces",
+            "controlled proposal audit" in str(exc),
+        )
+    else:
+        raise AssertionError("controlled proposal resolution failure did not raise")
+
+    async with session_factory() as session:
+        repositories = create_postgres_provider(session)
+        stored_offer = await repositories.offers.get_by_identity(
+            TENANT_A_ID,
+            "ggsel",
+            "offer-resolution-rollback",
+        )
+        decisions = await repositories.canonical_offer_decisions.list_for_offer(
+            TENANT_A_ID,
+            "ggsel",
+            "offer-resolution-rollback",
+        )
+    verifier.check(
+        "failed existing-product audit rolls back link and decision",
+        stored_offer is not None
+        and stored_offer.canonical_product_id is None
+        and decisions == (),
+    )
+
+
 async def _verify_cross_command_concurrency(
     scope_factory: RepositoryScopeFactory,
     session_factory: async_sessionmaker[AsyncSession],
     verifier: Verification,
 ) -> None:
-    offer = _offer("offer-cross-command", "Celeste Complete")
+    offer = _offer("offer-cross-command", "Minecraft Story Mode Legacy")
     async with session_factory() as session, session.begin():
         await create_postgres_provider(session).offers.save(TENANT_A_ID, offer)
     proposal_id = canonical_product_proposal_id(TENANT_A_ID, offer)
@@ -441,13 +577,13 @@ async def _verify_cross_command_concurrency(
             ),
             _context("cross-proposal"),
         ),
-        CanonicalOfferReviewService(scope_factory).review(
-            ReviewCanonicalOfferCommand(
+        CanonicalProductProposalService(scope_factory).resolve_existing(
+            ResolveCanonicalProductProposalCommand(
                 tenant_id=TENANT_A_ID,
+                proposal_id=proposal_id,
                 marketplace="ggsel",
                 external_id="offer-cross-command",
                 canonical_product_id=EXISTING_PRODUCT_ID,
-                decision=CanonicalOfferDecisionType.CONFIRMED,
                 reason="Existing product selected",
             ),
             _context("cross-existing"),
@@ -459,7 +595,10 @@ async def _verify_cross_command_concurrency(
         for result in results
         if isinstance(
             result,
-            (CanonicalProductProposalConfirmationResult, CanonicalOfferReviewResult),
+            (
+                CanonicalProductProposalConfirmationResult,
+                CanonicalProductProposalResolutionResult,
+            ),
         )
     ]
     conflicts = [
@@ -467,11 +606,11 @@ async def _verify_cross_command_concurrency(
         for result in results
         if isinstance(
             result,
-            (CanonicalProductProposalConflictError, CanonicalOfferLinkConflictError),
+            CanonicalProductProposalConflictError,
         )
     ]
     verifier.check(
-        "proposal and existing-product commands share one offer lock",
+        "create-new and resolve-existing commands share one offer lock",
         len(accepted) == 1 and len(conflicts) == 1,
     )
 
@@ -526,6 +665,23 @@ async def _verify_tenant_isolation(
     else:
         raise AssertionError("proposal confirmation crossed tenant boundary")
 
+    try:
+        await CanonicalProductProposalService(scope_factory).resolve_existing(
+            ResolveCanonicalProductProposalCommand(
+                tenant_id=TENANT_B_ID,
+                proposal_id=foreign_identity,
+                marketplace="ggsel",
+                external_id="offer-api",
+                canonical_product_id=EXISTING_PRODUCT_ID,
+                reason="Must remain tenant isolated",
+            ),
+            _context("resolution-tenant-isolation"),
+        )
+    except MarketplaceOfferUnavailableError:
+        verifier.check("proposal resolution hides cross-tenant offer", True)
+    else:
+        raise AssertionError("proposal resolution crossed tenant boundary")
+
     async with session_factory() as session:
         repositories = create_postgres_provider(session)
         product = await repositories.canonical_products.get_by_id(foreign_identity)
@@ -563,6 +719,18 @@ async def _verify_fresh_engine(
                 "ggsel",
                 "offer-api",
             )
+            resolved_offer = await repositories.offers.get_by_identity(
+                TENANT_A_ID,
+                "ggsel",
+                "offer-resolve",
+            )
+            resolved_decisions = (
+                await repositories.canonical_offer_decisions.list_for_offer(
+                    TENANT_A_ID,
+                    "ggsel",
+                    "offer-resolve",
+                )
+            )
         verifier.check(
             "fresh engine retains confirmed proposal lifecycle",
             api_product is not None
@@ -570,6 +738,13 @@ async def _verify_fresh_engine(
             and api_offer is not None
             and api_offer.canonical_product_id == api_proposal_id
             and len(api_decisions) == 1,
+        )
+        verifier.check(
+            "fresh engine retains existing-product proposal resolution",
+            resolved_offer is not None
+            and resolved_offer.canonical_product_id == EXISTING_PRODUCT_ID
+            and len(resolved_decisions) == 1
+            and resolved_decisions[0].canonical_product_id == EXISTING_PRODUCT_ID,
         )
     finally:
         await fresh_engine.dispose()
@@ -620,6 +795,7 @@ async def _seed_data(
         for offer in (
             _offer("offer-api", "Stardew Valley Complete"),
             _offer("offer-concurrent", "Hades Complete"),
+            _offer("offer-resolve", "Minecraft Dungeons Legacy"),
             _offer("offer-rollback", "Terraria Complete"),
             _offer("offer-auto", "Minecraft Java Bedrock Windows"),
         ):

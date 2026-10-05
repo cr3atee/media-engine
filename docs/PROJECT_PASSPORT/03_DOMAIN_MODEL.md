@@ -209,6 +209,11 @@ an offer. When explicitly confirmed, its stable UUID becomes the new
 decision evidence share one transaction. The accepted product still has no
 inferred category or aliases.
 
+An authorized reviewer may instead resolve the proposal to its current nearest
+existing `CanonicalProduct`. This requires explicit evidence, recomputes the
+same `NO_MATCH` projection inside the transaction, creates no product, and
+atomically persists the source-offer link plus immutable confirmed decision.
+
 ## Persistent Lifecycle Verification
 
 The production-shaped PostgreSQL flow verified exact links from `ParsedOffer` to

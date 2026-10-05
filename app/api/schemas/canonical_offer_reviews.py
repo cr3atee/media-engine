@@ -63,6 +63,19 @@ class ConfirmCanonicalProductProposalRequest(ApiModel):
     _normalize_reason = field_validator("reason")(_optional_nonempty_text)
 
 
+class ResolveCanonicalProductProposalRequest(ApiModel):
+    """Input for resolving a proposal to its displayed existing product."""
+
+    marketplace: str = Field(min_length=1, max_length=64)
+    external_id: str = Field(min_length=1, max_length=255)
+    canonical_product_id: UUID
+    reason: str = Field(min_length=1, max_length=2000)
+
+    _normalize_marketplace = field_validator("marketplace")(_nonempty_text)
+    _normalize_external_id = field_validator("external_id")(_nonempty_text)
+    _normalize_reason = field_validator("reason")(_nonempty_text)
+
+
 class CanonicalOfferReviewCandidateResponse(ApiModel):
     """Seller-safe representation of one review-confidence candidate."""
 
@@ -128,3 +141,9 @@ class CanonicalProductProposalConfirmationResponse(ApiModel):
     decision: CanonicalOfferDecisionType
     created_at: datetime
     replayed: bool
+
+
+class CanonicalProductProposalResolutionResponse(
+    CanonicalProductProposalConfirmationResponse
+):
+    """Existing canonical product selected through explicit human review."""

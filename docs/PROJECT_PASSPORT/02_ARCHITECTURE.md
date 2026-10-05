@@ -87,9 +87,10 @@ Current matching flow:
    canonical-product proposals. It derives a whitespace-normalized name from
    source data and does not create products, infer aliases, or persist links.
 9. `CanonicalProductProposalService` recomputes one selected proposal inside a
-   write scope, shares an offer-level lock with existing-product review commands,
-   then atomically creates the product, links the source offer, and appends
-   immutable confirmed evidence.
+   write scope and shares an offer-level lock with all link commands. It can
+   atomically create the proposed product or, with required human evidence,
+   reuse only the proposal's current nearest existing product; both paths link
+   the source offer and append immutable confirmed evidence.
 
 ## Repository Boundary
 
@@ -142,6 +143,8 @@ run inside ingestion or scoring transactions.
 - Canonical-product proposals are read projections, not persisted domain
   records. Their explicit confirmation command revalidates current source and
   matching state before mutation; reads never mutate the curated catalog.
+  Existing-product resolution is limited to the currently displayed nearest
+  candidate and does not alter deterministic confidence thresholds.
 - Marketplace pipeline persists parsed offers, price snapshots, and deterministic
   market events only through `RepositoryProvider`.
 - Scheduler jobs delegate to application services and do not own repositories,

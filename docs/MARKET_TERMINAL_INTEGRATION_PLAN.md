@@ -389,6 +389,10 @@ atomically: the service recomputes eligibility, creates the canonical product
 with the stable proposal ID, links its source offer, and records immutable
 confirmation evidence in one transaction. This command does not infer aliases,
 categories, or links for other marketplace offers.
+Reviewers can also resolve a current proposal to its displayed nearest existing
+canonical product with required human evidence. That path recomputes the
+proposal inside the transaction, creates no duplicate product, and uses the
+same offer-level lock, atomic link, and immutable evidence boundary.
 
 ## Architectural Guardrails
 
@@ -418,26 +422,19 @@ These should be answered before heavy frontend implementation:
 
 ## Recommended Next EPIC
 
-**EPIC 19 - Consumer Read API For Market Terminal**
+**EPIC 19 Task 43 - Authenticated Catalog Review Workspace**
 
 Goal:
 
-Expose the existing MediaEngine core through stable buyer-facing read endpoints
-that the Market Terminal UI can consume.
-
-Specification:
-
-- `docs/EPIC_19_CONSUMER_READ_API.md`
+Expose the completed catalog-review workflow through an authorized seller UI
+without moving matching or mutation policy out of MediaEngine.
 
 Scope:
 
-- product summary DTOs;
-- product detail DTOs;
-- offer list DTOs;
-- comparison result DTOs;
-- price-history DTOs;
-- latest price-change DTOs;
-- public FastAPI routes;
-- no new marketplace logic;
-- no new persistence semantics;
-- no UI implementation yet.
+- list current review candidates and unmatched product proposals;
+- confirm or reject review candidates with evidence;
+- create a source-backed canonical product from a current proposal;
+- resolve a proposal to its displayed existing canonical product;
+- preserve tenant authorization and idempotency keys;
+- no duplicated matching, linking, or proposal logic in the UI;
+- no lowered confidence thresholds.

@@ -263,6 +263,11 @@ This document tracks only work that is reflected by the current repository state
   revalidates one proposal and atomically creates its canonical product, links
   the source offer, and appends immutable confirmation evidence. Isolated
   PostgreSQL verification passes `19/19` checks.
+- EPIC 19 Task 42 existing-product proposal resolution: an authorized reviewer
+  can resolve a current `NO_MATCH` proposal only to its displayed nearest
+  canonical product with required evidence. The command creates no duplicate
+  product, preserves unchanged thresholds, and passes `27/27` isolated
+  PostgreSQL checks.
 
 ## Current Status
 
@@ -307,9 +312,10 @@ frontend hardening plus a product decision on category data exposure.
 
 ## Recommended Next EPIC
 
-**Existing-product resolution for unmatched proposals.**
+**Authenticated catalog-review workspace integration.**
 
-Allow a reviewer to resolve a source-backed `NO_MATCH` proposal to its displayed
-existing canonical candidate when evidence supports that decision, reusing the
-same immutable audit and atomic link boundary instead of creating a duplicate
-product. Do not lower automatic matching thresholds.
+Connect the completed review-candidate and product-proposal commands to an
+authorized seller workflow so reviewers can inspect evidence, confirm or reject
+candidate pairs, create source-backed products, and resolve proposals to the
+displayed existing product. Reuse the current APIs; do not move matching or
+catalog mutation logic into the UI and do not lower automatic thresholds.

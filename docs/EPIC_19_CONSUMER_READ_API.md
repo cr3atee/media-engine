@@ -1261,6 +1261,47 @@ Verification:
 - Full Pytest passes `451` tests with `58` expected skips; MyPy checks `412`
   source files; focused Ruff and Ruff format checks pass.
 
+### Task 42: Existing-Product Resolution for Unmatched Proposals
+
+Allow an authorized reviewer to resolve one still-current `NO_MATCH` proposal
+to the existing canonical product displayed by that proposal, without lowering
+matching thresholds or creating a duplicate product.
+
+Acceptance criteria:
+
+- The tenant-authorized command requires non-empty human evidence and an
+  idempotency key.
+- The service recomputes the proposal inside the write transaction and accepts
+  only its current nearest canonical product; arbitrary product selection,
+  stale proposals, linked offers, and changed matching outcomes fail closed.
+- The existing canonical product is reused. No product, alias, category, or
+  marketplace fact is invented.
+- Source-offer linking and immutable `confirmed` evidence commit atomically or
+  roll back together.
+- Proposal creation, existing-product resolution, and normal review commands
+  share the tenant/marketplace/external-ID offer lock before pair locking.
+- Same-key replay returns the original result; changed fingerprints and
+  concurrent competing commands cannot create duplicate links or decisions.
+
+Status:
+
+- Complete.
+
+Verification:
+
+- Focused proposal service and seller API tests pass `16/16`, including
+  evidence validation, current-target enforcement, replay, fingerprint
+  conflicts, no-duplicate behavior, and create/resolve contention.
+- `scripts/verify_canonical_product_proposal_postgres.py` passes `27/27`
+  checks against an isolated PostgreSQL 17 database, including rollback,
+  tenant isolation, shared offer-lock serialization, and fresh-engine
+  persistence for existing-product resolution.
+- Alembic remains at `0016_canonical_offer_decisions (head)`; `check` reports
+  no metadata drift and offline SQL generation succeeds. No migration is
+  required.
+- Full Pytest passes `456` tests with `58` expected skips; MyPy checks `412`
+  source files; focused Ruff and Ruff format checks pass.
+
 ## Deferred Runtime Constraint
 
 The repository-backed public read adapter currently returns bounded first

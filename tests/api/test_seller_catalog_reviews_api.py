@@ -191,6 +191,92 @@ def test_product_proposal_confirmation_is_atomic_audited_and_idempotent() -> Non
     assert len(decisions) == 1
 
 
+def test_product_proposal_can_resolve_to_displayed_existing_product() -> None:
+    provider = _seeded_provider()
+    client = _client(provider)
+    reviewer = _login_headers(client, "reviewer@example.com")
+    viewer = _login_headers(client, "viewer@example.com")
+    proposals_url = f"/api/v1/tenants/{TENANT_A_ID}/catalog/product-proposals"
+    proposal = client.get(proposals_url, headers=reviewer).json()[0]
+    resolve_url = f"{proposals_url}/{proposal['proposal_id']}/resolve-existing"
+    payload = {
+        "marketplace": "playerok",
+        "external_id": "offer-proposal",
+        "canonical_product_id": str(PRODUCT_ID),
+        "reason": "Verified as the same product by reviewer",
+    }
+
+    forbidden = client.post(
+        resolve_url,
+        headers={**viewer, "Idempotency-Key": "forbidden-resolution"},
+        json=payload,
+    )
+    missing_evidence = client.post(
+        resolve_url,
+        headers={**reviewer, "Idempotency-Key": "missing-evidence"},
+        json={**payload, "reason": "  "},
+    )
+    wrong_target = client.post(
+        resolve_url,
+        headers={**reviewer, "Idempotency-Key": "wrong-target"},
+        json={
+            **payload,
+            "canonical_product_id": "3a000000-0000-4000-8000-000000009999",
+        },
+    )
+    headers = {**reviewer, "Idempotency-Key": "resolve-product-proposal"}
+    resolved = client.post(resolve_url, headers=headers, json=payload)
+    replayed = client.post(resolve_url, headers=headers, json=payload)
+    conflict = client.post(
+        resolve_url,
+        headers=headers,
+        json={**payload, "reason": "Different evidence"},
+    )
+
+    stored_offer = run_async(
+        provider.offers.get_by_identity(
+            TENANT_A_ID,
+            "playerok",
+            "offer-proposal",
+        )
+    )
+    products = run_async(provider.canonical_products.list_by_tenant(TENANT_A_ID))
+    decisions = run_async(
+        provider.canonical_offer_decisions.list_for_offer(
+            TENANT_A_ID,
+            "playerok",
+            "offer-proposal",
+        )
+    )
+
+    assert forbidden.status_code == 403
+    assert missing_evidence.status_code == 422
+    assert wrong_target.status_code == 409
+    assert wrong_target.json()["error"]["code"] == "canonical_product_proposal_stale"
+    assert resolved.status_code == 200
+    assert resolved.json()["proposal_id"] == proposal["proposal_id"]
+    assert resolved.json()["canonical_product_id"] == str(PRODUCT_ID)
+    assert resolved.json()["decision"] == "confirmed"
+    assert resolved.json()["replayed"] is False
+    assert replayed.status_code == 200
+    assert replayed.json()["decision_id"] == resolved.json()["decision_id"]
+    assert replayed.json()["replayed"] is True
+    assert conflict.status_code == 409
+    assert conflict.json()["error"]["code"] == "idempotency_conflict"
+    assert stored_offer is not None
+    assert stored_offer.canonical_product_id == PRODUCT_ID
+    assert products == (
+        CanonicalProduct(
+            id=PRODUCT_ID,
+            tenant_id=TENANT_A_ID,
+            name="Minecraft Java Bedrock Windows",
+            category="Games",
+            aliases=(),
+        ),
+    )
+    assert len(decisions) == 1
+
+
 def test_confirm_links_offer_and_replays_without_duplicate_decision() -> None:
     provider = _seeded_provider()
     client = _client(provider)

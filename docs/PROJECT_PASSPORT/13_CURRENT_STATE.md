@@ -416,6 +416,10 @@ production AI wiring, and guarded live Telegram verification.
   revalidates current `NO_MATCH` status, creates a source-named product with the
   stable proposal ID, links only that source offer, and persists immutable
   evidence in one transaction.
+- EPIC 19 Task 42 adds evidence-backed existing-product resolution for current
+  `NO_MATCH` proposals. The command accepts only the proposal's displayed
+  nearest product, creates no duplicate catalog row, and shares the same
+  offer-level concurrency boundary as product creation and normal review.
 
 ## Known Gaps
 
@@ -442,10 +446,10 @@ production AI wiring, and guarded live Telegram verification.
   production reviewed link set is populated yet. The current aligned payloads
   remain below the unchanged review threshold, so the review queue correctly
   returns no real-data candidates for that set. The system proposal queue can
-  expose those `NO_MATCH` offers for catalog bootstrap and atomically confirm
-  new canonical products. Resolving a proposal to an already existing nearest
-  product still requires a dedicated evidence-backed command before broad
-  same-product link population is practical.
+  expose those `NO_MATCH` offers for catalog bootstrap, atomically confirm new
+  canonical products, or resolve a proposal to its displayed existing nearest
+  product with immutable human evidence. A production-reviewed link set and an
+  authenticated operator workflow are not populated yet.
 - Snapshot creation is skipped when parsed offers from any marketplace do not
   contain normalized price and currency.
 - Ingestion, scoring, and durable content processing are separate services and

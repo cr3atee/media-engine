@@ -22,9 +22,10 @@ This document lists only confirmed work remaining after EPIC 17 completion.
   verified product evidence rather than copying arbitrary marketplace titles.
   Authorized sellers can now read stable source-backed proposals for
   `NO_MATCH` offers and atomically confirm a new product plus its source link.
-  Add an audited resolution command for linking a proposal to a displayed
-  existing canonical product when human evidence supports that choice, rather
-  than creating duplicates or lowering thresholds.
+  They can also resolve a proposal to its displayed existing canonical product
+  with immutable human evidence, without creating duplicates or lowering
+  thresholds. Connect these completed commands to an authenticated catalog
+  review workspace and populate only evidence-backed production links.
 - Decide whether the embedded Market Terminal shell remains inside this
   repository or moves to a separate frontend project before public launch.
 - Decide whether public category browse must require parser/category retention

@@ -17,10 +17,12 @@ from app.api.schemas.canonical_offer_reviews import (
     CanonicalOfferReviewCandidateResponse,
     CanonicalOfferReviewResponse,
     CanonicalProductProposalConfirmationResponse,
+    CanonicalProductProposalResolutionResponse,
     CanonicalProductProposalResponse,
     ConfirmCanonicalOfferRequest,
     ConfirmCanonicalProductProposalRequest,
     RejectCanonicalOfferRequest,
+    ResolveCanonicalProductProposalRequest,
 )
 from app.domain.admin_actions import AdminActorType
 from app.domain.auth import Permission, TenantContext
@@ -48,9 +50,12 @@ from app.services.canonical_offer_review_queue import (
 from app.services.canonical_product_proposals import (
     CanonicalProductProposalConfirmationResult,
     CanonicalProductProposalConflictError,
+    CanonicalProductProposalEvidenceRequiredError,
+    CanonicalProductProposalResolutionResult,
     CanonicalProductProposalService,
     CanonicalProductProposalUnavailableError,
     ConfirmCanonicalProductProposalCommand,
+    ResolveCanonicalProductProposalCommand,
 )
 
 router = APIRouter(
@@ -159,6 +164,76 @@ async def confirm_canonical_product_proposal(
             "Canonical product proposal conflicts with current catalog state.",
         ) from exc
     return _proposal_confirmation_response(result)
+
+
+@router.post(
+    "/product-proposals/{proposal_id}/resolve-existing",
+    response_model=CanonicalProductProposalResolutionResponse,
+)
+async def resolve_canonical_product_proposal_to_existing(
+    request: Request,
+    proposal_id: UUID,
+    payload: ResolveCanonicalProductProposalRequest,
+    context: CatalogReviewTenant,
+    idempotency_key: Annotated[str, Depends(require_idempotency_key)],
+    service: Annotated[
+        CanonicalProductProposalService,
+        Depends(get_canonical_product_proposal_service),
+    ],
+) -> CanonicalProductProposalResolutionResponse:
+    """Link one current proposal to its displayed nearest existing product."""
+    try:
+        result = await service.resolve_existing(
+            ResolveCanonicalProductProposalCommand(
+                tenant_id=context.tenant.id,
+                proposal_id=proposal_id,
+                marketplace=payload.marketplace,
+                external_id=payload.external_id,
+                canonical_product_id=payload.canonical_product_id,
+                reason=payload.reason,
+            ),
+            CanonicalOfferReviewContext(
+                actor_id=str(context.principal.user_id),
+                actor_type=AdminActorType.USER,
+                request_id=get_request_id(request),
+                idempotency_key=idempotency_key,
+            ),
+        )
+    except MarketplaceOfferUnavailableError as exc:
+        raise ApiError(
+            404,
+            "canonical_product_proposal_not_found",
+            "Canonical product proposal was not found.",
+        ) from exc
+    except CanonicalProductProposalEvidenceRequiredError as exc:
+        raise ApiError(
+            422,
+            "canonical_product_proposal_evidence_required",
+            "Existing-product resolution requires review evidence.",
+        ) from exc
+    except CanonicalProductProposalUnavailableError as exc:
+        raise ApiError(
+            409,
+            "canonical_product_proposal_stale",
+            "Canonical product proposal target is no longer current.",
+        ) from exc
+    except CanonicalOfferReviewIdempotencyConflictError as exc:
+        raise ApiError(
+            409,
+            "idempotency_conflict",
+            "Idempotency key is bound to another catalog command.",
+        ) from exc
+    except (
+        CanonicalProductProposalConflictError,
+        CanonicalOfferDecisionConflictError,
+        CanonicalOfferLinkConflictError,
+    ) as exc:
+        raise ApiError(
+            409,
+            "canonical_product_proposal_conflict",
+            "Canonical product proposal conflicts with current catalog state.",
+        ) from exc
+    return _proposal_resolution_response(result)
 
 
 @router.post(
@@ -350,6 +425,29 @@ def _proposal_confirmation_response(
     if offer.external_id is None:
         raise RuntimeError("Confirmed proposal offer identity is incomplete.")
     return CanonicalProductProposalConfirmationResponse(
+        proposal_id=result.proposal_id,
+        canonical_product_id=product.id,
+        canonical_product_name=product.name,
+        canonical_product_category=product.category,
+        canonical_product_aliases=product.aliases,
+        marketplace=offer.marketplace,
+        external_id=offer.external_id,
+        decision_id=decision.id,
+        decision=decision.decision,
+        created_at=decision.created_at,
+        replayed=result.replayed,
+    )
+
+
+def _proposal_resolution_response(
+    result: CanonicalProductProposalResolutionResult,
+) -> CanonicalProductProposalResolutionResponse:
+    product = result.product
+    decision = result.decision
+    offer = result.offer
+    if offer.external_id is None:
+        raise RuntimeError("Resolved proposal offer identity is incomplete.")
+    return CanonicalProductProposalResolutionResponse(
         proposal_id=result.proposal_id,
         canonical_product_id=product.id,
         canonical_product_name=product.name,

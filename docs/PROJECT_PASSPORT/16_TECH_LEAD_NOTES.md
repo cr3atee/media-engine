@@ -194,6 +194,10 @@ This document captures architecture notes that are important for future reviews.
   UUID as the product UUID and atomically creates the product, links only the
   source offer, and appends immutable evidence. Keep proposed aliases empty;
   resolving other offers remains a separate reviewed decision.
+- Existing-product proposal resolution must recompute the current `NO_MATCH`
+  projection and accept only its displayed nearest product with non-empty human
+  evidence. It must never become an arbitrary product-link command or a reason
+  to lower automatic matching thresholds.
 - Every catalog command that may link an offer must acquire the shared
   tenant/marketplace/external-ID offer lock before its candidate-pair lock.
   Product-specific pair locks alone do not prevent two explicit commands from

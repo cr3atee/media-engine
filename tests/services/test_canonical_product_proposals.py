@@ -27,9 +27,12 @@ from app.services.canonical_offer_review_queue import (
 )
 from app.services.canonical_product_proposals import (
     CanonicalProductProposalConfirmationResult,
+    CanonicalProductProposalEvidenceRequiredError,
+    CanonicalProductProposalResolutionResult,
     CanonicalProductProposalService,
     CanonicalProductProposalUnavailableError,
     ConfirmCanonicalProductProposalCommand,
+    ResolveCanonicalProductProposalCommand,
 )
 from app.services.repository_scope import create_memory_repository_scope
 
@@ -142,6 +145,11 @@ def test_confirmation_requires_current_no_match_proposal() -> None:
         with pytest.raises(CanonicalProductProposalUnavailableError):
             await service.confirm(_command(offer), _context("auto-match"))
         with pytest.raises(CanonicalProductProposalUnavailableError):
+            await service.resolve_existing(
+                _resolution_command(offer),
+                _context("resolution-auto-match"),
+            )
+        with pytest.raises(CanonicalProductProposalUnavailableError):
             await service.confirm(
                 ConfirmCanonicalProductProposalCommand(
                     tenant_id=TENANT_A_ID,
@@ -253,6 +261,163 @@ def test_concurrent_keys_create_only_one_product() -> None:
     run_async(scenario())
 
 
+def test_resolution_links_nearest_existing_product_without_creating_duplicate() -> None:
+    async def scenario() -> None:
+        provider = create_memory_provider()
+        offer = _offer()
+        product = _existing_product()
+        await provider.offers.save(TENANT_A_ID, offer)
+        await provider.canonical_products.save(product)
+        service = _service(create_memory_repository_scope(provider))
+        command = _resolution_command(offer)
+        context = _context("resolve-existing")
+
+        resolved = await service.resolve_existing(command, context)
+        replayed = await service.resolve_existing(command, context)
+
+        products = await provider.canonical_products.list_by_tenant(TENANT_A_ID)
+        stored_offer = await provider.offers.get_by_identity(
+            TENANT_A_ID,
+            "ggsel",
+            "proposal-offer",
+        )
+        decisions = await provider.canonical_offer_decisions.list_for_offer(
+            TENANT_A_ID,
+            "ggsel",
+            "proposal-offer",
+        )
+
+        assert resolved.product == product
+        assert resolved.offer.canonical_product_id == EXISTING_PRODUCT_ID
+        assert resolved.decision.reason == "Human-verified equivalent product"
+        assert resolved.replayed is False
+        assert replayed.replayed is True
+        assert replayed.decision == resolved.decision
+        assert products == (product,)
+        assert stored_offer is not None
+        assert stored_offer.canonical_product_id == EXISTING_PRODUCT_ID
+        assert decisions == (resolved.decision,)
+
+    run_async(scenario())
+
+
+def test_resolution_requires_evidence_and_current_nearest_target() -> None:
+    async def scenario() -> None:
+        provider = create_memory_provider()
+        offer = _offer()
+        await provider.offers.save(TENANT_A_ID, offer)
+        await provider.canonical_products.save(_existing_product())
+        other_product = CanonicalProduct(
+            id=UUID("3c000000-0000-4000-8000-000000002002"),
+            tenant_id=TENANT_A_ID,
+            name="Terraria Deluxe",
+            category="Games",
+            aliases=(),
+        )
+        await provider.canonical_products.save(other_product)
+        service = _service(create_memory_repository_scope(provider))
+
+        with pytest.raises(CanonicalProductProposalEvidenceRequiredError):
+            await service.resolve_existing(
+                _resolution_command(offer, reason="  "),
+                _context("missing-evidence"),
+            )
+        with pytest.raises(CanonicalProductProposalUnavailableError):
+            await service.resolve_existing(
+                _resolution_command(
+                    offer,
+                    canonical_product_id=other_product.id,
+                ),
+                _context("wrong-target"),
+            )
+
+        stored_offer = await provider.offers.get_by_identity(
+            TENANT_A_ID,
+            "ggsel",
+            "proposal-offer",
+        )
+        assert stored_offer is not None
+        assert stored_offer.canonical_product_id is None
+        assert (
+            await provider.canonical_offer_decisions.list_for_offer(
+                TENANT_A_ID,
+                "ggsel",
+                "proposal-offer",
+            )
+            == ()
+        )
+
+    run_async(scenario())
+
+
+def test_resolution_rejects_idempotency_fingerprint_reuse() -> None:
+    async def scenario() -> None:
+        provider = create_memory_provider()
+        offer = _offer()
+        await provider.offers.save(TENANT_A_ID, offer)
+        await provider.canonical_products.save(_existing_product())
+        service = _service(create_memory_repository_scope(provider))
+        context = _context("resolution-shared-key")
+        await service.resolve_existing(_resolution_command(offer), context)
+
+        with pytest.raises(CanonicalOfferReviewIdempotencyConflictError):
+            await service.resolve_existing(
+                _resolution_command(offer, reason="Different evidence"),
+                context,
+            )
+
+    run_async(scenario())
+
+
+def test_create_and_existing_resolution_share_offer_concurrency_boundary() -> None:
+    async def scenario() -> None:
+        provider = create_memory_provider()
+        offer = _offer()
+        await provider.offers.save(TENANT_A_ID, offer)
+        await provider.canonical_products.save(_existing_product())
+        service = _service(create_memory_repository_scope(provider))
+
+        results = await asyncio.gather(
+            service.confirm(_command(offer), _context("create-new")),
+            service.resolve_existing(
+                _resolution_command(offer),
+                _context("resolve-existing-race"),
+            ),
+            return_exceptions=True,
+        )
+
+        accepted = [
+            result
+            for result in results
+            if isinstance(
+                result,
+                (
+                    CanonicalProductProposalConfirmationResult,
+                    CanonicalProductProposalResolutionResult,
+                ),
+            )
+        ]
+        failures = [result for result in results if isinstance(result, Exception)]
+        stored_offer = await provider.offers.get_by_identity(
+            TENANT_A_ID,
+            "ggsel",
+            "proposal-offer",
+        )
+        decisions = await provider.canonical_offer_decisions.list_for_offer(
+            TENANT_A_ID,
+            "ggsel",
+            "proposal-offer",
+        )
+
+        assert len(accepted) == 1
+        assert len(failures) == 1
+        assert stored_offer is not None
+        assert stored_offer.canonical_product_id == accepted[0].product.id
+        assert decisions == (accepted[0].decision,)
+
+    run_async(scenario())
+
+
 def _service(scope: Any) -> CanonicalProductProposalService:
     return CanonicalProductProposalService(
         scope,
@@ -284,6 +449,32 @@ def _command(
         marketplace="ggsel",
         external_id="proposal-offer",
         reason=reason,
+    )
+
+
+def _resolution_command(
+    offer: ParsedOffer,
+    *,
+    canonical_product_id: UUID = EXISTING_PRODUCT_ID,
+    reason: str = "Human-verified equivalent product",
+) -> ResolveCanonicalProductProposalCommand:
+    return ResolveCanonicalProductProposalCommand(
+        tenant_id=TENANT_A_ID,
+        proposal_id=canonical_product_proposal_id(TENANT_A_ID, offer),
+        marketplace="ggsel",
+        external_id="proposal-offer",
+        canonical_product_id=canonical_product_id,
+        reason=reason,
+    )
+
+
+def _existing_product() -> CanonicalProduct:
+    return CanonicalProduct(
+        id=EXISTING_PRODUCT_ID,
+        tenant_id=TENANT_A_ID,
+        name="Stardew Valley Base Game",
+        category="Games",
+        aliases=(),
     )
 
 
