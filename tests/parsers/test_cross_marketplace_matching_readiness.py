@@ -33,6 +33,14 @@ def test_analysis_finds_deterministic_automatic_match() -> None:
     assert report.automatic_grouping_ready is True
     assert report.top_candidates[0].decision is MatchDecision.AUTO_MATCH
     assert report.top_candidates[0].left_marketplace == "ggsel"
+    assert report.top_candidates[0].left_external_id == "1"
+    assert report.top_candidates[0].left_price == Decimal("790")
+    assert report.top_candidates[0].left_currency == "RUB"
+    assert report.top_candidates[0].left_url == "https://example.com/1"
+    assert len(report.top_candidates_by_marketplace_pair) == 1
+    assert report.top_candidates_by_marketplace_pair[0].candidates == (
+        report.top_candidates[0],
+    )
 
 
 def test_analysis_keeps_unrelated_offers_unmatched() -> None:
@@ -49,6 +57,7 @@ def test_analysis_keeps_unrelated_offers_unmatched() -> None:
     assert report.review_count == 0
     assert report.no_match_count == 1
     assert report.automatic_grouping_ready is False
+    assert len(report.top_candidates_by_marketplace_pair) == 1
 
 
 def test_analysis_skips_missing_titles_and_validates_limit() -> None:
@@ -64,9 +73,12 @@ def test_analysis_skips_missing_titles_and_validates_limit() -> None:
     assert report.comparable_offer_count == 0
     assert report.pair_count == 0
     assert report.highest_similarity == 0.0
+    assert report.top_candidates_by_marketplace_pair == ()
 
     with pytest.raises(ValueError, match="top_limit must not be negative"):
         analyze_cross_marketplace_matching({}, top_limit=-1)
+    with pytest.raises(ValueError, match="pair_top_limit must not be negative"):
+        analyze_cross_marketplace_matching({}, pair_top_limit=-1)
 
 
 def test_public_preview_discloses_separate_canonical_products() -> None:

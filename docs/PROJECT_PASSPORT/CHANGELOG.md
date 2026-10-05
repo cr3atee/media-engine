@@ -6,6 +6,11 @@ This document records notable Project Passport updates.
 
 ## Unreleased
 
+- Expanded aligned marketplace evidence with source IDs, prices, currencies,
+  sellers, URLs, and deterministic top-five candidates for every source pair.
+  A live run covered `1,426` offers and `108,880` pairs without changing
+  thresholds or persisting links; the evidence document records plausible
+  candidates and an explicit false-positive rejection for human review.
 - Added isolated PostgreSQL verification for saved real-offer catalog
   onboarding. All `81` GGSEL, Playerok, and FunPay offers persist exactly once,
   remain tenant-isolated proposals, roll back atomically on controlled failure,

@@ -417,6 +417,12 @@ atomic rollback, unchanged catalog state, and deterministic fresh-engine
 proposal recovery. This verifier proves persistence readiness; it does not
 authorize or automate any production catalog decision.
 
+Human review evidence can be regenerated with
+`scripts/verify_aligned_marketplace_categories.py`. Its output now carries
+both source identities, prices, currencies, sellers, URLs, and a top-five list
+for every marketplace pair. `docs/CATALOG_REVIEW_EVIDENCE.md` records the
+latest observed candidates and explicit risks; none is an approved link.
+
 ## Architectural Guardrails
 
 - Keep marketplace parsing out of the frontend.

@@ -1414,6 +1414,39 @@ Verification:
 - Full Pytest passes `458` tests with `58` expected skips, MyPy checks `414`
   source files, and focused Ruff and Ruff format checks pass.
 
+### Task 46: Cross-Marketplace Review Evidence
+
+Give a human reviewer complete source context for aligned marketplace
+candidates without changing confidence thresholds or creating links.
+
+Acceptance criteria:
+
+- Matching candidates retain marketplace ID, title, price, currency, seller,
+  and source URL for both sides.
+- Live aligned-category output includes the global top candidates and a bounded
+  top-five list for every marketplace pair, so one noisy pair cannot hide a
+  source.
+- Evidence remains diagnostic only; no repository, canonical product, alias,
+  link, or review decision is mutated.
+- Actual observations and unresolved risks are recorded in
+  `docs/CATALOG_REVIEW_EVIDENCE.md`.
+
+Status:
+
+- Complete.
+
+Verification:
+
+- A live public run produced `60/60` GGSEL, `20/20` Playerok, and
+  `1,346/1,346` FunPay parsed/snapshot-ready offers.
+- All `108,880` aligned title pairs remain `NO_MATCH`; the top-five evidence
+  for each of GGSEL/Playerok, GGSEL/FunPay, and Playerok/FunPay includes source
+  IDs, current prices, currencies, sellers, and URLs.
+- The report identifies one false strongest GGSEL/Playerok pair as `DO NOT
+  LINK` and leaves plausible base-edition pairs explicitly unapproved.
+- Focused tests pass `4/4`; full Pytest passes `458` tests with `58` expected
+  skips, MyPy checks `414` source files, and Ruff/Ruff format pass.
+
 ## Deferred Runtime Constraint
 
 The repository-backed public read adapter currently returns bounded first

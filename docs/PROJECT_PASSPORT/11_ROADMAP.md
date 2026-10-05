@@ -281,6 +281,10 @@ This document tracks only work that is reflected by the current repository state
   without duplicates, survive fresh-engine restart, and remain deterministic
   proposals without automatic catalog mutations. Isolated verification passes
   `20/20` checks.
+- EPIC 19 Task 46 cross-marketplace review evidence: live aligned-category
+  diagnostics now retain source IDs, prices, currencies, sellers, and URLs and
+  show top-five candidates for every marketplace pair. Plausible pairs remain
+  unapproved until a human verifies edition, platform, region, and delivery.
 
 ## Current Status
 

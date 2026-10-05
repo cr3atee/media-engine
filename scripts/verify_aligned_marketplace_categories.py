@@ -49,12 +49,7 @@ async def main() -> int:
     """Fetch aligned categories and report current deterministic match evidence."""
     _configure_stdout()
     try:
-        async with HttpClient(timeout=30.0) as http_client:
-            batches = (
-                await _fetch_ggsel(http_client),
-                await _fetch_playerok(http_client),
-                await _fetch_funpay(http_client),
-            )
+        batches = await fetch_aligned_marketplace_categories()
     except Exception as exc:
         print(f"Aligned category verification failed: {type(exc).__name__}: {exc}")
         return 1
@@ -91,10 +86,56 @@ async def main() -> int:
             f"- {candidate.similarity:.3f} [{candidate.decision.value}] "
             f"{candidate.left_marketplace}: {candidate.left_title}"
         )
+        print(
+            "  "
+            f"id={candidate.left_external_id or 'unknown'} | "
+            f"price={candidate.left_price} {candidate.left_currency or ''} | "
+            f"seller={candidate.left_seller_name or 'unknown'}"
+        )
+        print(f"  url={candidate.left_url or 'unknown'}")
         print(f"  {candidate.right_marketplace}: {candidate.right_title}")
+        print(
+            "  "
+            f"id={candidate.right_external_id or 'unknown'} | "
+            f"price={candidate.right_price} {candidate.right_currency or ''} | "
+            f"seller={candidate.right_seller_name or 'unknown'}"
+        )
+        print(f"  url={candidate.right_url or 'unknown'}")
+
+    print("\n=== TOP CANDIDATES PER SOURCE PAIR ===")
+    for pair in report.top_candidates_by_marketplace_pair:
+        print(f"\n{pair.left_marketplace}/{pair.right_marketplace}")
+        for candidate in pair.candidates:
+            print(f"- {candidate.similarity:.3f} [{candidate.decision.value}]")
+            print(
+                f"  {candidate.left_external_id or 'unknown'} | "
+                f"{candidate.left_price} {candidate.left_currency or ''} | "
+                f"seller={candidate.left_seller_name or 'unknown'}"
+            )
+            print(f"  {candidate.left_title}")
+            print(f"  {candidate.left_url or 'unknown'}")
+            print(
+                f"  {candidate.right_external_id or 'unknown'} | "
+                f"{candidate.right_price} {candidate.right_currency or ''} | "
+                f"seller={candidate.right_seller_name or 'unknown'}"
+            )
+            print(f"  {candidate.right_title}")
+            print(f"  {candidate.right_url or 'unknown'}")
 
     print("\nCategory alignment is source evidence, not product identity proof.")
     return 0
+
+
+async def fetch_aligned_marketplace_categories() -> tuple[
+    MarketplaceCategoryBatch, ...
+]:
+    """Fetch one aligned public category through each existing adapter."""
+    async with HttpClient(timeout=30.0) as http_client:
+        return (
+            await _fetch_ggsel(http_client),
+            await _fetch_playerok(http_client),
+            await _fetch_funpay(http_client),
+        )
 
 
 async def _fetch_ggsel(http_client: HttpClient) -> MarketplaceCategoryBatch:

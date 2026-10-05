@@ -210,6 +210,9 @@ This document captures architecture notes that are important for future reviews.
   scope with exact replay and rollback guarantees. Keep ingestion separate from
   human catalog decisions: persistence of an offer is never evidence that two
   marketplace listings identify the same product.
+- Candidate diagnostics must retain direct source identity and show alternatives
+  per marketplace pair. A highest similarity is not approval: the current
+  GGSEL/Playerok maximum demonstrably compares different Minecraft products.
 - Every catalog command that may link an offer must acquire the shared
   tenant/marketplace/external-ID offer lock before its candidate-pair lock.
   Product-specific pair locks alone do not prevent two explicit commands from

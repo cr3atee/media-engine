@@ -30,7 +30,8 @@ This document lists only confirmed work remaining after EPIC 17 completion.
   PostgreSQL onboarding verifier proves replay-safe persistence and restart
   recovery. Use the review workspace to make evidence-backed catalog decisions,
   then populate production only through explicitly approved operator actions
-  and record source coverage.
+  and record source coverage. The current live candidate evidence is recorded
+  in `docs/CATALOG_REVIEW_EVIDENCE.md`; all candidates remain unapproved.
 - Decide whether the embedded Market Terminal shell remains inside this
   repository or moves to a separate frontend project before public launch.
 - Decide whether public category browse must require parser/category retention

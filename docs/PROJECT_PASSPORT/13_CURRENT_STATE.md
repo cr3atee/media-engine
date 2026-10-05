@@ -433,6 +433,10 @@ production AI wiring, and guarded live Telegram verification.
   runtime. Offer ingest is tenant-scoped, replay-safe, rollback-atomic, and
   stable after a fresh-engine restart; the seller API reproduces all `81`
   proposals while leaving products, links, and decisions empty.
+- EPIC 19 Task 46 adds complete live review evidence for all three source
+  pairings. The latest run evaluates `108,880` aligned pairs and exposes full
+  source context, while preserving `NO_MATCH` for every pair and persisting no
+  human decision.
 
 ## Known Gaps
 
