@@ -420,6 +420,10 @@ production AI wiring, and guarded live Telegram verification.
   `NO_MATCH` proposals. The command accepts only the proposal's displayed
   nearest product, creates no duplicate catalog row, and shares the same
   offer-level concurrency boundary as product creation and normal review.
+- EPIC 19 Task 43 provides a separate authenticated `/terminal/review`
+  workspace over the existing seller auth, tenant context, review queue,
+  proposal queue, and idempotent commands. Browser tokens remain memory-only;
+  matching and catalog policy stay in backend services.
 
 ## Known Gaps
 
@@ -448,8 +452,8 @@ production AI wiring, and guarded live Telegram verification.
   returns no real-data candidates for that set. The system proposal queue can
   expose those `NO_MATCH` offers for catalog bootstrap, atomically confirm new
   canonical products, or resolve a proposal to its displayed existing nearest
-  product with immutable human evidence. A production-reviewed link set and an
-  authenticated operator workflow are not populated yet.
+  product with immutable human evidence. The authenticated operator workflow
+  is available, but a production-reviewed link set is not populated yet.
 - Snapshot creation is skipped when parsed offers from any marketplace do not
   contain normalized price and currency.
 - Ingestion, scoring, and durable content processing are separate services and

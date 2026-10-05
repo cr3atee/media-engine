@@ -268,6 +268,10 @@ This document tracks only work that is reflected by the current repository state
   canonical product with required evidence. The command creates no duplicate
   product, preserves unchanged thresholds, and passes `27/27` isolated
   PostgreSQL checks.
+- EPIC 19 Task 43 authenticated catalog-review workspace: the separate
+  `/terminal/review` shell uses existing seller auth, tenant context, queues,
+  and idempotent catalog commands without storing tokens in browser storage or
+  duplicating backend policy.
 
 ## Current Status
 
@@ -312,10 +316,9 @@ frontend hardening plus a product decision on category data exposure.
 
 ## Recommended Next EPIC
 
-**Authenticated catalog-review workspace integration.**
+**Guarded production catalog onboarding.**
 
-Connect the completed review-candidate and product-proposal commands to an
-authorized seller workflow so reviewers can inspect evidence, confirm or reject
-candidate pairs, create source-backed products, and resolve proposals to the
-displayed existing product. Reuse the current APIs; do not move matching or
-catalog mutation logic into the UI and do not lower automatic thresholds.
+Use the completed authenticated review workspace to populate an initial
+tenant-owned canonical catalog and exact marketplace links from human-verified
+evidence. Record operational results and source coverage; do not invent links,
+bulk-confirm `NO_MATCH` offers, or lower automatic matching thresholds.

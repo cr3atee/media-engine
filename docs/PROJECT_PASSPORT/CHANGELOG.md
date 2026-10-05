@@ -6,6 +6,13 @@ This document records notable Project Passport updates.
 
 ## Unreleased
 
+- Added a separate authenticated `/terminal/review` seller workspace for the
+  completed canonical review and product-proposal APIs. Tokens remain in
+  memory, parallel refresh is single-flight, commands carry idempotency keys,
+  and ambiguous requests retain their key for safe retry. The memory-only
+  review preview verifies login, tenant authorization, and both queues; full
+  Pytest passed `458` tests with `58` expected skips, MyPy checked `413` files,
+  and Node/Ruff/format checks passed.
 - Added tenant-authorized existing-product resolution for current canonical
   product proposals. The command requires human evidence, accepts only the
   recomputed nearest candidate, creates no duplicate product, and atomically

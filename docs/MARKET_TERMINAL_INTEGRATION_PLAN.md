@@ -393,6 +393,10 @@ Reviewers can also resolve a current proposal to its displayed nearest existing
 canonical product with required human evidence. That path recomputes the
 proposal inside the transaction, creates no duplicate product, and uses the
 same offer-level lock, atomic link, and immutable evidence boundary.
+The dedicated `/terminal/review` workspace now exposes these completed seller
+flows through the existing auth and tenant APIs. It keeps tokens in memory,
+passes idempotency keys for every command, and contains no matching or catalog
+business rules.
 
 ## Architectural Guardrails
 
@@ -422,19 +426,18 @@ These should be answered before heavy frontend implementation:
 
 ## Recommended Next EPIC
 
-**EPIC 19 Task 43 - Authenticated Catalog Review Workspace**
+**Guarded Production Catalog Onboarding**
 
 Goal:
 
-Expose the completed catalog-review workflow through an authorized seller UI
-without moving matching or mutation policy out of MediaEngine.
+Populate the first tenant-owned canonical catalog and exact marketplace links
+from human-verified source evidence using the completed seller workspace.
 
 Scope:
 
-- list current review candidates and unmatched product proposals;
-- confirm or reject review candidates with evidence;
-- create a source-backed canonical product from a current proposal;
-- resolve a proposal to its displayed existing canonical product;
-- preserve tenant authorization and idempotency keys;
-- no duplicated matching, linking, or proposal logic in the UI;
-- no lowered confidence thresholds.
+- run the authenticated workspace against explicitly selected operational data;
+- record reviewed source coverage and unresolved variants;
+- create or link products only from visible source evidence;
+- retain immutable decisions and tenant isolation;
+- do not bulk-confirm unmatched offers;
+- do not invent aliases or lower confidence thresholds.

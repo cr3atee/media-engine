@@ -40,6 +40,7 @@ def test_market_terminal_shell_is_served() -> None:
         assert "Сравнивайте предложения популярных площадок" in response.text
         assert ">Каталог</a>" in response.text
         assert ">Скидки</a>" in response.text
+        assert 'href="/terminal/review">Кабинет продавца</a>' in response.text
         assert ">Найти</button>" in response.text
         assert "Find the best marketplace price" not in response.text
         assert "/terminal/styles.css" in response.text
@@ -144,3 +145,65 @@ def test_market_terminal_static_assets_are_served() -> None:
     assert "response.statusText" not in script.text
     assert ".skip-link:focus" in styles.text
     assert "#detailTitle:focus-visible" in styles.text
+
+
+def test_market_terminal_catalog_review_workspace_is_served() -> None:
+    client = _client()
+
+    for path in ("/terminal/review", "/terminal/review/"):
+        response = client.get(path)
+
+        assert response.status_code == 200
+        assert response.headers["content-type"].startswith("text/html")
+        assert response.headers["x-content-type-options"] == "nosniff"
+        assert "default-src 'self'" in response.headers["content-security-policy"]
+        assert "style-src 'self'" in response.headers["content-security-policy"]
+        assert "'unsafe-inline'" not in response.headers["content-security-policy"]
+        assert "Рабочее место продавца" in response.text
+        assert "Подтверждайте связи, а не угадывайте товары." in response.text
+        assert 'id="loginForm"' in response.text
+        assert 'autocomplete="username"' in response.text
+        assert 'autocomplete="current-password"' in response.text
+        assert 'id="tenantSelect"' in response.text
+        assert 'id="reviewCandidates"' in response.text
+        assert 'id="productProposals"' in response.text
+        assert 'aria-busy="false"' in response.text
+        assert "/terminal/styles.css" in response.text
+        assert "/terminal/review.css" in response.text
+        assert "/terminal/review.js" in response.text
+
+
+def test_market_terminal_catalog_review_assets_are_served() -> None:
+    client = _client()
+
+    styles = client.get("/terminal/review.css")
+    script = client.get("/terminal/review.js")
+
+    assert styles.status_code == 200
+    assert styles.headers["content-type"].startswith("text/css")
+    assert styles.headers["x-content-type-options"] == "nosniff"
+    assert ".review-columns" in styles.text
+    assert ".review-card" in styles.text
+    assert ".action-button.resolve" in styles.text
+    assert "@media (max-width: 680px)" in styles.text
+
+    assert script.status_code == 200
+    assert script.headers["content-type"].startswith("application/javascript")
+    assert script.headers["x-content-type-options"] == "nosniff"
+    assert 'const api = "/api/v1";' in script.text
+    assert '"/auth/login"' in script.text
+    assert '"/auth/refresh"' in script.text
+    assert '"/auth/logout"' in script.text
+    assert 'requestJson("/me")' in script.text
+    assert "/catalog/review-candidates?limit=100" in script.text
+    assert "/catalog/product-proposals?limit=100" in script.text
+    assert "`/catalog/reviews/${endpoint}`" in script.text
+    assert "let endpoint = `${base}/confirm`;" in script.text
+    assert "endpoint = `${base}/resolve-existing`;" in script.text
+    assert 'headers: { "Idempotency-Key": idempotencyKey }' in script.text
+    assert 'headers.set("Authorization", `Bearer ${state.accessToken}`);' in script.text
+    assert 'typeof crypto.randomUUID === "function"' in script.text
+    assert "state.pendingMutations" in script.text
+    assert "state.refreshPromise" in script.text
+    assert "localStorage" not in script.text
+    assert "sessionStorage" not in script.text

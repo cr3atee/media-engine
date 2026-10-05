@@ -24,8 +24,9 @@ This document lists only confirmed work remaining after EPIC 17 completion.
   `NO_MATCH` offers and atomically confirm a new product plus its source link.
   They can also resolve a proposal to its displayed existing canonical product
   with immutable human evidence, without creating duplicates or lowering
-  thresholds. Connect these completed commands to an authenticated catalog
-  review workspace and populate only evidence-backed production links.
+  thresholds. The authenticated catalog-review workspace now exposes these
+  completed commands; use it to populate only evidence-backed production links
+  and record operational source coverage.
 - Decide whether the embedded Market Terminal shell remains inside this
   repository or moves to a separate frontend project before public launch.
 - Decide whether public category browse must require parser/category retention

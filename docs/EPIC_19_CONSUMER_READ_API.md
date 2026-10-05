@@ -1302,6 +1302,46 @@ Verification:
 - Full Pytest passes `456` tests with `58` expected skips; MyPy checks `412`
   source files; focused Ruff and Ruff format checks pass.
 
+### Task 43: Authenticated Catalog Review Workspace
+
+Connect the completed seller catalog-review API to a dedicated embedded UI
+without moving matching, proposal, linking, or audit policy into the browser.
+
+Acceptance criteria:
+
+- FastAPI serves a separate `/terminal/review` workspace so authenticated
+  seller controls do not become part of the anonymous public catalog.
+- Login, refresh, logout, `/me`, and explicit tenant context use the existing
+  seller-auth API. Access and refresh tokens remain in memory and are never
+  written to browser storage.
+- A single shared refresh operation protects parallel queue requests from
+  rotating the same refresh token concurrently.
+- The workspace lists existing `REVIEW` candidates and `NO_MATCH` proposals,
+  then delegates confirm, reject, create-new, and resolve-existing actions to
+  the existing tenant-authorized endpoints.
+- Every mutation carries an `Idempotency-Key`; ambiguous network/server
+  outcomes retain that key for an exact retry instead of silently issuing a
+  new command.
+- Source values are escaped, external links are protocol-checked, required
+  evidence is validated before submission, and the layout remains keyboard,
+  screen-reader, desktop, and mobile usable.
+
+Status:
+
+- Complete.
+
+Verification:
+
+- `node --check app/web/market_terminal/review.js` passes.
+- Focused terminal/auth/catalog API tests pass `13/13`; full Pytest passes
+  `458` tests with `58` expected skips.
+- `scripts/run_catalog_review_preview.py --check` verifies login, tenant
+  context, `catalog_review`, one review candidate, and one product proposal in
+  an isolated memory-only application.
+- Full MyPy checks `413` source files; focused Ruff and Ruff format checks pass.
+- No repository, schema, matching, or migration change is required. Existing
+  PostgreSQL catalog-command verification remains `27/27`.
+
 ## Deferred Runtime Constraint
 
 The repository-backed public read adapter currently returns bounded first

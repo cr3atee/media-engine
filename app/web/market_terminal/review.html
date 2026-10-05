@@ -1,0 +1,204 @@
+<!doctype html>
+<html lang="ru">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Проверка каталога | Market Terminal</title>
+    <link rel="stylesheet" href="/terminal/styles.css" />
+    <link rel="stylesheet" href="/terminal/review.css" />
+  </head>
+  <body>
+    <a class="skip-link" href="#reviewWorkspace">Перейти к проверке каталога</a>
+    <main class="shell review-shell">
+      <header class="topbar glass">
+        <a class="brand" href="/terminal" aria-label="Каталог Market Terminal">
+          <span class="brand-mark">MT</span>
+          <span>
+            <strong>Market Terminal</strong>
+            <small>Рабочее место продавца</small>
+          </span>
+        </a>
+        <nav class="nav" aria-label="Навигация рабочего места">
+          <a href="/terminal">Публичный каталог</a>
+          <a href="#reviewCandidates">Совпадения</a>
+          <a href="#productProposals">Новые товары</a>
+        </nav>
+        <span
+          class="api-status"
+          id="sessionStatus"
+          role="status"
+          aria-live="polite"
+          aria-atomic="true"
+        >
+          Требуется вход
+        </span>
+      </header>
+
+      <section class="review-intro">
+        <div>
+          <p class="eyebrow">Catalog intelligence / human review</p>
+          <h1>Подтверждайте связи, а не угадывайте товары.</h1>
+          <p class="lead">
+            Система показывает только рассчитанные кандидаты и предложения.
+            Ваше решение сохраняется вместе с причиной и не меняет пороги
+            автоматического сопоставления.
+          </p>
+        </div>
+        <aside class="guardrail glass" aria-label="Правила проверки">
+          <span class="guardrail-index">01</span>
+          <strong>Факты источника остаются неизменными</strong>
+          <p>Новые названия берутся из объявления, а существующая связь требует подтверждения.</p>
+        </aside>
+      </section>
+
+      <section class="auth-layout" id="authArea">
+        <form class="login-card glass" id="loginForm">
+          <div>
+            <p class="eyebrow">Защищённый доступ</p>
+            <h2>Вход продавца</h2>
+            <p class="form-hint">
+              Токены живут только в памяти этой вкладки и удаляются при выходе
+              или обновлении страницы.
+            </p>
+          </div>
+          <label for="emailInput">
+            <span>Электронная почта</span>
+            <input
+              id="emailInput"
+              name="email"
+              type="email"
+              autocomplete="username"
+              required
+            />
+          </label>
+          <label for="passwordInput">
+            <span>Пароль</span>
+            <input
+              id="passwordInput"
+              name="password"
+              type="password"
+              autocomplete="current-password"
+              required
+            />
+          </label>
+          <button class="primary-button" id="loginButton" type="submit">
+            Войти в рабочее место
+          </button>
+          <p
+            class="form-message"
+            id="loginMessage"
+            role="status"
+            aria-live="polite"
+          ></p>
+        </form>
+
+        <section class="session-card glass" id="sessionPanel" hidden>
+          <div class="session-identity">
+            <p class="eyebrow">Активная сессия</p>
+            <h2 id="sellerName">Продавец</h2>
+            <p class="form-hint" id="sellerEmail"></p>
+          </div>
+          <label class="tenant-control" for="tenantSelect">
+            <span>Рабочее пространство</span>
+            <select id="tenantSelect"></select>
+          </label>
+          <div class="session-meta">
+            <span class="role-badge" id="tenantRole">—</span>
+            <span id="permissionSummary">Проверка прав</span>
+          </div>
+          <div class="session-actions">
+            <button class="ghost-button" id="reloadButton" type="button">
+              Обновить очереди
+            </button>
+            <button class="danger-button" id="logoutButton" type="button">
+              Выйти
+            </button>
+          </div>
+        </section>
+      </section>
+
+      <section
+        class="review-workspace"
+        id="reviewWorkspace"
+        aria-busy="false"
+        hidden
+      >
+        <div class="review-metrics" aria-label="Состояние очередей">
+          <article class="review-metric glass">
+            <span>Нужна проверка</span>
+            <strong id="candidateCount">0</strong>
+            <small>кандидатов совпадения</small>
+          </article>
+          <article class="review-metric glass">
+            <span>Новые позиции</span>
+            <strong id="proposalCount">0</strong>
+            <small>предложений каталога</small>
+          </article>
+          <article class="review-metric glass accent-metric">
+            <span>Текущий контур</span>
+            <strong id="tenantLabel">—</strong>
+            <small>данные изолированы по продавцу</small>
+          </article>
+        </div>
+
+        <p
+          class="workspace-message"
+          id="workspaceMessage"
+          role="status"
+          aria-live="polite"
+          aria-atomic="true"
+        ></p>
+
+        <div class="review-columns">
+          <section
+            class="review-panel glass"
+            id="reviewCandidates"
+            aria-labelledby="reviewCandidatesTitle"
+          >
+            <div class="panel-heading">
+              <span>
+                <p class="eyebrow">Пограничные совпадения</p>
+                <h2 id="reviewCandidatesTitle">Подтвердить или отклонить</h2>
+              </span>
+              <span class="queue-marker">REVIEW</span>
+            </div>
+            <p class="panel-copy">
+              Здесь появляются пары внутри действующего review-порога. Решение
+              фиксируется как неизменяемое доказательство.
+            </p>
+            <div
+              class="review-list"
+              id="candidateList"
+              aria-live="polite"
+            ></div>
+          </section>
+
+          <section
+            class="review-panel glass"
+            id="productProposals"
+            aria-labelledby="productProposalsTitle"
+          >
+            <div class="panel-heading">
+              <span>
+                <p class="eyebrow">Не найдено совпадение</p>
+                <h2 id="productProposalsTitle">Создать или связать</h2>
+              </span>
+              <span class="queue-marker warning">NO MATCH</span>
+            </div>
+            <p class="panel-copy">
+              Можно создать товар из исходного названия или связать объявление
+              только с показанным ближайшим товаром.
+            </p>
+            <div
+              class="review-list"
+              id="proposalList"
+              aria-live="polite"
+            ></div>
+          </section>
+        </div>
+      </section>
+    </main>
+
+    <script src="/terminal/review.js" defer></script>
+  </body>
+</html>

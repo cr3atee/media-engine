@@ -145,6 +145,10 @@ run inside ingestion or scoring transactions.
   matching state before mutation; reads never mutate the curated catalog.
   Existing-product resolution is limited to the currently displayed nearest
   candidate and does not alter deterministic confidence thresholds.
+- The embedded `/terminal/review` seller workspace is an HTTP client only. It
+  keeps seller tokens in tab memory, resolves explicit tenant context, and
+  delegates every catalog decision to the existing authorized/idempotent API;
+  no matching, linking, or proposal policy is reimplemented in JavaScript.
 - Marketplace pipeline persists parsed offers, price snapshots, and deterministic
   market events only through `RepositoryProvider`.
 - Scheduler jobs delegate to application services and do not own repositories,

@@ -198,6 +198,10 @@ This document captures architecture notes that are important for future reviews.
   projection and accept only its displayed nearest product with non-empty human
   evidence. It must never become an arbitrary product-link command or a reason
   to lower automatic matching thresholds.
+- Seller browser sessions in the embedded review workspace are intentionally
+  memory-only. Do not move bearer or refresh tokens into `localStorage`; keep
+  refresh rotation single-flight and preserve mutation idempotency keys across
+  ambiguous transport outcomes.
 - Every catalog command that may link an offer must acquire the shared
   tenant/marketplace/external-ID offer lock before its candidate-pair lock.
   Product-specific pair locks alone do not prevent two explicit commands from
