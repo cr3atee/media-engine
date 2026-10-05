@@ -25,8 +25,10 @@ This document lists only confirmed work remaining after EPIC 17 completion.
   They can also resolve a proposal to its displayed existing canonical product
   with immutable human evidence, without creating duplicates or lowering
   thresholds. The authenticated catalog-review workspace now exposes these
-  completed commands; use it to populate only evidence-backed production links
-  and record operational source coverage.
+  completed commands. Its saved-data preview now exposes all `81` captured real
+  offers as unresolved proposals without pre-seeding products or links; use it
+  to perform evidence-backed catalog review, then populate production only
+  through explicitly approved operator decisions and record source coverage.
 - Decide whether the embedded Market Terminal shell remains inside this
   repository or moves to a separate frontend project before public launch.
 - Decide whether public category browse must require parser/category retention

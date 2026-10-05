@@ -424,6 +424,11 @@ production AI wiring, and guarded live Telegram verification.
   workspace over the existing seller auth, tenant context, review queue,
   proposal queue, and idempotent commands. Browser tokens remain memory-only;
   matching and catalog policy stay in backend services.
+- EPIC 19 Task 44 connects that workspace to all saved real marketplace
+  payloads through an opt-in memory-only preview. The verified dataset contains
+  `60` GGSEL, `20` Playerok, and `1` FunPay offer; with no invented catalog
+  identities, it correctly produces zero review candidates and `81` product
+  proposals.
 
 ## Known Gaps
 

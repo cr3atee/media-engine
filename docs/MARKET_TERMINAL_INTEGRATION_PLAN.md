@@ -398,6 +398,18 @@ flows through the existing auth and tenant APIs. It keeps tokens in memory,
 passes idempotency keys for every command, and contains no matching or catalog
 business rules.
 
+For an operator-facing dry run over the captured real marketplace data, use:
+
+```powershell
+.venv\Scripts\python.exe scripts/run_catalog_review_preview.py --saved-data
+```
+
+This isolated mode loads `60` GGSEL, `20` Playerok, and `1` FunPay offer into
+memory for the preview tenant. It intentionally seeds no canonical products,
+links, aliases, or decisions, so the current `81` source-backed offers appear
+as `NO_MATCH` proposals rather than fabricated comparisons. Use
+`--saved-data --check` for a non-blocking verification.
+
 ## Architectural Guardrails
 
 - Keep marketplace parsing out of the frontend.

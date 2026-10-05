@@ -272,6 +272,10 @@ This document tracks only work that is reflected by the current repository state
   `/terminal/review` shell uses existing seller auth, tenant context, queues,
   and idempotent catalog commands without storing tokens in browser storage or
   duplicating backend policy.
+- EPIC 19 Task 44 saved real-data catalog-review preview: an explicit
+  `--saved-data` mode loads all `81` captured GGSEL, Playerok, and FunPay offers
+  into the isolated memory tenant. It creates no catalog records or links and
+  verifies that all offers remain honest `NO_MATCH` proposals.
 
 ## Current Status
 

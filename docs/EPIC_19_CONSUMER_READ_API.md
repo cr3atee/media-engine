@@ -1342,6 +1342,41 @@ Verification:
 - No repository, schema, matching, or migration change is required. Existing
   PostgreSQL catalog-command verification remains `27/27`.
 
+### Task 44: Saved Real-Data Catalog Review Preview
+
+Exercise the authenticated seller workspace with the existing captured
+marketplace payloads without manufacturing catalog identity.
+
+Acceptance criteria:
+
+- `scripts/run_catalog_review_preview.py --saved-data` reuses the existing
+  GGSEL, Playerok, and FunPay saved-payload loaders.
+- Loaded offers are reassigned only to the isolated preview tenant and stored
+  in memory; source identifiers, titles, prices, currencies, and URLs remain
+  source-backed.
+- Duplicate marketplace/external-ID identities are seeded once, and missing
+  source payloads fail with an explicit diagnostic.
+- No canonical products, aliases, links, review decisions, or automatic
+  matches are seeded for the saved-data mode.
+- The original deterministic synthetic preview remains the default.
+
+Status:
+
+- Complete.
+
+Verification:
+
+- The default `--check` mode still verifies one `REVIEW` candidate and one
+  `NO_MATCH` proposal.
+- `--saved-data --check` loads `60` GGSEL, `20` Playerok, and `1` FunPay offer
+  and exposes all `81` as tenant-scoped `NO_MATCH` proposals, with zero
+  fabricated `REVIEW` candidates.
+- The preview is loopback-only and memory-only; it does not mutate production
+  data or claim that any two offers represent the same product.
+- Focused seller/UI API tests pass `10/10`; full Pytest passes `458` tests with
+  `58` expected skips, MyPy checks `413` source files, and focused Ruff and
+  Ruff format checks pass.
+
 ## Deferred Runtime Constraint
 
 The repository-backed public read adapter currently returns bounded first

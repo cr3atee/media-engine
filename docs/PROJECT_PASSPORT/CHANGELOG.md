@@ -6,6 +6,13 @@ This document records notable Project Passport updates.
 
 ## Unreleased
 
+- Added an opt-in saved-real-data mode to the authenticated catalog-review
+  preview. It reuses existing loaders, scopes `60` GGSEL, `20` Playerok, and
+  `1` FunPay offer to an isolated memory tenant, and verifies all `81` as
+  unresolved proposals without creating products, links, aliases, decisions,
+  or fabricated matches. The original synthetic preview remains the default;
+  focused tests, full Pytest (`458 passed, 58 skipped`), MyPy (`413` files),
+  Ruff, and Ruff format pass.
 - Added a separate authenticated `/terminal/review` seller workspace for the
   completed canonical review and product-proposal APIs. Tokens remain in
   memory, parallel refresh is single-flight, commands carry idempotency keys,

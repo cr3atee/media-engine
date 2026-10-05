@@ -202,6 +202,10 @@ This document captures architecture notes that are important for future reviews.
   memory-only. Do not move bearer or refresh tokens into `localStorage`; keep
   refresh rotation single-flight and preserve mutation idempotency keys across
   ambiguous transport outcomes.
+- The catalog-review `--saved-data` preview is an isolated operator aid, not a
+  catalog import command. It may re-scope captured offers to its memory tenant,
+  but it must not pre-seed canonical products, aliases, links, or human review
+  evidence.
 - Every catalog command that may link an offer must acquire the shared
   tenant/marketplace/external-ID offer lock before its candidate-pair lock.
   Product-specific pair locks alone do not prevent two explicit commands from
