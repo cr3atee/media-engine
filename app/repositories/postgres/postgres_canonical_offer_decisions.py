@@ -51,6 +51,18 @@ class PostgresCanonicalOfferDecisionRepository(CanonicalOfferDecisionRepository)
             f"{external_id.strip()}:{canonical_product_id}"
         )
 
+    async def acquire_offer_lock(
+        self,
+        tenant_id: UUID,
+        marketplace: str,
+        external_id: str,
+    ) -> None:
+        """Acquire a transaction-scoped lock for all decisions on one offer."""
+        await self._acquire_lock(
+            "canonical-decision:offer:"
+            f"{tenant_id}:{marketplace.strip().lower()}:{external_id.strip()}"
+        )
+
     async def append(
         self,
         decision: CanonicalOfferDecision,

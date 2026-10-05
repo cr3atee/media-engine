@@ -204,8 +204,10 @@ nearest remaining canonical-product context when one exists.
 
 It is not persisted and is not an accepted catalog identity. Its proposed
 aliases are empty, and reading it does not create a `CanonicalProduct` or link
-an offer. An explicit atomic confirmation workflow remains required for those
-mutations.
+an offer. When explicitly confirmed, its stable UUID becomes the new
+`CanonicalProduct.id`; creation, source-offer linking, and immutable confirmed
+decision evidence share one transaction. The accepted product still has no
+inferred category or aliases.
 
 ## Persistent Lifecycle Verification
 

@@ -86,6 +86,10 @@ Current matching flow:
 8. The same service projects unresolved `NO_MATCH` offers as stable read-only
    canonical-product proposals. It derives a whitespace-normalized name from
    source data and does not create products, infer aliases, or persist links.
+9. `CanonicalProductProposalService` recomputes one selected proposal inside a
+   write scope, shares an offer-level lock with existing-product review commands,
+   then atomically creates the product, links the source offer, and appends
+   immutable confirmed evidence.
 
 ## Repository Boundary
 
@@ -136,8 +140,8 @@ run inside ingestion or scoring transactions.
   performs authorization and mapping only; candidate generation remains an
   application service and excludes terminal pairs before deterministic matching.
 - Canonical-product proposals are read projections, not persisted domain
-  records. Product creation and offer linking require a separate explicit
-  command boundary; reads never mutate the curated catalog.
+  records. Their explicit confirmation command revalidates current source and
+  matching state before mutation; reads never mutate the curated catalog.
 - Marketplace pipeline persists parsed offers, price snapshots, and deterministic
   market events only through `RepositoryProvider`.
 - Scheduler jobs delegate to application services and do not own repositories,

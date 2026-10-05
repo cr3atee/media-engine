@@ -6,6 +6,14 @@ This document records notable Project Passport updates.
 
 ## Unreleased
 
+- Added tenant-authorized atomic confirmation for source-backed canonical
+  product proposals. The command revalidates `NO_MATCH`, uses the stable
+  proposal UUID as product identity, creates the product, links its source
+  offer, and appends immutable evidence in one transaction. PostgreSQL 17
+  verification passed `19/19`, including cross-command offer-link contention;
+  full Pytest passed `451` tests with `58`
+  expected skips, MyPy checked `412` files, and focused Ruff/format checks
+  passed.
 - Added a tenant-authorized, read-only canonical-product proposal queue for
   unresolved `NO_MATCH` offers. Proposals use stable source identity, expose
   nearest-candidate context, invent no aliases, and perform no catalog mutation.

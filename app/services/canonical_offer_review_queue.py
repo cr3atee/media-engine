@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from collections.abc import Collection, Sequence
 from dataclasses import dataclass
 from uuid import UUID, uuid5
 
@@ -85,15 +86,16 @@ class CanonicalOfferReviewQueueService:
         """Return stable system proposals for unmatched tenant offers."""
         matches = await self._load_unresolved_matches(tenant_id)
         proposals = [
-            CanonicalProductProposal(
-                proposal_id=_proposal_id(tenant_id, match.offer),
-                offer=match.offer,
-                proposed_name=" ".join((match.offer.title or "").split()),
-                nearest_canonical_product=match.result.canonical_product,
-                similarity=match.result.similarity,
-            )
+            proposal
             for match in matches
-            if match.result.decision is MatchDecision.NO_MATCH
+            if (
+                proposal := build_canonical_product_proposal(
+                    tenant_id,
+                    match.offer,
+                    match.result,
+                )
+            )
+            is not None
         ]
         return tuple(
             sorted(
@@ -138,12 +140,14 @@ class CanonicalOfferReviewQueueService:
                     offer.external_id.strip(),
                 )
                 decided_product_ids = decided_product_ids_by_offer.get(offer_key, set())
-                eligible_products = tuple(
-                    product
-                    for product in products
-                    if product.id not in decided_product_ids
+                result = resolve_unreviewed_offer_match(
+                    offer,
+                    products,
+                    decided_product_ids,
+                    self._matching_service,
                 )
-                result = self._matching_service.match(offer, eligible_products)
+                if result is None:
+                    continue
                 if result.decision is MatchDecision.AUTO_MATCH:
                     continue
                 matches.append(
@@ -158,7 +162,44 @@ class CanonicalOfferReviewQueueService:
 _PROPOSAL_NAMESPACE = UUID("3d000000-0000-4000-8000-000000000001")
 
 
-def _proposal_id(tenant_id: UUID, offer: ParsedOffer) -> UUID:
+def resolve_unreviewed_offer_match(
+    offer: ParsedOffer,
+    products: Sequence[CanonicalProduct],
+    terminal_product_ids: Collection[UUID],
+    matching_service: MatchingService,
+) -> MatchResult | None:
+    """Match one eligible unlinked offer after excluding terminal pairs."""
+    if (
+        offer.canonical_product_id is not None
+        or offer.external_id is None
+        or not offer.title
+    ):
+        return None
+    eligible_products = tuple(
+        product for product in products if product.id not in terminal_product_ids
+    )
+    return matching_service.match(offer, eligible_products)
+
+
+def build_canonical_product_proposal(
+    tenant_id: UUID,
+    offer: ParsedOffer,
+    result: MatchResult,
+) -> CanonicalProductProposal | None:
+    """Project one current no-match result into a stable read-only proposal."""
+    if result.decision is not MatchDecision.NO_MATCH:
+        return None
+    return CanonicalProductProposal(
+        proposal_id=canonical_product_proposal_id(tenant_id, offer),
+        offer=offer,
+        proposed_name=" ".join((offer.title or "").split()),
+        nearest_canonical_product=result.canonical_product,
+        similarity=result.similarity,
+    )
+
+
+def canonical_product_proposal_id(tenant_id: UUID, offer: ParsedOffer) -> UUID:
+    """Return the stable proposal identity for one tenant-owned source offer."""
     external_id = offer.external_id
     if external_id is None:
         raise ValueError("Product proposal requires an offer external ID.")

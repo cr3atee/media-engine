@@ -110,6 +110,87 @@ def test_product_proposals_are_stable_and_permission_scoped() -> None:
     assert foreign.json()["error"]["code"] == "tenant_not_found"
 
 
+def test_product_proposal_confirmation_is_atomic_audited_and_idempotent() -> None:
+    provider = _seeded_provider()
+    client = _client(provider)
+    reviewer = _login_headers(client, "reviewer@example.com")
+    viewer = _login_headers(client, "viewer@example.com")
+    proposals_url = f"/api/v1/tenants/{TENANT_A_ID}/catalog/product-proposals"
+    proposal = client.get(proposals_url, headers=reviewer).json()[0]
+    confirm_url = f"{proposals_url}/{proposal['proposal_id']}/confirm"
+    payload = {
+        "marketplace": "playerok",
+        "external_id": "offer-proposal",
+        "reason": "Verified source product",
+    }
+
+    forbidden = client.post(
+        confirm_url,
+        headers={**viewer, "Idempotency-Key": "forbidden-confirm"},
+        json=payload,
+    )
+    foreign = client.post(
+        confirm_url.replace(str(TENANT_A_ID), str(TENANT_B_ID)),
+        headers={**reviewer, "Idempotency-Key": "foreign-confirm"},
+        json=payload,
+    )
+    headers = {**reviewer, "Idempotency-Key": "confirm-product-proposal"}
+    confirmed = client.post(confirm_url, headers=headers, json=payload)
+    replayed = client.post(confirm_url, headers=headers, json=payload)
+    conflict = client.post(
+        confirm_url,
+        headers=headers,
+        json={**payload, "reason": "Different semantics"},
+    )
+    empty_queue = client.get(proposals_url, headers=reviewer)
+
+    result = confirmed.json()
+    stored_product = run_async(
+        provider.canonical_products.get_by_tenant_and_id(
+            TENANT_A_ID,
+            UUID(proposal["proposal_id"]),
+        )
+    )
+    stored_offer = run_async(
+        provider.offers.get_by_identity(
+            TENANT_A_ID,
+            "playerok",
+            "offer-proposal",
+        )
+    )
+    decisions = run_async(
+        provider.canonical_offer_decisions.list_for_offer(
+            TENANT_A_ID,
+            "playerok",
+            "offer-proposal",
+        )
+    )
+
+    assert forbidden.status_code == 403
+    assert foreign.status_code == 404
+    assert confirmed.status_code == 200
+    assert result["proposal_id"] == proposal["proposal_id"]
+    assert result["canonical_product_id"] == proposal["proposal_id"]
+    assert result["canonical_product_name"] == "Stardew Valley Complete"
+    assert result["canonical_product_category"] is None
+    assert result["canonical_product_aliases"] == []
+    assert result["decision"] == "confirmed"
+    assert result["replayed"] is False
+    assert replayed.status_code == 200
+    assert replayed.json()["decision_id"] == result["decision_id"]
+    assert replayed.json()["replayed"] is True
+    assert conflict.status_code == 409
+    assert conflict.json()["error"]["code"] == "idempotency_conflict"
+    assert "fingerprint" not in conflict.text.lower()
+    assert empty_queue.status_code == 200
+    assert empty_queue.json() == []
+    assert stored_product is not None
+    assert stored_product.id == UUID(proposal["proposal_id"])
+    assert stored_offer is not None
+    assert stored_offer.canonical_product_id == stored_product.id
+    assert len(decisions) == 1
+
+
 def test_confirm_links_offer_and_replays_without_duplicate_decision() -> None:
     provider = _seeded_provider()
     client = _client(provider)

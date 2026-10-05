@@ -8,6 +8,7 @@ from fastapi import APIRouter, Depends, Query, Request
 from app.api.dependencies import (
     get_canonical_offer_review_queue_service,
     get_canonical_offer_review_service,
+    get_canonical_product_proposal_service,
     require_idempotency_key,
     require_tenant_permission,
 )
@@ -15,8 +16,10 @@ from app.api.errors import ApiError, get_request_id
 from app.api.schemas.canonical_offer_reviews import (
     CanonicalOfferReviewCandidateResponse,
     CanonicalOfferReviewResponse,
+    CanonicalProductProposalConfirmationResponse,
     CanonicalProductProposalResponse,
     ConfirmCanonicalOfferRequest,
+    ConfirmCanonicalProductProposalRequest,
     RejectCanonicalOfferRequest,
 )
 from app.domain.admin_actions import AdminActorType
@@ -41,6 +44,13 @@ from app.services.canonical_offer_review_queue import (
     CanonicalOfferReviewCandidate,
     CanonicalOfferReviewQueueService,
     CanonicalProductProposal,
+)
+from app.services.canonical_product_proposals import (
+    CanonicalProductProposalConfirmationResult,
+    CanonicalProductProposalConflictError,
+    CanonicalProductProposalService,
+    CanonicalProductProposalUnavailableError,
+    ConfirmCanonicalProductProposalCommand,
 )
 
 router = APIRouter(
@@ -86,6 +96,69 @@ async def list_canonical_product_proposals(
     """List system proposals derived from unmatched tenant offers."""
     proposals = await service.list_product_proposals(context.tenant.id)
     return [_proposal_response(proposal) for proposal in proposals[:limit]]
+
+
+@router.post(
+    "/product-proposals/{proposal_id}/confirm",
+    response_model=CanonicalProductProposalConfirmationResponse,
+)
+async def confirm_canonical_product_proposal(
+    request: Request,
+    proposal_id: UUID,
+    payload: ConfirmCanonicalProductProposalRequest,
+    context: CatalogReviewTenant,
+    idempotency_key: Annotated[str, Depends(require_idempotency_key)],
+    service: Annotated[
+        CanonicalProductProposalService,
+        Depends(get_canonical_product_proposal_service),
+    ],
+) -> CanonicalProductProposalConfirmationResponse:
+    """Atomically create and link one still-current system proposal."""
+    try:
+        result = await service.confirm(
+            ConfirmCanonicalProductProposalCommand(
+                tenant_id=context.tenant.id,
+                proposal_id=proposal_id,
+                marketplace=payload.marketplace,
+                external_id=payload.external_id,
+                reason=payload.reason,
+            ),
+            CanonicalOfferReviewContext(
+                actor_id=str(context.principal.user_id),
+                actor_type=AdminActorType.USER,
+                request_id=get_request_id(request),
+                idempotency_key=idempotency_key,
+            ),
+        )
+    except MarketplaceOfferUnavailableError as exc:
+        raise ApiError(
+            404,
+            "canonical_product_proposal_not_found",
+            "Canonical product proposal was not found.",
+        ) from exc
+    except CanonicalProductProposalUnavailableError as exc:
+        raise ApiError(
+            409,
+            "canonical_product_proposal_stale",
+            "Canonical product proposal is no longer current.",
+        ) from exc
+    except CanonicalOfferReviewIdempotencyConflictError as exc:
+        raise ApiError(
+            409,
+            "idempotency_conflict",
+            "Idempotency key is bound to another catalog command.",
+        ) from exc
+    except (
+        CanonicalProductProposalConflictError,
+        CanonicalOfferDecisionConflictError,
+        CanonicalOfferLinkConflictError,
+    ) as exc:
+        raise ApiError(
+            409,
+            "canonical_product_proposal_conflict",
+            "Canonical product proposal conflicts with current catalog state.",
+        ) from exc
+    return _proposal_confirmation_response(result)
 
 
 @router.post(
@@ -265,4 +338,27 @@ def _proposal_response(
         nearest_canonical_product_name=nearest.name if nearest is not None else None,
         nearest_similarity=proposal.similarity,
         match_decision=MatchDecision.NO_MATCH,
+    )
+
+
+def _proposal_confirmation_response(
+    result: CanonicalProductProposalConfirmationResult,
+) -> CanonicalProductProposalConfirmationResponse:
+    product = result.product
+    decision = result.decision
+    offer = result.offer
+    if offer.external_id is None:
+        raise RuntimeError("Confirmed proposal offer identity is incomplete.")
+    return CanonicalProductProposalConfirmationResponse(
+        proposal_id=result.proposal_id,
+        canonical_product_id=product.id,
+        canonical_product_name=product.name,
+        canonical_product_category=product.category,
+        canonical_product_aliases=product.aliases,
+        marketplace=offer.marketplace,
+        external_id=offer.external_id,
+        decision_id=decision.id,
+        decision=decision.decision,
+        created_at=decision.created_at,
+        replayed=result.replayed,
     )

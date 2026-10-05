@@ -259,6 +259,10 @@ This document tracks only work that is reflected by the current repository state
   inspect stable source-backed proposals for unresolved `NO_MATCH` offers.
   Reads reuse existing matching and terminal-pair filtering, create no product
   or link, and pass `16/16` isolated PostgreSQL checks.
+- EPIC 19 Task 41 atomic proposal confirmation: an authorized idempotent command
+  revalidates one proposal and atomically creates its canonical product, links
+  the source offer, and appends immutable confirmation evidence. Isolated
+  PostgreSQL verification passes `19/19` checks.
 
 ## Current Status
 
@@ -303,9 +307,9 @@ frontend hardening plus a product decision on category data exposure.
 
 ## Recommended Next EPIC
 
-**Canonical product proposal confirmation.**
+**Existing-product resolution for unmatched proposals.**
 
-Add one tenant-authorized, idempotent transaction that confirms a system
-proposal by creating the canonical product and linking its source offer. Keep
-the existing read projection, matching thresholds, and immutable audit model
-unchanged.
+Allow a reviewer to resolve a source-backed `NO_MATCH` proposal to its displayed
+existing canonical candidate when evidence supports that decision, reusing the
+same immutable audit and atomic link boundary instead of creating a duplicate
+product. Do not lower automatic matching thresholds.

@@ -384,8 +384,11 @@ no candidate at the unchanged `REVIEW` threshold. Unmatched `NO_MATCH` offers
 are now exposed to authorized sellers as read-only system proposals at
 `/api/v1/tenants/{tenant_id}/catalog/product-proposals`. These projections use
 only source facts, have stable identities, and do not create catalog records or
-invent aliases. A separate atomic confirmation command is still required before
-any proposal can become a canonical product and offer link.
+invent aliases. Authorized reviewers can now confirm one current proposal
+atomically: the service recomputes eligibility, creates the canonical product
+with the stable proposal ID, links its source offer, and records immutable
+confirmation evidence in one transaction. This command does not infer aliases,
+categories, or links for other marketplace offers.
 
 ## Architectural Guardrails
 

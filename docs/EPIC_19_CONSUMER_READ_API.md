@@ -1220,6 +1220,47 @@ Verification:
 - Full Pytest passes `444` tests with `58` expected skips; MyPy checks `409`
   source files; focused Ruff and Ruff format checks pass.
 
+### Task 41: Atomic Canonical Product Proposal Confirmation
+
+Allow an authorized reviewer to accept one still-current system proposal
+without introducing manual catalog CRUD or weakening deterministic matching.
+
+Acceptance criteria:
+
+- A catalog reviewer confirms a proposal through an idempotent tenant-scoped
+  command protected by the existing `catalog_review` permission.
+- The service recomputes the proposal inside the write transaction and rejects
+  stale identities, linked offers, and offers no longer classified `NO_MATCH`.
+- The stable proposal UUID becomes the created canonical-product UUID. A shared
+  offer lock precedes the pair lock so proposal creation and existing-product
+  confirmation cannot race to write different links for the same offer.
+- The new product uses only the source-derived proposed name, `category=None`,
+  and empty aliases; the command invents no catalog metadata.
+- Product creation, source-offer linking, and immutable `confirmed` decision
+  evidence commit in one repository scope or roll back together.
+- Same-key replay returns the original result; fingerprint reuse and competing
+  keys fail without creating duplicate products.
+- Existing repository contracts, schema, confidence thresholds, and public
+  buyer APIs remain unchanged.
+
+Status:
+
+- Complete.
+
+Verification:
+
+- Focused catalog service/API tests pass `25/25`, including success, replay,
+  stale and threshold guards, tenant isolation, memory rollback, permissions,
+  sanitized conflicts, and concurrent different keys.
+- `scripts/verify_canonical_product_proposal_postgres.py` passes `19/19`
+  checks against an isolated PostgreSQL 17 database, including atomic writes,
+  rollback after a controlled audit failure, same-command and cross-command
+  advisory-lock serialization, and fresh-engine persistence.
+- Alembic remains at `0016_canonical_offer_decisions (head)` and `check` reports
+  no new upgrade operations; no migration is required.
+- Full Pytest passes `451` tests with `58` expected skips; MyPy checks `412`
+  source files; focused Ruff and Ruff format checks pass.
+
 ## Deferred Runtime Constraint
 
 The repository-backed public read adapter currently returns bounded first

@@ -412,6 +412,10 @@ production AI wiring, and guarded live Telegram verification.
 - EPIC 19 Task 40 exposes stable read-only canonical-product proposals for
   unresolved `NO_MATCH` offers. The projection uses source facts only and does
   not create products, aliases, or offer links.
+- EPIC 19 Task 41 adds explicit atomic proposal confirmation. The command
+  revalidates current `NO_MATCH` status, creates a source-named product with the
+  stable proposal ID, links only that source offer, and persists immutable
+  evidence in one transaction.
 
 ## Known Gaps
 
@@ -438,8 +442,10 @@ production AI wiring, and guarded live Telegram verification.
   production reviewed link set is populated yet. The current aligned payloads
   remain below the unchanged review threshold, so the review queue correctly
   returns no real-data candidates for that set. The system proposal queue can
-  expose those `NO_MATCH` offers for catalog bootstrap, but its atomic
-  confirmation mutation is not implemented yet.
+  expose those `NO_MATCH` offers for catalog bootstrap and atomically confirm
+  new canonical products. Resolving a proposal to an already existing nearest
+  product still requires a dedicated evidence-backed command before broad
+  same-product link population is practical.
 - Snapshot creation is skipped when parsed offers from any marketplace do not
   contain normalized price and currency.
 - Ingestion, scoring, and durable content processing are separate services and

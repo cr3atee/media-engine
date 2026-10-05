@@ -20,6 +20,15 @@ class CanonicalOfferDecisionRepository(BaseRepository):
         """Serialize commands sharing one tenant-scoped idempotency key."""
 
     @abstractmethod
+    async def acquire_offer_lock(
+        self,
+        tenant_id: UUID,
+        marketplace: str,
+        external_id: str,
+    ) -> None:
+        """Serialize competing catalog decisions for one marketplace offer."""
+
+    @abstractmethod
     async def acquire_pair_lock(
         self,
         tenant_id: UUID,

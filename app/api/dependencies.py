@@ -35,6 +35,7 @@ from app.services.canonical_offer_review import CanonicalOfferReviewService
 from app.services.canonical_offer_review_queue import (
     CanonicalOfferReviewQueueService,
 )
+from app.services.canonical_product_proposals import CanonicalProductProposalService
 from app.services.marketplace_integrations import MarketplaceIntegrationService
 from app.services.passwords import PasswordHasher
 from app.services.public_categories import PublicCategoryReadService
@@ -234,6 +235,13 @@ async def get_canonical_offer_review_queue_service(
 ) -> CanonicalOfferReviewQueueService:
     """Build the deterministic canonical offer review queue service."""
     return CanonicalOfferReviewQueueService(_repository_scope_factory(request))
+
+
+async def get_canonical_product_proposal_service(
+    request: Request,
+) -> CanonicalProductProposalService:
+    """Build the atomic canonical-product proposal command service."""
+    return CanonicalProductProposalService(_repository_scope_factory(request))
 
 
 async def require_idempotency_key(

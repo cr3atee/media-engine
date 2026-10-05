@@ -41,6 +41,15 @@ class MemoryCanonicalOfferDecisionRepository(CanonicalOfferDecisionRepository):
         """Rely on the enclosing serialized memory repository scope."""
         del tenant_id, marketplace, external_id, canonical_product_id
 
+    async def acquire_offer_lock(
+        self,
+        tenant_id: UUID,
+        marketplace: str,
+        external_id: str,
+    ) -> None:
+        """Rely on the enclosing serialized memory repository scope."""
+        del tenant_id, marketplace, external_id
+
     async def append(
         self,
         decision: CanonicalOfferDecision,

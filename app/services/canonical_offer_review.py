@@ -115,6 +115,11 @@ class CanonicalOfferReviewService:
                     replayed=True,
                 )
 
+            await decisions.acquire_offer_lock(
+                command.tenant_id,
+                command.marketplace,
+                command.external_id,
+            )
             await decisions.acquire_pair_lock(
                 command.tenant_id,
                 command.marketplace,

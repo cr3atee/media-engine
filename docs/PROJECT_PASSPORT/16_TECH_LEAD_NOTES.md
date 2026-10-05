@@ -190,9 +190,14 @@ This document captures architecture notes that are important for future reviews.
   source-title ingestion field. `MatchingService` may score them, but parsers and
   preview tooling must not manufacture aliases to force a comparison result.
 - Canonical-product proposals are deterministic read projections for `NO_MATCH`
-  offers, not persisted catalog entities. Keep proposed aliases empty and make
-  any future accept operation one audited transaction that creates the product
-  and links only the source offer.
+  offers, not persisted catalog entities. Their confirmation uses the proposal
+  UUID as the product UUID and atomically creates the product, links only the
+  source offer, and appends immutable evidence. Keep proposed aliases empty;
+  resolving other offers remains a separate reviewed decision.
+- Every catalog command that may link an offer must acquire the shared
+  tenant/marketplace/external-ID offer lock before its candidate-pair lock.
+  Product-specific pair locks alone do not prevent two explicit commands from
+  racing to assign different products.
 
 ## Review Notes
 

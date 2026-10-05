@@ -51,6 +51,18 @@ class RejectCanonicalOfferRequest(ApiModel):
     _normalize_reason = field_validator("reason")(_nonempty_text)
 
 
+class ConfirmCanonicalProductProposalRequest(ApiModel):
+    """Input for confirming one current source-backed product proposal."""
+
+    marketplace: str = Field(min_length=1, max_length=64)
+    external_id: str = Field(min_length=1, max_length=255)
+    reason: str | None = Field(default=None, max_length=2000)
+
+    _normalize_marketplace = field_validator("marketplace")(_nonempty_text)
+    _normalize_external_id = field_validator("external_id")(_nonempty_text)
+    _normalize_reason = field_validator("reason")(_optional_nonempty_text)
+
+
 class CanonicalOfferReviewCandidateResponse(ApiModel):
     """Seller-safe representation of one review-confidence candidate."""
 
@@ -98,5 +110,21 @@ class CanonicalOfferReviewResponse(ApiModel):
     actor_type: AdminActorType
     reason: str | None
     request_id: str
+    created_at: datetime
+    replayed: bool
+
+
+class CanonicalProductProposalConfirmationResponse(ApiModel):
+    """Created canonical product and immutable proposal decision evidence."""
+
+    proposal_id: UUID
+    canonical_product_id: UUID
+    canonical_product_name: str
+    canonical_product_category: str | None
+    canonical_product_aliases: tuple[str, ...]
+    marketplace: str
+    external_id: str
+    decision_id: UUID
+    decision: CanonicalOfferDecisionType
     created_at: datetime
     replayed: bool

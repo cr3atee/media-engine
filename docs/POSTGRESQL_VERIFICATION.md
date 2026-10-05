@@ -655,3 +655,25 @@ read-only projection and requires no migration. Full Pytest passed `444` tests
 with `58` expected skips; MyPy checked `409` source files; focused Ruff and Ruff
 format checks passed. The temporary container and volume were removed after
 verification.
+
+## EPIC 19 Canonical Product Proposal Confirmation
+
+`scripts/verify_canonical_product_proposal_postgres.py` was executed against a
+temporary `postgres:17` container and isolated database
+`epic19_catalog_proposal_confirm_verify` on a dynamic loopback port. No project
+or production database was used.
+
+All `19/19` checks passed. The verifier covers migration head, tenant catalog
+authorization, current `NO_MATCH` selection, source-derived product identity,
+idempotent replay, sanitized fingerprint conflict, stale and threshold guards,
+queue removal, atomic product/link/evidence persistence, concurrent different
+keys, shared offer-lock contention between proposal creation and existing-product
+confirmation, controlled rollback after partial in-transaction writes, tenant
+isolation, and fresh-engine persistence.
+
+Alembic remains at `0016_canonical_offer_decisions`; `check` reports no new
+upgrade operations. This task reuses existing canonical product, offer-link,
+and immutable decision storage and therefore adds no migration. Full Pytest
+passed `451` tests with `58` expected skips; MyPy checked `412` source files;
+focused Ruff and Ruff format checks passed. The temporary container and volume
+were removed after verification.
