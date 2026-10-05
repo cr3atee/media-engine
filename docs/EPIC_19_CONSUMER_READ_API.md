@@ -1377,6 +1377,43 @@ Verification:
   `58` expected skips, MyPy checks `413` source files, and focused Ruff and
   Ruff format checks pass.
 
+### Task 45: PostgreSQL Catalog Onboarding Verification
+
+Prove that the saved real marketplace offers can enter the persistent seller
+review boundary without changing application behavior or manufacturing catalog
+identity.
+
+Acceptance criteria:
+
+- `scripts/verify_catalog_onboarding_postgres.py` accepts only an isolated
+  PostgreSQL database named `epic19_catalog_onboarding_*`.
+- A clean Alembic head receives all deduplicated saved GGSEL, Playerok, and
+  FunPay offers through the existing PostgreSQL repository scope.
+- Replaying the same source batch does not create duplicate offer identities.
+- Seller auth, tenant context, the review workspace, and the proposal API work
+  over the committed records while foreign tenants remain hidden.
+- Onboarding creates no canonical products, aliases, links, or review
+  decisions; controlled failure rolls back the complete transaction.
+- A fresh engine reproduces the same offer count and deterministic proposal
+  identities.
+
+Status:
+
+- Complete.
+
+Verification:
+
+- Isolated PostgreSQL 17 verification passes `20/20` checks for `60` GGSEL,
+  `20` Playerok, and `1` FunPay offer.
+- All `81` offers remain unlinked source-backed proposals after replay and
+  fresh-engine restart; zero review candidates or catalog mutations are
+  fabricated.
+- Alembic reports `0016_canonical_offer_decisions (head)`, metadata drift is
+  absent, and full offline upgrade SQL generation succeeds. No migration is
+  required.
+- Full Pytest passes `458` tests with `58` expected skips, MyPy checks `414`
+  source files, and focused Ruff and Ruff format checks pass.
+
 ## Deferred Runtime Constraint
 
 The repository-backed public read adapter currently returns bounded first

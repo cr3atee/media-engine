@@ -429,6 +429,10 @@ production AI wiring, and guarded live Telegram verification.
   `60` GGSEL, `20` Playerok, and `1` FunPay offer; with no invented catalog
   identities, it correctly produces zero review candidates and `81` product
   proposals.
+- EPIC 19 Task 45 verifies the same dataset through a clean isolated PostgreSQL
+  runtime. Offer ingest is tenant-scoped, replay-safe, rollback-atomic, and
+  stable after a fresh-engine restart; the seller API reproduces all `81`
+  proposals while leaving products, links, and decisions empty.
 
 ## Known Gaps
 

@@ -679,3 +679,26 @@ and immutable decision storage and therefore adds no migration. Full Pytest
 passed `456` tests with `58` expected skips; MyPy checked `412` source files;
 focused Ruff and Ruff format checks passed. The temporary container and volume
 were removed after verification.
+
+## EPIC 19 Saved-Offer Catalog Onboarding
+
+`scripts/verify_catalog_onboarding_postgres.py` was executed against a
+temporary PostgreSQL 17 container and isolated database
+`epic19_catalog_onboarding_verify` on `127.0.0.1:55439`. No project or
+production database was used.
+
+All `20/20` checks passed. The verifier persists `60` GGSEL, `20` Playerok,
+and `1` FunPay saved real offer through the existing repository scope, then
+checks exact replay without duplicates, source-count preservation, seller auth,
+tenant context, foreign-tenant hiding, zero fabricated `REVIEW` candidates,
+`81` deterministic `NO_MATCH` proposals, and unique proposal identities. It
+also proves that onboarding creates no canonical products, links, or immutable
+decisions, that controlled failure rolls back atomically, and that a fresh
+engine retains all offers and reproduces the same proposal identities.
+
+Alembic `current` reported `0016_canonical_offer_decisions (head)`, `check`
+reported no new upgrade operations, and full offline upgrade SQL generation
+succeeded. No schema change was required. Full Pytest passed `458` tests with
+`58` expected skips, MyPy checked `414` source files, and focused Ruff and Ruff
+format checks passed. The temporary container and volume were removed after
+verification.

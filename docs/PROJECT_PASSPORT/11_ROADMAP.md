@@ -276,6 +276,11 @@ This document tracks only work that is reflected by the current repository state
   `--saved-data` mode loads all `81` captured GGSEL, Playerok, and FunPay offers
   into the isolated memory tenant. It creates no catalog records or links and
   verifies that all offers remain honest `NO_MATCH` proposals.
+- EPIC 19 Task 45 PostgreSQL catalog onboarding verification: all `81` saved
+  real offers persist through the existing tenant repository boundary, replay
+  without duplicates, survive fresh-engine restart, and remain deterministic
+  proposals without automatic catalog mutations. Isolated verification passes
+  `20/20` checks.
 
 ## Current Status
 

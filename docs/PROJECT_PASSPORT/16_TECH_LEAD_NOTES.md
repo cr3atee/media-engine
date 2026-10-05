@@ -206,6 +206,10 @@ This document captures architecture notes that are important for future reviews.
   catalog import command. It may re-scope captured offers to its memory tenant,
   but it must not pre-seed canonical products, aliases, links, or human review
   evidence.
+- PostgreSQL catalog onboarding is now verified through the existing repository
+  scope with exact replay and rollback guarantees. Keep ingestion separate from
+  human catalog decisions: persistence of an offer is never evidence that two
+  marketplace listings identify the same product.
 - Every catalog command that may link an offer must acquire the shared
   tenant/marketplace/external-ID offer lock before its candidate-pair lock.
   Product-specific pair locks alone do not prevent two explicit commands from

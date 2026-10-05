@@ -410,6 +410,13 @@ links, aliases, or decisions, so the current `81` source-backed offers appear
 as `NO_MATCH` proposals rather than fabricated comparisons. Use
 `--saved-data --check` for a non-blocking verification.
 
+The same onboarding boundary is verified against an isolated PostgreSQL 17
+database by `scripts/verify_catalog_onboarding_postgres.py`. Its `20/20`
+checks cover replay without duplicate offers, seller auth and tenant isolation,
+atomic rollback, unchanged catalog state, and deterministic fresh-engine
+proposal recovery. This verifier proves persistence readiness; it does not
+authorize or automate any production catalog decision.
+
 ## Architectural Guardrails
 
 - Keep marketplace parsing out of the frontend.

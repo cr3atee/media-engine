@@ -6,6 +6,12 @@ This document records notable Project Passport updates.
 
 ## Unreleased
 
+- Added isolated PostgreSQL verification for saved real-offer catalog
+  onboarding. All `81` GGSEL, Playerok, and FunPay offers persist exactly once,
+  remain tenant-isolated proposals, roll back atomically on controlled failure,
+  and survive fresh-engine restart without automatic catalog mutations. The
+  verifier passes `20/20`; Alembic head/check/offline SQL, full Pytest
+  (`458 passed, 58 skipped`), MyPy (`414` files), Ruff, and format pass.
 - Added an opt-in saved-real-data mode to the authenticated catalog-review
   preview. It reuses existing loaders, scopes `60` GGSEL, `20` Playerok, and
   `1` FunPay offer to an isolated memory tenant, and verifies all `81` as
