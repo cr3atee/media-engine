@@ -21,6 +21,9 @@ from app.repositories.postgres.postgres_generated_contents import (
 from app.repositories.postgres.postgres_marketplace_integrations import (
     PostgresMarketplaceIntegrationRepository,
 )
+from app.repositories.postgres.postgres_marketplace_polling_runs import (
+    PostgresMarketplacePollingRunRepository,
+)
 from app.repositories.postgres.postgres_memberships import PostgresMembershipRepository
 from app.repositories.postgres.postgres_offers import PostgresOfferRepository
 from app.repositories.postgres.postgres_price_history import (
@@ -43,6 +46,7 @@ __all__ = [
     "PostgresGeneratedContentRepository",
     "PostgresMarketEventRepository",
     "PostgresMarketplaceIntegrationRepository",
+    "PostgresMarketplacePollingRunRepository",
     "PostgresMembershipRepository",
     "PostgresOfferRepository",
     "PostgresPasswordCredentialRepository",

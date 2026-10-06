@@ -6,6 +6,11 @@ This document records notable Project Passport updates.
 
 ## Unreleased
 
+- Added immutable tenant-scoped marketplace polling history, memory/PostgreSQL
+  repository parity, atomic latest-outcome updates, and a bounded seller read
+  endpoint. Migration `0017_marketplace_polling_runs` and its isolated
+  PostgreSQL 17 verifier passed `25/25`; full Pytest (`471 passed, 58 skipped`),
+  MyPy (`422` files), Ruff, format, Alembic lifecycle, and offline SQL passed.
 - Added per-integration marketplace polling failure isolation, sanitized durable
   latest-outcome metadata, bounded Playerok GraphQL source configuration, and a
   guarded live PostgreSQL verifier. The final PostgreSQL 17 run passed `22/22`

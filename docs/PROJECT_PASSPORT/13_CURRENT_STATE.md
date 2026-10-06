@@ -476,9 +476,10 @@ itself is now verified against isolated PostgreSQL.
   still require production process/bootstrap configuration.
 - Production deployment can now start from `scripts/run_mediaengine_worker.py`;
   guarded public-source polling has passed against live GGSEL, Playerok, and
-  FunPay data in isolated PostgreSQL. Unattended polling still requires
-  production monitoring, alerting, deployment configuration, and credential
-  retrieval for authenticated sources.
+  FunPay data in isolated PostgreSQL. Tenant-scoped polling history now retains
+  safe success, failure, and skip evidence across restarts. Unattended polling
+  still requires production metrics/alert routing, deployment configuration,
+  and credential retrieval for authenticated sources.
 - Public Market Terminal integration still needs a frontend location decision
   for public launch and a product decision on category exposure. An embedded
   dependency-free `/terminal` shell now consumes `/api/v1/public` routes for
@@ -572,6 +573,6 @@ marketplace data reliability closure: GGSEL, Playerok, and FunPay are verified
 from real saved/live payloads as snapshot-ready, and a strict saved-payload
 drift guard is present. Runtime bootstrap/process helpers and the worker command
 now centralize repository scope, Scheduler construction, job registration, and
-safe shutdown. Guarded live polling is verified; unattended production
-scheduling should still wait for monitoring, alerting, deployment
-configuration, and authenticated-source credential retrieval.
+safe shutdown. Guarded live polling and durable per-integration run history are
+verified; unattended production scheduling should still wait for metrics/alert
+routing, deployment configuration, and authenticated-source credential retrieval.

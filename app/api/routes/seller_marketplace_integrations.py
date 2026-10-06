@@ -3,7 +3,7 @@ from __future__ import annotations
 from typing import Annotated
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, status
+from fastapi import APIRouter, Depends, Query, status
 
 from app.api.dependencies import (
     get_marketplace_integration_service,
@@ -15,6 +15,7 @@ from app.api.schemas.marketplace_integrations import (
     DisableMarketplaceIntegrationRequest,
     MarketplaceCredentialResponse,
     MarketplaceIntegrationResponse,
+    MarketplacePollingRunResponse,
     RotateMarketplaceCredentialRequest,
     UpdateMarketplaceIntegrationRequest,
 )
@@ -23,6 +24,8 @@ from app.domain.marketplace_integrations import (
     RedactedCredentialMetadata,
     SafeMarketplaceIntegration,
 )
+from app.domain.marketplace_polling import MarketplacePollingRun
+from app.repositories.marketplace_polling_runs import MAX_POLLING_RUN_HISTORY
 from app.services.marketplace_integrations import (
     CreateMarketplaceIntegrationCommand,
     DisableMarketplaceIntegrationCommand,
@@ -78,6 +81,34 @@ async def get_marketplace_integration(
             "Marketplace integration was not found.",
         )
     return _response(integration)
+
+
+@router.get(
+    "/{integration_id}/runs",
+    response_model=list[MarketplacePollingRunResponse],
+)
+async def list_marketplace_polling_runs(
+    integration_id: UUID,
+    context: IntegrationReadTenant,
+    service: Annotated[
+        MarketplaceIntegrationService,
+        Depends(get_marketplace_integration_service),
+    ],
+    limit: Annotated[int, Query(ge=1, le=MAX_POLLING_RUN_HISTORY)] = 20,
+) -> list[MarketplacePollingRunResponse]:
+    """Return bounded retained polling history for one tenant integration."""
+    runs = await service.list_runs(
+        context.tenant.id,
+        integration_id,
+        limit=limit,
+    )
+    if runs is None:
+        raise ApiError(
+            404,
+            "resource_not_found",
+            "Marketplace integration was not found.",
+        )
+    return [_polling_run_response(run) for run in runs]
 
 
 @router.post(
@@ -247,4 +278,28 @@ def _credential_response(
         configured_at=credential.configured_at,
         last_rotated_at=credential.last_rotated_at,
         version=credential.version,
+    )
+
+
+def _polling_run_response(
+    run: MarketplacePollingRun,
+) -> MarketplacePollingRunResponse:
+    return MarketplacePollingRunResponse(
+        id=run.id,
+        integration_id=run.integration_id,
+        marketplace=run.marketplace,
+        status=run.status,
+        started_at=run.started_at,
+        finished_at=run.finished_at,
+        duration_ms=int(run.duration.total_seconds() * 1000),
+        offers_received=run.offers_received,
+        offers_persisted=run.offers_persisted,
+        snapshots_created=run.snapshots_created,
+        snapshots_persisted=run.snapshots_persisted,
+        price_changes_detected=run.price_changes_detected,
+        events_created=run.events_created,
+        processing_error_count=run.processing_error_count,
+        skipped_reason=run.skipped_reason,
+        error_code=run.error_code,
+        error_summary=run.error_summary,
     )

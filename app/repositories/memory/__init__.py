@@ -19,6 +19,9 @@ from app.repositories.memory.memory_generated_contents import (
 from app.repositories.memory.memory_marketplace_integrations import (
     MemoryMarketplaceIntegrationRepository,
 )
+from app.repositories.memory.memory_marketplace_polling_runs import (
+    MemoryMarketplacePollingRunRepository,
+)
 from app.repositories.memory.memory_memberships import MemoryMembershipRepository
 from app.repositories.memory.memory_offers import MemoryOfferRepository
 from app.repositories.memory.memory_price_history import MemoryPriceHistoryRepository
@@ -37,6 +40,7 @@ __all__ = (
     "MemoryGeneratedContentRepository",
     "MemoryMarketEventRepository",
     "MemoryMarketplaceIntegrationRepository",
+    "MemoryMarketplacePollingRunRepository",
     "MemoryMembershipRepository",
     "MemoryOfferRepository",
     "MemoryPasswordCredentialRepository",

@@ -10,6 +10,7 @@ from app.domain.marketplace_integrations import (
     MarketplaceAuthType,
     MarketplaceIntegrationStatus,
 )
+from app.domain.marketplace_polling import MarketplacePollingRunStatus
 
 
 def _nonempty_text(value: str) -> str:
@@ -63,6 +64,28 @@ class MarketplaceIntegrationResponse(ApiModel):
     created_at: datetime
     updated_at: datetime
     version: int = Field(ge=1)
+
+
+class MarketplacePollingRunResponse(ApiModel):
+    """Safe retained polling diagnostics for one marketplace integration."""
+
+    id: UUID
+    integration_id: UUID
+    marketplace: str
+    status: MarketplacePollingRunStatus
+    started_at: datetime
+    finished_at: datetime
+    duration_ms: int = Field(ge=0)
+    offers_received: int | None = Field(default=None, ge=0)
+    offers_persisted: int | None = Field(default=None, ge=0)
+    snapshots_created: int | None = Field(default=None, ge=0)
+    snapshots_persisted: int | None = Field(default=None, ge=0)
+    price_changes_detected: int | None = Field(default=None, ge=0)
+    events_created: int | None = Field(default=None, ge=0)
+    processing_error_count: int | None = Field(default=None, ge=0)
+    skipped_reason: str | None
+    error_code: str | None
+    error_summary: str | None
 
 
 class CreateMarketplaceIntegrationRequest(ApiModel):

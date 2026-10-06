@@ -58,9 +58,10 @@ This document lists only confirmed work remaining after EPIC 17 completion.
 
 ## Operational
 
-- Add retained per-run diagnostics and alert routing for worker failures,
-  skipped integrations, and marketplace source drift. Current integration
-  metadata retains only the latest successful/failed outcome.
+- Add production metrics export and alert routing for retained worker failures,
+  skipped integrations, processing-error counts, and marketplace source drift.
+  Tenant-scoped per-run diagnostics are now durable; retention/pruning policy
+  should be selected from observed production volume.
 - Add production monitoring and alerting for exhausted content attempts and
   ambiguous publications.
 

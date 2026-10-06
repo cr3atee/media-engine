@@ -219,15 +219,19 @@ This document captures architecture notes that are important for future reviews.
   racing to assign different products.
 - Enabled marketplace polling isolates ordinary exceptions per integration so
   one source cannot prevent later sources from running. It persists only safe
-  latest-outcome metadata; cancellation and repository failures still propagate
-  to Scheduler ownership rather than being swallowed.
+  latest-outcome metadata plus immutable tenant-scoped run history;
+  cancellation and repository failures still propagate to Scheduler ownership
+  rather than being swallowed. Latest metadata and each run commit atomically.
 - Playerok runtime category scope is encoded only through allowlisted query
   parameters on the known GraphQL endpoint. Do not turn integration source URLs
   into arbitrary request configuration or credential transport.
 - Guarded live polling passed for GGSEL, Playerok, and FunPay through the
   production worker composition. Transient source failures were observed, so
-  production operation still needs retained run history and alerting rather
-  than assuming every external source succeeds on every tick.
+  production operation must use the retained run history and still needs alert
+  routing rather than assuming every external source succeeds on every tick.
+- Polling history deliberately excludes source URLs, credential references, and
+  raw exception messages. Add exporters or alerts from the safe repository/API
+  projection; do not weaken this redaction boundary.
 
 ## Review Notes
 

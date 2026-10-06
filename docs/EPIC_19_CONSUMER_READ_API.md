@@ -1499,6 +1499,36 @@ Verification:
   ticks and requires every real source to succeed at least once; it does not
   conceal failed attempts or add a service-layer retry policy.
 
+### Task 48: Durable Marketplace Polling History
+
+Retain safe per-integration operational evidence instead of keeping only the
+latest success or failure metadata.
+
+Acceptance criteria:
+
+- Every selected integration retains an immutable succeeded, failed, or skipped
+  polling record.
+- Successful application runs retain bounded stage counts; failures retain only
+  a stable error class and constant sanitized summary.
+- Source URLs, credential references, and raw exception messages are not stored
+  in polling history.
+- Latest integration metadata and the immutable run are committed atomically.
+- Tenant-authorized readers can obtain a bounded newest-first history for one
+  integration without crossing tenant boundaries.
+
+Status:
+
+- Complete.
+
+Verification:
+
+- Migration `0017_marketplace_polling_runs` passed clean upgrade,
+  current/check, downgrade/re-upgrade, and offline SQL verification.
+- The isolated PostgreSQL 17 verifier passed `25/25`, including tenant
+  isolation, safe diagnostics, rollback, and fresh-engine persistence.
+- Focused tests pass `26/26`; full Pytest passes `471` tests with `58` expected
+  skips, MyPy checks `422` source files, and Ruff plus Ruff format pass.
+
 ## Deferred Runtime Constraint
 
 The repository-backed public read adapter currently returns bounded first

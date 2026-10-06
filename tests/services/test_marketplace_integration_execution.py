@@ -11,6 +11,7 @@ from app.domain.marketplace_integrations import (
     MarketplaceIntegration,
     MarketplaceIntegrationStatus,
 )
+from app.domain.marketplace_polling import MarketplacePollingRunStatus
 from app.domain.tenancy import Tenant
 from app.repositories.provider import create_memory_provider
 from app.scheduler.jobs import EnabledMarketplaceIntegrationsJob, JobExecutionState
@@ -190,6 +191,22 @@ def test_execution_service_runs_only_enabled_integrations_for_active_tenants() -
             "missing_source_url",
             "unsupported_marketplace",
         ]
+        for execution, expected_status in zip(
+            batch.executions,
+            (
+                MarketplacePollingRunStatus.SUCCEEDED,
+                MarketplacePollingRunStatus.SKIPPED,
+                MarketplacePollingRunStatus.SKIPPED,
+            ),
+            strict=True,
+        ):
+            history = await provider.marketplace_polling_runs.list_by_integration(
+                execution.tenant_id,
+                execution.integration_id,
+                limit=10,
+            )
+            assert len(history) == 1
+            assert history[0].status is expected_status
 
     run_async(scenario())
 
@@ -254,6 +271,22 @@ def test_execution_service_isolates_failures_and_persists_outcomes() -> None:
         assert stored_succeeded.last_successful_run_at == completed_at
         assert stored_succeeded.last_error_code is None
         assert stored_succeeded.version == 2
+        failed_history = await provider.marketplace_polling_runs.list_by_integration(
+            TENANT_A_ID,
+            failed.id,
+            limit=10,
+        )
+        successful_history = (
+            await provider.marketplace_polling_runs.list_by_integration(
+                TENANT_A_ID,
+                succeeded.id,
+                limit=10,
+            )
+        )
+        assert failed_history[0].status is MarketplacePollingRunStatus.FAILED
+        assert failed_history[0].error_code == "RuntimeError"
+        assert "secret" not in (failed_history[0].error_summary or "")
+        assert successful_history[0].status is MarketplacePollingRunStatus.SUCCEEDED
 
         recovered_at = completed_at + timedelta(hours=1)
         recovery_service = MarketplaceIntegrationExecutionService(
@@ -277,5 +310,14 @@ def test_execution_service_isolates_failures_and_persists_outcomes() -> None:
         assert recovered.last_error_code is None
         assert recovered.last_error_summary is None
         assert recovered.version == 3
+        recovered_history = await provider.marketplace_polling_runs.list_by_integration(
+            TENANT_A_ID,
+            failed.id,
+            limit=10,
+        )
+        assert [run.status for run in recovered_history] == [
+            MarketplacePollingRunStatus.SUCCEEDED,
+            MarketplacePollingRunStatus.FAILED,
+        ]
 
     run_async(scenario())

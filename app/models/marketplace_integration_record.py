@@ -11,6 +11,7 @@ from sqlalchemy import (
     Index,
     Integer,
     String,
+    UniqueConstraint,
     Uuid,
     text,
 )
@@ -133,6 +134,11 @@ class MarketplaceIntegrationRecord(Base):
             "auth_type",
             "credential_configured_at",
             postgresql_where=text("credential_reference IS NOT NULL"),
+        ),
+        UniqueConstraint(
+            "tenant_id",
+            "id",
+            name="uq_marketplace_integrations_tenant_id",
         ),
     )
 

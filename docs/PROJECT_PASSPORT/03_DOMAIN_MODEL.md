@@ -214,6 +214,19 @@ existing `CanonicalProduct`. This requires explicit evidence, recomputes the
 same `NO_MATCH` projection inside the transaction, creates no product, and
 atomically persists the source-offer link plus immutable confirmed decision.
 
+## MarketplacePollingRun
+
+`MarketplacePollingRun` is immutable operational evidence for one selected,
+tenant-owned marketplace integration attempt. It records integration and
+marketplace identity, terminal succeeded/failed/skipped status, UTC timing, and
+safe pipeline counts when available. Failure state contains only a stable error
+class and constant sanitized summary; skipped state contains a stable reason.
+
+The domain contract does not contain source URLs, credentials, raw exception
+messages, ORM IDs from other records, or scheduling policy. PostgreSQL enforces
+same-tenant integration ownership and outcome consistency. The seller read API
+exposes bounded newest-first history without allowing foreign-tenant reads.
+
 ## Persistent Lifecycle Verification
 
 The production-shaped PostgreSQL flow verified exact links from `ParsedOffer` to

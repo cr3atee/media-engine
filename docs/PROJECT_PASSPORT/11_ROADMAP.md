@@ -289,6 +289,10 @@ This document tracks only work that is reflected by the current repository state
   composition passed `22/22` checks against live public GGSEL, Playerok, and
   FunPay data in isolated PostgreSQL 17. Integration failures are isolated,
   sanitized outcomes are durable, and fresh-engine persistence is verified.
+- EPIC 19 Task 48 durable marketplace polling history: every selected
+  integration now retains a tenant-scoped succeeded, failed, or skipped run;
+  latest outcome and immutable history commit atomically. PostgreSQL 17
+  verification passes `25/25` checks at migration `0017_marketplace_polling_runs`.
 
 ## Current Status
 
@@ -318,15 +322,15 @@ public query adapter foundations. Default FastAPI bootstrap now wires public
 reads to a PostgreSQL-backed repository scope. Saved marketplace payloads verify
 through the public route/DTO layer for product cards, details, offers,
 comparisons, and price history. The first embedded `/terminal` visual shell is
-available for API contract validation. Guarded public-source polling is now
-live-verified; unattended production polling still requires deployment
-configuration, monitoring/alerting, and credential retrieval for authenticated
-sources. The remaining work before public visual launch is frontend hardening
+available for API contract validation. Guarded public-source polling and durable
+per-integration history are now verified; unattended production polling still
+requires deployment configuration, alert routing, and credential retrieval for
+authenticated sources. The remaining work before public visual launch is frontend hardening
 plus a product decision on category data exposure.
 
 ## Not Present Yet
 
-- Production monitoring, alerting, and retained polling-run history.
+- Production metrics export, alert routing, and polling-history retention policy.
 - Optional guarded live Telegram test-chat message.
 - Production AI provider integration in the pipeline.
 - Live marketplace credential storage and credential retrieval for execution.

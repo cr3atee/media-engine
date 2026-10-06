@@ -153,6 +153,10 @@ run inside ingestion or scoring transactions.
   market events only through `RepositoryProvider`.
 - Scheduler jobs delegate to application services and do not own repositories,
   sessions, scoring policy, or business logic.
+- Marketplace network work finishes before a short outcome transaction updates
+  latest integration metadata and appends one immutable tenant-scoped polling
+  run. The journal stores safe counters/classifications, never source URLs,
+  credential references, or raw exception text.
 - Scoring never runs while a claim repository scope or row lock remains open.
 - AI/content providers are called only after the generation-claim transaction has
   committed.

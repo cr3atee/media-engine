@@ -15,7 +15,9 @@ from app.domain.marketplace_integrations import (
     SafeMarketplaceIntegration,
     safe_marketplace_integration,
 )
+from app.domain.marketplace_polling import MarketplacePollingRun
 from app.repositories.base import RepositoryIdentityConflictError
+from app.repositories.marketplace_polling_runs import MAX_POLLING_RUN_HISTORY
 from app.services.repository_scope import RepositoryScopeFactory
 
 type Clock = Callable[[], datetime]
@@ -135,6 +137,33 @@ class MarketplaceIntegrationService:
                 safe_marketplace_integration(integration)
                 if integration is not None
                 else None
+            )
+
+    async def list_runs(
+        self,
+        tenant_id: UUID,
+        integration_id: UUID,
+        *,
+        limit: int,
+    ) -> Sequence[MarketplacePollingRun] | None:
+        """Return bounded history for an existing tenant-owned integration."""
+        if not 1 <= limit <= MAX_POLLING_RUN_HISTORY:
+            raise ValueError(
+                f"Polling run limit must be between 1 and {MAX_POLLING_RUN_HISTORY}."
+            )
+        async with self._repository_scope_factory() as repositories:
+            integration = (
+                await repositories.marketplace_integrations.get_by_tenant_and_id(
+                    tenant_id,
+                    integration_id,
+                )
+            )
+            if integration is None:
+                return None
+            return await repositories.marketplace_polling_runs.list_by_integration(
+                tenant_id,
+                integration_id,
+                limit=limit,
             )
 
     async def create(

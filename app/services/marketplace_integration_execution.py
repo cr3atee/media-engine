@@ -4,9 +4,14 @@ from collections.abc import Callable, Mapping
 from dataclasses import dataclass, replace
 from datetime import UTC, datetime
 from typing import Protocol
-from uuid import UUID
+from uuid import UUID, uuid4
 
 from app.domain.marketplace_integrations import MarketplaceIntegration
+from app.domain.marketplace_polling import (
+    MarketplacePollingRun,
+    MarketplacePollingRunStatus,
+)
+from app.services.marketplace_application_runner import MarketplaceRunResult
 from app.services.repository_scope import RepositoryScopeFactory
 
 
@@ -21,6 +26,7 @@ type MarketplaceIntegrationRunnerFactory = Callable[
     [MarketplaceIntegration],
     MarketplaceIntegrationRunner,
 ]
+type PollingRunIdFactory = Callable[[], UUID]
 
 
 @dataclass(slots=True, frozen=True)
@@ -36,6 +42,9 @@ class MarketplaceIntegrationExecution:
     result: object | None = None
     error_code: str | None = None
     error_summary: str | None = None
+    polling_run_id: UUID | None = None
+    started_at: datetime | None = None
+    finished_at: datetime | None = None
 
     @property
     def succeeded(self) -> bool:
@@ -70,6 +79,7 @@ class MarketplaceIntegrationExecutionService:
         repository_scope_factory: RepositoryScopeFactory,
         runner_factories: Mapping[str, MarketplaceIntegrationRunnerFactory],
         clock: Callable[[], datetime] | None = None,
+        polling_run_id_factory: PollingRunIdFactory = uuid4,
     ) -> None:
         """Initialize the service with repositories and marketplace factories."""
         self._repository_scope_factory = repository_scope_factory
@@ -78,6 +88,7 @@ class MarketplaceIntegrationExecutionService:
             for marketplace, factory in runner_factories.items()
         }
         self._clock = clock or _utc_now
+        self._polling_run_id_factory = polling_run_id_factory
 
     async def run_enabled_integrations(self) -> MarketplaceIntegrationExecutionBatch:
         """Run enabled active integrations whose owning tenants are active."""
@@ -85,18 +96,32 @@ class MarketplaceIntegrationExecutionService:
         executions: list[MarketplaceIntegrationExecution] = []
 
         for integration in selected:
+            started_at = max(self._clock(), integration.created_at)
+            polling_run_id = self._polling_run_id_factory()
             source_url = integration.source_url
             if source_url is None:
-                executions.append(
-                    _skipped_execution(integration, "missing_source_url"),
+                execution = _skipped_execution(
+                    integration,
+                    "missing_source_url",
+                    polling_run_id=polling_run_id,
+                    started_at=started_at,
+                    finished_at=max(self._clock(), started_at),
                 )
+                await self._record_execution(integration, execution)
+                executions.append(execution)
                 continue
 
             factory = self._runner_factories.get(integration.marketplace)
             if factory is None:
-                executions.append(
-                    _skipped_execution(integration, "unsupported_marketplace"),
+                execution = _skipped_execution(
+                    integration,
+                    "unsupported_marketplace",
+                    polling_run_id=polling_run_id,
+                    started_at=started_at,
+                    finished_at=max(self._clock(), started_at),
                 )
+                await self._record_execution(integration, execution)
+                executions.append(execution)
                 continue
 
             runner = factory(integration)
@@ -105,36 +130,35 @@ class MarketplaceIntegrationExecutionService:
             except Exception as exc:
                 error_code = type(exc).__name__
                 error_summary = "Marketplace polling failed."
-                await self._record_outcome(
-                    integration,
-                    succeeded=False,
-                    error_code=error_code,
-                    error_summary=error_summary,
-                )
-                executions.append(
-                    MarketplaceIntegrationExecution(
-                        integration_id=integration.id,
-                        tenant_id=integration.tenant_id,
-                        marketplace=integration.marketplace,
-                        source_url=source_url,
-                        executed=True,
-                        error_code=error_code,
-                        error_summary=error_summary,
-                    ),
-                )
-                continue
-
-            await self._record_outcome(integration, succeeded=True)
-            executions.append(
-                MarketplaceIntegrationExecution(
+                execution = MarketplaceIntegrationExecution(
                     integration_id=integration.id,
                     tenant_id=integration.tenant_id,
                     marketplace=integration.marketplace,
                     source_url=source_url,
                     executed=True,
-                    result=result,
-                ),
+                    error_code=error_code,
+                    error_summary=error_summary,
+                    polling_run_id=polling_run_id,
+                    started_at=started_at,
+                    finished_at=max(self._clock(), started_at),
+                )
+                await self._record_execution(integration, execution)
+                executions.append(execution)
+                continue
+
+            execution = MarketplaceIntegrationExecution(
+                integration_id=integration.id,
+                tenant_id=integration.tenant_id,
+                marketplace=integration.marketplace,
+                source_url=source_url,
+                executed=True,
+                result=result,
+                polling_run_id=polling_run_id,
+                started_at=started_at,
+                finished_at=max(self._clock(), started_at),
             )
+            await self._record_execution(integration, execution)
+            executions.append(execution)
 
         return MarketplaceIntegrationExecutionBatch(
             selected_integrations=len(selected),
@@ -145,13 +169,10 @@ class MarketplaceIntegrationExecutionService:
             executions=tuple(executions),
         )
 
-    async def _record_outcome(
+    async def _record_execution(
         self,
         integration: MarketplaceIntegration,
-        *,
-        succeeded: bool,
-        error_code: str | None = None,
-        error_summary: str | None = None,
+        execution: MarketplaceIntegrationExecution,
     ) -> None:
         async with self._repository_scope_factory() as repositories:
             stored = await repositories.marketplace_integrations.get_by_tenant_and_id(
@@ -160,22 +181,33 @@ class MarketplaceIntegrationExecutionService:
             )
             if stored is None:
                 return
-            occurred_at = max(self._clock(), stored.updated_at)
-            await repositories.marketplace_integrations.save(
-                replace(
-                    stored,
-                    last_successful_run_at=(
-                        occurred_at if succeeded else stored.last_successful_run_at
-                    ),
-                    last_failed_run_at=(
-                        stored.last_failed_run_at if succeeded else occurred_at
-                    ),
-                    last_error_code=None if succeeded else error_code,
-                    last_error_summary=None if succeeded else error_summary,
-                    updated_at=occurred_at,
-                    version=stored.version + 1,
+            if execution.executed:
+                finished_at = _required_timestamp(execution.finished_at)
+                occurred_at = max(finished_at, stored.updated_at)
+                await repositories.marketplace_integrations.save(
+                    replace(
+                        stored,
+                        last_successful_run_at=(
+                            occurred_at
+                            if execution.succeeded
+                            else stored.last_successful_run_at
+                        ),
+                        last_failed_run_at=(
+                            stored.last_failed_run_at
+                            if execution.succeeded
+                            else occurred_at
+                        ),
+                        last_error_code=(
+                            None if execution.succeeded else execution.error_code
+                        ),
+                        last_error_summary=(
+                            None if execution.succeeded else execution.error_summary
+                        ),
+                        updated_at=occurred_at,
+                        version=stored.version + 1,
+                    )
                 )
-            )
+            await repositories.marketplace_polling_runs.save(_to_polling_run(execution))
 
     async def _select_integrations(self) -> tuple[MarketplaceIntegration, ...]:
         async with self._repository_scope_factory() as repositories:
@@ -191,6 +223,10 @@ class MarketplaceIntegrationExecutionService:
 def _skipped_execution(
     integration: MarketplaceIntegration,
     reason: str,
+    *,
+    polling_run_id: UUID,
+    started_at: datetime,
+    finished_at: datetime,
 ) -> MarketplaceIntegrationExecution:
     return MarketplaceIntegrationExecution(
         integration_id=integration.id,
@@ -199,7 +235,62 @@ def _skipped_execution(
         source_url=integration.source_url,
         executed=False,
         skipped_reason=reason,
+        polling_run_id=polling_run_id,
+        started_at=started_at,
+        finished_at=finished_at,
     )
+
+
+def _to_polling_run(
+    execution: MarketplaceIntegrationExecution,
+) -> MarketplacePollingRun:
+    result = execution.result
+    metrics = result if isinstance(result, MarketplaceRunResult) else None
+    return MarketplacePollingRun(
+        id=_required_run_id(execution.polling_run_id),
+        tenant_id=execution.tenant_id,
+        integration_id=execution.integration_id,
+        marketplace=execution.marketplace,
+        status=_run_status(execution),
+        started_at=_required_timestamp(execution.started_at),
+        finished_at=_required_timestamp(execution.finished_at),
+        offers_received=metrics.offers_received if metrics is not None else None,
+        offers_persisted=metrics.offers_persisted if metrics is not None else None,
+        snapshots_created=metrics.snapshots_created if metrics is not None else None,
+        snapshots_persisted=(
+            metrics.snapshots_persisted if metrics is not None else None
+        ),
+        price_changes_detected=(
+            metrics.price_changes_detected if metrics is not None else None
+        ),
+        events_created=metrics.events_created if metrics is not None else None,
+        processing_error_count=len(metrics.errors) if metrics is not None else None,
+        skipped_reason=execution.skipped_reason,
+        error_code=execution.error_code,
+        error_summary=execution.error_summary,
+    )
+
+
+def _run_status(
+    execution: MarketplaceIntegrationExecution,
+) -> MarketplacePollingRunStatus:
+    if not execution.executed:
+        return MarketplacePollingRunStatus.SKIPPED
+    if execution.succeeded:
+        return MarketplacePollingRunStatus.SUCCEEDED
+    return MarketplacePollingRunStatus.FAILED
+
+
+def _required_run_id(value: UUID | None) -> UUID:
+    if value is None:
+        raise RuntimeError("Marketplace polling run ID is missing.")
+    return value
+
+
+def _required_timestamp(value: datetime | None) -> datetime:
+    if value is None:
+        raise RuntimeError("Marketplace polling run timestamp is missing.")
+    return value
 
 
 def _utc_now() -> datetime:

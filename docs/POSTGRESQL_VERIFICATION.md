@@ -10,8 +10,9 @@ tenant-scoped seller workflows are live-verified. EPIC 17 marketplace
 integration persistence, credential metadata redaction, and seller integration
 API boundaries are also live-verified. EPIC 16 and EPIC 17 verification used
 isolated PostgreSQL 17.10 databases without using a project or production
-database. The current verified revision is
-`0016_canonical_offer_decisions`.
+database. Durable marketplace polling history is additionally verified against
+an isolated PostgreSQL 17 database. The current verified revision is
+`0017_marketplace_polling_runs`.
 
 ## Verified Schema
 
@@ -47,6 +48,10 @@ database. The current verified revision is
   recovery rules are database constrained and indexed.
 - Generated-content and publication foreign keys use `ON DELETE RESTRICT` so
   event/content audit history is not destroyed by cascade deletion.
+- Revision `0017_marketplace_polling_runs` adds immutable tenant-scoped polling
+  history with a composite integration foreign key, outcome/count constraints,
+  and newest-first indexes. Clean upgrade, downgrade to `0016`, re-upgrade,
+  metadata check, and offline SQL generation pass.
 
 ## Verified Repositories
 
@@ -82,6 +87,9 @@ database. The current verified revision is
 - PostgreSQL-specific tests verify two-session generation/publication contention,
   durable fresh-session round trips, unique idempotency, rollback, and atomic
   content/publication completion.
+- Polling-run repositories preserve success/failure/skip outcomes, safe metrics,
+  deterministic newest-first reads, bounds, tenant isolation, immutable replay,
+  and fresh-engine persistence with memory/PostgreSQL contract parity.
 
 ## Verified Transactions
 
@@ -655,6 +663,25 @@ read-only projection and requires no migration. Full Pytest passed `444` tests
 with `58` expected skips; MyPy checked `409` source files; focused Ruff and Ruff
 format checks passed. The temporary container and volume were removed after
 verification.
+
+## EPIC 19 Marketplace Polling History
+
+`scripts/verify_marketplace_polling_history_postgres.py` was executed against a
+temporary PostgreSQL 17 container and isolated database
+`epic19_history_verify` on loopback. No project or production database was used.
+
+All `25/25` checks passed. The verifier covers succeeded, failed, and skipped
+integration attempts; safe stage counters; stable ordering and bounded reads;
+tenant isolation; redaction of raw exceptions and source URLs; atomic latest-
+outcome/history rollback; schema constraints and indexes; and fresh-engine
+persistence.
+
+Alembic `current` reported `0017_marketplace_polling_runs (head)`, `check`
+reported no new upgrade operations, downgrade to
+`0016_canonical_offer_decisions` and upgrade back to head passed, and full
+offline SQL generation included the polling-history table. Full Pytest passed
+`471` tests with `58` expected skips, MyPy checked `422` source files, and Ruff
+plus Ruff format checks passed.
 
 ## EPIC 19 Canonical Product Proposal Workflows
 

@@ -12,6 +12,10 @@ from pydantic import SecretStr
 from app.config.settings import AdminApiSettings, AuthSettings
 from app.domain.auth import PasswordCredential
 from app.domain.marketplace_integrations import REDACTED_CREDENTIAL_REFERENCE
+from app.domain.marketplace_polling import (
+    MarketplacePollingRun,
+    MarketplacePollingRunStatus,
+)
 from app.domain.tenancy import Membership, Tenant, TenantRole, User
 from app.main import create_app
 from app.repositories.provider import RepositoryProvider, create_memory_provider
@@ -225,6 +229,61 @@ def test_duplicate_identity_is_rejected_only_within_tenant() -> None:
     assert duplicate.status_code == 409
     assert duplicate.json()["error"]["code"] == "integration_identity_conflict"
     assert tenant_b.status_code == 201
+
+
+def test_seller_reads_bounded_tenant_scoped_polling_history() -> None:
+    provider = create_memory_provider()
+    run_async(_seed_identity(provider))
+    client = _client(provider)
+    headers = _login_headers(client, "admin@example.com")
+    created = _create_integration(client, headers)
+    integration_id = UUID(created["id"])
+    run = MarketplacePollingRun(
+        id=UUID("27000000-0000-4000-8000-000000000001"),
+        tenant_id=TENANT_A_ID,
+        integration_id=integration_id,
+        marketplace="ggsel",
+        status=MarketplacePollingRunStatus.FAILED,
+        started_at=NOW,
+        finished_at=NOW,
+        error_code="TimeoutError",
+        error_summary="Marketplace polling failed.",
+    )
+    run_async(provider.marketplace_polling_runs.save(run))
+
+    response = client.get(
+        f"/api/v1/tenants/{TENANT_A_ID}/marketplace-integrations/"
+        f"{integration_id}/runs?limit=1",
+        headers=headers,
+    )
+    foreign = client.get(
+        f"/api/v1/tenants/{TENANT_B_ID}/marketplace-integrations/{integration_id}/runs",
+        headers=headers,
+    )
+
+    assert response.status_code == 200
+    assert response.json() == [
+        {
+            "id": str(run.id),
+            "integration_id": str(integration_id),
+            "marketplace": "ggsel",
+            "status": "failed",
+            "started_at": "2026-09-02T12:00:00Z",
+            "finished_at": "2026-09-02T12:00:00Z",
+            "duration_ms": 0,
+            "offers_received": None,
+            "offers_persisted": None,
+            "snapshots_created": None,
+            "snapshots_persisted": None,
+            "price_changes_detected": None,
+            "events_created": None,
+            "processing_error_count": None,
+            "skipped_reason": None,
+            "error_code": "TimeoutError",
+            "error_summary": "Marketplace polling failed.",
+        }
+    ]
+    assert foreign.status_code == 404
 
 
 def _create_integration(
