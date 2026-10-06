@@ -31,6 +31,8 @@ class MarketplaceIntegrationDiagnostic:
     source_url_present: bool
     skipped_reason: str | None
     result_type: str | None
+    error_code: str | None = None
+    error_summary: str | None = None
     run: MarketplaceRunDiagnostic | None = None
 
 
@@ -41,6 +43,7 @@ class MarketplacePollingDiagnostic:
     selected_integrations: int
     executed_integrations: int
     skipped_integrations: int
+    failed_integrations: int
     executions: tuple[MarketplaceIntegrationDiagnostic, ...]
 
 
@@ -56,6 +59,7 @@ class RuntimeMonitor:
             selected_integrations=batch.selected_integrations,
             executed_integrations=batch.executed_integrations,
             skipped_integrations=batch.skipped_integrations,
+            failed_integrations=batch.failed_integrations,
             executions=tuple(
                 self._summarize_execution(execution) for execution in batch.executions
             ),
@@ -72,6 +76,8 @@ class RuntimeMonitor:
             source_url_present=execution.source_url is not None,
             skipped_reason=execution.skipped_reason,
             result_type=type(result).__name__ if result is not None else None,
+            error_code=execution.error_code,
+            error_summary=execution.error_summary,
             run=(
                 self._summarize_marketplace_run(result)
                 if isinstance(result, MarketplaceRunResult)

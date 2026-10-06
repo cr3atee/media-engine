@@ -60,9 +60,35 @@ def test_runtime_monitor_summarizes_marketplace_execution_batch() -> None:
     assert diagnostic.selected_integrations == 2
     assert diagnostic.executed_integrations == 1
     assert diagnostic.skipped_integrations == 1
+    assert diagnostic.failed_integrations == 0
     assert diagnostic.executions[0].run is not None
     assert diagnostic.executions[0].run.offers_received == 10
     assert diagnostic.executions[0].run.events_created == 1
     assert diagnostic.executions[0].run.errors == ("skipped malformed offer",)
     assert diagnostic.executions[1].source_url_present is False
     assert diagnostic.executions[1].skipped_reason == "missing_source_url"
+
+
+def test_runtime_monitor_exposes_redacted_integration_failure() -> None:
+    batch = MarketplaceIntegrationExecutionBatch(
+        selected_integrations=1,
+        executed_integrations=1,
+        skipped_integrations=0,
+        executions=(
+            MarketplaceIntegrationExecution(
+                integration_id=UUID("10000000-0000-4000-8000-000000000705"),
+                tenant_id=UUID("10000000-0000-4000-8000-000000000706"),
+                marketplace="playerok",
+                source_url="https://playerok.com/graphql",
+                executed=True,
+                error_code="TimeoutError",
+                error_summary="Marketplace polling failed.",
+            ),
+        ),
+    )
+
+    diagnostic = RuntimeMonitor().summarize_marketplace_batch(batch)
+
+    assert diagnostic.failed_integrations == 1
+    assert diagnostic.executions[0].error_code == "TimeoutError"
+    assert diagnostic.executions[0].error_summary == "Marketplace polling failed."

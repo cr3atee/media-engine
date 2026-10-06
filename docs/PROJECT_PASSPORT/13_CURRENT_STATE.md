@@ -125,8 +125,9 @@ summarize enabled marketplace integration polling batches for safe operational
 diagnostics.
 The core readiness review is recorded in `docs/CORE_READINESS_REVIEW.md`:
 MediaEngine is ready as a reusable backend core, while public production launch
-still requires guarded live polling verification, secret retrieval,
-production AI wiring, and guarded live Telegram verification.
+still requires production polling monitoring, secret retrieval, production AI
+wiring, and guarded live Telegram verification. Guarded public-source polling
+itself is now verified against isolated PostgreSQL.
 
 ## Active Capabilities
 
@@ -342,8 +343,10 @@ production AI wiring, and guarded live Telegram verification.
   supported marketplace runner factories, register enabled integration
   execution, execute once, or run periodically.
 - Runtime polling diagnostics can report selected, executed, skipped
-  integrations, per-marketplace run counts, snapshot counts, price changes,
-  event counts, and sanitized error counts from the existing execution result.
+  and failed integrations, per-marketplace run counts, snapshot counts, price
+  changes, event counts, and sanitized error details from the existing
+  execution result. Latest success/failure metadata is durable on each
+  integration, and ordinary source failures no longer stop later integrations.
 - Market Terminal integration planning is documented: MediaEngine remains the
   backend core, while Market Terminal is the public visual product shell.
 - EPIC 19 has started with public consumer DTOs for product cards, product
@@ -472,8 +475,10 @@ production AI wiring, and guarded live Telegram verification.
 - Ingestion, scoring, and durable content processing are separate services and
   still require production process/bootstrap configuration.
 - Production deployment can now start from `scripts/run_mediaengine_worker.py`;
-  guarded live operational verification still needs to be executed before
-  unattended polling.
+  guarded public-source polling has passed against live GGSEL, Playerok, and
+  FunPay data in isolated PostgreSQL. Unattended polling still requires
+  production monitoring, alerting, deployment configuration, and credential
+  retrieval for authenticated sources.
 - Public Market Terminal integration still needs a frontend location decision
   for public launch and a product decision on category exposure. An embedded
   dependency-free `/terminal` shell now consumes `/api/v1/public` routes for
@@ -567,5 +572,6 @@ marketplace data reliability closure: GGSEL, Playerok, and FunPay are verified
 from real saved/live payloads as snapshot-ready, and a strict saved-payload
 drift guard is present. Runtime bootstrap/process helpers and the worker command
 now centralize repository scope, Scheduler construction, job registration, and
-safe shutdown. Production scheduling should still wait for guarded live polling
-verification.
+safe shutdown. Guarded live polling is verified; unattended production
+scheduling should still wait for monitoring, alerting, deployment
+configuration, and authenticated-source credential retrieval.

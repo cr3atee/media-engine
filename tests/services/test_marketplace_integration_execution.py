@@ -63,6 +63,14 @@ class RecordingRunner:
         return f"ran:{self._integration.marketplace}:{url}"
 
 
+class FailingRunner:
+    """Runner double used to verify per-integration failure isolation."""
+
+    async def run(self, url: str) -> object:
+        """Fail without exposing the source URL through diagnostics."""
+        raise RuntimeError(f"secret source failed: {url}")
+
+
 class RecordingExecutionService:
     """Service double used to verify Scheduler job delegation."""
 
@@ -194,3 +202,80 @@ def test_scheduler_job_delegates_to_enabled_integration_service() -> None:
 
     assert service.calls == 1
     assert job.status.state is JobExecutionState.SUCCEEDED
+
+
+def test_execution_service_isolates_failures_and_persists_outcomes() -> None:
+    provider = create_memory_provider()
+    calls: list[RunnerCall] = []
+    completed_at = NOW + timedelta(hours=1)
+
+    async def scenario() -> None:
+        await provider.tenants.create(
+            make_tenant(tenant_id=TENANT_A_ID, slug="tenant-a"),
+        )
+        failed = make_integration(number=7, marketplace="ggsel")
+        succeeded = make_integration(number=8, marketplace="playerok")
+        await provider.marketplace_integrations.save(failed)
+        await provider.marketplace_integrations.save(succeeded)
+
+        service = MarketplaceIntegrationExecutionService(
+            repository_scope_factory=create_memory_repository_scope(provider),
+            runner_factories={
+                "ggsel": lambda integration: FailingRunner(),
+                "playerok": lambda integration: RecordingRunner(integration, calls),
+            },
+            clock=lambda: completed_at,
+        )
+        batch = await service.run_enabled_integrations()
+
+        assert batch.selected_integrations == 2
+        assert batch.executed_integrations == 2
+        assert batch.skipped_integrations == 0
+        assert batch.failed_integrations == 1
+        assert batch.executions[0].error_code == "RuntimeError"
+        assert batch.executions[0].error_summary == "Marketplace polling failed."
+        assert batch.executions[1].succeeded is True
+        assert len(calls) == 1
+
+        stored_failed = await provider.marketplace_integrations.get_by_tenant_and_id(
+            TENANT_A_ID,
+            failed.id,
+        )
+        stored_succeeded = await provider.marketplace_integrations.get_by_tenant_and_id(
+            TENANT_A_ID,
+            succeeded.id,
+        )
+        assert stored_failed is not None
+        assert stored_failed.last_failed_run_at == completed_at
+        assert stored_failed.last_error_code == "RuntimeError"
+        assert stored_failed.last_error_summary == "Marketplace polling failed."
+        assert stored_failed.version == 2
+        assert stored_succeeded is not None
+        assert stored_succeeded.last_successful_run_at == completed_at
+        assert stored_succeeded.last_error_code is None
+        assert stored_succeeded.version == 2
+
+        recovered_at = completed_at + timedelta(hours=1)
+        recovery_service = MarketplaceIntegrationExecutionService(
+            repository_scope_factory=create_memory_repository_scope(provider),
+            runner_factories={
+                "ggsel": lambda integration: RecordingRunner(integration, calls),
+                "playerok": lambda integration: RecordingRunner(integration, calls),
+            },
+            clock=lambda: recovered_at,
+        )
+        recovery_batch = await recovery_service.run_enabled_integrations()
+        recovered = await provider.marketplace_integrations.get_by_tenant_and_id(
+            TENANT_A_ID,
+            failed.id,
+        )
+
+        assert recovery_batch.failed_integrations == 0
+        assert recovered is not None
+        assert recovered.last_failed_run_at == completed_at
+        assert recovered.last_successful_run_at == recovered_at
+        assert recovered.last_error_code is None
+        assert recovered.last_error_summary is None
+        assert recovered.version == 3
+
+    run_async(scenario())

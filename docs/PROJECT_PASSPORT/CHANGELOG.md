@@ -6,6 +6,12 @@ This document records notable Project Passport updates.
 
 ## Unreleased
 
+- Added per-integration marketplace polling failure isolation, sanitized durable
+  latest-outcome metadata, bounded Playerok GraphQL source configuration, and a
+  guarded live PostgreSQL verifier. The final PostgreSQL 17 run passed `22/22`
+  checks and persisted `60` GGSEL, `20` Playerok, and `1` FunPay offer plus
+  corresponding snapshots; Alembic head/check/offline SQL, full Pytest
+  (`466 passed, 58 skipped`), MyPy (`415` files), Ruff, and format passed.
 - Expanded aligned marketplace evidence with source IDs, prices, currencies,
   sellers, URLs, and deterministic top-five candidates for every source pair.
   A live run covered `1,426` offers and `108,880` pairs without changing

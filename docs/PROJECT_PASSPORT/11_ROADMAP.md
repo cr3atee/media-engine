@@ -285,6 +285,10 @@ This document tracks only work that is reflected by the current repository state
   diagnostics now retain source IDs, prices, currencies, sellers, and URLs and
   show top-five candidates for every marketplace pair. Plausible pairs remain
   unapproved until a human verifies edition, platform, region, and delivery.
+- EPIC 19 Task 47 guarded live marketplace polling: the production worker
+  composition passed `22/22` checks against live public GGSEL, Playerok, and
+  FunPay data in isolated PostgreSQL 17. Integration failures are isolated,
+  sanitized outcomes are durable, and fresh-engine persistence is verified.
 
 ## Current Status
 
@@ -314,14 +318,15 @@ public query adapter foundations. Default FastAPI bootstrap now wires public
 reads to a PostgreSQL-backed repository scope. Saved marketplace payloads verify
 through the public route/DTO layer for product cards, details, offers,
 comparisons, and price history. The first embedded `/terminal` visual shell is
-available for API contract validation. The remaining work before production
-polling is guarded live operational verification and explicit runtime
-integration configuration; the remaining work before public visual launch is
-frontend hardening plus a product decision on category data exposure.
+available for API contract validation. Guarded public-source polling is now
+live-verified; unattended production polling still requires deployment
+configuration, monitoring/alerting, and credential retrieval for authenticated
+sources. The remaining work before public visual launch is frontend hardening
+plus a product decision on category data exposure.
 
 ## Not Present Yet
 
-- Live marketplace polling monitoring for scheduled production ingestion.
+- Production monitoring, alerting, and retained polling-run history.
 - Optional guarded live Telegram test-chat message.
 - Production AI provider integration in the pipeline.
 - Live marketplace credential storage and credential retrieval for execution.

@@ -117,8 +117,10 @@ Important gaps:
 - UI account/favorites/notifications from the brief are not implemented as a
   consumer product feature.
 - AI currently supports generated content flows, not a general product Q&A chat.
-- Live marketplace credential retrieval and unattended production polling still
-  require guarded operational verification.
+- Guarded public-source polling is live-verified through the production worker
+  composition. Unattended production polling still requires monitoring,
+  deployment configuration, and credential retrieval for authenticated
+  sources.
 - Lolz appears in the product brief, but the current backend supports GGSEL,
   Playerok, and FunPay readiness. Lolz should be treated as a future marketplace
   adapter unless explicitly implemented later.

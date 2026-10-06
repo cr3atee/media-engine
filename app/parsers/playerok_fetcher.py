@@ -1,5 +1,8 @@
 from __future__ import annotations
 
+from dataclasses import dataclass
+from urllib.parse import parse_qs, urlsplit
+
 import httpx
 
 from app.core.http_client import HttpClient
@@ -7,6 +10,14 @@ from app.core.http_client import HttpClient
 
 class PlayerokFetchError(RuntimeError):
     """Raised when a raw Playerok response cannot be downloaded."""
+
+
+@dataclass(slots=True, frozen=True)
+class _GraphQLParameters:
+    first: int
+    after: str | None
+    game_id: str | None
+    game_category_id: str | None
 
 
 class PlayerokFetcher:
@@ -87,8 +98,14 @@ query items(
         self.last_content_type = None
         self.last_diagnostic = None
 
-        if url == self.GRAPHQL_URL:
-            return await self.fetch_items()
+        graphql_parameters = self._graphql_parameters(url)
+        if graphql_parameters is not None:
+            return await self.fetch_items(
+                first=graphql_parameters.first,
+                after=graphql_parameters.after,
+                game_id=graphql_parameters.game_id,
+                game_category_id=graphql_parameters.game_category_id,
+            )
 
         try:
             response = await self._http_client.get(url, headers=self.DEFAULT_HEADERS)
@@ -97,6 +114,48 @@ query items(
             raise PlayerokFetchError(msg) from exc
 
         return self._read_response(response)
+
+    def _graphql_parameters(self, url: str) -> _GraphQLParameters | None:
+        configured = urlsplit(url)
+        endpoint = urlsplit(self.GRAPHQL_URL)
+        if (
+            configured.scheme,
+            configured.netloc,
+            configured.path,
+        ) != (endpoint.scheme, endpoint.netloc, endpoint.path):
+            return None
+
+        values = parse_qs(configured.query, keep_blank_values=True)
+        allowed = {"first", "after", "game_id", "game_category_id"}
+        unknown = set(values) - allowed
+        if unknown:
+            names = ", ".join(sorted(unknown))
+            raise PlayerokFetchError(
+                f"Unsupported Playerok GraphQL source parameters: {names}"
+            )
+        if any(len(items) != 1 for items in values.values()):
+            raise PlayerokFetchError(
+                "Playerok GraphQL source parameters must not be repeated"
+            )
+
+        first_value = _optional_parameter(values, "first")
+        try:
+            first = 20 if first_value is None else int(first_value)
+        except ValueError as exc:
+            raise PlayerokFetchError(
+                "Playerok GraphQL first parameter must be an integer"
+            ) from exc
+        if not 1 <= first <= 100:
+            raise PlayerokFetchError(
+                "Playerok GraphQL first parameter must be between 1 and 100"
+            )
+
+        return _GraphQLParameters(
+            first=first,
+            after=_optional_parameter(values, "after"),
+            game_id=_optional_parameter(values, "game_id"),
+            game_category_id=_optional_parameter(values, "game_category_id"),
+        )
 
     async def fetch_items(
         self,
@@ -160,3 +219,13 @@ query items(
             raise PlayerokFetchError(msg)
 
         return response.text
+
+
+def _optional_parameter(values: dict[str, list[str]], name: str) -> str | None:
+    parameter = values.get(name)
+    if parameter is None:
+        return None
+    value = parameter[0].strip()
+    if not value:
+        raise PlayerokFetchError(f"Playerok GraphQL {name} parameter must not be empty")
+    return value

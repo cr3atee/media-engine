@@ -10,7 +10,7 @@ This document lists only confirmed work remaining after EPIC 17 completion.
   links. Current saved real payloads have no `AUTO_MATCH` or `REVIEW` result
   across `1,280` cross-marketplace title pairs, so weakening matching thresholds
   or inventing preview links is not acceptable. Equivalent Minecraft key
-  categories are now live-verified for all three sources, but all `106,240`
+  categories are now live-verified for all three sources, but all `108,880`
   aligned-category pairs remain below `REVIEW`. Use the tenant-scoped
   `CanonicalOfferLinkService` to populate only reviewed exact variants. The
   PostgreSQL schema now prevents cross-tenant canonical links; catalog
@@ -40,8 +40,6 @@ This document lists only confirmed work remaining after EPIC 17 completion.
 - Add PostgreSQL-specific public query adapters only if direct SQL read
   optimization is explicitly approved after the repository-backed adapter is
   exercised.
-- Run guarded live polling verification around the production worker command
-  before unattended scheduled ingestion.
 - Add live marketplace polling monitoring and production runtime integration
   configuration before relying on GGSEL, Playerok, or FunPay for scheduled
   ingestion.
@@ -60,17 +58,17 @@ This document lists only confirmed work remaining after EPIC 17 completion.
 
 ## Operational
 
-- Add persisted runtime diagnostics for worker command failures, skipped
-  integrations, and marketplace source drift after the in-process diagnostic
-  boundary is exercised live.
+- Add retained per-run diagnostics and alert routing for worker failures,
+  skipped integrations, and marketplace source drift. Current integration
+  metadata retains only the latest successful/failed outcome.
 - Add production monitoring and alerting for exhausted content attempts and
   ambiguous publications.
 
 ## Known Marketplace Gap
 
-- GGSEL, Playerok, and FunPay are ready from current real captured-response
-  proof and strict saved-payload verification. Production scheduling still needs
-  live polling monitoring.
+- GGSEL, Playerok, and FunPay are ready from captured-response proof, strict
+  saved-payload verification, and guarded live polling verification. Production
+  scheduling still needs monitoring, alerting, and deployment configuration.
 - Real source extraction readiness does not imply same-product comparison
   readiness. The current saved payloads contain `81` snapshot-ready offers but
   no deterministic cross-marketplace match under the existing confidence rules.

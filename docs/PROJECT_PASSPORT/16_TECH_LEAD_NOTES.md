@@ -217,6 +217,17 @@ This document captures architecture notes that are important for future reviews.
   tenant/marketplace/external-ID offer lock before its candidate-pair lock.
   Product-specific pair locks alone do not prevent two explicit commands from
   racing to assign different products.
+- Enabled marketplace polling isolates ordinary exceptions per integration so
+  one source cannot prevent later sources from running. It persists only safe
+  latest-outcome metadata; cancellation and repository failures still propagate
+  to Scheduler ownership rather than being swallowed.
+- Playerok runtime category scope is encoded only through allowlisted query
+  parameters on the known GraphQL endpoint. Do not turn integration source URLs
+  into arbitrary request configuration or credential transport.
+- Guarded live polling passed for GGSEL, Playerok, and FunPay through the
+  production worker composition. Transient source failures were observed, so
+  production operation still needs retained run history and alerting rather
+  than assuming every external source succeeds on every tick.
 
 ## Review Notes
 

@@ -120,11 +120,13 @@ def _print_marketplace_result(process: RuntimeProcess, job_name: str) -> None:
     print(f"Selected integrations: {diagnostic.selected_integrations}")
     print(f"Executed integrations: {diagnostic.executed_integrations}")
     print(f"Skipped integrations: {diagnostic.skipped_integrations}")
+    print(f"Failed integrations: {diagnostic.failed_integrations}")
     for execution in diagnostic.executions:
         print(
             f"{execution.marketplace}: executed={execution.executed} "
             f"source_url_present={execution.source_url_present} "
-            f"skipped={execution.skipped_reason} result={execution.result_type}"
+            f"skipped={execution.skipped_reason} result={execution.result_type} "
+            f"error={execution.error_code}"
         )
         if execution.run is not None:
             print(

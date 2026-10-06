@@ -5,6 +5,7 @@ from decimal import Decimal
 from typing import cast
 
 import httpx
+import pytest
 
 from app.core.http_client import HttpClient
 from app.parsers.playerok_extractor import PlayerokExtractor
@@ -225,6 +226,59 @@ def test_playerok_fetcher_scopes_items_to_game_category() -> None:
         "pagination": {"first": 10, "after": "next-page"},
         "showForbiddenImage": True,
     }
+
+
+def test_playerok_fetcher_reads_category_scope_from_source_url() -> None:
+    """Runtime source URLs can configure the existing bounded items query."""
+    fake_client = _FakeHttpClient(
+        httpx.Response(200, json={"data": {"items": {"edges": []}}}),
+    )
+    fetcher = PlayerokFetcher(cast(HttpClient, fake_client))
+
+    asyncio.run(
+        fetcher.fetch(
+            f"{PlayerokFetcher.GRAPHQL_URL}?first=10&game_id=minecraft-game"
+            "&game_category_id=minecraft-keys"
+        )
+    )
+
+    payload = fake_client.posts[0]["json"]
+    assert isinstance(payload, dict)
+    assert payload["variables"] == {
+        "filter": {
+            "status": ["APPROVED"],
+            "gameId": "minecraft-game",
+            "gameCategoryId": "minecraft-keys",
+        },
+        "pagination": {"first": 10, "after": None},
+        "showForbiddenImage": True,
+    }
+
+
+@pytest.mark.parametrize(
+    ("query", "message"),
+    [
+        ("token=secret", "Unsupported Playerok GraphQL source parameters: token"),
+        ("first=10&first=20", "parameters must not be repeated"),
+        ("game_id=", "game_id parameter must not be empty"),
+        ("first=many", "first parameter must be an integer"),
+        ("first=0", "first parameter must be between 1 and 100"),
+    ],
+)
+def test_playerok_fetcher_rejects_invalid_source_url_parameters(
+    query: str,
+    message: str,
+) -> None:
+    """Unknown runtime parameters fail closed instead of changing the request."""
+    fetcher = PlayerokFetcher(
+        cast(
+            HttpClient,
+            _FakeHttpClient(httpx.Response(200, json={"data": {"items": {}}})),
+        )
+    )
+
+    with pytest.raises(PlayerokFetchError, match=message):
+        asyncio.run(fetcher.fetch(f"{PlayerokFetcher.GRAPHQL_URL}?{query}"))
 
 
 def test_playerok_fetcher_rejects_empty_response() -> None:

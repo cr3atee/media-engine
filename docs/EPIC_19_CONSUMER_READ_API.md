@@ -87,6 +87,12 @@ scope using the existing `RepositoryProvider` and repository-backed public read
 adapter. Tests can still pass `public_read_repository_scope_factory=None` to
 verify safe `public_read_api_unavailable` behavior explicitly.
 
+Task 47 is complete: the production worker composition has been exercised
+against live public GGSEL, Playerok, and FunPay sources with an isolated
+PostgreSQL 17 database. Per-integration failures no longer abort later sources,
+safe success/failure metadata is durable, and a bounded Playerok category can be
+configured through an allowlisted GraphQL source URL.
+
 No PostgreSQL-specific direct SQL public query adapter has been implemented.
 An early embedded `/terminal` frontend shell now exists for validating the
 public read API contract, but it is not yet a production frontend commitment.
@@ -1446,6 +1452,52 @@ Verification:
   LINK` and leaves plausible base-edition pairs explicitly unapproved.
 - Focused tests pass `4/4`; full Pytest passes `458` tests with `58` expected
   skips, MyPy checks `414` source files, and Ruff/Ruff format pass.
+
+### Task 47: Guarded Live Marketplace Polling Verification
+
+Exercise the production worker composition with live public marketplace data
+while keeping failures isolated, diagnostics redacted, and persistence confined
+to an explicitly isolated database.
+
+Acceptance criteria:
+
+- One failed integration does not prevent later enabled integrations from
+  running in the same polling batch.
+- Existing integration metadata records successful and failed run timestamps,
+  safe error codes, a constant redacted summary, and a monotonic version.
+- Playerok runtime source URLs may configure only `first`, `after`, `game_id`,
+  and `game_category_id` for the existing GraphQL items operation; unknown,
+  repeated, empty, or out-of-range parameters fail closed.
+- A guarded verifier accepts only an `epic19_polling_*` PostgreSQL database,
+  uses the existing Scheduler, worker, pipeline, and repository composition,
+  and requires live snapshot-ready output from GGSEL, Playerok, and FunPay.
+- No credential, parser, matching, comparator, catalog, Telegram, or AI behavior
+  is introduced.
+
+Status:
+
+- Complete.
+
+Verification:
+
+- `scripts/verify_live_marketplace_polling_postgres.py` passes `22/22` checks
+  against an isolated PostgreSQL 17 database.
+- One live Scheduler tick persisted `60` GGSEL, `20` Playerok, and `1` FunPay
+  offer with the same number of price snapshots.
+- An intentional failure containing private-looking input remained sanitized
+  and did not stop the three real marketplace executions.
+- Successful and failed integration outcomes survived a fresh engine; Scheduler
+  reported the batch as successful while runtime diagnostics retained the
+  isolated integration failure count.
+- Alembic remained at `0016_canonical_offer_decisions (head)`; `check` and full
+  offline SQL generation passed with no migration required.
+- Focused polling/fetcher/runtime tests pass `24/24`; full Pytest passes `466`
+  tests with `58` expected skips, MyPy checks `415` source files, and Ruff plus
+  Ruff format pass for every touched Python file.
+- Earlier live attempts observed transient Playerok and FunPay transport
+  failures. The bounded verifier can exercise up to three separate Scheduler
+  ticks and requires every real source to succeed at least once; it does not
+  conceal failed attempts or add a service-layer retry policy.
 
 ## Deferred Runtime Constraint
 
