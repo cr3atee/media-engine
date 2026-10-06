@@ -232,6 +232,14 @@ This document captures architecture notes that are important for future reviews.
 - Polling history deliberately excludes source URLs, credential references, and
   raw exception messages. Add exporters or alerts from the safe repository/API
   projection; do not weaken this redaction boundary.
+- The core release gate is intentionally a subprocess coordinator over existing
+  verifiers. Keep it free of domain logic and live-network behavior. Its local
+  database-name guard permits the public UI and polling-history verifiers to
+  reuse one disposable PostgreSQL database sequentially.
+- Backend core release-candidate status does not approve canonical links.
+  Human-reviewed product identity, production operations, and public UX remain
+  separate launch concerns and must not trigger threshold weakening or a core
+  redesign.
 
 ## Review Notes
 

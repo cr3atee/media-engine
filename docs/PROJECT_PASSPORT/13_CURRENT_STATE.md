@@ -112,6 +112,14 @@ readiness verifier reports snapshot-ready offers.
 The strict saved-payload drift guard now verifies GGSEL, Playerok, and FunPay
 with non-zero exit behavior and confirms all three sources are currently
 snapshot-ready from saved real payloads.
+The repeatable core release gate now composes saved-payload contracts,
+repository-backed public UI verification, PostgreSQL public reads, and durable
+polling history. Its final isolated PostgreSQL 17.10 run passed all `4/4`
+stages, including `63/63` public UI and `25/25` polling-history checks. Full
+Pytest passes `477` tests with `58` expected skips and MyPy checks `424` source
+files. This establishes backend core release-candidate status without claiming
+unverified cross-marketplace product identity or unattended public launch
+readiness.
 Runtime bootstrap factories now expose memory/PostgreSQL repository scopes and
 Scheduler construction as a single reusable composition boundary for future
 process entrypoints.

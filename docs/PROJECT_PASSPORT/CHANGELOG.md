@@ -6,6 +6,12 @@ This document records notable Project Passport updates.
 
 ## Unreleased
 
+- Added a repeatable backend core release gate that delegates to existing
+  saved-payload, public UI, PostgreSQL persistence, and polling-history
+  verifiers without live marketplace, Telegram, or AI calls. The final
+  PostgreSQL 17.10 run passed `4/4` stages (`63/63` public UI and `25/25`
+  polling history); Alembic lifecycle, full Pytest (`477 passed, 58 skipped`),
+  MyPy (`424` files), Ruff, and format passed.
 - Added immutable tenant-scoped marketplace polling history, memory/PostgreSQL
   repository parity, atomic latest-outcome updates, and a bounded seller read
   endpoint. Migration `0017_marketplace_polling_runs` and its isolated

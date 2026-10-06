@@ -1529,6 +1529,40 @@ Verification:
 - Focused tests pass `26/26`; full Pytest passes `471` tests with `58` expected
   skips, MyPy checks `422` source files, and Ruff plus Ruff format pass.
 
+### Task 49: Core Release Candidate Gate
+
+Provide one repeatable verification command for the current backend core
+without duplicating verifier logic or performing volatile live-network checks.
+
+Acceptance criteria:
+
+- Offline mode reuses the saved marketplace payload and repository-backed
+  public UI verifiers.
+- Full mode additionally reuses the PostgreSQL public UI and durable polling
+  history verifiers.
+- Full mode accepts only an explicitly isolated local PostgreSQL database.
+- No live marketplace, Telegram, AI, matching, catalog, or business behavior is
+  added to the coordinator.
+- The result distinguishes backend core readiness from public launch readiness
+  and does not infer cross-marketplace product identity.
+
+Status:
+
+- Complete.
+
+Verification:
+
+- `scripts/verify_core_release_readiness.py` passed all `4/4` stages against
+  isolated PostgreSQL 17.10.
+- The delegated PostgreSQL checks passed `63/63` for public UI persistence and
+  `25/25` for durable polling history.
+- Alembic current/check, downgrade/re-upgrade, and offline SQL passed at
+  `0017_marketplace_polling_runs`.
+- Focused tests pass `13/13`; full Pytest passes `477` tests with `58` expected
+  skips, MyPy checks `424` source files, and focused Ruff/format checks pass.
+- Detailed release boundaries are recorded in
+  `docs/CORE_RELEASE_READINESS.md`.
+
 ## Deferred Runtime Constraint
 
 The repository-backed public read adapter currently returns bounded first

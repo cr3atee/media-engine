@@ -2,7 +2,8 @@
 
 ## Purpose
 
-This document lists only confirmed work remaining after EPIC 17 completion.
+This document lists only confirmed work remaining after backend core release
+candidate verification.
 
 ## Immediate
 
@@ -73,3 +74,12 @@ This document lists only confirmed work remaining after EPIC 17 completion.
 - Real source extraction readiness does not imply same-product comparison
   readiness. The current saved payloads contain `81` snapshot-ready offers but
   no deterministic cross-marketplace match under the existing confidence rules.
+
+## Release Candidate Boundary
+
+- The backend core release gate is complete and repeatable. Do not reopen core
+  architecture merely to address catalog population, deployment configuration,
+  monitoring, frontend ownership, or category-exposure product decisions.
+- A public launch remains blocked by the immediate and operational items above;
+  release-candidate status must not be presented as an unattended production
+  launch.

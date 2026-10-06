@@ -293,6 +293,10 @@ This document tracks only work that is reflected by the current repository state
   integration now retains a tenant-scoped succeeded, failed, or skipped run;
   latest outcome and immutable history commit atomically. PostgreSQL 17
   verification passes `25/25` checks at migration `0017_marketplace_polling_runs`.
+- EPIC 19 Task 49 core release candidate gate: one guarded command composes
+  saved-payload, public UI, PostgreSQL persistence, fresh-session, rollback, and
+  polling-history verification without live marketplace, Telegram, or AI calls.
+  The full gate passes `4/4` stages on PostgreSQL 17.10.
 
 ## Current Status
 
@@ -325,8 +329,10 @@ comparisons, and price history. The first embedded `/terminal` visual shell is
 available for API contract validation. Guarded public-source polling and durable
 per-integration history are now verified; unattended production polling still
 requires deployment configuration, alert routing, and credential retrieval for
-authenticated sources. The remaining work before public visual launch is frontend hardening
-plus a product decision on category data exposure.
+authenticated sources. The backend core is now a verified release candidate.
+The remaining work before public visual launch is human-approved catalog
+onboarding, production monitoring/deployment configuration, frontend hardening,
+and a product decision on category data exposure.
 
 ## Not Present Yet
 
