@@ -19,8 +19,11 @@ from app.api.schemas.canonical_offer_reviews import (
     CanonicalProductProposalConfirmationResponse,
     CanonicalProductProposalResolutionResponse,
     CanonicalProductProposalResponse,
+    CatalogOnboardingSummaryResponse,
+    CatalogOnboardingWorkspaceResponse,
     ConfirmCanonicalOfferRequest,
     ConfirmCanonicalProductProposalRequest,
+    MarketplaceCatalogOnboardingSummaryResponse,
     RejectCanonicalOfferRequest,
     ResolveCanonicalProductProposalRequest,
 )
@@ -46,6 +49,8 @@ from app.services.canonical_offer_review_queue import (
     CanonicalOfferReviewCandidate,
     CanonicalOfferReviewQueueService,
     CanonicalProductProposal,
+    CatalogOnboardingSummary,
+    CatalogOnboardingWorkspace,
 )
 from app.services.canonical_product_proposals import (
     CanonicalProductProposalConfirmationResult,
@@ -67,6 +72,39 @@ CatalogReviewTenant = Annotated[
     TenantContext,
     Depends(require_tenant_permission(Permission.CATALOG_REVIEW)),
 ]
+
+
+@router.get(
+    "/onboarding-summary",
+    response_model=CatalogOnboardingSummaryResponse,
+)
+async def get_catalog_onboarding_summary(
+    context: CatalogReviewTenant,
+    service: Annotated[
+        CanonicalOfferReviewQueueService,
+        Depends(get_canonical_offer_review_queue_service),
+    ],
+) -> CatalogOnboardingSummaryResponse:
+    """Return complete onboarding progress for the authorized tenant."""
+    summary = await service.get_onboarding_summary(context.tenant.id)
+    return _onboarding_summary_response(summary)
+
+
+@router.get(
+    "/onboarding-workspace",
+    response_model=CatalogOnboardingWorkspaceResponse,
+)
+async def get_catalog_onboarding_workspace(
+    context: CatalogReviewTenant,
+    service: Annotated[
+        CanonicalOfferReviewQueueService,
+        Depends(get_canonical_offer_review_queue_service),
+    ],
+    limit: Annotated[int, Query(ge=1, le=200)] = 100,
+) -> CatalogOnboardingWorkspaceResponse:
+    """Return one consistent summary and bounded queues for the workspace."""
+    workspace = await service.get_onboarding_workspace(context.tenant.id)
+    return _onboarding_workspace_response(workspace, limit=limit)
 
 
 @router.get(
@@ -369,6 +407,51 @@ def _candidate_response(
         canonical_product_category=product.category,
         similarity=candidate.similarity,
         match_decision=candidate.match_decision,
+    )
+
+
+def _onboarding_summary_response(
+    summary: CatalogOnboardingSummary,
+) -> CatalogOnboardingSummaryResponse:
+    return CatalogOnboardingSummaryResponse(
+        total_offers=summary.total_offers,
+        linked_offers=summary.linked_offers,
+        unresolved_offers=summary.unresolved_offers,
+        review_candidates=summary.review_candidates,
+        product_proposals=summary.product_proposals,
+        unqueued_offers=summary.unqueued_offers,
+        canonical_products=summary.canonical_products,
+        terminal_decisions=summary.terminal_decisions,
+        marketplaces=tuple(
+            MarketplaceCatalogOnboardingSummaryResponse(
+                marketplace=item.marketplace,
+                total_offers=item.total_offers,
+                linked_offers=item.linked_offers,
+                unresolved_offers=item.unresolved_offers,
+                review_candidates=item.review_candidates,
+                product_proposals=item.product_proposals,
+                unqueued_offers=item.unqueued_offers,
+            )
+            for item in summary.marketplaces
+        ),
+    )
+
+
+def _onboarding_workspace_response(
+    workspace: CatalogOnboardingWorkspace,
+    *,
+    limit: int,
+) -> CatalogOnboardingWorkspaceResponse:
+    return CatalogOnboardingWorkspaceResponse(
+        summary=_onboarding_summary_response(workspace.summary),
+        review_candidates=tuple(
+            _candidate_response(candidate)
+            for candidate in workspace.review_candidates[:limit]
+        ),
+        product_proposals=tuple(
+            _proposal_response(proposal)
+            for proposal in workspace.product_proposals[:limit]
+        ),
     )
 
 

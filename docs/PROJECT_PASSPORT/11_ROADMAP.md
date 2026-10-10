@@ -297,6 +297,11 @@ This document tracks only work that is reflected by the current repository state
   saved-payload, public UI, PostgreSQL persistence, fresh-session, rollback, and
   polling-history verification without live marketplace, Telegram, or AI calls.
   The full gate passes `4/4` stages on PostgreSQL 17.10.
+- EPIC 20 Task 1 guarded catalog-onboarding progress: the authenticated review
+  workspace now exposes complete tenant and per-marketplace counts plus bounded
+  actionable queues from one consistent repository snapshot and matching pass.
+  Isolated PostgreSQL 17.10 verification passes `21/21` without changing
+  thresholds or creating automatic links.
 
 ## Current Status
 
@@ -330,9 +335,10 @@ available for API contract validation. Guarded public-source polling and durable
 per-integration history are now verified; unattended production polling still
 requires deployment configuration, alert routing, and credential retrieval for
 authenticated sources. The backend core is now a verified release candidate.
-The remaining work before public visual launch is human-approved catalog
-onboarding, production monitoring/deployment configuration, frontend hardening,
-and a product decision on category data exposure.
+The remaining work before public visual launch is execution of human-approved
+catalog onboarding through the now measurable operator workspace, production
+monitoring/deployment configuration, frontend hardening, and a product decision
+on category data exposure.
 
 ## Not Present Yet
 
@@ -346,7 +352,8 @@ and a product decision on category data exposure.
 
 **Guarded production catalog onboarding.**
 
-Use the completed authenticated review workspace to populate an initial
-tenant-owned canonical catalog and exact marketplace links from human-verified
-evidence. Record operational results and source coverage; do not invent links,
-bulk-confirm `NO_MATCH` offers, or lower automatic matching thresholds.
+Use the completed authenticated review workspace and its complete progress
+summary to process a bounded initial batch of tenant-owned canonical products
+and exact marketplace links from human-verified evidence. Record operational
+results and source coverage; do not invent links, bulk-confirm `NO_MATCH`
+offers, or lower automatic matching thresholds.

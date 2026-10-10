@@ -125,6 +125,16 @@
       >
         <div class="review-metrics" aria-label="Состояние очередей">
           <article class="review-metric glass">
+            <span>Объявления</span>
+            <strong id="offerCount">0</strong>
+            <small>получено из маркетплейсов</small>
+          </article>
+          <article class="review-metric glass">
+            <span>Связано</span>
+            <strong id="linkedOfferCount">0</strong>
+            <small>подтверждено в каталоге</small>
+          </article>
+          <article class="review-metric glass">
             <span>Нужна проверка</span>
             <strong id="candidateCount">0</strong>
             <small>кандидатов совпадения</small>
@@ -140,6 +150,18 @@
             <small>данные изолированы по продавцу</small>
           </article>
         </div>
+
+        <div class="onboarding-facts glass" aria-label="Прогресс каталога">
+          <span><strong id="canonicalProductCount">0</strong> товаров</span>
+          <span><strong id="decisionCount">0</strong> решений</span>
+          <span><strong id="unqueuedOfferCount">0</strong> вне очередей</span>
+        </div>
+
+        <div
+          class="marketplace-progress"
+          id="marketplaceProgress"
+          aria-label="Прогресс по маркетплейсам"
+        ></div>
 
         <p
           class="workspace-message"

@@ -448,6 +448,12 @@ itself is now verified against isolated PostgreSQL.
   pairings. The latest run evaluates `108,880` aligned pairs and exposes full
   source context, while preserving `NO_MATCH` for every pair and persisting no
   human decision.
+- EPIC 20 Task 1 adds complete catalog-onboarding progress and one consistent
+  workspace projection. Authorized operators can see full tenant and
+  per-marketplace totals, linked and unresolved offers, actionable queues,
+  unqueued records, canonical products, and immutable decisions without
+  triggering writes. The PostgreSQL verifier passes `21/21` at Alembic head
+  `0017_marketplace_polling_runs`.
 
 ## Known Gaps
 
@@ -477,7 +483,10 @@ itself is now verified against isolated PostgreSQL.
   expose those `NO_MATCH` offers for catalog bootstrap, atomically confirm new
   canonical products, or resolve a proposal to its displayed existing nearest
   product with immutable human evidence. The authenticated operator workflow
-  is available, but a production-reviewed link set is not populated yet.
+  is available, but a production-reviewed link set is not populated yet. The
+  workspace now exposes complete onboarding progress separately from its
+  bounded queue payloads, so this remaining operational gap is measurable
+  without fabricating matches.
 - Snapshot creation is skipped when parsed offers from any marketplace do not
   contain normalized price and currency.
 - Ingestion, scoring, and durable content processing are separate services and

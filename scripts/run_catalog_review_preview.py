@@ -149,29 +149,31 @@ async def verify_preview(
             f"/api/v1/tenants/{TENANT_ID}/context",
             headers=headers,
         )
-        candidates = await client.get(
-            f"/api/v1/tenants/{TENANT_ID}/catalog/review-candidates",
-            headers=headers,
-        )
-        proposals = await client.get(
-            f"/api/v1/tenants/{TENANT_ID}/catalog/product-proposals",
+        workspace = await client.get(
+            f"/api/v1/tenants/{TENANT_ID}/catalog/onboarding-workspace?limit=100",
             headers=headers,
         )
 
-    responses = (document, profile, context, candidates, proposals)
+    responses = (document, profile, context, workspace)
     if any(response.status_code != 200 for response in responses):
         statuses = ", ".join(str(response.status_code) for response in responses)
         raise RuntimeError(f"Preview read path failed with statuses: {statuses}.")
     if "catalog_review" not in context.json()["permissions"]:
         raise RuntimeError("Preview reviewer does not have catalog_review permission.")
-    candidate_count = len(candidates.json())
-    proposal_count = len(proposals.json())
+    workspace_body = workspace.json()
+    candidate_count = len(workspace_body["review_candidates"])
+    proposal_count = len(workspace_body["product_proposals"])
     if candidate_count != expected_candidates or proposal_count != expected_proposals:
         raise RuntimeError(
             "Preview queue mismatch: "
             f"expected {expected_candidates}/{expected_proposals}, "
             f"got {candidate_count}/{proposal_count}."
         )
+    summary_body = workspace_body["summary"]
+    if summary_body["review_candidates"] != expected_candidates:
+        raise RuntimeError("Preview summary candidate count does not match queue.")
+    if summary_body["product_proposals"] != expected_proposals:
+        raise RuntimeError("Preview summary proposal count does not match queue.")
     return candidate_count, proposal_count
 
 

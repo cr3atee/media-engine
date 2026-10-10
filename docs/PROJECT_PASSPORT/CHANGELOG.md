@@ -6,6 +6,13 @@ This document records notable Project Passport updates.
 
 ## Unreleased
 
+- Added EPIC 20 Task 1 guarded catalog-onboarding progress: complete tenant and
+  per-marketplace summary DTOs, protected summary/workspace routes, and Market
+  Terminal progress rendering from one repository state and matching pass. The
+  isolated PostgreSQL 17.10 verifier passed `21/21`; full Pytest (`479 passed,
+  58 skipped`), MyPy (`425` files), Ruff, format, JavaScript syntax, Alembic
+  current/check, and offline SQL passed without changing matching thresholds or
+  creating automatic links.
 - Added a repeatable backend core release gate that delegates to existing
   saved-payload, public UI, PostgreSQL persistence, and polling-history
   verifiers without live marketplace, Telegram, or AI calls. The final

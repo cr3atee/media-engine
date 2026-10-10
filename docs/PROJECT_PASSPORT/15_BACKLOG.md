@@ -32,7 +32,11 @@ candidate verification.
   recovery. Use the review workspace to make evidence-backed catalog decisions,
   then populate production only through explicitly approved operator actions
   and record source coverage. The current live candidate evidence is recorded
-  in `docs/CATALOG_REVIEW_EVIDENCE.md`; all candidates remain unapproved.
+  in `docs/CATALOG_REVIEW_EVIDENCE.md`; all candidates remain unapproved. The
+  workspace now reports complete tenant and per-marketplace onboarding progress
+  from one consistent state, including unresolved records outside actionable
+  queues. Execute a bounded human-reviewed batch next; do not infer completion
+  from the queue page limit.
 - Decide whether the embedded Market Terminal shell remains inside this
   repository or moves to a separate frontend project before public launch.
 - Decide whether public category browse must require parser/category retention

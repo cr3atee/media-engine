@@ -165,6 +165,9 @@ def test_market_terminal_catalog_review_workspace_is_served() -> None:
         assert 'autocomplete="username"' in response.text
         assert 'autocomplete="current-password"' in response.text
         assert 'id="tenantSelect"' in response.text
+        assert 'id="offerCount"' in response.text
+        assert 'id="linkedOfferCount"' in response.text
+        assert 'id="marketplaceProgress"' in response.text
         assert 'id="reviewCandidates"' in response.text
         assert 'id="productProposals"' in response.text
         assert 'aria-busy="false"' in response.text
@@ -195,8 +198,9 @@ def test_market_terminal_catalog_review_assets_are_served() -> None:
     assert '"/auth/refresh"' in script.text
     assert '"/auth/logout"' in script.text
     assert 'requestJson("/me")' in script.text
-    assert "/catalog/review-candidates?limit=100" in script.text
-    assert "/catalog/product-proposals?limit=100" in script.text
+    assert "/catalog/onboarding-workspace?limit=100" in script.text
+    assert "function renderOnboardingSummary(summary)" in script.text
+    assert "function marketplaceProgressCard(summary)" in script.text
     assert "`/catalog/reviews/${endpoint}`" in script.text
     assert "let endpoint = `${base}/confirm`;" in script.text
     assert "endpoint = `${base}/resolve-existing`;" in script.text

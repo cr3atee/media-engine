@@ -206,6 +206,13 @@ This document captures architecture notes that are important for future reviews.
   catalog import command. It may re-scope captured offers to its memory tenant,
   but it must not pre-seed canonical products, aliases, links, or human review
   evidence.
+- Catalog-onboarding progress is a complete read projection, while candidate
+  and proposal payloads are bounded. The combined workspace must derive both
+  from one loaded repository state and one matching pass; do not restore
+  multiple browser requests that independently recompute the full catalog.
+- `unqueued_offers` is an observability count, not an action or approval. It
+  keeps automatic-confidence and incomplete unresolved records visible without
+  silently linking them or weakening review policy.
 - PostgreSQL catalog onboarding is now verified through the existing repository
   scope with exact replay and rollback guarantees. Keep ingestion separate from
   human catalog decisions: persistence of an offer is never evidence that two

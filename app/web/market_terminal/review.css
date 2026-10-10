@@ -257,7 +257,7 @@
 
 .review-metrics {
   display: grid;
-  grid-template-columns: 0.75fr 0.75fr 1.5fr;
+  grid-template-columns: repeat(4, minmax(0, 0.75fr)) minmax(0, 1.4fr);
   gap: 12px;
 }
 
@@ -298,6 +298,52 @@
   background:
     linear-gradient(115deg, rgba(103, 217, 196, 0.17), transparent 55%),
     var(--glass-strong);
+}
+
+.onboarding-facts,
+.marketplace-progress-card {
+  border-radius: 18px;
+}
+
+.onboarding-facts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px 24px;
+  padding: 14px 18px;
+  color: var(--muted);
+  font-size: 0.82rem;
+}
+
+.onboarding-facts strong {
+  color: var(--text);
+}
+
+.marketplace-progress {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+  gap: 12px;
+}
+
+.marketplace-progress-card {
+  display: grid;
+  gap: 6px;
+  padding: 15px 18px;
+}
+
+.marketplace-progress-card strong {
+  color: var(--accent);
+  font-size: 0.76rem;
+  letter-spacing: 0.1em;
+}
+
+.marketplace-progress-card span {
+  color: var(--text);
+  font-weight: 800;
+}
+
+.marketplace-progress-card small {
+  color: var(--muted);
+  line-height: 1.45;
 }
 
 .review-columns {

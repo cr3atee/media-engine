@@ -17,8 +17,14 @@ const elements = {
   reloadButton: document.querySelector("#reloadButton"),
   logoutButton: document.querySelector("#logoutButton"),
   reviewWorkspace: document.querySelector("#reviewWorkspace"),
+  offerCount: document.querySelector("#offerCount"),
+  linkedOfferCount: document.querySelector("#linkedOfferCount"),
   candidateCount: document.querySelector("#candidateCount"),
   proposalCount: document.querySelector("#proposalCount"),
+  canonicalProductCount: document.querySelector("#canonicalProductCount"),
+  decisionCount: document.querySelector("#decisionCount"),
+  unqueuedOfferCount: document.querySelector("#unqueuedOfferCount"),
+  marketplaceProgress: document.querySelector("#marketplaceProgress"),
   tenantLabel: document.querySelector("#tenantLabel"),
   workspaceMessage: document.querySelector("#workspaceMessage"),
   candidateList: document.querySelector("#candidateList"),
@@ -31,6 +37,7 @@ const state = {
   memberships: [],
   activeTenantId: null,
   activeTenant: null,
+  onboardingSummary: null,
   candidates: [],
   proposals: [],
   pendingMutations: new Map(),
@@ -171,23 +178,22 @@ async function loadQueues() {
   setWorkspaceMessage("Обновляем очереди…");
   try {
     const tenant = encodeURIComponent(tenantId);
-    const [candidates, proposals] = await Promise.all([
-      requestJson(`/tenants/${tenant}/catalog/review-candidates?limit=100`),
-      requestJson(`/tenants/${tenant}/catalog/product-proposals?limit=100`),
-    ]);
+    const workspace = await requestJson(
+      `/tenants/${tenant}/catalog/onboarding-workspace?limit=100`,
+    );
     if (
       sessionEpoch !== state.sessionEpoch ||
       tenantId !== state.activeTenantId
     ) {
       return;
     }
-    state.candidates = candidates;
-    state.proposals = proposals;
-    renderCandidates(candidates);
-    renderProposals(proposals);
-    elements.candidateCount.textContent = String(candidates.length);
-    elements.proposalCount.textContent = String(proposals.length);
-    setWorkspaceMessage(queueSummary(candidates.length, proposals.length));
+    state.onboardingSummary = workspace.summary;
+    state.candidates = workspace.review_candidates;
+    state.proposals = workspace.product_proposals;
+    renderCandidates(workspace.review_candidates);
+    renderProposals(workspace.product_proposals);
+    renderOnboardingSummary(workspace.summary);
+    setWorkspaceMessage(onboardingSummaryMessage(workspace.summary));
     setSessionStatus("Данные актуальны");
   } catch (error) {
     setWorkspaceMessage(errorMessage(error), true);
@@ -518,6 +524,7 @@ function clearSession(message) {
   state.memberships = [];
   state.activeTenantId = null;
   state.activeTenant = null;
+  state.onboardingSummary = null;
   state.candidates = [];
   state.proposals = [];
   state.pendingMutations.clear();
@@ -534,9 +541,43 @@ function clearSession(message) {
 function renderEmptyQueues() {
   elements.candidateList.innerHTML = emptyState("Войдите, чтобы загрузить очередь.");
   elements.proposalList.innerHTML = emptyState("Войдите, чтобы загрузить предложения.");
+  elements.offerCount.textContent = "0";
+  elements.linkedOfferCount.textContent = "0";
   elements.candidateCount.textContent = "0";
   elements.proposalCount.textContent = "0";
+  elements.canonicalProductCount.textContent = "0";
+  elements.decisionCount.textContent = "0";
+  elements.unqueuedOfferCount.textContent = "0";
+  elements.marketplaceProgress.replaceChildren();
   elements.tenantLabel.textContent = "—";
+}
+
+function renderOnboardingSummary(summary) {
+  elements.offerCount.textContent = String(summary.total_offers);
+  elements.linkedOfferCount.textContent = String(summary.linked_offers);
+  elements.candidateCount.textContent = String(summary.review_candidates);
+  elements.proposalCount.textContent = String(summary.product_proposals);
+  elements.canonicalProductCount.textContent = String(summary.canonical_products);
+  elements.decisionCount.textContent = String(summary.terminal_decisions);
+  elements.unqueuedOfferCount.textContent = String(summary.unqueued_offers);
+  elements.marketplaceProgress.replaceChildren(
+    ...summary.marketplaces.map((marketplace) => marketplaceProgressCard(marketplace)),
+  );
+}
+
+function marketplaceProgressCard(summary) {
+  const card = document.createElement("article");
+  card.className = "marketplace-progress-card glass";
+
+  const heading = document.createElement("strong");
+  heading.textContent = summary.marketplace.toUpperCase();
+  const counts = document.createElement("span");
+  counts.textContent = `${summary.linked_offers} из ${summary.total_offers} связано`;
+  const pending = document.createElement("small");
+  pending.textContent = `${summary.review_candidates} совпадений · ${summary.product_proposals} новых · ${summary.unqueued_offers} вне очередей`;
+
+  card.append(heading, counts, pending);
+  return card;
 }
 
 function proposalCandidateHtml(proposal) {
@@ -630,11 +671,11 @@ function roleLabel(role) {
   }[role] || role;
 }
 
-function queueSummary(candidateCount, proposalCount) {
-  if (candidateCount === 0 && proposalCount === 0) {
-    return "Очередь пуста: новых решений не требуется.";
+function onboardingSummaryMessage(summary) {
+  if (summary.unresolved_offers === 0) {
+    return "Каталог обработан: все объявления связаны.";
   }
-  return `Загружено: ${candidateCount} совпадений и ${proposalCount} предложений.`;
+  return `Ожидают решения: ${summary.unresolved_offers}. В очередях: ${summary.review_candidates + summary.product_proposals}.`;
 }
 
 function emptyState(message) {

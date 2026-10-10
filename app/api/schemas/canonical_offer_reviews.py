@@ -110,6 +110,40 @@ class CanonicalProductProposalResponse(ApiModel):
     match_decision: MatchDecision
 
 
+class MarketplaceCatalogOnboardingSummaryResponse(ApiModel):
+    """Catalog onboarding progress for one marketplace."""
+
+    marketplace: str
+    total_offers: int = Field(ge=0)
+    linked_offers: int = Field(ge=0)
+    unresolved_offers: int = Field(ge=0)
+    review_candidates: int = Field(ge=0)
+    product_proposals: int = Field(ge=0)
+    unqueued_offers: int = Field(ge=0)
+
+
+class CatalogOnboardingSummaryResponse(ApiModel):
+    """Complete tenant-scoped catalog onboarding progress."""
+
+    total_offers: int = Field(ge=0)
+    linked_offers: int = Field(ge=0)
+    unresolved_offers: int = Field(ge=0)
+    review_candidates: int = Field(ge=0)
+    product_proposals: int = Field(ge=0)
+    unqueued_offers: int = Field(ge=0)
+    canonical_products: int = Field(ge=0)
+    terminal_decisions: int = Field(ge=0)
+    marketplaces: tuple[MarketplaceCatalogOnboardingSummaryResponse, ...]
+
+
+class CatalogOnboardingWorkspaceResponse(ApiModel):
+    """One consistent catalog summary and its bounded review queues."""
+
+    summary: CatalogOnboardingSummaryResponse
+    review_candidates: tuple[CanonicalOfferReviewCandidateResponse, ...]
+    product_proposals: tuple[CanonicalProductProposalResponse, ...]
+
+
 class CanonicalOfferReviewResponse(ApiModel):
     """Stable response for one persisted canonical offer review decision."""
 

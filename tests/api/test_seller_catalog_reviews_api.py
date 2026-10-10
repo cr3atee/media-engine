@@ -30,6 +30,67 @@ VIEWER_ID = UUID("3a000000-0000-4000-8000-000000003002")
 PASSWORD = "correct horse battery staple"
 
 
+def test_onboarding_summary_is_complete_and_permission_scoped() -> None:
+    provider = _seeded_provider()
+    client = _client(provider)
+    reviewer = _login_headers(client, "reviewer@example.com")
+    viewer = _login_headers(client, "viewer@example.com")
+    url = f"/api/v1/tenants/{TENANT_A_ID}/catalog/onboarding-summary"
+
+    own = client.get(url, headers=reviewer)
+    workspace = client.get(
+        f"/api/v1/tenants/{TENANT_A_ID}/catalog/onboarding-workspace?limit=100",
+        headers=reviewer,
+    )
+    forbidden = client.get(url, headers=viewer)
+    foreign = client.get(
+        f"/api/v1/tenants/{TENANT_B_ID}/catalog/onboarding-summary",
+        headers=reviewer,
+    )
+    anonymous = client.get(url)
+
+    assert own.status_code == 200
+    assert own.json() == {
+        "total_offers": 2,
+        "linked_offers": 0,
+        "unresolved_offers": 2,
+        "review_candidates": 1,
+        "product_proposals": 1,
+        "unqueued_offers": 0,
+        "canonical_products": 1,
+        "terminal_decisions": 0,
+        "marketplaces": [
+            {
+                "marketplace": "ggsel",
+                "total_offers": 1,
+                "linked_offers": 0,
+                "unresolved_offers": 1,
+                "review_candidates": 1,
+                "product_proposals": 0,
+                "unqueued_offers": 0,
+            },
+            {
+                "marketplace": "playerok",
+                "total_offers": 1,
+                "linked_offers": 0,
+                "unresolved_offers": 1,
+                "review_candidates": 0,
+                "product_proposals": 1,
+                "unqueued_offers": 0,
+            },
+        ],
+    }
+    assert workspace.status_code == 200
+    assert workspace.json()["summary"] == own.json()
+    assert len(workspace.json()["review_candidates"]) == 1
+    assert len(workspace.json()["product_proposals"]) == 1
+    assert forbidden.status_code == 403
+    assert forbidden.json()["error"]["code"] == "permission_denied"
+    assert foreign.status_code == 404
+    assert foreign.json()["error"]["code"] == "tenant_not_found"
+    assert anonymous.status_code == 401
+
+
 def test_review_queue_requires_catalog_permission_and_scopes_tenant() -> None:
     provider = _seeded_provider()
     client = _client(provider)

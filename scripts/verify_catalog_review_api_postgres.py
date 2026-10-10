@@ -127,6 +127,12 @@ async def _verify_api(
         headers=reviewer,
     )
     initial = await client.get(queue_url, headers=reviewer)
+    summary_url = f"/api/v1/tenants/{TENANT_A_ID}/catalog/onboarding-summary"
+    initial_summary = await client.get(summary_url, headers=reviewer)
+    initial_workspace = await client.get(
+        f"/api/v1/tenants/{TENANT_A_ID}/catalog/onboarding-workspace?limit=100",
+        headers=reviewer,
+    )
     verifier.check("seller authentication required", anonymous.status_code == 401)
     verifier.check(
         "catalog review permission enforced",
@@ -145,6 +151,32 @@ async def _verify_api(
         and initial.json()[0]["canonical_product_id"] == str(PRODUCT_A_ID)
         and initial.json()[0]["similarity"] == 0.8
         and initial.json()[0]["match_decision"] == "review",
+    )
+    summary_payload = initial_summary.json()
+    verifier.check(
+        "onboarding summary covers the complete tenant catalog",
+        initial_summary.status_code == 200
+        and summary_payload["total_offers"] == 3
+        and summary_payload["linked_offers"] == 0
+        and summary_payload["unresolved_offers"] == 3
+        and summary_payload["review_candidates"] == 1
+        and summary_payload["product_proposals"] == 1
+        and summary_payload["canonical_products"] == 2
+        and summary_payload["terminal_decisions"] == 0,
+    )
+    verifier.check(
+        "onboarding summary exposes unresolved offers outside review queues",
+        summary_payload["unqueued_offers"] == 1
+        and [item["marketplace"] for item in summary_payload["marketplaces"]]
+        == ["ggsel", "playerok"],
+    )
+    workspace_payload = initial_workspace.json()
+    verifier.check(
+        "workspace returns one consistent bounded catalog snapshot",
+        initial_workspace.status_code == 200
+        and workspace_payload["summary"] == summary_payload
+        and len(workspace_payload["review_candidates"]) == 1
+        and len(workspace_payload["product_proposals"]) == 1,
     )
 
     proposal_url = f"/api/v1/tenants/{TENANT_A_ID}/catalog/product-proposals"
@@ -221,6 +253,7 @@ async def _verify_api(
         json=_payload(PRODUCT_B_ID),
     )
     empty_queue = await client.get(queue_url, headers=reviewer)
+    completed_summary = await client.get(summary_url, headers=reviewer)
     verifier.check(
         "confirmation persists reviewed link",
         confirmed.status_code == 200
@@ -236,6 +269,17 @@ async def _verify_api(
     verifier.check(
         "linked offer leaves review queue",
         empty_queue.status_code == 200 and empty_queue.json() == [],
+    )
+    completed_payload = completed_summary.json()
+    verifier.check(
+        "onboarding summary advances after durable review decisions",
+        completed_summary.status_code == 200
+        and completed_payload["linked_offers"] == 1
+        and completed_payload["unresolved_offers"] == 2
+        and completed_payload["review_candidates"] == 0
+        and completed_payload["product_proposals"] == 1
+        and completed_payload["unqueued_offers"] == 1
+        and completed_payload["terminal_decisions"] == 2,
     )
     return proposal_id
 
@@ -355,14 +399,26 @@ async def _verify_fresh_engine(
                 CanonicalOfferDecisionType.REJECTED,
             },
         )
-        proposals = await CanonicalOfferReviewQueueService(
+        queue_service = CanonicalOfferReviewQueueService(
             create_postgres_repository_scope(fresh_factory)
-        ).list_product_proposals(TENANT_A_ID)
+        )
+        proposals = await queue_service.list_product_proposals(TENANT_A_ID)
+        summary = await queue_service.get_onboarding_summary(TENANT_A_ID)
         verifier.check(
             "fresh engine reproduces stable product proposal",
             len(proposals) == 1
             and proposals[0].proposal_id == expected_proposal_id
             and proposals[0].offer.external_id == "offer-proposal",
+        )
+        verifier.check(
+            "fresh engine reproduces onboarding progress",
+            summary.total_offers == 3
+            and summary.linked_offers == 1
+            and summary.unresolved_offers == 2
+            and summary.review_candidates == 0
+            and summary.product_proposals == 1
+            and summary.unqueued_offers == 1
+            and summary.terminal_decisions == 2,
         )
     finally:
         await fresh_engine.dispose()
