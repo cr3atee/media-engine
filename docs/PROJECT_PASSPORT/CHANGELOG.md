@@ -6,6 +6,12 @@ This document records notable Project Passport updates.
 
 ## Unreleased
 
+- Reworked the public Market Terminal presentation into a flat,
+  high-contrast editorial interface, removing glass, decorative gradients,
+  rounded dashboard cards, and pill navigation without changing its API or
+  state behavior. Saved-data public UI checks (`42`) and responsive headless
+  browser verification cover product selection, offers, comparison, history,
+  and zero horizontal overflow at `390x844`.
 - Added EPIC 20 Task 2 end-to-end catalog onboarding verification. An isolated
   synthetic proposal now proves the existing idempotent reviewer command all
   the way through canonical creation, offer linking, onboarding progress, and

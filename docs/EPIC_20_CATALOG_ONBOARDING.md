@@ -31,6 +31,11 @@ links.
   product, detail, offer, and comparison routes.
 - Exact command replay remains idempotent: the second request reuses the same
   decision and does not duplicate the canonical product or link.
+- The public Market Terminal now uses the same flat, high-contrast editorial
+  language as the review workspace: direct typography and rules replace glass,
+  gradients, rounded dashboard cards, and pill-shaped navigation. Existing
+  search, filters, URL state, product selection, comparison, and history
+  behavior is unchanged.
 
 ## Counting Semantics
 
@@ -76,6 +81,13 @@ lists.
 - Browser verification confirmed the complete reviewer action and subsequent
   public product selection, offer, and comparison views without horizontal
   overflow on the exercised desktop viewport.
+- Saved-payload public UI verification passed `42` checks and rendered one
+  source-backed product from each of GGSEL, Playerok, and FunPay. Headless Edge
+  verification at `390x844` confirmed product selection, offer, comparison, and
+  history rendering with `documentWidth == viewportWidth`.
+- Full Pytest: `479 passed, 58 skipped`; full MyPy: no issues in `426` source
+  files; focused Ruff, Ruff format, JavaScript syntax, and whitespace checks
+  passed.
 
 ## Operational State
 

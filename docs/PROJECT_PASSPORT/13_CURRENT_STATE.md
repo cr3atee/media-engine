@@ -460,6 +460,11 @@ itself is now verified against isolated PostgreSQL.
   and exposes the reviewed result through public product, detail, offer, and
   comparison reads. The memory-backed verifier passes `33/33`; saved real
   marketplace proposals remain untouched pending human review.
+- The embedded public Market Terminal now has a flat, light, high-contrast
+  editorial presentation aligned with the review workspace. Existing public
+  API behavior remains intact; saved-data verification passes `42` checks and
+  exact `390x844` browser emulation confirms product selection, offers,
+  comparison, and history without horizontal overflow.
 
 ## Known Gaps
 

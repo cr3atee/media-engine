@@ -35,6 +35,7 @@ def test_market_terminal_shell_is_served() -> None:
             "camera=(), geolocation=(), microphone=()"
         )
         assert '<html lang="ru">' in response.text
+        assert '<body class="terminal-page">' in response.text
         assert "Market Terminal" in response.text
         assert "Найдите цифровой товар по лучшей цене." in response.text
         assert "Сравнивайте предложения популярных площадок" in response.text
@@ -79,7 +80,11 @@ def test_market_terminal_static_assets_are_served() -> None:
     assert styles.status_code == 200
     assert styles.headers["content-type"].startswith("text/css")
     assert styles.headers["x-content-type-options"] == "nosniff"
-    assert "backdrop-filter" in styles.text
+    assert "backdrop-filter" not in styles.text
+    assert "linear-gradient" not in styles.text
+    assert "radial-gradient" not in styles.text
+    assert "border-radius: 999px" not in styles.text
+    assert 'class="glass"' not in client.get("/terminal").text
     assert script.status_code == 200
     assert script.headers["content-type"].startswith("application/javascript")
     assert script.headers["x-content-type-options"] == "nosniff"

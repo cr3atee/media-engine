@@ -404,7 +404,7 @@ function renderCategories(categories) {
         category.code === state.selectedCategoryCode ? " active" : "";
       return `
         <button
-          class="pill category-filter${active}"
+          class="category-filter${active}"
           type="button"
           data-category-index="${index}"
           aria-pressed="${String(Boolean(active))}"
@@ -419,7 +419,7 @@ function renderCategories(categories) {
 
   elements.categoryList.innerHTML = `
     <button
-      class="pill category-filter${allActive}"
+      class="category-filter${allActive}"
       type="button"
       data-category-index="-1"
       aria-pressed="${String(Boolean(allActive))}"
@@ -528,11 +528,11 @@ function renderComparison(comparison) {
     <p>${escapeHtml(comparison.best_offer.marketplace)} / ${escapeHtml(comparison.best_offer.title ?? "")}</p>
     ${
       differences.length
-        ? `<div class="pill-list">
+        ? `<div class="comparison-list">
             ${differences
               .map(
                 (difference) => `
-                  <span class="pill">
+                  <span class="comparison-row">
                     <strong>${escapeHtml(difference.offer.marketplace)}</strong>
                     <small>${escapeHtml(differenceLabel(difference))}</small>
                   </span>

@@ -6,10 +6,10 @@
     <title>Market Terminal</title>
     <link rel="stylesheet" href="/terminal/styles.css" />
   </head>
-  <body>
+  <body class="terminal-page">
     <a class="skip-link" href="#products">Перейти к каталогу товаров</a>
     <main class="shell">
-      <header class="topbar glass">
+      <header class="topbar">
         <a class="brand" href="/terminal" aria-label="Главная Market Terminal">
           <span class="brand-mark">MT</span>
           <span>
@@ -43,7 +43,7 @@
             и выбирайте подходящую цену без лишних вкладок.
           </p>
         </div>
-        <form class="search glass" id="searchForm">
+        <form class="search" id="searchForm">
           <label for="searchInput">Поиск товара</label>
           <div class="search-row">
             <input
@@ -103,19 +103,19 @@
       </section>
 
       <section class="metric-strip" aria-label="Сводка текущего каталога">
-        <article class="metric glass">
+        <article class="metric">
           <span class="metric-label">Товаров показано</span>
           <strong id="productCount">--</strong>
         </article>
-        <article class="metric glass">
+        <article class="metric">
           <span class="metric-label">Предложений</span>
           <strong id="offerCount">--</strong>
         </article>
-        <article class="metric glass">
+        <article class="metric">
           <span class="metric-label">Категорий</span>
           <strong id="categoryCount">--</strong>
         </article>
-        <article class="metric glass">
+        <article class="metric">
           <span class="metric-label">Новых скидок</span>
           <strong id="dropCount">--</strong>
         </article>
@@ -123,7 +123,7 @@
 
       <section class="grid-layout">
         <section
-          class="panel glass"
+          class="panel"
           id="products"
           tabindex="-1"
           aria-labelledby="catalogTitle"
@@ -140,7 +140,7 @@
           <div class="product-grid" id="productGrid" aria-live="polite"></div>
         </section>
 
-        <aside class="panel glass side-panel">
+        <aside class="panel side-panel">
           <div class="panel-heading">
             <span>
               <p class="eyebrow">Навигация</p>
@@ -148,7 +148,7 @@
             </span>
           </div>
           <div
-            class="pill-list"
+            class="category-list"
             id="categoryList"
             aria-live="polite"
           ></div>
@@ -168,7 +168,7 @@
       </section>
 
       <section
-        class="panel glass detail-panel"
+        class="panel detail-panel"
         id="details"
         aria-labelledby="detailTitle"
         aria-busy="false"

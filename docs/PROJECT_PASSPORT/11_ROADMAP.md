@@ -307,6 +307,11 @@ This document tracks only work that is reflected by the current repository state
   becomes visible through the repository-backed public product, detail, offer,
   and comparison routes. The verifier passes `33/33`; no saved real offer is
   auto-confirmed or presented as reviewed.
+- Public Market Terminal visual hardening replaces the original glass/gradient
+  dashboard treatment with a flat, high-contrast editorial interface while
+  preserving the existing query and navigation behavior. Saved marketplace
+  data passes `42` public UI checks, and a `390x844` browser run confirms the
+  dynamic detail flow without horizontal overflow.
 
 ## Current Status
 
