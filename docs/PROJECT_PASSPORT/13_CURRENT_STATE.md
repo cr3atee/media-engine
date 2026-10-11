@@ -454,6 +454,12 @@ itself is now verified against isolated PostgreSQL.
   unqueued records, canonical products, and immutable decisions without
   triggering writes. The PostgreSQL verifier passes `21/21` at Alembic head
   `0017_marketplace_polling_runs`.
+- EPIC 20 Task 2 verifies the complete isolated onboarding result: an
+  authorized proposal confirmation atomically creates the canonical product,
+  links the offer, records the immutable decision, updates onboarding counts,
+  and exposes the reviewed result through public product, detail, offer, and
+  comparison reads. The memory-backed verifier passes `33/33`; saved real
+  marketplace proposals remain untouched pending human review.
 
 ## Known Gaps
 

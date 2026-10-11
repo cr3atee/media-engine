@@ -6,6 +6,11 @@ This document records notable Project Passport updates.
 
 ## Unreleased
 
+- Added EPIC 20 Task 2 end-to-end catalog onboarding verification. An isolated
+  synthetic proposal now proves the existing idempotent reviewer command all
+  the way through canonical creation, offer linking, onboarding progress, and
+  repository-backed public product/detail/offer/comparison reads (`33/33`
+  checks), without mutating or auto-confirming saved real marketplace data.
 - Added EPIC 20 Task 1 guarded catalog-onboarding progress: complete tenant and
   per-marketplace summary DTOs, protected summary/workspace routes, and Market
   Terminal progress rendering from one repository state and matching pass. The

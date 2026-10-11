@@ -302,6 +302,11 @@ This document tracks only work that is reflected by the current repository state
   actionable queues from one consistent repository snapshot and matching pass.
   Isolated PostgreSQL 17.10 verification passes `21/21` without changing
   thresholds or creating automatic links.
+- EPIC 20 Task 2 onboarding-to-public-catalog verification: one isolated
+  synthetic proposal is confirmed through the existing idempotent command and
+  becomes visible through the repository-backed public product, detail, offer,
+  and comparison routes. The verifier passes `33/33`; no saved real offer is
+  auto-confirmed or presented as reviewed.
 
 ## Current Status
 
@@ -339,6 +344,10 @@ The remaining work before public visual launch is execution of human-approved
 catalog onboarding through the now measurable operator workspace, production
 monitoring/deployment configuration, frontend hardening, and a product decision
 on category data exposure.
+
+The complete operator-decision-to-public-read path is now integration-verified
+with isolated synthetic data. Production catalog readiness still depends on a
+bounded human-reviewed batch from the saved marketplace evidence.
 
 ## Not Present Yet
 

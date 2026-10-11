@@ -16,6 +16,9 @@ from app.main import create_app
 from app.models.canonical_product import CanonicalProduct
 from app.parsers.models import ParsedOffer
 from app.repositories.provider import RepositoryProvider, create_memory_provider
+from app.repositories.public_queries.repository_backed import (
+    create_repository_backed_public_read_scope_factory,
+)
 from app.repositories.queries.provider import ReadRepositoryProvider
 from app.services.passwords import PasswordHasher
 from app.services.repository_scope import create_memory_repository_scope
@@ -184,6 +187,7 @@ def test_product_proposal_confirmation_is_atomic_audited_and_idempotent() -> Non
         "external_id": "offer-proposal",
         "reason": "Verified source product",
     }
+    public_before = client.get("/api/v1/public/products?q=Stardew")
 
     forbidden = client.post(
         confirm_url,
@@ -204,8 +208,21 @@ def test_product_proposal_confirmation_is_atomic_audited_and_idempotent() -> Non
         json={**payload, "reason": "Different semantics"},
     )
     empty_queue = client.get(proposals_url, headers=reviewer)
+    onboarding = client.get(
+        f"/api/v1/tenants/{TENANT_A_ID}/catalog/onboarding-summary",
+        headers=reviewer,
+    )
 
     result = confirmed.json()
+    public_products = client.get("/api/v1/public/products?q=Stardew")
+    public_product_id = result["canonical_product_id"]
+    public_detail = client.get(f"/api/v1/public/products/{public_product_id}")
+    public_offers = client.get(
+        f"/api/v1/public/products/{public_product_id}/offers",
+    )
+    public_comparison = client.get(
+        f"/api/v1/public/products/{public_product_id}/comparison",
+    )
     stored_product = run_async(
         provider.canonical_products.get_by_tenant_and_id(
             TENANT_A_ID,
@@ -229,6 +246,8 @@ def test_product_proposal_confirmation_is_atomic_audited_and_idempotent() -> Non
 
     assert forbidden.status_code == 403
     assert foreign.status_code == 404
+    assert public_before.status_code == 200
+    assert public_before.json()["items"] == []
     assert confirmed.status_code == 200
     assert result["proposal_id"] == proposal["proposal_id"]
     assert result["canonical_product_id"] == proposal["proposal_id"]
@@ -245,6 +264,41 @@ def test_product_proposal_confirmation_is_atomic_audited_and_idempotent() -> Non
     assert "fingerprint" not in conflict.text.lower()
     assert empty_queue.status_code == 200
     assert empty_queue.json() == []
+    assert onboarding.status_code == 200
+    assert onboarding.json()["linked_offers"] == 1
+    assert onboarding.json()["product_proposals"] == 0
+    assert onboarding.json()["canonical_products"] == 2
+    assert onboarding.json()["terminal_decisions"] == 1
+    assert public_products.status_code == 200
+    assert public_products.json()["items"] == [
+        {
+            "id": public_product_id,
+            "name": "Stardew Valley Complete",
+            "category": None,
+            "best_offer": {
+                "marketplace": "playerok",
+                "external_id": "offer-proposal",
+                "title": "Stardew Valley Complete",
+                "url": "https://playerok.com/products/offer-proposal",
+                "price": "499.00",
+                "currency": "RUB",
+                "seller_id": None,
+                "seller_name": None,
+            },
+            "offer_count": 1,
+            "marketplace_count": 1,
+            "updated_at": None,
+        }
+    ]
+    assert public_detail.status_code == 200
+    assert public_detail.json()["name"] == "Stardew Valley Complete"
+    assert public_detail.json()["best_offer"]["price"] == "499.00"
+    assert public_offers.status_code == 200
+    assert len(public_offers.json()["items"]) == 1
+    assert public_offers.json()["items"][0]["marketplace"] == "playerok"
+    assert public_comparison.status_code == 200
+    assert public_comparison.json()["status"] == "complete"
+    assert len(public_comparison.json()["offers"]) == 1
     assert stored_product is not None
     assert stored_product.id == UUID(proposal["proposal_id"])
     assert stored_offer is not None
@@ -516,6 +570,9 @@ def _client(provider: RepositoryProvider) -> TestClient:
             api_key=SecretStr("admin-secret"),
         ),
         auth_settings=AuthSettings(access_token_secret=SecretStr("auth-secret")),
+        public_read_repository_scope_factory=(
+            create_repository_backed_public_read_scope_factory(provider)
+        ),
         read_repository_scope_factory=read_scope,
         repository_scope_factory=create_memory_repository_scope(provider),
     )

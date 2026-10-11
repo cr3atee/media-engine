@@ -2,7 +2,7 @@
 
 ## Status
 
-Task 1 is implemented and verified.
+Tasks 1 and 2 are implemented and verified.
 
 ## Goal
 
@@ -25,6 +25,12 @@ links.
   progress.
 - Compatibility with the existing candidate and proposal endpoints and all
   existing idempotent catalog commands.
+- An isolated operator-to-public-catalog verification path that confirms one
+  synthetic `NO_MATCH` proposal, records one immutable decision, links the
+  source offer, and exposes the resulting product through the existing public
+  product, detail, offer, and comparison routes.
+- Exact command replay remains idempotent: the second request reuses the same
+  decision and does not duplicate the canonical product or link.
 
 ## Counting Semantics
 
@@ -65,6 +71,11 @@ lists.
 - Full MyPy: no issues in `425` source files.
 - Focused Ruff and Ruff format checks: passed.
 - Review JavaScript syntax check: passed.
+- Isolated memory-backed onboarding-to-public-catalog verifier: `33/33` checks
+  passed.
+- Browser verification confirmed the complete reviewer action and subsequent
+  public product selection, offer, and comparison views without horizontal
+  overflow on the exercised desktop viewport.
 
 ## Operational State
 
@@ -76,3 +87,7 @@ The next operational step is a bounded human-reviewed onboarding batch using
 the existing confirm, reject, create-product, and resolve-to-existing commands.
 Source coverage and reviewed decisions must be recorded before a catalog is
 presented as production-ready.
+
+The Task 2 verification uses synthetic, isolated data. It proves the wiring and
+transaction outcome but does not claim that any of the `81` saved real offers
+has been reviewed or linked.
