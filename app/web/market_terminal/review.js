@@ -1,5 +1,7 @@
 const api = "/api/v1";
 const requestTimeoutMs = 15_000;
+const candidatePageSize = 6;
+const proposalPageSize = 9;
 
 const elements = {
   sessionStatus: document.querySelector("#sessionStatus"),
@@ -24,11 +26,29 @@ const elements = {
   canonicalProductCount: document.querySelector("#canonicalProductCount"),
   decisionCount: document.querySelector("#decisionCount"),
   unqueuedOfferCount: document.querySelector("#unqueuedOfferCount"),
+  catalogProgressTitle: document.querySelector("#catalogProgressTitle"),
+  catalogProgressPercent: document.querySelector("#catalogProgressPercent"),
+  catalogProgress: document.querySelector("#catalogProgress"),
   marketplaceProgress: document.querySelector("#marketplaceProgress"),
   tenantLabel: document.querySelector("#tenantLabel"),
   workspaceMessage: document.querySelector("#workspaceMessage"),
+  queueSearchInput: document.querySelector("#queueSearchInput"),
+  queueMarketplaceFilter: document.querySelector("#queueMarketplaceFilter"),
+  resetQueueFilters: document.querySelector("#resetQueueFilters"),
+  filterSummary: document.querySelector("#filterSummary"),
+  reviewColumns: document.querySelector("#reviewColumns"),
+  candidatePanel: document.querySelector("#reviewCandidates"),
   candidateList: document.querySelector("#candidateList"),
+  candidatePagination: document.querySelector("#candidatePagination"),
+  candidatePrevious: document.querySelector("#candidatePrevious"),
+  candidateNext: document.querySelector("#candidateNext"),
+  candidateRange: document.querySelector("#candidateRange"),
+  proposalPanel: document.querySelector("#productProposals"),
   proposalList: document.querySelector("#proposalList"),
+  proposalPagination: document.querySelector("#proposalPagination"),
+  proposalPrevious: document.querySelector("#proposalPrevious"),
+  proposalNext: document.querySelector("#proposalNext"),
+  proposalRange: document.querySelector("#proposalRange"),
 };
 
 const state = {
@@ -40,6 +60,10 @@ const state = {
   onboardingSummary: null,
   candidates: [],
   proposals: [],
+  queueQuery: "",
+  queueMarketplace: "",
+  candidatePage: 1,
+  proposalPage: 1,
   pendingMutations: new Map(),
   refreshPromise: null,
   sessionEpoch: 0,
@@ -68,6 +92,44 @@ elements.reloadButton.addEventListener("click", () => {
 
 elements.logoutButton.addEventListener("click", () => {
   void logout();
+});
+
+elements.queueSearchInput.addEventListener("input", () => {
+  state.queueQuery = elements.queueSearchInput.value.trim().toLocaleLowerCase("ru-RU");
+  resetQueuePages();
+  renderQueues();
+});
+
+elements.queueMarketplaceFilter.addEventListener("change", () => {
+  state.queueMarketplace = elements.queueMarketplaceFilter.value;
+  resetQueuePages();
+  renderQueues();
+});
+
+elements.resetQueueFilters.addEventListener("click", () => {
+  resetQueueFilters();
+  renderQueues();
+  elements.queueSearchInput.focus();
+});
+
+elements.candidatePrevious.addEventListener("click", () => {
+  state.candidatePage = Math.max(1, state.candidatePage - 1);
+  renderQueues();
+});
+
+elements.candidateNext.addEventListener("click", () => {
+  state.candidatePage += 1;
+  renderQueues();
+});
+
+elements.proposalPrevious.addEventListener("click", () => {
+  state.proposalPage = Math.max(1, state.proposalPage - 1);
+  renderQueues();
+});
+
+elements.proposalNext.addEventListener("click", () => {
+  state.proposalPage += 1;
+  renderQueues();
 });
 
 elements.candidateList.addEventListener("click", (event) => {
@@ -119,8 +181,15 @@ async function loadIdentity() {
   elements.sellerEmail.textContent = profile.user.email;
   elements.loginForm.hidden = true;
   elements.sessionPanel.hidden = false;
+  document.body.classList.add("review-authenticated");
   renderTenantOptions();
   await selectTenant(state.memberships[0].tenant_id);
+  if (!elements.reviewWorkspace.hidden) {
+    const behavior = window.matchMedia("(prefers-reduced-motion: reduce)").matches
+      ? "auto"
+      : "smooth";
+    elements.reviewWorkspace.scrollIntoView({ behavior, block: "start" });
+  }
 }
 
 function renderTenantOptions() {
@@ -190,8 +259,8 @@ async function loadQueues() {
     state.onboardingSummary = workspace.summary;
     state.candidates = workspace.review_candidates;
     state.proposals = workspace.product_proposals;
-    renderCandidates(workspace.review_candidates);
-    renderProposals(workspace.product_proposals);
+    syncMarketplaceFilterOptions();
+    renderQueues();
     renderOnboardingSummary(workspace.summary);
     setWorkspaceMessage(onboardingSummaryMessage(workspace.summary));
     setSessionStatus("Данные актуальны");
@@ -203,16 +272,144 @@ async function loadQueues() {
   }
 }
 
+function renderQueues() {
+  const candidates = state.candidates.filter(queueItemMatches);
+  const proposals = state.proposals.filter(queueItemMatches);
+  renderCandidates(candidates);
+  renderProposals(proposals);
+  elements.candidatePanel.hidden = candidates.length === 0 && proposals.length > 0;
+  elements.proposalPanel.hidden = proposals.length === 0 && candidates.length > 0;
+  elements.reviewColumns.classList.toggle(
+    "proposals-only",
+    candidates.length === 0 && proposals.length > 0,
+  );
+  elements.reviewColumns.classList.toggle(
+    "candidates-only",
+    proposals.length === 0 && candidates.length > 0,
+  );
+  const visible = candidates.length + proposals.length;
+  const total = state.candidates.length + state.proposals.length;
+  elements.filterSummary.textContent =
+    visible === total
+      ? `Все объявления в очередях: ${total}`
+      : `Найдено ${visible} из ${total}`;
+}
+
 function renderCandidates(candidates) {
+  elements.candidatePanel.classList.toggle("queue-empty", candidates.length === 0);
   if (candidates.length === 0) {
     elements.candidateList.innerHTML = emptyState(
-      "Нет пар, которым сейчас нужна ручная проверка.",
+      queueFiltersActive()
+        ? "По текущему фильтру совпадений нет."
+        : "Нет пар, которым сейчас нужна ручная проверка.",
+    );
+    renderPagination(
+      elements.candidatePagination,
+      elements.candidatePrevious,
+      elements.candidateNext,
+      elements.candidateRange,
+      { page: 1, totalPages: 1, totalItems: 0, start: 0, end: 0 },
     );
     return;
   }
+  const page = paginate(candidates, state.candidatePage, candidatePageSize);
+  state.candidatePage = page.page;
   elements.candidateList.replaceChildren(
-    ...candidates.map((candidate) => candidateCard(candidate)),
+    ...page.items.map((candidate) => candidateCard(candidate)),
   );
+  renderPagination(
+    elements.candidatePagination,
+    elements.candidatePrevious,
+    elements.candidateNext,
+    elements.candidateRange,
+    page,
+  );
+}
+
+function queueItemMatches(item) {
+  if (state.queueMarketplace && item.marketplace !== state.queueMarketplace) {
+    return false;
+  }
+  if (!state.queueQuery) {
+    return true;
+  }
+  const searchable = [
+    item.offer_title,
+    item.proposed_name,
+    item.canonical_product_name,
+    item.nearest_canonical_product_name,
+    item.external_id,
+    item.marketplace,
+  ]
+    .filter(Boolean)
+    .join(" ")
+    .toLocaleLowerCase("ru-RU");
+  return searchable.includes(state.queueQuery);
+}
+
+function syncMarketplaceFilterOptions() {
+  const current = state.queueMarketplace;
+  const marketplaces = [...new Set(
+    [...state.candidates, ...state.proposals].map((item) => item.marketplace),
+  )].sort((left, right) => left.localeCompare(right));
+  const options = [document.createElement("option")];
+  options[0].value = "";
+  options[0].textContent = "Все площадки";
+  for (const marketplace of marketplaces) {
+    const option = document.createElement("option");
+    option.value = marketplace;
+    option.textContent = marketplace.toUpperCase();
+    options.push(option);
+  }
+  elements.queueMarketplaceFilter.replaceChildren(...options);
+  if (marketplaces.includes(current)) {
+    elements.queueMarketplaceFilter.value = current;
+  } else {
+    state.queueMarketplace = "";
+  }
+}
+
+function paginate(items, requestedPage, pageSize) {
+  const totalItems = items.length;
+  const totalPages = Math.max(1, Math.ceil(totalItems / pageSize));
+  const page = Math.min(Math.max(1, requestedPage), totalPages);
+  const start = (page - 1) * pageSize;
+  const end = Math.min(start + pageSize, totalItems);
+  return {
+    items: items.slice(start, end),
+    page,
+    totalPages,
+    totalItems,
+    start,
+    end,
+  };
+}
+
+function renderPagination(container, previous, next, range, page) {
+  container.hidden = page.totalPages <= 1;
+  previous.disabled = page.page <= 1;
+  next.disabled = page.page >= page.totalPages;
+  range.textContent =
+    page.totalItems === 0
+      ? "Нет записей"
+      : `${page.start + 1}–${page.end} из ${page.totalItems}`;
+}
+
+function resetQueuePages() {
+  state.candidatePage = 1;
+  state.proposalPage = 1;
+}
+
+function resetQueueFilters() {
+  state.queueQuery = "";
+  state.queueMarketplace = "";
+  elements.queueSearchInput.value = "";
+  elements.queueMarketplaceFilter.value = "";
+  resetQueuePages();
+}
+
+function queueFiltersActive() {
+  return Boolean(state.queueQuery || state.queueMarketplace);
 }
 
 function candidateCard(candidate) {
@@ -241,28 +438,52 @@ function candidateCard(candidate) {
       </span>
       ${externalLinkHtml(candidate.offer_url)}
     </div>
-    <label class="reason-label">
-      Причина решения
-      <small>Обязательна для отклонения, рекомендуется для подтверждения.</small>
-      <textarea class="review-reason" maxlength="2000" placeholder="Что проверено в исходном объявлении?"></textarea>
-    </label>
-    <div class="review-actions">
-      <button class="action-button confirm" data-action="confirm-candidate" type="button">Подтвердить связь</button>
-      <button class="action-button reject" data-action="reject-candidate" type="button">Отклонить пару</button>
-    </div>
+    <details class="decision-details">
+      <summary>Принять решение</summary>
+      <div class="decision-body">
+        <label class="reason-label">
+          Причина решения
+          <small>Обязательна для отклонения, рекомендуется для подтверждения.</small>
+          <textarea class="review-reason" maxlength="2000" placeholder="Что проверено в исходном объявлении?"></textarea>
+        </label>
+        <div class="review-actions">
+          <button class="action-button confirm" data-action="confirm-candidate" type="button">Подтвердить связь</button>
+          <button class="action-button reject" data-action="reject-candidate" type="button">Отклонить пару</button>
+        </div>
+      </div>
+    </details>
   `;
   return card;
 }
 
 function renderProposals(proposals) {
+  elements.proposalPanel.classList.toggle("queue-empty", proposals.length === 0);
   if (proposals.length === 0) {
     elements.proposalList.innerHTML = emptyState(
-      "Нет объявлений, для которых требуется создать или выбрать товар.",
+      queueFiltersActive()
+        ? "По текущему фильтру новых товаров нет."
+        : "Нет объявлений, для которых требуется создать или выбрать товар.",
+    );
+    renderPagination(
+      elements.proposalPagination,
+      elements.proposalPrevious,
+      elements.proposalNext,
+      elements.proposalRange,
+      { page: 1, totalPages: 1, totalItems: 0, start: 0, end: 0 },
     );
     return;
   }
+  const page = paginate(proposals, state.proposalPage, proposalPageSize);
+  state.proposalPage = page.page;
   elements.proposalList.replaceChildren(
-    ...proposals.map((proposal) => proposalCard(proposal)),
+    ...page.items.map((proposal) => proposalCard(proposal)),
+  );
+  renderPagination(
+    elements.proposalPagination,
+    elements.proposalPrevious,
+    elements.proposalNext,
+    elements.proposalRange,
+    page,
   );
 }
 
@@ -288,15 +509,20 @@ function proposalCard(proposal) {
       ${factHtml("Решение", decisionLabel(proposal.match_decision))}
     </div>
     ${proposalCandidateHtml(proposal)}
-    <label class="reason-label">
-      Проверенные факты
-      <small>Обязательны для связи с существующим товаром.</small>
-      <textarea class="review-reason" maxlength="2000" placeholder="Почему это новый или уже существующий товар?"></textarea>
-    </label>
-    <div class="review-actions">
-      <button class="action-button create" data-action="create-product" type="button">Создать новый товар</button>
-      <button class="action-button resolve" data-action="resolve-existing" type="button" ${nearestId ? "" : "disabled"}>Связать с показанным</button>
-    </div>
+    <details class="decision-details">
+      <summary>Принять решение</summary>
+      <div class="decision-body">
+        <label class="reason-label">
+          Проверенные факты
+          <small>Обязательны для связи с существующим товаром.</small>
+          <textarea class="review-reason" maxlength="2000" placeholder="Почему это новый или уже существующий товар?"></textarea>
+        </label>
+        <div class="review-actions">
+          <button class="action-button create" data-action="create-product" type="button">Создать новый товар</button>
+          <button class="action-button resolve" data-action="resolve-existing" type="button" ${nearestId ? "" : "disabled"}>Связать с показанным</button>
+        </div>
+      </div>
+    </details>
   `;
   return card;
 }
@@ -527,8 +753,10 @@ function clearSession(message) {
   state.onboardingSummary = null;
   state.candidates = [];
   state.proposals = [];
+  resetQueueFilters();
   state.pendingMutations.clear();
   state.refreshPromise = null;
+  document.body.classList.remove("review-authenticated");
   elements.loginForm.hidden = false;
   elements.sessionPanel.hidden = true;
   elements.reviewWorkspace.hidden = true;
@@ -539,6 +767,9 @@ function clearSession(message) {
 }
 
 function renderEmptyQueues() {
+  elements.candidatePanel.hidden = false;
+  elements.proposalPanel.hidden = false;
+  elements.reviewColumns.classList.remove("proposals-only", "candidates-only");
   elements.candidateList.innerHTML = emptyState("Войдите, чтобы загрузить очередь.");
   elements.proposalList.innerHTML = emptyState("Войдите, чтобы загрузить предложения.");
   elements.offerCount.textContent = "0";
@@ -548,7 +779,13 @@ function renderEmptyQueues() {
   elements.canonicalProductCount.textContent = "0";
   elements.decisionCount.textContent = "0";
   elements.unqueuedOfferCount.textContent = "0";
+  elements.catalogProgressTitle.textContent = "Связано 0 из 0 объявлений";
+  elements.catalogProgressPercent.textContent = "0%";
+  elements.catalogProgress.value = 0;
   elements.marketplaceProgress.replaceChildren();
+  elements.filterSummary.textContent = "Показаны все объявления";
+  elements.candidatePagination.hidden = true;
+  elements.proposalPagination.hidden = true;
   elements.tenantLabel.textContent = "—";
 }
 
@@ -560,6 +797,15 @@ function renderOnboardingSummary(summary) {
   elements.canonicalProductCount.textContent = String(summary.canonical_products);
   elements.decisionCount.textContent = String(summary.terminal_decisions);
   elements.unqueuedOfferCount.textContent = String(summary.unqueued_offers);
+  const progress =
+    summary.total_offers === 0
+      ? 0
+      : Math.round((summary.linked_offers / summary.total_offers) * 100);
+  elements.catalogProgressTitle.textContent =
+    `Связано ${summary.linked_offers} из ${summary.total_offers} объявлений`;
+  elements.catalogProgressPercent.textContent = `${progress}%`;
+  elements.catalogProgress.value = progress;
+  elements.catalogProgress.textContent = `${progress}%`;
   elements.marketplaceProgress.replaceChildren(
     ...summary.marketplaces.map((marketplace) => marketplaceProgressCard(marketplace)),
   );
@@ -567,7 +813,7 @@ function renderOnboardingSummary(summary) {
 
 function marketplaceProgressCard(summary) {
   const card = document.createElement("article");
-  card.className = "marketplace-progress-card glass";
+  card.className = "marketplace-progress-card";
 
   const heading = document.createElement("strong");
   heading.textContent = summary.marketplace.toUpperCase();

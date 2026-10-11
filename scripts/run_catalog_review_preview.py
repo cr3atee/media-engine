@@ -30,6 +30,9 @@ from app.domain.tenancy import Membership, Tenant, TenantRole, User
 from app.models.canonical_product import CanonicalProduct
 from app.parsers.models import ParsedOffer
 from app.repositories.provider import RepositoryProvider, create_memory_provider
+from app.repositories.public_queries.repository_backed import (
+    create_repository_backed_public_read_scope_factory,
+)
 from app.services.passwords import PasswordHasher
 from app.services.repository_scope import create_memory_repository_scope
 
@@ -114,7 +117,9 @@ async def prepare_preview(*, saved_data: bool = False) -> PreparedPreview:
             access_token_secret=SecretStr("catalog-review-preview-secret"),
             password_hash_iterations=100_000,
         ),
-        public_read_repository_scope_factory=None,
+        public_read_repository_scope_factory=(
+            create_repository_backed_public_read_scope_factory(provider)
+        ),
         repository_scope_factory=create_memory_repository_scope(provider),
     )
     return PreparedPreview(application=application, seed=seed)
@@ -153,8 +158,17 @@ async def verify_preview(
             f"/api/v1/tenants/{TENANT_ID}/catalog/onboarding-workspace?limit=100",
             headers=headers,
         )
+        public_document = await client.get("/terminal")
+        public_products = await client.get("/api/v1/public/products?limit=10")
 
-    responses = (document, profile, context, workspace)
+    responses = (
+        document,
+        profile,
+        context,
+        workspace,
+        public_document,
+        public_products,
+    )
     if any(response.status_code != 200 for response in responses):
         statuses = ", ".join(str(response.status_code) for response in responses)
         raise RuntimeError(f"Preview read path failed with statuses: {statuses}.")

@@ -160,14 +160,21 @@ def test_market_terminal_catalog_review_workspace_is_served() -> None:
         assert "style-src 'self'" in response.headers["content-security-policy"]
         assert "'unsafe-inline'" not in response.headers["content-security-policy"]
         assert "Рабочее место продавца" in response.text
-        assert "Подтверждайте связи, а не угадывайте товары." in response.text
+        assert "Проверка каталога" in response.text
+        assert 'class="review-page"' in response.text
+        assert " glass" not in response.text
         assert 'id="loginForm"' in response.text
         assert 'autocomplete="username"' in response.text
         assert 'autocomplete="current-password"' in response.text
         assert 'id="tenantSelect"' in response.text
         assert 'id="offerCount"' in response.text
         assert 'id="linkedOfferCount"' in response.text
+        assert 'id="catalogProgress"' in response.text
         assert 'id="marketplaceProgress"' in response.text
+        assert 'id="queueSearchInput"' in response.text
+        assert 'id="queueMarketplaceFilter"' in response.text
+        assert 'id="candidatePagination"' in response.text
+        assert 'id="proposalPagination"' in response.text
         assert 'id="reviewCandidates"' in response.text
         assert 'id="productProposals"' in response.text
         assert 'aria-busy="false"' in response.text
@@ -187,8 +194,14 @@ def test_market_terminal_catalog_review_assets_are_served() -> None:
     assert styles.headers["x-content-type-options"] == "nosniff"
     assert ".review-columns" in styles.text
     assert ".review-card" in styles.text
+    assert ".queue-toolbar" in styles.text
+    assert ".queue-pagination" in styles.text
+    assert ".decision-details" in styles.text
     assert ".action-button.resolve" in styles.text
-    assert "@media (max-width: 680px)" in styles.text
+    assert "@media (max-width: 560px)" in styles.text
+    assert "linear-gradient" not in styles.text
+    assert "border-radius: 999px" not in styles.text
+    assert 'card.className = "marketplace-progress-card";' in script.text
 
     assert script.status_code == 200
     assert script.headers["content-type"].startswith("application/javascript")
@@ -201,6 +214,10 @@ def test_market_terminal_catalog_review_assets_are_served() -> None:
     assert "/catalog/onboarding-workspace?limit=100" in script.text
     assert "function renderOnboardingSummary(summary)" in script.text
     assert "function marketplaceProgressCard(summary)" in script.text
+    assert "function renderQueues()" in script.text
+    assert "function queueItemMatches(item)" in script.text
+    assert "function paginate(items, requestedPage, pageSize)" in script.text
+    assert "const proposalPageSize = 9;" in script.text
     assert "`/catalog/reviews/${endpoint}`" in script.text
     assert "let endpoint = `${base}/confirm`;" in script.text
     assert "endpoint = `${base}/resolve-existing`;" in script.text

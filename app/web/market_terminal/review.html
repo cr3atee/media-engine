@@ -7,10 +7,10 @@
     <link rel="stylesheet" href="/terminal/styles.css" />
     <link rel="stylesheet" href="/terminal/review.css" />
   </head>
-  <body>
+  <body class="review-page">
     <a class="skip-link" href="#reviewWorkspace">Перейти к проверке каталога</a>
     <main class="shell review-shell">
-      <header class="topbar glass">
+      <header class="topbar">
         <a class="brand" href="/terminal" aria-label="Каталог Market Terminal">
           <span class="brand-mark">MT</span>
           <span>
@@ -19,7 +19,7 @@
           </span>
         </a>
         <nav class="nav" aria-label="Навигация рабочего места">
-          <a href="/terminal">Публичный каталог</a>
+          <a href="/terminal">Каталог</a>
           <a href="#reviewCandidates">Совпадения</a>
           <a href="#productProposals">Новые товары</a>
         </nav>
@@ -36,25 +36,24 @@
 
       <section class="review-intro">
         <div>
-          <p class="eyebrow">Catalog intelligence / human review</p>
-          <h1>Подтверждайте связи, а не угадывайте товары.</h1>
+          <h1>Проверка каталога</h1>
           <p class="lead">
-            Система показывает только рассчитанные кандидаты и предложения.
-            Ваше решение сохраняется вместе с причиной и не меняет пороги
-            автоматического сопоставления.
+            Разберите объявления, для которых система не смогла принять
+            однозначное решение.
           </p>
         </div>
-        <aside class="guardrail glass" aria-label="Правила проверки">
-          <span class="guardrail-index">01</span>
-          <strong>Факты источника остаются неизменными</strong>
-          <p>Новые названия берутся из объявления, а существующая связь требует подтверждения.</p>
+        <aside class="review-rule" aria-label="Правило проверки">
+          <strong>Правило проверки</strong>
+          <p>
+            Исходные данные объявления не редактируются. Решение сохраняется
+            вместе с причиной.
+          </p>
         </aside>
       </section>
 
       <section class="auth-layout" id="authArea">
-        <form class="login-card glass" id="loginForm">
+        <form class="login-card" id="loginForm">
           <div>
-            <p class="eyebrow">Защищённый доступ</p>
             <h2>Вход продавца</h2>
             <p class="form-hint">
               Токены живут только в памяти этой вкладки и удаляются при выходе
@@ -92,9 +91,9 @@
           ></p>
         </form>
 
-        <section class="session-card glass" id="sessionPanel" hidden>
+        <section class="session-card" id="sessionPanel" hidden>
           <div class="session-identity">
-            <p class="eyebrow">Активная сессия</p>
+            <p class="section-label">Активная сессия</p>
             <h2 id="sellerName">Продавец</h2>
             <p class="form-hint" id="sellerEmail"></p>
           </div>
@@ -123,39 +122,61 @@
         aria-busy="false"
         hidden
       >
-        <div class="review-metrics" aria-label="Состояние очередей">
-          <article class="review-metric glass">
-            <span>Объявления</span>
-            <strong id="offerCount">0</strong>
-            <small>получено из маркетплейсов</small>
-          </article>
-          <article class="review-metric glass">
-            <span>Связано</span>
-            <strong id="linkedOfferCount">0</strong>
-            <small>подтверждено в каталоге</small>
-          </article>
-          <article class="review-metric glass">
-            <span>Нужна проверка</span>
-            <strong id="candidateCount">0</strong>
-            <small>кандидатов совпадения</small>
-          </article>
-          <article class="review-metric glass">
-            <span>Новые позиции</span>
-            <strong id="proposalCount">0</strong>
-            <small>предложений каталога</small>
-          </article>
-          <article class="review-metric glass accent-metric">
-            <span>Текущий контур</span>
+        <header class="workspace-heading">
+          <div>
+            <p class="section-label">Рабочая очередь</p>
+            <h1>Решения по каталогу</h1>
+          </div>
+          <div class="workspace-context">
+            <span>Рабочее пространство</span>
             <strong id="tenantLabel">—</strong>
-            <small>данные изолированы по продавцу</small>
-          </article>
-        </div>
+          </div>
+        </header>
 
-        <div class="onboarding-facts glass" aria-label="Прогресс каталога">
+        <dl class="review-metrics" aria-label="Состояние очередей">
+          <div class="review-metric">
+            <dt>Все объявления</dt>
+            <dd id="offerCount">0</dd>
+            <small>получено</small>
+          </div>
+          <div class="review-metric">
+            <dt>Связано</dt>
+            <dd id="linkedOfferCount">0</dd>
+            <small>в каталоге</small>
+          </div>
+          <div class="review-metric">
+            <dt>На проверке</dt>
+            <dd id="candidateCount">0</dd>
+            <small>совпадений</small>
+          </div>
+          <div class="review-metric">
+            <dt>Новые товары</dt>
+            <dd id="proposalCount">0</dd>
+            <small>предложений</small>
+          </div>
+        </dl>
+
+        <div class="onboarding-facts" aria-label="Прогресс каталога">
           <span><strong id="canonicalProductCount">0</strong> товаров</span>
           <span><strong id="decisionCount">0</strong> решений</span>
           <span><strong id="unqueuedOfferCount">0</strong> вне очередей</span>
         </div>
+
+        <section class="catalog-progress" aria-labelledby="catalogProgressTitle">
+          <div>
+            <p class="section-label">Готовность каталога</p>
+            <strong id="catalogProgressTitle">Связано 0 из 0 объявлений</strong>
+          </div>
+          <div class="catalog-progress-value">
+            <span id="catalogProgressPercent">0%</span>
+            <progress
+              id="catalogProgress"
+              max="100"
+              value="0"
+              aria-label="Доля связанных объявлений"
+            >0%</progress>
+          </div>
+        </section>
 
         <div
           class="marketplace-progress"
@@ -171,18 +192,43 @@
           aria-atomic="true"
         ></p>
 
-        <div class="review-columns">
+        <section class="queue-toolbar" aria-label="Фильтры очередей">
+          <div class="queue-toolbar-copy">
+            <p class="section-label">Фильтр очереди</p>
+            <strong id="filterSummary">Показаны все объявления</strong>
+          </div>
+          <label for="queueSearchInput">
+            <span>Поиск по названию или ID</span>
+            <input
+              id="queueSearchInput"
+              type="search"
+              autocomplete="off"
+              placeholder="Например, Minecraft"
+            />
+          </label>
+          <label for="queueMarketplaceFilter">
+            <span>Площадка</span>
+            <select id="queueMarketplaceFilter">
+              <option value="">Все площадки</option>
+            </select>
+          </label>
+          <button class="ghost-button" id="resetQueueFilters" type="button">
+            Сбросить
+          </button>
+        </section>
+
+        <div class="review-columns" id="reviewColumns">
           <section
-            class="review-panel glass"
+            class="review-panel"
             id="reviewCandidates"
             aria-labelledby="reviewCandidatesTitle"
           >
             <div class="panel-heading">
               <span>
-                <p class="eyebrow">Пограничные совпадения</p>
+                <p class="section-label">Пограничные совпадения</p>
                 <h2 id="reviewCandidatesTitle">Подтвердить или отклонить</h2>
               </span>
-              <span class="queue-marker">REVIEW</span>
+              <span class="queue-marker">Проверка</span>
             </div>
             <p class="panel-copy">
               Здесь появляются пары внутри действующего review-порога. Решение
@@ -193,29 +239,57 @@
               id="candidateList"
               aria-live="polite"
             ></div>
+            <nav
+              class="queue-pagination"
+              id="candidatePagination"
+              aria-label="Страницы совпадений"
+              hidden
+            >
+              <button class="ghost-button" id="candidatePrevious" type="button">
+                Назад
+              </button>
+              <span id="candidateRange"></span>
+              <button class="ghost-button" id="candidateNext" type="button">
+                Дальше
+              </button>
+            </nav>
           </section>
 
           <section
-            class="review-panel glass"
+            class="review-panel"
             id="productProposals"
             aria-labelledby="productProposalsTitle"
           >
             <div class="panel-heading">
               <span>
-                <p class="eyebrow">Не найдено совпадение</p>
+                <p class="section-label">Совпадение не найдено</p>
                 <h2 id="productProposalsTitle">Создать или связать</h2>
               </span>
-              <span class="queue-marker warning">NO MATCH</span>
+              <span class="queue-marker warning">Новый товар</span>
             </div>
             <p class="panel-copy">
               Можно создать товар из исходного названия или связать объявление
               только с показанным ближайшим товаром.
             </p>
             <div
-              class="review-list"
+              class="review-list proposal-grid"
               id="proposalList"
               aria-live="polite"
             ></div>
+            <nav
+              class="queue-pagination"
+              id="proposalPagination"
+              aria-label="Страницы новых товаров"
+              hidden
+            >
+              <button class="ghost-button" id="proposalPrevious" type="button">
+                Назад
+              </button>
+              <span id="proposalRange"></span>
+              <button class="ghost-button" id="proposalNext" type="button">
+                Дальше
+              </button>
+            </nav>
           </section>
         </div>
       </section>
