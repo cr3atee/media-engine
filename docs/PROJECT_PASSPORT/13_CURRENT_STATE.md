@@ -486,6 +486,13 @@ production operations readiness: metrics export, alert routing, polling-history
 retention, and deployment configuration. Bounded human catalog review proceeds
 in parallel and is not replaced by title inference.
 
+EPIC 21 Task 1 adds an opt-in production metrics boundary around the existing
+worker. Scheduler counters and latest marketplace batch gauges are rendered in
+Prometheus text format and atomically written for an external textfile
+collector. Labels intentionally exclude tenant/integration identifiers, source
+URLs, credentials, and error details. Business processing and persistence are
+unchanged; alert routing, retention, and deployment wiring remain.
+
 ## Known Gaps
 
 - GGSEL saved-response extraction now produces 60 snapshot-ready `ParsedOffer`

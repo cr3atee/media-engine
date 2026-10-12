@@ -322,6 +322,11 @@ This document tracks only work that is reflected by the current repository state
   operator-to-public flow, and repository-backed public UI verification. The
   offline gate passes `4/4`; live marketplace evidence remains an explicit
   opt-in and no saved offer is auto-confirmed.
+- EPIC 21 Task 1 worker metrics export: the existing runtime and latest polling
+  batch now render low-cardinality Prometheus textfile metrics through an
+  opt-in, atomically replaced worker output. Scheduler failures/retries/lease
+  skips and per-marketplace volume/error signals are exposed without tenant,
+  integration, URL, credential, or error-detail labels.
 
 ## Current Status
 
@@ -366,7 +371,9 @@ bounded human-reviewed batch from the saved marketplace evidence.
 
 ## Not Present Yet
 
-- Production metrics export, alert routing, and polling-history retention policy.
+- Production alert routing and polling-history retention policy. The worker now
+  has an opt-in Prometheus textfile export foundation; deployment scrape wiring
+  remains.
 - Optional guarded live Telegram test-chat message.
 - Production AI provider integration in the pipeline.
 - Live marketplace credential storage and credential retrieval for execution.

@@ -6,6 +6,12 @@ This document records notable Project Passport updates.
 
 ## Unreleased
 
+- Started EPIC 21 production operations readiness with dependency-free,
+  low-cardinality Prometheus textfile metrics for Scheduler statistics and the
+  latest marketplace polling batch. Export is opt-in and atomically replaced;
+  sensitive/high-cardinality source and tenant context is omitted. The offline
+  verifier passes `12/12`; full Pytest passes `494` tests and MyPy checks `433`
+  files.
 - Completed the EPIC 20 software acceptance boundary with one deterministic
   `4/4` gate over saved payload contracts, the mutation-free review workspace,
   explicit operator-to-public onboarding, and repository-backed public UI

@@ -64,10 +64,11 @@ candidate verification.
 
 ## Operational
 
-- Add production metrics export and alert routing for retained worker failures,
+- Connect the completed opt-in Prometheus textfile metrics export to the chosen
+  deployment collector and add alert routing for retained worker failures,
   skipped integrations, processing-error counts, and marketplace source drift.
-  Tenant-scoped per-run diagnostics are now durable; retention/pruning policy
-  should be selected from observed production volume.
+  Tenant-scoped per-run diagnostics are durable; retention/pruning policy should
+  be selected from observed production volume.
 - Add production monitoring and alerting for exhausted content attempts and
   ambiguous publications.
 
