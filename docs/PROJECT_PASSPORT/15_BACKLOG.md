@@ -35,8 +35,9 @@ candidate verification.
   in `docs/CATALOG_REVIEW_EVIDENCE.md`; all candidates remain unapproved. The
   workspace now reports complete tenant and per-marketplace onboarding progress
   from one consistent state, including unresolved records outside actionable
-  queues. Execute a bounded human-reviewed batch next; do not infer completion
-  from the queue page limit.
+  queues. A bounded FunPay/GGSEL batch is now available in the isolated preview;
+  execute the human decisions next and do not infer completion from the queue
+  page limit.
 - Decide whether the embedded Market Terminal shell remains inside this
   repository or moves to a separate frontend project before public launch.
 - Decide whether public category browse must require parser/category retention

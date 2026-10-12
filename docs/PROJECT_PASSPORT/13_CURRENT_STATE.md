@@ -475,6 +475,16 @@ itself is now verified against isolated PostgreSQL.
   marketplace combination, deduplicates shared offers, persists nothing, and
   leaves every catalog action to the authenticated human reviewer. The first
   check contains two proposals across FunPay and GGSEL.
+- EPIC 20 Task 4 closes the software acceptance boundary with one deterministic
+  offline command. Its `4/4` stages cover saved marketplace contracts, the
+  mutation-free saved-data workspace, explicit operator onboarding through
+  public catalog reads, and repository-backed public UI DTOs. Live evidence is
+  opt-in; saved marketplace offers remain unapproved pending a human decision.
+
+EPIC 20 software implementation is complete. The next engineering boundary is
+production operations readiness: metrics export, alert routing, polling-history
+retention, and deployment configuration. Bounded human catalog review proceeds
+in parallel and is not replaced by title inference.
 
 ## Known Gaps
 

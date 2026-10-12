@@ -6,6 +6,11 @@ This document records notable Project Passport updates.
 
 ## Unreleased
 
+- Completed the EPIC 20 software acceptance boundary with one deterministic
+  `4/4` gate over saved payload contracts, the mutation-free review workspace,
+  explicit operator-to-public onboarding, and repository-backed public UI
+  reads. Live marketplace evidence remains opt-in and saved offers remain
+  unapproved until a human decision.
 - Added an opt-in bounded aligned-live mode to the catalog review preview. It
   reuses current matching evidence, selects one `NO_MATCH` pair per available
   marketplace combination, deduplicates offers, and starts with no catalog

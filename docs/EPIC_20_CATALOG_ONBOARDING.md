@@ -2,7 +2,8 @@
 
 ## Status
 
-Tasks 1 through 3 are implemented and verified.
+Implementation Tasks 1 through 4 are complete and verified. Production catalog
+identity decisions remain explicit operator work, not an automated task.
 
 ## Goal
 
@@ -40,6 +41,10 @@ links.
   memory-only operator batch from the highest existing `NO_MATCH` evidence for
   every available marketplace pair. Shared offers are deduplicated; no product,
   link, alias, or decision is pre-seeded.
+- A single deterministic EPIC 20 acceptance gate composes the saved-payload
+  contracts, saved-data review workspace, operator-to-public path, and public
+  catalog/UI verifier. Optional live evidence is excluded by default and
+  requires `--include-live-evidence`.
 
 ## Counting Semantics
 
@@ -100,7 +105,10 @@ lists.
 - The 2026-10-12 bounded live preview check passed with one FunPay offer and
   one GGSEL offer, zero review candidates, and two explicit product proposals.
   Playerok remained unavailable and was not replaced with fixture or mock data.
-- Full Pytest: `485 passed, 58 skipped`; full MyPy: no issues in `428` source
+- The deterministic EPIC 20 acceptance gate passes `4/4` stages. It performs no
+  live marketplace, Telegram, AI, or PostgreSQL calls and mutates only isolated
+  in-memory state.
+- Full Pytest: `489 passed, 58 skipped`; full MyPy: no issues in `430` source
   files; focused Ruff and Ruff format checks passed.
 
 ## Operational State
@@ -125,3 +133,9 @@ offers are invalid.
 The bounded live batch is now ready for an operator to inspect both current
 source pages. Any confirm or resolve action remains an explicit human decision
 and the preview state is discarded when its process stops.
+
+The software boundary for EPIC 20 is complete. The next engineering EPIC should
+address production operations readiness (metrics export, alert routing,
+polling-history retention, and deployment configuration). Human-approved
+catalog decisions can proceed in parallel and must not be replaced by inferred
+links.

@@ -317,6 +317,11 @@ This document tracks only work that is reflected by the current repository state
   source combination, deduplicate repeated offers, and expose only explicit
   product proposals in memory. The current partial live check produced one
   FunPay and one GGSEL proposal pair while Playerok returned `HTTP 502`.
+- EPIC 20 Task 4 deterministic acceptance gate: one command composes saved
+  payload contracts, the mutation-free saved-data workspace, the explicit
+  operator-to-public flow, and repository-backed public UI verification. The
+  offline gate passes `4/4`; live marketplace evidence remains an explicit
+  opt-in and no saved offer is auto-confirmed.
 
 ## Current Status
 
@@ -369,10 +374,10 @@ bounded human-reviewed batch from the saved marketplace evidence.
 
 ## Recommended Next EPIC
 
-**Guarded production catalog onboarding.**
+**Production operations readiness.**
 
-Use the completed authenticated review workspace and its complete progress
-summary to process a bounded initial batch of tenant-owned canonical products
-and exact marketplace links from human-verified evidence. Record operational
-results and source coverage; do not invent links, bulk-confirm `NO_MATCH`
-offers, or lower automatic matching thresholds.
+Add the already identified metrics export, alert routing, polling-history
+retention policy, and deployment configuration around the verified worker and
+marketplace polling boundaries. In parallel, use the completed review workspace
+to process a bounded initial catalog batch from human-verified evidence. Do not
+invent links, bulk-confirm `NO_MATCH` offers, or lower matching thresholds.
