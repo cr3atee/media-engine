@@ -312,6 +312,11 @@ This document tracks only work that is reflected by the current repository state
   preserving the existing query and navigation behavior. Saved marketplace
   data passes `42` public UI checks, and a `390x844` browser run confirms the
   dynamic detail flow without horizontal overflow.
+- EPIC 20 Task 3 bounded live review batch: the operator preview can fetch
+  aligned public categories, retain one highest `NO_MATCH` pair per available
+  source combination, deduplicate repeated offers, and expose only explicit
+  product proposals in memory. The current partial live check produced one
+  FunPay and one GGSEL proposal pair while Playerok returned `HTTP 502`.
 
 ## Current Status
 

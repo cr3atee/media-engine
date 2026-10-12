@@ -6,6 +6,11 @@ This document records notable Project Passport updates.
 
 ## Unreleased
 
+- Added an opt-in bounded aligned-live mode to the catalog review preview. It
+  reuses current matching evidence, selects one `NO_MATCH` pair per available
+  marketplace combination, deduplicates offers, and starts with no catalog
+  mutation. The first live check yielded two proposals across FunPay and GGSEL;
+  full Pytest passed `485` tests and MyPy checked `428` files.
 - Hardened aligned marketplace review evidence against one-source outages.
   Successful source batches remain visible while any missing marketplace keeps
   the verifier non-zero. The 2026-10-12 partial run retained `60` GGSEL and

@@ -470,6 +470,11 @@ itself is now verified against isolated PostgreSQL.
   and `1,284` FunPay offers after Playerok returned `HTTP 502`, classified all
   `77,040` available pairs as `NO_MATCH`, and correctly failed the overall run
   as incomplete.
+- A bounded aligned-live mode is available in the existing catalog review
+  preview. It selects at most one highest-scoring `NO_MATCH` pair per available
+  marketplace combination, deduplicates shared offers, persists nothing, and
+  leaves every catalog action to the authenticated human reviewer. The first
+  check contains two proposals across FunPay and GGSEL.
 
 ## Known Gaps
 

@@ -27,6 +27,11 @@ This partial result does not replace the last complete three-source observation
 below. The verifier returned a non-zero status, persisted nothing, and did not
 create or approve any canonical link.
 
+The same live result was reduced to a bounded memory-only operator preview: one
+FunPay offer and one GGSEL offer, zero review candidates, and two `NO_MATCH`
+product proposals. The selection takes only the highest existing evidence per
+available source pair and does not convert similarity into a decision.
+
 ## Latest Live Observation
 
 Observed on 2026-10-05 through the existing public GGSEL, Playerok, and FunPay

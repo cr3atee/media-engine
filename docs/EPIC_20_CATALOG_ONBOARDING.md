@@ -2,7 +2,7 @@
 
 ## Status
 
-Tasks 1 and 2 are implemented and verified.
+Tasks 1 through 3 are implemented and verified.
 
 ## Goal
 
@@ -36,6 +36,10 @@ links.
   gradients, rounded dashboard cards, and pill-shaped navigation. Existing
   search, filters, URL state, product selection, comparison, and history
   behavior is unchanged.
+- The catalog-review preview accepts `--aligned-live-data` and builds a bounded
+  memory-only operator batch from the highest existing `NO_MATCH` evidence for
+  every available marketplace pair. Shared offers are deduplicated; no product,
+  link, alias, or decision is pre-seeded.
 
 ## Counting Semantics
 
@@ -93,6 +97,11 @@ lists.
   `HTTP 502`; GGSEL and FunPay still produced `1,344` snapshot-ready offers and
   `77,040` `NO_MATCH` pairs with a highest similarity of `0.714`. No data was
   persisted.
+- The 2026-10-12 bounded live preview check passed with one FunPay offer and
+  one GGSEL offer, zero review candidates, and two explicit product proposals.
+  Playerok remained unavailable and was not replaced with fixture or mock data.
+- Full Pytest: `485 passed, 58 skipped`; full MyPy: no issues in `428` source
+  files; focused Ruff and Ruff format checks passed.
 
 ## Operational State
 
@@ -112,3 +121,7 @@ has been reviewed or linked.
 The current Playerok `HTTP 502` is an upstream availability blocker for a fresh
 complete three-source review batch, not evidence that existing stored Playerok
 offers are invalid.
+
+The bounded live batch is now ready for an operator to inspect both current
+source pages. Any confirm or resolve action remains an explicit human decision
+and the preview state is discarded when its process stops.

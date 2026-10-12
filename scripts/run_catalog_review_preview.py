@@ -35,6 +35,13 @@ from app.repositories.public_queries.repository_backed import (
 )
 from app.services.passwords import PasswordHasher
 from app.services.repository_scope import create_memory_repository_scope
+from scripts.analyze_cross_marketplace_matching import (
+    analyze_cross_marketplace_matching,
+)
+from scripts.verify_aligned_marketplace_categories import (
+    MarketplaceCategoryBatch,
+    fetch_aligned_marketplace_categories_isolated,
+)
 
 TENANT_ID = UUID("43000000-0000-4000-8000-000000000001")
 USER_ID = UUID("43000000-0000-4000-8000-000000000002")
@@ -52,6 +59,7 @@ class PreviewArguments:
     port: int
     check: bool
     saved_data: bool
+    aligned_live_data: bool
 
 
 @dataclass(slots=True, frozen=True)
@@ -62,6 +70,7 @@ class PreviewSeedSummary:
     offers_by_marketplace: tuple[tuple[str, int], ...]
     expected_candidates: int
     expected_proposals: int
+    notes: tuple[str, ...] = ()
 
 
 @dataclass(slots=True, frozen=True)
@@ -88,23 +97,43 @@ def parse_args() -> PreviewArguments:
         action="store_true",
         help="Verify authentication and queues without starting a server.",
     )
-    parser.add_argument(
+    data_source = parser.add_mutually_exclusive_group()
+    data_source.add_argument(
         "--saved-data",
         action="store_true",
         help="Load saved real GGSEL, Playerok, and FunPay offers into memory.",
+    )
+    data_source.add_argument(
+        "--aligned-live-data",
+        action="store_true",
+        help=(
+            "Fetch a bounded live review batch from aligned public categories "
+            "without persisting decisions."
+        ),
     )
     namespace = parser.parse_args()
     return PreviewArguments(
         port=cast(int, namespace.port),
         check=cast(bool, namespace.check),
         saved_data=cast(bool, namespace.saved_data),
+        aligned_live_data=cast(bool, namespace.aligned_live_data),
     )
 
 
-async def prepare_preview(*, saved_data: bool = False) -> PreparedPreview:
+async def prepare_preview(
+    *,
+    saved_data: bool = False,
+    aligned_live_data: bool = False,
+) -> PreparedPreview:
     """Build an isolated memory-backed seller review application and seed."""
+    if saved_data and aligned_live_data:
+        raise ValueError("Preview data sources are mutually exclusive.")
     provider = create_memory_provider()
-    seed = await _seed_preview(provider, saved_data=saved_data)
+    seed = await _seed_preview(
+        provider,
+        saved_data=saved_data,
+        aligned_live_data=aligned_live_data,
+    )
 
     from app.main import create_app
 
@@ -195,10 +224,13 @@ async def _seed_preview(
     provider: RepositoryProvider,
     *,
     saved_data: bool,
+    aligned_live_data: bool,
 ) -> PreviewSeedSummary:
     await _seed_identity(provider)
     if saved_data:
         return await _seed_saved_marketplace_offers(provider)
+    if aligned_live_data:
+        return await _seed_aligned_live_offers(provider)
     await _seed_synthetic_catalog(provider)
     return PreviewSeedSummary(
         mode="synthetic",
@@ -337,13 +369,121 @@ async def _seed_saved_marketplace_offers(
     )
 
 
+async def _seed_aligned_live_offers(
+    provider: RepositoryProvider,
+) -> PreviewSeedSummary:
+    results = await fetch_aligned_marketplace_categories_isolated()
+    batches = tuple(
+        result.batch
+        for result in results
+        if result.succeeded and result.batch is not None
+    )
+    if len(batches) < 2:
+        statuses = ", ".join(
+            f"{result.marketplace}={result.error_code or 'unavailable'}"
+            for result in results
+            if not result.succeeded
+        )
+        raise RuntimeError(
+            "Aligned live review requires at least two sources; "
+            f"failures: {statuses or 'insufficient source data'}."
+        )
+
+    selected = _select_aligned_review_offers(batches)
+    if not selected:
+        raise RuntimeError("Aligned live sources produced no reviewable pair.")
+
+    seeded_counts = await _save_review_offers(provider, selected)
+    unavailable = tuple(
+        f"{result.marketplace} unavailable: {result.error_code or 'UnknownError'}"
+        for result in results
+        if not result.succeeded
+    )
+    return PreviewSeedSummary(
+        mode="bounded aligned live review batch",
+        offers_by_marketplace=seeded_counts,
+        expected_candidates=0,
+        expected_proposals=len(selected),
+        notes=(
+            "Highest deterministic NO_MATCH pair per available source pairing; "
+            "human confirmation is still required.",
+            *unavailable,
+        ),
+    )
+
+
+def _select_aligned_review_offers(
+    batches: tuple[MarketplaceCategoryBatch, ...],
+) -> tuple[ParsedOffer, ...]:
+    report = analyze_cross_marketplace_matching(
+        {batch.marketplace: batch.snapshot_ready_offers for batch in batches},
+        top_limit=0,
+        pair_top_limit=1,
+    )
+    offer_lookup = {
+        (offer.marketplace.strip().lower(), (offer.external_id or "").strip()): offer
+        for batch in batches
+        for offer in batch.snapshot_ready_offers
+        if offer.marketplace.strip() and (offer.external_id or "").strip()
+    }
+    selected: list[ParsedOffer] = []
+    seen: set[tuple[str, str]] = set()
+    for pair in report.top_candidates_by_marketplace_pair:
+        if not pair.candidates:
+            continue
+        candidate = pair.candidates[0]
+        identities = (
+            (
+                candidate.left_marketplace,
+                candidate.left_external_id or "",
+            ),
+            (
+                candidate.right_marketplace,
+                candidate.right_external_id or "",
+            ),
+        )
+        for marketplace, external_id in identities:
+            identity = (marketplace.strip().lower(), external_id.strip())
+            if identity in seen or identity not in offer_lookup:
+                continue
+            seen.add(identity)
+            selected.append(offer_lookup[identity])
+    return tuple(selected)
+
+
+async def _save_review_offers(
+    provider: RepositoryProvider,
+    offers: tuple[ParsedOffer, ...],
+) -> tuple[tuple[str, int], ...]:
+    counts: dict[str, int] = {}
+    for offer in offers:
+        marketplace = offer.marketplace.strip().lower()
+        external_id = (offer.external_id or "").strip()
+        await provider.offers.save(
+            TENANT_ID,
+            replace(
+                offer,
+                tenant_id=TENANT_ID,
+                marketplace=marketplace,
+                external_id=external_id,
+            ),
+        )
+        counts[marketplace] = counts.get(marketplace, 0) + 1
+    return tuple(sorted(counts.items()))
+
+
 def main() -> int:
     """Prepare and run the loopback-only catalog-review preview."""
     _configure_stdout()
     logging.getLogger("httpx").setLevel(logging.WARNING)
     arguments = parse_args()
     try:
-        preview = asyncio.run(prepare_preview(saved_data=arguments.saved_data))
+        preview = asyncio.run(
+            prepare_preview(
+                saved_data=arguments.saved_data,
+                aligned_live_data=arguments.aligned_live_data,
+            )
+        )
         if arguments.check:
             candidates, proposals = asyncio.run(
                 verify_preview(
@@ -370,7 +510,9 @@ def main() -> int:
         print(f"Dataset: {preview.seed.mode}")
         for marketplace, count in preview.seed.offers_by_marketplace:
             print(f"{marketplace}: {count} offers")
-        if arguments.saved_data:
+        for note in preview.seed.notes:
+            print(f"NOTE: {note}")
+        if arguments.saved_data or arguments.aligned_live_data:
             print("No catalog products, links, or review decisions are pre-seeded.")
         print("Data is memory-only and resets when the process stops.")
         uvicorn.run(
