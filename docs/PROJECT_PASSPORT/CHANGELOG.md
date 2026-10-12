@@ -6,6 +6,11 @@ This document records notable Project Passport updates.
 
 ## Unreleased
 
+- Hardened aligned marketplace review evidence against one-source outages.
+  Successful source batches remain visible while any missing marketplace keeps
+  the verifier non-zero. The 2026-10-12 partial run retained `60` GGSEL and
+  `1,284` FunPay offers after a Playerok `HTTP 502`, evaluated `77,040` pairs,
+  and persisted no catalog decision.
 - Reworked the public Market Terminal presentation into a flat,
   high-contrast editorial interface, removing glass, decorative gradients,
   rounded dashboard cards, and pill navigation without changing its API or

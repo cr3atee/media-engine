@@ -465,6 +465,11 @@ itself is now verified against isolated PostgreSQL.
   API behavior remains intact; saved-data verification passes `42` checks and
   exact `390x844` browser emulation confirms product selection, offers,
   comparison, and history without horizontal overflow.
+- Live aligned-category verification now isolates a failed source instead of
+  discarding successful evidence. The 2026-10-12 refresh retained `60` GGSEL
+  and `1,284` FunPay offers after Playerok returned `HTTP 502`, classified all
+  `77,040` available pairs as `NO_MATCH`, and correctly failed the overall run
+  as incomplete.
 
 ## Known Gaps
 

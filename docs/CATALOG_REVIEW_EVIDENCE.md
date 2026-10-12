@@ -6,6 +6,27 @@ This document records source-backed evidence for human canonical-product
 review. It is not an approval manifest and must not be used to create automatic
 links.
 
+## Latest Refresh Attempt
+
+Observed on 2026-10-12 through the same public adapter boundaries. The run was
+intentionally marked incomplete because Playerok first timed out and then
+returned `HTTP 502` on a repeated request.
+
+| Marketplace | Result | Source count | Parsed | Snapshot-ready |
+| --- | --- | ---: | ---: | ---: |
+| GGSEL | available | 60 | 60 | 60 |
+| Playerok | `HTTP 502` | - | - | - |
+| FunPay | available | 1,284 | 1,284 | 1,284 |
+
+Failure isolation preserved the successful evidence: GGSEL and FunPay produced
+`77,040` title pairs, all remained `NO_MATCH`, and the highest similarity was
+still `0.714`. The leading pair remains FunPay offer `25007196` and GGSEL offer
+`102169338`; observed prices were `21.62 EUR` and `1699 RUB` respectively.
+
+This partial result does not replace the last complete three-source observation
+below. The verifier returned a non-zero status, persisted nothing, and did not
+create or approve any canonical link.
+
 ## Latest Live Observation
 
 Observed on 2026-10-05 through the existing public GGSEL, Playerok, and FunPay

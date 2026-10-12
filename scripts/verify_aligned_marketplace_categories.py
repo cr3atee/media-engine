@@ -4,7 +4,9 @@ from __future__ import annotations
 
 import asyncio
 import json
+import re
 import sys
+from collections.abc import Awaitable, Callable
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -45,22 +47,57 @@ class MarketplaceCategoryBatch:
     snapshot_ready_offers: tuple[ParsedOffer, ...]
 
 
+type MarketplaceCategoryFetcher = Callable[
+    [HttpClient],
+    Awaitable[MarketplaceCategoryBatch],
+]
+
+
+@dataclass(slots=True, frozen=True)
+class MarketplaceCategoryFetchResult:
+    """One isolated marketplace fetch outcome for review evidence."""
+
+    marketplace: str
+    batch: MarketplaceCategoryBatch | None = None
+    error_code: str | None = None
+    error_summary: str | None = None
+
+    @property
+    def succeeded(self) -> bool:
+        """Return whether the marketplace produced a usable batch."""
+        return self.batch is not None and self.error_code is None
+
+
 async def main() -> int:
     """Fetch aligned categories and report current deterministic match evidence."""
     _configure_stdout()
-    try:
-        batches = await fetch_aligned_marketplace_categories()
-    except Exception as exc:
-        print(f"Aligned category verification failed: {type(exc).__name__}: {exc}")
-        return 1
+    results = await fetch_aligned_marketplace_categories_isolated()
+    batches = tuple(
+        result.batch
+        for result in results
+        if result.succeeded and result.batch is not None
+    )
+    failures = tuple(result for result in results if not result.succeeded)
 
     print("=== REAL ALIGNED CATEGORY INPUT ===")
-    for batch in batches:
+    for result in results:
+        if result.batch is None:
+            print(
+                f"{result.marketplace}: failed "
+                f"[{result.error_code or 'UnknownError'}] "
+                f"{result.error_summary or 'Marketplace request failed.'}"
+            )
+            continue
+        batch = result.batch
         print(
             f"{batch.marketplace}: source={batch.source_total}, "
             f"parsed={len(batch.offers)}, "
             f"snapshot-ready={len(batch.snapshot_ready_offers)}"
         )
+
+    if len(batches) < 2:
+        print("At least two successful marketplace sources are required.")
+        return 1
 
     empty_sources = [
         batch.marketplace for batch in batches if not batch.snapshot_ready_offers
@@ -123,19 +160,73 @@ async def main() -> int:
             print(f"  {candidate.right_url or 'unknown'}")
 
     print("\nCategory alignment is source evidence, not product identity proof.")
+    if failures:
+        print(
+            "Status: incomplete; one or more marketplaces were unavailable, "
+            "so this run is not full three-source evidence."
+        )
+        return 1
+    print("Status: complete three-source evidence.")
     return 0
 
 
 async def fetch_aligned_marketplace_categories() -> tuple[
     MarketplaceCategoryBatch, ...
 ]:
-    """Fetch one aligned public category through each existing adapter."""
-    async with HttpClient(timeout=30.0) as http_client:
-        return (
-            await _fetch_ggsel(http_client),
-            await _fetch_playerok(http_client),
-            await _fetch_funpay(http_client),
+    """Fetch all aligned categories or fail when any source is unavailable."""
+    results = await fetch_aligned_marketplace_categories_isolated()
+    failures = tuple(result for result in results if not result.succeeded)
+    if failures:
+        details = ", ".join(
+            f"{result.marketplace}:{result.error_code or 'UnknownError'}"
+            for result in failures
         )
+        raise RuntimeError(f"Aligned marketplace fetch failed: {details}")
+    return tuple(result.batch for result in results if result.batch is not None)
+
+
+async def fetch_aligned_marketplace_categories_isolated() -> tuple[
+    MarketplaceCategoryFetchResult, ...
+]:
+    """Fetch each aligned category without hiding successful source evidence."""
+    async with HttpClient(timeout=30.0) as http_client:
+        return tuple(
+            await asyncio.gather(
+                _capture_fetch("ggsel", _fetch_ggsel, http_client),
+                _capture_fetch("playerok", _fetch_playerok, http_client),
+                _capture_fetch("funpay", _fetch_funpay, http_client),
+            )
+        )
+
+
+async def _capture_fetch(
+    marketplace: str,
+    fetch: MarketplaceCategoryFetcher,
+    http_client: HttpClient,
+) -> MarketplaceCategoryFetchResult:
+    try:
+        batch = await fetch(http_client)
+    except Exception as exc:
+        return MarketplaceCategoryFetchResult(
+            marketplace=marketplace,
+            error_code=type(exc).__name__,
+            error_summary=_safe_error_summary(exc),
+        )
+    return MarketplaceCategoryFetchResult(
+        marketplace=marketplace,
+        batch=batch,
+    )
+
+
+def _safe_error_summary(error: Exception) -> str:
+    summary = re.sub(r"<[^>]*>", " ", str(error))
+    summary = " ".join(summary.split())
+    if not summary:
+        return "Marketplace request failed."
+    http_status = re.search(r"\bHTTP [1-5]\d{2}\b", summary)
+    if http_status is not None:
+        return summary[: http_status.end()]
+    return summary[:240]
 
 
 async def _fetch_ggsel(http_client: HttpClient) -> MarketplaceCategoryBatch:

@@ -88,6 +88,11 @@ lists.
 - Full Pytest: `479 passed, 58 skipped`; full MyPy: no issues in `426` source
   files; focused Ruff, Ruff format, JavaScript syntax, and whitespace checks
   passed.
+- The aligned-category verifier now isolates source failures while still
+  returning non-zero for incomplete evidence. On 2026-10-12 Playerok returned
+  `HTTP 502`; GGSEL and FunPay still produced `1,344` snapshot-ready offers and
+  `77,040` `NO_MATCH` pairs with a highest similarity of `0.714`. No data was
+  persisted.
 
 ## Operational State
 
@@ -103,3 +108,7 @@ presented as production-ready.
 The Task 2 verification uses synthetic, isolated data. It proves the wiring and
 transaction outcome but does not claim that any of the `81` saved real offers
 has been reviewed or linked.
+
+The current Playerok `HTTP 502` is an upstream availability blocker for a fresh
+complete three-source review batch, not evidence that existing stored Playerok
+offers are invalid.
