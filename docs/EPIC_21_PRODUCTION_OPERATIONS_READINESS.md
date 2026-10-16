@@ -2,8 +2,9 @@
 
 ## Status
 
-Task 1 is implemented and verified. Alert evaluation/routing, polling-history
-retention, and deployment wiring remain separate tasks.
+Tasks 1 and 2 are implemented and verified. Polling-history retention,
+production sink wiring, alert lifecycle policy, and deployment wiring remain
+separate tasks.
 
 ## Goal
 
@@ -54,22 +55,62 @@ Example:
 - The exporter does not expose an HTTP listener and therefore does not add a
   new unauthenticated network surface.
 
+## Task 2 - Operational Alert Conditions and Routing
+
+Delivered:
+
+- A pure `OperationalAlertEngine` evaluates existing marketplace execution
+  batches and dashboard read models without performing I/O.
+- Deterministic conditions cover failed and skipped marketplace polling,
+  successful polling with item-processing errors, explicit source-volume
+  drift, event-scoring failures, content-generation failures, permanent
+  publication failures, and ambiguous publications.
+- Source-volume drift requires a caller-owned positive baseline scoped to one
+  tenant integration. The engine does not infer thresholds from sparse or
+  process-local history.
+- Alerts carry stable SHA-256 fingerprints derived from safe condition and
+  scope identifiers. Changing an observed count does not create a new alert
+  identity.
+- `AlertSink`, `AlertRoute`, and `OperationalAlertRouter` provide a
+  delivery-neutral boundary with severity/code filters, deterministic order,
+  per-routing-pass deduplication, and isolation of individual sink failures.
+- Routing failures retain only the sink route name, alert fingerprint, and
+  exception class. Source URLs, query strings, credentials, raw upstream
+  errors, and raw sink errors are not copied into alert results.
+- No Telegram, HTTP, database, Scheduler, retry, or production sink wiring was
+  added.
+
+Alert semantics:
+
+- Evaluation is a snapshot over supplied observations; it does not persist
+  active/resolved state or notification history.
+- Dashboard counters are evaluated only when positive. The current
+  `generated_content_failed` counter proves failed generation attempts, not
+  that every retry for a content item is exhausted, so the alert is named
+  `content_generation_failed` rather than overstating terminal exhaustion.
+- Tenant and integration UUIDs are retained as internal routing scope but are
+  not placed in user-controlled summaries or metric labels.
+- Production deduplication windows, escalation, acknowledgement, resolution,
+  and concrete delivery sinks remain deployment concerns.
+
 ## Verification
 
 - Offline runtime verifier: `12/12` checks passed.
+- Offline operational-alert verifier: `17/17` checks passed.
 - Focused runtime/monitoring tests: `10` passed.
-- Full Pytest: `494 passed, 58 skipped` with one known unrelated Starlette
+- Focused operational-alert tests: `6` passed.
+- Full Pytest: `500 passed, 58 skipped` with one known unrelated Starlette
   TestClient deprecation warning.
-- Full MyPy: no issues in `433` source files.
+- Full MyPy: no issues in `436` source files.
 - Focused Ruff and Ruff format checks: passed.
 
 ## Remaining Tasks
 
-1. Define deterministic alert conditions and a delivery-neutral alert routing
-   contract for failed/skipped polling, source-volume drift, exhausted content
-   attempts, and ambiguous publications.
-2. Add explicit polling-history retention and pruning policy with memory and
+1. Add explicit polling-history retention and pruning policy with memory and
    PostgreSQL parity, rollback safety, and tenant isolation.
+2. Wire an approved production alert sink and define alert lifecycle,
+   deduplication-window, acknowledgement, and escalation policy. Add a distinct
+   terminal content-attempt signal before alerting on retry exhaustion.
 3. Document and verify deployment configuration for worker replicas, Scheduler
    leases, metrics collection, health checks, and graceful shutdown.
 4. Run an isolated PostgreSQL production-shaped operations verification before

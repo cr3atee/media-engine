@@ -65,18 +65,22 @@ candidate verification.
 ## Operational
 
 - Connect the completed opt-in Prometheus textfile metrics export to the chosen
-  deployment collector and add alert routing for retained worker failures,
-  skipped integrations, processing-error counts, and marketplace source drift.
-  Tenant-scoped per-run diagnostics are durable; retention/pruning policy should
-  be selected from observed production volume.
-- Add production monitoring and alerting for exhausted content attempts and
-  ambiguous publications.
+  deployment collector. Connect the delivery-neutral alert router to an
+  approved production sink and define durable deduplication, acknowledgement,
+  resolution, and escalation policy. Tenant-scoped per-run diagnostics are
+  durable; retention/pruning policy should be selected from observed production
+  volume.
+- Add a distinct read-model signal for content items whose complete retry budget
+  is exhausted. Current alert evaluation safely reports failed attempts and
+  ambiguous/permanently failed publications, but does not overstate failed
+  attempts as terminal content exhaustion.
 
 ## Known Marketplace Gap
 
 - GGSEL, Playerok, and FunPay are ready from captured-response proof, strict
   saved-payload verification, and guarded live polling verification. Production
-  scheduling still needs monitoring, alerting, and deployment configuration.
+  scheduling still needs collector/sink wiring, alert lifecycle policy, and
+  deployment configuration.
 - Real source extraction readiness does not imply same-product comparison
   readiness. The current saved payloads contain `81` snapshot-ready offers but
   no deterministic cross-marketplace match under the existing confidence rules.

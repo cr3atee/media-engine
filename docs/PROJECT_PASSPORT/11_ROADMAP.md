@@ -327,6 +327,11 @@ This document tracks only work that is reflected by the current repository state
   opt-in, atomically replaced worker output. Scheduler failures/retries/lease
   skips and per-marketplace volume/error signals are exposed without tenant,
   integration, URL, credential, or error-detail labels.
+- EPIC 21 Task 2 operational alerts: deterministic alert evaluation now covers
+  marketplace polling outcomes, explicit source-volume baselines, dashboard
+  failure counters, and publication ambiguity. Delivery-neutral routes filter
+  by severity/code, deduplicate stable fingerprints per pass, isolate sink
+  failures, and omit raw source/sink details.
 
 ## Current Status
 
@@ -358,8 +363,9 @@ through the public route/DTO layer for product cards, details, offers,
 comparisons, and price history. The first embedded `/terminal` visual shell is
 available for API contract validation. Guarded public-source polling and durable
 per-integration history are now verified; unattended production polling still
-requires deployment configuration, alert routing, and credential retrieval for
-authenticated sources. The backend core is now a verified release candidate.
+requires deployment configuration, concrete alert sink/lifecycle wiring, and
+credential retrieval for authenticated sources. The backend core is now a
+verified release candidate.
 The remaining work before public visual launch is execution of human-approved
 catalog onboarding through the now measurable operator workspace, production
 monitoring/deployment configuration, frontend hardening, and a product decision
@@ -371,9 +377,9 @@ bounded human-reviewed batch from the saved marketplace evidence.
 
 ## Not Present Yet
 
-- Production alert routing and polling-history retention policy. The worker now
-  has an opt-in Prometheus textfile export foundation; deployment scrape wiring
-  remains.
+- Production alert sink/lifecycle wiring and polling-history retention policy.
+  The worker has an opt-in Prometheus textfile export and delivery-neutral alert
+  routing foundation; deployment scrape and notification wiring remain.
 - Optional guarded live Telegram test-chat message.
 - Production AI provider integration in the pipeline.
 - Live marketplace credential storage and credential retrieval for execution.
@@ -383,8 +389,8 @@ bounded human-reviewed batch from the saved marketplace evidence.
 
 **Production operations readiness.**
 
-Add the already identified metrics export, alert routing, polling-history
-retention policy, and deployment configuration around the verified worker and
-marketplace polling boundaries. In parallel, use the completed review workspace
-to process a bounded initial catalog batch from human-verified evidence. Do not
-invent links, bulk-confirm `NO_MATCH` offers, or lower matching thresholds.
+Continue the operations boundary with polling-history retention, a selected
+production alert sink/lifecycle policy, and deployment configuration around the
+verified worker. In parallel, use the completed review workspace to process a
+bounded initial catalog batch from human-verified evidence. Do not invent links,
+bulk-confirm `NO_MATCH` offers, or lower matching thresholds.

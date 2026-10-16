@@ -6,6 +6,13 @@ This document records notable Project Passport updates.
 
 ## Unreleased
 
+- Added EPIC 21 Task 2 deterministic operational alert conditions and a
+  delivery-neutral routing boundary. Explicit marketplace volume baselines,
+  stable scoped fingerprints, severity/code filters, per-pass deduplication,
+  sink-failure isolation, and source/sink-detail redaction pass the offline
+  verifier `17/17` and focused tests `6/6`. Full Pytest passes `500` tests with
+  `58` expected skips, and MyPy checks `436` files; no concrete network sink or
+  durable alert lifecycle was introduced.
 - Started EPIC 21 production operations readiness with dependency-free,
   low-cardinality Prometheus textfile metrics for Scheduler statistics and the
   latest marketplace polling batch. Export is opt-in and atomically replaced;

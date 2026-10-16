@@ -491,7 +491,15 @@ worker. Scheduler counters and latest marketplace batch gauges are rendered in
 Prometheus text format and atomically written for an external textfile
 collector. Labels intentionally exclude tenant/integration identifiers, source
 URLs, credentials, and error details. Business processing and persistence are
-unchanged; alert routing, retention, and deployment wiring remain.
+unchanged.
+
+EPIC 21 Task 2 adds deterministic operational-alert evaluation over existing
+marketplace execution batches and dashboard summaries. Explicit source-volume
+baselines, stable tenant/integration-aware fingerprints, delivery-neutral
+severity/code routes, per-pass deduplication, sink-failure isolation, and safe
+error classification are implemented without network or persistence coupling.
+Concrete production sinks, durable alert lifecycle policy, polling-history
+retention, and deployment wiring remain.
 
 ## Known Gaps
 
@@ -533,8 +541,9 @@ unchanged; alert routing, retention, and deployment wiring remain.
   guarded public-source polling has passed against live GGSEL, Playerok, and
   FunPay data in isolated PostgreSQL. Tenant-scoped polling history now retains
   safe success, failure, and skip evidence across restarts. Unattended polling
-  still requires production metrics/alert routing, deployment configuration,
-  and credential retrieval for authenticated sources.
+  still requires deployment metrics collection, concrete alert sink/lifecycle
+  wiring, deployment configuration, and credential retrieval for authenticated
+  sources.
 - Public Market Terminal integration still needs a frontend location decision
   for public launch and a product decision on category exposure. An embedded
   dependency-free `/terminal` shell now consumes `/api/v1/public` routes for
