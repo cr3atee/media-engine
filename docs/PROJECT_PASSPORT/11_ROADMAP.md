@@ -332,6 +332,10 @@ This document tracks only work that is reflected by the current repository state
   failure counters, and publication ambiguity. Delivery-neutral routes filter
   by severity/code, deduplicate stable fingerprints per pass, isolate sink
   failures, and omit raw source/sink details.
+- EPIC 21 Task 3 polling-history retention: an explicit caller-owned policy now
+  drives tenant-scoped, bounded oldest-first pruning while preserving the
+  newest N runs per integration. Memory/PostgreSQL parity, rollback,
+  concurrency, tenant isolation, and fresh-session persistence are verified.
 
 ## Current Status
 
@@ -377,9 +381,10 @@ bounded human-reviewed batch from the saved marketplace evidence.
 
 ## Not Present Yet
 
-- Production alert sink/lifecycle wiring and polling-history retention policy.
-  The worker has an opt-in Prometheus textfile export and delivery-neutral alert
-  routing foundation; deployment scrape and notification wiring remain.
+- Production alert sink/lifecycle wiring and deployment scheduling for bounded
+  polling-history retention. The worker has an opt-in Prometheus textfile export,
+  delivery-neutral alert routing, and verified retention foundation; collector,
+  notification, and approved policy-value wiring remain.
 - Optional guarded live Telegram test-chat message.
 - Production AI provider integration in the pipeline.
 - Live marketplace credential storage and credential retrieval for execution.
@@ -389,8 +394,9 @@ bounded human-reviewed batch from the saved marketplace evidence.
 
 **Production operations readiness.**
 
-Continue the operations boundary with polling-history retention, a selected
-production alert sink/lifecycle policy, and deployment configuration around the
-verified worker. In parallel, use the completed review workspace to process a
-bounded initial catalog batch from human-verified evidence. Do not invent links,
-bulk-confirm `NO_MATCH` offers, or lower matching thresholds.
+Continue the operations boundary with a selected production alert sink/lifecycle
+policy and deployment configuration around the verified worker, including
+explicit retention values and schedule. In parallel, use the completed review
+workspace to process a bounded initial catalog batch from human-verified
+evidence. Do not invent links, bulk-confirm `NO_MATCH` offers, or lower matching
+thresholds.

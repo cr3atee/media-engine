@@ -2,9 +2,9 @@
 
 ## Status
 
-Tasks 1 and 2 are implemented and verified. Polling-history retention,
-production sink wiring, alert lifecycle policy, and deployment wiring remain
-separate tasks.
+Tasks 1 through 3 are implemented and verified. Production sink wiring, alert
+lifecycle policy, deployment configuration, and the final operations gate
+remain separate tasks.
 
 ## Goal
 
@@ -93,25 +93,65 @@ Alert semantics:
 - Production deduplication windows, escalation, acknowledgement, resolution,
   and concrete delivery sinks remain deployment concerns.
 
+## Task 3 - Polling-History Retention
+
+Delivered:
+
+- The existing `MarketplacePollingRunRepository` now exposes one typed,
+  tenant-scoped, bounded pruning operation implemented consistently by memory
+  and PostgreSQL repositories.
+- `MarketplacePollingRetentionPolicy` requires an explicit positive retention
+  period, preserves at least the newest run for every integration, and caps one
+  deletion pass at `1,000` records.
+- `MarketplacePollingRetentionService` computes one UTC cutoff and performs one
+  bounded repository call inside the existing transaction scope. It does not
+  own Scheduler or deployment configuration.
+- Runs are eligible only when `finished_at` is strictly before the cutoff and
+  they are outside the configured newest-N protection for their integration.
+  Eligible records are deleted oldest-first with UUID tie-breaking.
+- PostgreSQL deletion returns only IDs actually removed by `DELETE ...
+  RETURNING`; concurrent callers therefore cannot both report ownership of one
+  deletion.
+- Memory and PostgreSQL rollback preserve the complete pre-pruning state when
+  the caller-owned transaction fails.
+- No schema change was required. The existing tenant/integration/newest-first
+  index supports retention ranking, and `alembic check` reports no drift.
+
+Retention semantics:
+
+- No production retention duration is hardcoded. Deployment must select
+  `retain_for`, `keep_latest_per_integration`, and `batch_size` from operational
+  volume and audit requirements.
+- A full cleanup may require multiple bounded passes. `batch_limit_reached`
+  reports that the current pass hit its limit; it does not claim that more rows
+  definitely remain.
+- Pruning deletes immutable history records but never mutates retained evidence
+  or marketplace-integration latest-outcome metadata.
+
 ## Verification
 
 - Offline runtime verifier: `12/12` checks passed.
 - Offline operational-alert verifier: `17/17` checks passed.
 - Focused runtime/monitoring tests: `10` passed.
 - Focused operational-alert tests: `6` passed.
-- Full Pytest: `500 passed, 58 skipped` with one known unrelated Starlette
+- Focused polling-retention and existing polling-history tests: `9` passed.
+- Isolated PostgreSQL 17 retention verifier: `16/16` checks passed, including
+  memory parity, tenant isolation, rollback, concurrency, and fresh-session
+  persistence.
+- Alembic current/check, downgrade to `0016`, re-upgrade to head, and offline
+  SQL generation passed at `0017_marketplace_polling_runs`.
+- Full Pytest: `505 passed, 58 skipped` with one known unrelated Starlette
   TestClient deprecation warning.
-- Full MyPy: no issues in `436` source files.
+- Full MyPy: no issues in `439` source files.
 - Focused Ruff and Ruff format checks: passed.
 
 ## Remaining Tasks
 
-1. Add explicit polling-history retention and pruning policy with memory and
-   PostgreSQL parity, rollback safety, and tenant isolation.
-2. Wire an approved production alert sink and define alert lifecycle,
+1. Wire an approved production alert sink and define alert lifecycle,
    deduplication-window, acknowledgement, and escalation policy. Add a distinct
    terminal content-attempt signal before alerting on retry exhaustion.
-3. Document and verify deployment configuration for worker replicas, Scheduler
-   leases, metrics collection, health checks, and graceful shutdown.
-4. Run an isolated PostgreSQL production-shaped operations verification before
+2. Document and verify deployment configuration for worker replicas, Scheduler
+   leases, metrics collection, health checks, graceful shutdown, and scheduled
+   bounded retention using explicitly approved policy values.
+3. Run an isolated PostgreSQL production-shaped operations verification before
    declaring EPIC 21 complete.

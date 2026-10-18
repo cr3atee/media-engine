@@ -239,6 +239,10 @@ This document captures architecture notes that are important for future reviews.
 - Polling history deliberately excludes source URLs, credential references, and
   raw exception messages. Add exporters or alerts from the safe repository/API
   projection; do not weaken this redaction boundary.
+- Polling-history retention is caller-configured and tenant-scoped. Always keep
+  at least the newest run per integration, delete only records strictly older
+  than the UTC cutoff, and execute bounded batches through the shared repository
+  transaction scope. Do not hide deployment policy inside repository code.
 - The core release gate is intentionally a subprocess coordinator over existing
   verifiers. Keep it free of domain logic and live-network behavior. Its local
   database-name guard permits the public UI and polling-history verifiers to

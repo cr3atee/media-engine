@@ -7,6 +7,7 @@ from app.domain.marketplace_polling import MarketplacePollingRun
 from app.repositories.base import RepositoryIdentityConflictError
 from app.repositories.marketplace_polling_runs import (
     MAX_POLLING_RUN_HISTORY,
+    MarketplacePollingRunPruneRequest,
     MarketplacePollingRunRepository,
 )
 
@@ -48,6 +49,42 @@ class MemoryMarketplacePollingRunRepository(MarketplacePollingRunRepository):
                 reverse=True,
             )[:limit]
         )
+
+    async def prune_by_tenant(
+        self,
+        request: MarketplacePollingRunPruneRequest,
+    ) -> Sequence[UUID]:
+        """Delete oldest expired runs while preserving recent integration runs."""
+        tenant_runs = tuple(
+            run
+            for run in self._runs_by_id.values()
+            if run.tenant_id == request.tenant_id
+        )
+        runs_by_integration: dict[UUID, list[MarketplacePollingRun]] = {}
+        for run in tenant_runs:
+            runs_by_integration.setdefault(run.integration_id, []).append(run)
+
+        protected_ids: set[UUID] = set()
+        for runs in runs_by_integration.values():
+            newest = sorted(
+                runs,
+                key=lambda run: (run.finished_at, run.id),
+                reverse=True,
+            )[: request.keep_latest_per_integration]
+            protected_ids.update(run.id for run in newest)
+
+        eligible = sorted(
+            (
+                run
+                for run in tenant_runs
+                if run.id not in protected_ids and run.finished_at < request.cutoff
+            ),
+            key=lambda run: (run.finished_at, run.id),
+        )[: request.limit]
+        deleted_ids = tuple(run.id for run in eligible)
+        for run_id in deleted_ids:
+            del self._runs_by_id[run_id]
+        return deleted_ids
 
 
 def _validate_limit(limit: int) -> None:

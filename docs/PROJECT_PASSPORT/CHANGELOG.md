@@ -6,6 +6,12 @@ This document records notable Project Passport updates.
 
 ## Unreleased
 
+- Added EPIC 21 Task 3 explicit polling-history retention with deterministic
+  oldest-first bounded pruning, newest-per-integration protection, tenant
+  isolation, and memory/PostgreSQL parity. Isolated PostgreSQL 17 verification
+  passes `16/16`, focused polling tests pass `9/9`, full Pytest passes `505`
+  tests with `58` expected skips, and MyPy checks `439` files. Existing schema
+  indexes are reused and Alembic reports no model drift.
 - Added EPIC 21 Task 2 deterministic operational alert conditions and a
   delivery-neutral routing boundary. Explicit marketplace volume baselines,
   stable scoped fingerprints, severity/code filters, per-pass deduplication,

@@ -3,7 +3,7 @@ from __future__ import annotations
 from collections.abc import Sequence
 from uuid import UUID
 
-from sqlalchemy import select
+from sqlalchemy import delete, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.domain.marketplace_polling import (
@@ -14,6 +14,7 @@ from app.models.marketplace_polling_run_record import MarketplacePollingRunRecor
 from app.repositories.base import RepositoryIdentityConflictError
 from app.repositories.marketplace_polling_runs import (
     MAX_POLLING_RUN_HISTORY,
+    MarketplacePollingRunPruneRequest,
     MarketplacePollingRunRepository,
 )
 
@@ -63,6 +64,55 @@ class PostgresMarketplacePollingRunRepository(MarketplacePollingRunRepository):
             .limit(limit)
         )
         return tuple(_to_domain(record) for record in result.scalars())
+
+    async def prune_by_tenant(
+        self,
+        request: MarketplacePollingRunPruneRequest,
+    ) -> Sequence[UUID]:
+        """Delete a deterministic batch without crossing the tenant boundary."""
+        retention_rank = (
+            func.row_number()
+            .over(
+                partition_by=MarketplacePollingRunRecord.integration_id,
+                order_by=(
+                    MarketplacePollingRunRecord.finished_at.desc(),
+                    MarketplacePollingRunRecord.id.desc(),
+                ),
+            )
+            .label("retention_rank")
+        )
+        ranked = (
+            select(
+                MarketplacePollingRunRecord.id.label("id"),
+                MarketplacePollingRunRecord.finished_at.label("finished_at"),
+                retention_rank,
+            )
+            .where(MarketplacePollingRunRecord.tenant_id == request.tenant_id)
+            .cte("ranked_polling_runs")
+        )
+        candidates = await self._session.execute(
+            select(ranked.c.id)
+            .where(
+                ranked.c.retention_rank > request.keep_latest_per_integration,
+                ranked.c.finished_at < request.cutoff,
+            )
+            .order_by(ranked.c.finished_at.asc(), ranked.c.id.asc())
+            .limit(request.limit)
+        )
+        candidate_ids = tuple(candidates.scalars())
+        if not candidate_ids:
+            return ()
+
+        deleted = await self._session.execute(
+            delete(MarketplacePollingRunRecord)
+            .where(
+                MarketplacePollingRunRecord.tenant_id == request.tenant_id,
+                MarketplacePollingRunRecord.id.in_(candidate_ids),
+            )
+            .returning(MarketplacePollingRunRecord.id)
+        )
+        deleted_ids = set(deleted.scalars())
+        return tuple(run_id for run_id in candidate_ids if run_id in deleted_ids)
 
 
 def _to_record(run: MarketplacePollingRun) -> MarketplacePollingRunRecord:

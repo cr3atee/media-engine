@@ -498,8 +498,16 @@ marketplace execution batches and dashboard summaries. Explicit source-volume
 baselines, stable tenant/integration-aware fingerprints, delivery-neutral
 severity/code routes, per-pass deduplication, sink-failure isolation, and safe
 error classification are implemented without network or persistence coupling.
-Concrete production sinks, durable alert lifecycle policy, polling-history
-retention, and deployment wiring remain.
+Concrete production sinks, durable alert lifecycle policy, retention schedule
+and production policy values, and deployment wiring remain.
+
+EPIC 21 Task 3 adds explicit polling-history retention without changing the
+polling workflow. One caller-owned policy controls the UTC age cutoff,
+newest-per-integration protection, and bounded batch size. Memory and PostgreSQL
+repositories delete the same deterministic oldest-first IDs; tenant isolation,
+transaction rollback, concurrent calls, and fresh-session persistence pass
+against isolated PostgreSQL 17. Production policy values and scheduled
+invocation remain deployment decisions.
 
 ## Known Gaps
 

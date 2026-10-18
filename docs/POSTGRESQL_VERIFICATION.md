@@ -11,8 +11,8 @@ integration persistence, credential metadata redaction, and seller integration
 API boundaries are also live-verified. EPIC 16 and EPIC 17 verification used
 isolated PostgreSQL 17.10 databases without using a project or production
 database. Durable marketplace polling history is additionally verified against
-an isolated PostgreSQL 17 database. The current verified revision is
-`0017_marketplace_polling_runs`.
+an isolated PostgreSQL 17 database, including bounded retention and pruning.
+The current verified revision is `0017_marketplace_polling_runs`.
 
 ## Verified Schema
 
@@ -90,6 +90,11 @@ an isolated PostgreSQL 17 database. The current verified revision is
 - Polling-run repositories preserve success/failure/skip outcomes, safe metrics,
   deterministic newest-first reads, bounds, tenant isolation, immutable replay,
   and fresh-engine persistence with memory/PostgreSQL contract parity.
+- Polling-run pruning has memory/PostgreSQL parity for explicit UTC cutoff,
+  newest-N integration protection, bounded deterministic deletion, idempotent
+  completion, tenant isolation, concurrent workers, transaction rollback, and
+  fresh-engine persistence. PostgreSQL verification passes `16/16` without a
+  schema change.
 
 ## Verified Transactions
 

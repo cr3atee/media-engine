@@ -68,8 +68,9 @@ candidate verification.
   deployment collector. Connect the delivery-neutral alert router to an
   approved production sink and define durable deduplication, acknowledgement,
   resolution, and escalation policy. Tenant-scoped per-run diagnostics are
-  durable; retention/pruning policy should be selected from observed production
-  volume.
+  durable, and bounded pruning is implemented; select production retention
+  duration, newest-per-integration protection, batch size, and execution schedule
+  from observed volume and audit requirements.
 - Add a distinct read-model signal for content items whose complete retry budget
   is exhausted. Current alert evaluation safely reports failed attempts and
   ambiguous/permanently failed publications, but does not overstate failed
