@@ -259,6 +259,11 @@ This document captures architecture notes that are important for future reviews.
   preserve `SIGTERM` shutdown, and ensure the deployment stop grace exceeds the
   largest configured timeout/retry budget. Retention values belong in reviewed
   deployment policy, not repository or domain defaults.
+- The final EPIC 21 verifier passed `38/38` against isolated PostgreSQL `17.10`
+  with two worker runtimes, lease exclusion/release, durable polling outcomes,
+  rollback, tenant isolation, metrics, alert lifecycle, scheduled retention,
+  restart, and graceful shutdown. Keep the verifier network-free; live source
+  and collector rollout are separate guarded operator actions.
 - The core release gate is intentionally a subprocess coordinator over existing
   verifiers. Keep it free of domain logic and live-network behavior. Its local
   database-name guard permits the public UI and polling-history verifiers to

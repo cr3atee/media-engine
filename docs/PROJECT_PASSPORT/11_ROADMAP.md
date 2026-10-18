@@ -347,6 +347,11 @@ This document tracks only work that is reflected by the current repository state
   scheduled polling-history retention, and graceful `SIGTERM` shutdown. The
   deployment verifier passes `25/25`; the initial operations policy is recorded
   in `docs/EPIC_21_DEPLOYMENT_RUNBOOK.md` rather than domain code.
+- EPIC 21 Task 6 production-shaped operations gate: two runtime replicas over
+  isolated PostgreSQL `17.10` verify lease exclusion, durable polling history,
+  rollback, tenant isolation, replica metrics, alert lifecycle, scheduled
+  retention, fresh-process restart, and graceful shutdown. The final verifier
+  passes `38/38`; EPIC 21 is complete.
 
 ## Current Status
 
@@ -377,14 +382,14 @@ reads to a PostgreSQL-backed repository scope. Saved marketplace payloads verify
 through the public route/DTO layer for product cards, details, offers,
 comparisons, and price history. The first embedded `/terminal` visual shell is
 available for API contract validation. Guarded public-source polling, durable
-per-integration history, and production deployment configuration are verified;
-unattended polling still requires the final operations gate, target collector
-rollout, and credential retrieval for authenticated sources. The backend core
-is now a verified release candidate.
+per-integration history, production deployment configuration, and the final
+PostgreSQL operations gate are verified. Unattended target deployment still
+requires collector/secret infrastructure and credential retrieval for
+authenticated sources. The backend core is now a verified release candidate.
 The remaining work before public visual launch is execution of human-approved
-catalog onboarding through the now measurable operator workspace, production
-monitoring/deployment configuration, frontend hardening, and a product decision
-on category data exposure.
+catalog onboarding through the now measurable operator workspace,
+target-environment monitoring/secret rollout, frontend hardening, and a product
+decision on category data exposure.
 
 The complete operator-decision-to-public-read path is now integration-verified
 with isolated synthetic data. Production catalog readiness still depends on a
@@ -392,11 +397,8 @@ bounded human-reviewed batch from the saved marketplace evidence.
 
 ## Not Present Yet
 
-- Final isolated PostgreSQL production-shaped operations verification. Worker
-  replicas, Scheduler leases, metrics collection, health checks, graceful
-  shutdown, and scheduled bounded retention now have explicit deployment
-  configuration; durable alert acknowledgement remains an external collector
-  responsibility.
+- Target-environment metrics collector and alert-manager rollout. Durable alert
+  acknowledgement remains an external collector responsibility.
 - Optional guarded live Telegram test-chat message.
 - Production AI provider integration in the pipeline.
 - Live marketplace credential storage and credential retrieval for execution.
@@ -404,9 +406,10 @@ bounded human-reviewed batch from the saved marketplace evidence.
 
 ## Recommended Next EPIC
 
-**Production operations readiness.**
+**Catalog onboarding and controlled deployment rollout.**
 
-Run the final production-shaped PostgreSQL operations gate against the verified
-deployment configuration. In parallel, use the completed review workspace to
-process a bounded initial catalog batch from human-verified evidence. Do not
-invent links, bulk-confirm `NO_MATCH` offers, or lower matching thresholds.
+Use the completed review workspace to process a bounded initial catalog batch
+from human-verified evidence, then deploy the verified operations boundary into
+an operator-managed test environment. Do not invent links, bulk-confirm
+`NO_MATCH` offers, lower matching thresholds, or enable authenticated sources
+before reviewed credential delivery exists.

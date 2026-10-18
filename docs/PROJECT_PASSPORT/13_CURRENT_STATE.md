@@ -481,10 +481,11 @@ itself is now verified against isolated PostgreSQL.
   public catalog reads, and repository-backed public UI DTOs. Live evidence is
   opt-in; saved marketplace offers remain unapproved pending a human decision.
 
-EPIC 20 software implementation is complete. The next engineering boundary is
+EPIC 20 software implementation is complete. EPIC 21 subsequently completed
 production operations readiness: metrics export, alert routing, polling-history
-retention, and deployment configuration. Bounded human catalog review proceeds
-in parallel and is not replaced by title inference.
+retention, deployment configuration, and the final PostgreSQL operations gate.
+Bounded human catalog review proceeds in parallel and is not replaced by title
+inference.
 
 EPIC 21 Task 1 adds an opt-in production metrics boundary around the existing
 worker. Scheduler counters and latest marketplace batch gauges are rendered in
@@ -525,7 +526,15 @@ metrics per replica, a textfile collector, explicit scheduled retention, and
 `SIGTERM`-driven graceful shutdown. The initial 90-day/ten-run/500-row retention
 policy is deployment configuration rather than business logic. Offline
 deployment verification passes `25/25`; only the final isolated PostgreSQL
-operations gate remains before EPIC 21 completion.
+operations gate remained before EPIC 21 completion.
+
+EPIC 21 Task 6 closes that gate against isolated PostgreSQL `17.10`. Two worker
+runtimes prove lease exclusion/release, durable safe polling outcomes, tenant
+isolation, rollback, replica metrics, alert lifecycle, scheduled retention,
+fresh-process restart, and graceful stop in `38/38` checks. The verifier uses
+only controlled local runners and performs no live marketplace, Telegram, or AI
+calls. EPIC 21 is complete; external collector, secret-manager, and approved
+authenticated-source rollout remain deployment work.
 
 ## Known Gaps
 
@@ -536,9 +545,9 @@ operations gate remains before EPIC 21 completion.
   the `RUB` fallback must remain documented and covered by drift monitoring.
   Optional verified game/category filters now support targeted source batches,
   but `ParsedOffer` still does not retain category metadata.
-- Saved-payload drift monitoring and production runtime configuration exist;
-  the combined PostgreSQL operations gate and external collector deployment
-  remain before unattended polling is approved.
+- Saved-payload drift monitoring, production runtime configuration, and the
+  combined PostgreSQL operations gate are complete; external collector and
+  secret infrastructure remain before unattended target deployment is approved.
 - Core readiness is no longer blocked by domain architecture; remaining work is
   production runtime and operational integration.
 - FunPay saved-response extraction now produces one snapshot-ready `ParsedOffer`
@@ -570,9 +579,8 @@ operations gate remains before EPIC 21 completion.
   safe success, failure, and skip evidence across restarts. Unattended polling
   now has a production Compose/runbook boundary with leased replicas, health
   checks, metrics collection, explicit retention, and graceful shutdown. It
-  still requires the final operations verification, deployment-managed
-  collector/secret infrastructure, and credential retrieval for authenticated
-  sources.
+  passed the final operations verification. Deployment-managed collector/secret
+  infrastructure and credential retrieval for authenticated sources remain.
 - Public Market Terminal integration still needs a frontend location decision
   for public launch and a product decision on category exposure. An embedded
   dependency-free `/terminal` shell now consumes `/api/v1/public` routes for
@@ -668,5 +676,5 @@ drift guard is present. Runtime bootstrap/process helpers and the worker command
 now centralize repository scope, Scheduler construction, job registration, and
 safe shutdown. Guarded live polling and durable per-integration run history are
 verified; unattended production scheduling should still wait for collector and
-deployment configuration, the final operations gate, and authenticated-source
-credential retrieval.
+secret infrastructure plus authenticated-source credential retrieval. The
+PostgreSQL operations gate and deployment configuration are complete.

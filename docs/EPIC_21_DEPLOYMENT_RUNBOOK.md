@@ -153,6 +153,14 @@ Task 5 verification includes:
 - focused Ruff/format and `25` Pytest checks;
 - full Pytest (`523 passed, 58 skipped`) and MyPy (`448` source files).
 
-The final EPIC 21 task must still run the complete production-shaped flow
-against an isolated PostgreSQL 17 database, including two worker schedulers,
-leases, retention, metrics, alerts, restart, and graceful shutdown evidence.
+The final production-shaped gate passed against isolated PostgreSQL `17.10`:
+`scripts/verify_epic21_operations_postgres.py` completed `38/38` checks across
+two worker schedulers, lease exclusion/release, durable polling outcomes,
+tenant isolation, rollback, replica metrics, alert lifecycle, scheduled
+retention, fresh-process restart, and graceful shutdown. It made no live
+marketplace, Telegram, or AI calls. Alembic current/check, downgrade/re-upgrade,
+and offline SQL generation also passed at `0017_marketplace_polling_runs`.
+
+This verification closes EPIC 21 software readiness. It does not replace
+target-environment PostgreSQL backup validation, secret delivery, collector and
+alert-manager rollout, or approved credentials for authenticated sources.

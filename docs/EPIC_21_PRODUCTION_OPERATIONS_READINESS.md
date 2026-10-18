@@ -2,8 +2,10 @@
 
 ## Status
 
-Tasks 1 through 5 are implemented and verified. Only the final isolated
-PostgreSQL production-shaped operations gate remains.
+Tasks 1 through 6 are implemented and verified. EPIC 21 is complete at the
+application and deployment-configuration boundary; target-environment
+collector, secret-manager, and authenticated-source rollout remain operator
+responsibilities.
 
 ## Goal
 
@@ -225,7 +227,45 @@ Task 5 verification:
 - Focused Ruff and MyPy: passed.
 - Full Pytest: `523 passed, 58 skipped`; full MyPy: `448` source files.
 
+## Task 6 - Production-Shaped PostgreSQL Operations Gate
+
+Delivered and verified:
+
+- `scripts/verify_epic21_operations_postgres.py` composes two worker runtimes
+  over one isolated PostgreSQL database without live marketplace, Telegram, or
+  AI calls.
+- PostgreSQL Scheduler leases allow one worker to execute while the competing
+  replica records a lease skip; leases are released after execution and clean
+  shutdown.
+- One bounded polling batch persists successful, failed, and skipped outcomes,
+  safe counters, and sanitized failure metadata while preserving tenant
+  isolation and transaction rollback.
+- Replica-specific Prometheus files expose Scheduler and marketplace outcomes
+  without tenant IDs, integration IDs, source URLs, credentials, or raw errors.
+- Alert evaluation reads the PostgreSQL dashboard, opens deterministic failed
+  and skipped alerts, suppresses duplicates, emits resolutions, and keeps
+  lifecycle output redacted.
+- Scheduled retention discovers both history-owning tenants, deletes only
+  deterministic expired rows, and preserves each integration's newest
+  evidence.
+- A fresh engine and worker process read retained state, acquire a new lease,
+  append history, and stop cleanly.
+
+Final verification:
+
+- Isolated PostgreSQL `17.10` operations verifier: `38/38` checks passed.
+- Alembic `current` and `check`, downgrade to `0016`, re-upgrade to
+  `0017_marketplace_polling_runs`, and full offline SQL generation passed.
+- Offline metrics, alerts, and deployment verifiers passed `12/12`, `25/25`,
+  and `25/25` checks respectively.
+- Focused operations tests: `41` passed.
+- Full Pytest: `523 passed, 58 skipped` with one unrelated Starlette
+  TestClient deprecation warning.
+- Full MyPy: no issues in `449` source files; focused Ruff and Ruff format
+  checks passed.
+
 ## Remaining Tasks
 
-1. Run an isolated PostgreSQL production-shaped operations verification before
-   declaring EPIC 21 complete.
+No EPIC 21 implementation task remains. Production rollout still requires an
+operator-managed external PostgreSQL service, secret delivery, collector/alert
+manager configuration, and approved credentials for authenticated sources.

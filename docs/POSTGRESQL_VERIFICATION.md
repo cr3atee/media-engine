@@ -734,3 +734,26 @@ succeeded. No schema change was required. Full Pytest passed `458` tests with
 `58` expected skips, MyPy checked `414` source files, and focused Ruff and Ruff
 format checks passed. The temporary container and volume were removed after
 verification.
+
+## EPIC 21 Production Operations Readiness
+
+`scripts/verify_epic21_operations_postgres.py` was executed against temporary
+PostgreSQL `17.10` and isolated database `epic21_operations_verify` on loopback.
+No project or production database was used, and the verifier performed no live
+marketplace, Telegram, or AI calls.
+
+All `38/38` checks passed. Two PostgreSQL-backed worker runtimes proved
+single-owner Scheduler execution and competing-replica lease skips, lease
+release, successful/failed/skipped polling persistence, safe diagnostic
+redaction, tenant isolation, atomic rollback, replica-specific Prometheus
+files, alert open/suppress/resolve transitions, bounded multi-tenant retention,
+fresh-engine persistence, worker restart, and graceful shutdown.
+
+Alembic `current` reported `0017_marketplace_polling_runs (head)`, `check`
+reported no new upgrade operations, downgrade to
+`0016_canonical_offer_decisions` and upgrade back to head passed, and full
+offline SQL generation succeeded. Offline metrics, alerts, and deployment
+verifiers passed `12/12`, `25/25`, and `25/25`; focused operations tests passed
+`41/41`; full Pytest passed `523` tests with `58` expected skips; MyPy checked
+`449` source files; and focused Ruff plus Ruff format checks passed. The
+temporary container and volume were removed after verification.

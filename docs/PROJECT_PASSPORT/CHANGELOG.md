@@ -6,6 +6,14 @@ This document records notable Project Passport updates.
 
 ## Unreleased
 
+- Completed EPIC 21 production operations readiness with a network-free,
+  production-shaped verifier over two worker runtimes and isolated PostgreSQL
+  `17.10`. All `38/38` checks pass for lease exclusion/release, durable polling
+  outcomes, tenant isolation, rollback, replica metrics, alert lifecycle,
+  scheduled retention, fresh-process restart, and graceful shutdown. Alembic
+  current/check, downgrade/re-upgrade, and offline SQL pass; full Pytest reports
+  `523 passed, 58 skipped`, MyPy checks `449` files, and focused Ruff/format
+  checks pass.
 - Added EPIC 21 Task 5 production deployment configuration: lockfile-built
   non-root image, leased worker replicas, API/worker health checks, unique
   Prometheus textfiles, explicit daily 90-day polling-history retention,

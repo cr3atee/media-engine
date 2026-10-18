@@ -46,10 +46,6 @@ candidate verification.
 - Add PostgreSQL-specific public query adapters only if direct SQL read
   optimization is explicitly approved after the repository-backed adapter is
   exercised.
-- Complete the final isolated PostgreSQL production-shaped operations gate
-  before relying on GGSEL, Playerok, or FunPay for unattended ingestion. The
-  deployment configuration and initial policy are now recorded and verified
-  offline.
 - Define the next EPIC before implementing live marketplace credential storage
   or execution-time credential retrieval.
 - Keep tenant-owned marketplace integrations redacted and metadata-only until a
@@ -75,8 +71,9 @@ candidate verification.
 
 - GGSEL, Playerok, and FunPay are ready from captured-response proof, strict
   saved-payload verification, and guarded live polling verification. Production
-  scheduling has explicit deployment policy; it still needs target collector
-  rollout, authenticated-source credentials, and the final operations gate.
+  scheduling has explicit deployment policy and a passed PostgreSQL operations
+  gate; it still needs target collector rollout and authenticated-source
+  credentials.
 - Real source extraction readiness does not imply same-product comparison
   readiness. The current saved payloads contain `81` snapshot-ready offers but
   no deterministic cross-marketplace match under the existing confidence rules.
