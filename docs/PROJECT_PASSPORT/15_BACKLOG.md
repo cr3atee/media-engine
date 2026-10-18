@@ -46,9 +46,8 @@ candidate verification.
 - Add PostgreSQL-specific public query adapters only if direct SQL read
   optimization is explicitly approved after the repository-backed adapter is
   exercised.
-- Add live marketplace polling monitoring and production runtime integration
-  configuration before relying on GGSEL, Playerok, or FunPay for scheduled
-  ingestion.
+- Complete deployment configuration and the final production-shaped operations
+  gate before relying on GGSEL, Playerok, or FunPay for scheduled ingestion.
 - Define the next EPIC before implementing live marketplace credential storage
   or execution-time credential retrieval.
 - Keep tenant-owned marketplace integrations redacted and metadata-only until a
@@ -64,24 +63,21 @@ candidate verification.
 
 ## Operational
 
-- Connect the completed opt-in Prometheus textfile metrics export to the chosen
-  deployment collector. Connect the delivery-neutral alert router to an
-  approved production sink and define durable deduplication, acknowledgement,
-  resolution, and escalation policy. Tenant-scoped per-run diagnostics are
-  durable, and bounded pruning is implemented; select production retention
-  duration, newest-per-integration protection, batch size, and execution schedule
-  from observed volume and audit requirements.
-- Add a distinct read-model signal for content items whose complete retry budget
-  is exhausted. Current alert evaluation safely reports failed attempts and
-  ambiguous/permanently failed publications, but does not overstate failed
-  attempts as terminal content exhaustion.
+- Connect the completed opt-in Prometheus textfile export and redacted
+  structured-alert log sink to the chosen deployment collector. The worker now
+  has process-local deduplication, acknowledgement, resolution, and escalation;
+  configure durable cross-replica lifecycle in the external alert manager.
+  Tenant-scoped per-run diagnostics are durable, and bounded pruning is
+  implemented; select production retention duration, newest-per-integration
+  protection, batch size, and execution schedule from observed volume and audit
+  requirements.
 
 ## Known Marketplace Gap
 
 - GGSEL, Playerok, and FunPay are ready from captured-response proof, strict
   saved-payload verification, and guarded live polling verification. Production
-  scheduling still needs collector/sink wiring, alert lifecycle policy, and
-  deployment configuration.
+  scheduling still needs external collector configuration, explicit policy
+  values, and the final operations gate.
 - Real source extraction readiness does not imply same-product comparison
   readiness. The current saved payloads contain `81` snapshot-ready offers but
   no deterministic cross-marketplace match under the existing confidence rules.

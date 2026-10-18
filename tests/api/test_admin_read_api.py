@@ -457,6 +457,17 @@ def test_dashboard_summary_is_bounded_and_sanitized() -> None:
         generation_status="generated",
         review_status="approved",
     )
+    exhausted_content = replace(
+        _content(event.id),
+        id=uuid4(),
+        generation_status="failed",
+        review_status="not_required",
+        content_text=None,
+        content_checksum=None,
+        attempt_number=3,
+        error_code="generation_attempts_exhausted",
+        error_summary="Content generation failed.",
+    )
     publication = replace(
         _publication(event.id, content.id),
         status="failed",
@@ -465,7 +476,7 @@ def test_dashboard_summary_is_bounded_and_sanitized() -> None:
     client = _client_for(
         create_memory_read_provider(
             events=(event,),
-            content=(content,),
+            content=(content, exhausted_content),
             publications=(publication,),
         )
     )
@@ -491,6 +502,8 @@ def test_dashboard_summary_is_bounded_and_sanitized() -> None:
     assert body["total_new_market_events"] == 1
     assert body["events_awaiting_scoring"] == 1
     assert body["approved_content_awaiting_publication"] == 1
+    assert body["generated_content_failed"] == 1
+    assert body["generated_content_attempts_exhausted"] == 1
     assert body["publications_retryable"] == 1
     assert "test-secret" not in response.text
     assert wide_range.status_code == 422

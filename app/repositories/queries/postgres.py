@@ -340,6 +340,18 @@ class PostgresDashboardQueryRepository(DashboardQueryRepository):
                     GeneratedContentRecord.generation_status == "failed",
                 )
             ),
+            generated_content_attempts_exhausted=await self._count(
+                select(func.count(GeneratedContentRecord.id)).where(
+                    *_window_filters(
+                        GeneratedContentRecord.created_at,
+                        GeneratedContentRecord.tenant_id,
+                        window,
+                    ),
+                    GeneratedContentRecord.generation_status == "failed",
+                    GeneratedContentRecord.last_error_code
+                    == "generation_attempts_exhausted",
+                )
+            ),
             generated_content_awaiting_review=await self._count(
                 select(func.count(GeneratedContentRecord.id)).where(
                     *_window_filters(

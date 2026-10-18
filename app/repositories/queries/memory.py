@@ -218,6 +218,11 @@ class MemoryDashboardQueryRepository(DashboardQueryRepository):
             generated_content_failed=sum(
                 item.generation_status == "failed" for item in content
             ),
+            generated_content_attempts_exhausted=sum(
+                item.generation_status == "failed"
+                and item.error_code == "generation_attempts_exhausted"
+                for item in content
+            ),
             generated_content_awaiting_review=sum(
                 item.generation_status == "generated"
                 and item.review_status == "pending"

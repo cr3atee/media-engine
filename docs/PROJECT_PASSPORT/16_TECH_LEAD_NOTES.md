@@ -243,6 +243,17 @@ This document captures architecture notes that are important for future reviews.
   at least the newest run per integration, delete only records strictly older
   than the UTC cutoff, and execute bounded batches through the shared repository
   transaction scope. Do not hide deployment policy inside repository code.
+- Operational alert lifecycle is intentionally process-local. Keep stable
+  fingerprints and allowlisted structured fields as the external collector
+  boundary; do not persist acknowledgement in marketplace/domain repositories
+  or leak summaries, URLs, exception text, credentials, or provider responses.
+- A dashboard content failure is terminal retry exhaustion only when its
+  persisted error code is `generation_attempts_exhausted`. Keep the broad
+  failed-attempt counter separate and do not infer terminal state from
+  `generation_status='failed'` alone.
+- Runtime alert evaluation must not reconcile a partial snapshot after a
+  dashboard read failure, because that would emit false resolutions. Sink
+  failures remain isolated and occur after the read transaction closes.
 - The core release gate is intentionally a subprocess coordinator over existing
   verifiers. Keep it free of domain logic and live-network behavior. Its local
   database-name guard permits the public UI and polling-history verifiers to

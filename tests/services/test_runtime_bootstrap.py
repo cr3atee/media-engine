@@ -50,6 +50,7 @@ def test_memory_runtime_components_wire_repository_scope_and_scheduler() -> None
         return job.calls
 
     assert run_async(scenario()) == 1
+    assert components.read_repository_scope_factory is None
     assert components.scheduler.get_status("counting").state is (
         JobExecutionState.SUCCEEDED
     )
@@ -67,6 +68,7 @@ def test_postgres_runtime_components_bind_scope_to_postgres_repositories() -> No
             return type(repositories.offers).__name__
 
     assert isinstance(components, RuntimeComponents)
+    assert components.read_repository_scope_factory is not None
     assert run_async(inspect_scope()) == PostgresOfferRepository.__name__
 
 

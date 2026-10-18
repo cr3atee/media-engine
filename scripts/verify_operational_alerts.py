@@ -17,6 +17,12 @@ if str(PROJECT_ROOT) not in sys.path:
 
 from app.domain.marketplace import Marketplace
 from app.repositories.queries.models import DashboardSummaryRead, DashboardWindow
+from app.runtime.alert_lifecycle import (
+    AlertLifecyclePolicy,
+    AlertLifecycleTransition,
+    OperationalAlertLifecycle,
+)
+from app.runtime.alert_sinks import StructuredLoggingAlertSink
 from app.runtime.alerts import (
     AlertRoute,
     AlertSeverity,
@@ -71,6 +77,23 @@ class RecordingSink:
             raise RuntimeError("private sink response")
 
 
+class RecordingLogger:
+    """Capture structured alert events without configuring process logging."""
+
+    def __init__(self) -> None:
+        self.entries: list[tuple[str, str, dict[str, object]]] = []
+
+    def warning(self, event: str, **event_fields: object) -> object:
+        """Capture a warning entry."""
+        self.entries.append(("warning", event, event_fields))
+        return None
+
+    def error(self, event: str, **event_fields: object) -> object:
+        """Capture an error entry."""
+        self.entries.append(("error", event, event_fields))
+        return None
+
+
 async def verify() -> Verification:
     """Exercise alert conditions, stable identity, routing, and redaction."""
     verification = Verification()
@@ -88,6 +111,7 @@ async def verify() -> Verification:
     )
 
     expected_codes = {
+        "content_generation_attempts_exhausted",
         "content_generation_failed",
         "event_scoring_failed",
         "marketplace_polling_failed",
@@ -97,13 +121,13 @@ async def verify() -> Verification:
         "publication_ambiguous",
         "publication_permanently_failed",
     }
-    verification.expect(len(alerts) == 8, "eight conditions evaluated")
+    verification.expect(len(alerts) == 9, "nine conditions evaluated")
     verification.expect(
         {alert.code for alert in alerts} == expected_codes,
         "expected alert codes returned",
     )
     verification.expect(
-        sum(alert.severity is AlertSeverity.CRITICAL for alert in alerts) == 3,
+        sum(alert.severity is AlertSeverity.CRITICAL for alert in alerts) == 4,
         "critical severity classification",
     )
     drift = next(
@@ -178,9 +202,9 @@ async def verify() -> Verification:
             ),
         )
     ).route(alerts)
-    verification.expect(result.alerts == 8, "all unique alerts routed")
-    verification.expect(result.attempted_deliveries == 12, "route filters applied")
-    verification.expect(result.delivered == 11, "successful deliveries counted")
+    verification.expect(result.alerts == 9, "all unique alerts routed")
+    verification.expect(result.attempted_deliveries == 14, "route filters applied")
+    verification.expect(result.delivered == 13, "successful deliveries counted")
     verification.expect(len(result.failures) == 1, "sink failure isolated")
     verification.expect(
         result.failures[0].error_code == "RuntimeError",
@@ -188,7 +212,7 @@ async def verify() -> Verification:
     )
     verification.expect(
         (len(all_sink.alerts), len(critical_sink.alerts), len(failing_sink.alerts))
-        == (8, 3, 1),
+        == (9, 4, 1),
         "severity and code routing preserved",
     )
     verification.expect(
@@ -201,8 +225,99 @@ async def verify() -> Verification:
         (AlertRoute(name="deduplicated", sink=deduplicated_sink),)
     ).route((*alerts, alerts[0]))
     verification.expect(
-        deduplicated.alerts == 8 and deduplicated.delivered == 8,
+        deduplicated.alerts == 9 and deduplicated.delivered == 9,
         "duplicate fingerprints delivered once per routing pass",
+    )
+
+    lifecycle = OperationalAlertLifecycle(
+        AlertLifecyclePolicy(reminder_interval=timedelta(minutes=30))
+    )
+    opened = lifecycle.reconcile(alerts, NOW)
+    verification.expect(
+        len(opened.notifications) == 9
+        and all(
+            item.transition is AlertLifecycleTransition.OPENED
+            for item in opened.notifications
+        ),
+        "new alerts produce opened transitions",
+    )
+    repeated = lifecycle.reconcile(alerts, NOW + timedelta(minutes=5))
+    verification.expect(
+        repeated.notifications == () and repeated.suppressed_notifications == 9,
+        "duplicates are suppressed inside the reminder window",
+    )
+    acknowledged_alert = alerts[-1]
+    verification.expect(
+        lifecycle.acknowledge(
+            acknowledged_alert.fingerprint,
+            NOW + timedelta(minutes=6),
+        ),
+        "active alert acknowledgement accepted",
+    )
+    reminders = lifecycle.reconcile(alerts, NOW + timedelta(minutes=30))
+    verification.expect(
+        sum(
+            item.transition is AlertLifecycleTransition.REMINDER
+            for item in reminders.notifications
+        )
+        == 8
+        and reminders.acknowledged_alerts == 1,
+        "acknowledgement suppresses reminders",
+    )
+    resolved = lifecycle.reconcile((), NOW + timedelta(minutes=31))
+    verification.expect(
+        len(resolved.notifications) == 9
+        and all(
+            item.transition is AlertLifecycleTransition.RESOLVED
+            for item in resolved.notifications
+        ),
+        "cleared conditions produce resolved transitions",
+    )
+
+    escalation_lifecycle = OperationalAlertLifecycle()
+    warning = OperationalAlert(
+        code="test_escalation",
+        severity=AlertSeverity.WARNING,
+        summary="must-not-leak",
+        observed_value=1,
+        threshold=1,
+        tenant_id=TENANT_ID,
+    )
+    critical = OperationalAlert(
+        code="test_escalation",
+        severity=AlertSeverity.CRITICAL,
+        summary="must-not-leak",
+        observed_value=2,
+        threshold=1,
+        tenant_id=TENANT_ID,
+    )
+    escalation_lifecycle.reconcile((warning,), NOW)
+    escalation_lifecycle.acknowledge(warning.fingerprint, NOW + timedelta(seconds=1))
+    escalated = escalation_lifecycle.reconcile(
+        (critical,),
+        NOW + timedelta(seconds=2),
+    )
+    verification.expect(
+        escalated.notifications[0].transition is AlertLifecycleTransition.ESCALATED
+        and escalated.acknowledged_alerts == 0,
+        "severity escalation bypasses acknowledgement",
+    )
+
+    logger = RecordingLogger()
+    log_sink = StructuredLoggingAlertSink(logger)
+    await log_sink.publish(warning)
+    await log_sink.publish_lifecycle(escalated.notifications[0])
+    verification.expect(
+        [entry[:2] for entry in logger.entries]
+        == [
+            ("warning", "operational_alert"),
+            ("error", "operational_alert_lifecycle"),
+        ],
+        "structured sink maps severity and lifecycle events",
+    )
+    verification.expect(
+        all(value not in repr(logger.entries) for value in SENSITIVE_VALUES),
+        "structured sink emits only allowlisted safe fields",
     )
     return verification
 
@@ -289,6 +404,7 @@ def _dashboard(*, ambiguous: int = 2) -> DashboardSummaryRead:
         scoring_failures=1,
         generated_content_pending=0,
         generated_content_failed=3,
+        generated_content_attempts_exhausted=1,
         generated_content_awaiting_review=0,
         approved_content_awaiting_publication=0,
         publications_pending=0,

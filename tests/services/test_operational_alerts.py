@@ -87,6 +87,7 @@ def test_dashboard_alerts_cover_only_actual_failure_counters() -> None:
     alerts = OperationalAlertEngine().evaluate(dashboard=_dashboard())
 
     assert [(alert.code, alert.severity, alert.observed_value) for alert in alerts] == [
+        ("content_generation_attempts_exhausted", AlertSeverity.CRITICAL, 1),
         ("publication_ambiguous", AlertSeverity.CRITICAL, 2),
         ("publication_permanently_failed", AlertSeverity.CRITICAL, 1),
         ("content_generation_failed", AlertSeverity.WARNING, 3),
@@ -149,14 +150,14 @@ def test_router_filters_by_severity_and_isolates_sink_failures() -> None:
 
     result = run_async(router.route(alerts))
 
-    assert result.alerts == 8
-    assert result.attempted_deliveries == 12
-    assert result.delivered == 11
+    assert result.alerts == 9
+    assert result.attempted_deliveries == 14
+    assert result.delivered == 13
     assert len(result.failures) == 1
     assert result.failures[0].route_name == "failing"
     assert result.failures[0].error_code == "RuntimeError"
-    assert len(all_sink.alerts) == 8
-    assert len(critical_sink.alerts) == 3
+    assert len(all_sink.alerts) == 9
+    assert len(critical_sink.alerts) == 4
     assert len(failing_sink.alerts) == 1
     assert "sensitive sink detail" not in repr(result)
 
@@ -243,6 +244,7 @@ def _dashboard() -> DashboardSummaryRead:
         scoring_failures=1,
         generated_content_pending=0,
         generated_content_failed=3,
+        generated_content_attempts_exhausted=1,
         generated_content_awaiting_review=0,
         approved_content_awaiting_publication=0,
         publications_pending=0,

@@ -6,6 +6,13 @@ This document records notable Project Passport updates.
 
 ## Unreleased
 
+- Added EPIC 21 Task 4 opt-in runtime alert monitoring with deterministic
+  opened/reminder/escalated/resolved lifecycle, acknowledgement and reminder
+  suppression, severity escalation, redacted structured-log delivery, and
+  failure isolation. Added an exact `generation_attempts_exhausted` dashboard
+  signal for memory/PostgreSQL reads and the admin DTO. The offline verifier
+  passes `25/25`, focused alert/runtime tests pass `12/12`, full Pytest passes
+  `511` tests with `58` expected skips, and MyPy checks `444` files.
 - Added EPIC 21 Task 3 explicit polling-history retention with deterministic
   oldest-first bounded pruning, newest-per-integration protection, tenant
   isolation, and memory/PostgreSQL parity. Isolated PostgreSQL 17 verification

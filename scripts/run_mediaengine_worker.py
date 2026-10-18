@@ -10,6 +10,7 @@ import sys
 from collections.abc import Sequence
 from contextlib import suppress
 from dataclasses import dataclass
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -18,7 +19,11 @@ if str(ROOT) not in sys.path:
 
 from app.config.settings import settings
 from app.core.http_client import HttpClient
-from app.runtime.bootstrap import create_default_runtime_components
+from app.core.logging import setup_logging
+from app.runtime.alert_lifecycle import AlertLifecyclePolicy, OperationalAlertLifecycle
+from app.runtime.alert_monitor import RuntimeAlertMonitor
+from app.runtime.alert_sinks import StructuredLoggingAlertSink
+from app.runtime.bootstrap import RuntimeComponents, create_default_runtime_components
 from app.runtime.marketplaces import create_marketplace_runner_factories
 from app.runtime.metrics import PrometheusTextfileWriter, RuntimeMetricsExporter
 from app.runtime.monitoring import RuntimeMonitor
@@ -85,8 +90,10 @@ def parse_args(argv: Sequence[str] | None = None) -> WorkerArguments:
 async def main() -> int:
     """Run one bounded or periodic MediaEngine worker process."""
     args = parse_args()
+    setup_logging()
     components = create_default_runtime_components(settings)
     process = RuntimeProcess(components)
+    alert_monitor = _create_alert_monitor(components)
     metrics_writer = (
         PrometheusTextfileWriter(args.metrics_file)
         if args.metrics_file is not None
@@ -112,6 +119,7 @@ async def main() -> int:
         job_name = process.list_statuses()[0].name
         if args.once:
             await process.execute_once(job_name)
+            await _evaluate_alerts(process, job_name, alert_monitor)
             _write_metrics(process, job_name, metrics_writer)
             _print_marketplace_result(process, job_name)
             _print_statuses(process)
@@ -132,6 +140,18 @@ async def main() -> int:
             if metrics_writer is not None
             else None
         )
+        alert_task = (
+            asyncio.create_task(
+                _refresh_alerts(
+                    process,
+                    job_name,
+                    alert_monitor,
+                    refresh_seconds=settings.alerting.evaluation_interval_seconds,
+                )
+            )
+            if alert_monitor is not None
+            else None
+        )
         try:
             if args.duration_seconds is None:
                 await asyncio.Event().wait()
@@ -143,11 +163,84 @@ async def main() -> int:
                 metrics_task.cancel()
                 with suppress(asyncio.CancelledError):
                     await metrics_task
+            if alert_task is not None:
+                alert_task.cancel()
+                with suppress(asyncio.CancelledError):
+                    await alert_task
+                await _evaluate_alerts(process, job_name, alert_monitor)
             _write_metrics(process, job_name, metrics_writer)
             _print_marketplace_result(process, job_name)
             _print_statuses(process)
 
     return 0
+
+
+def _create_alert_monitor(
+    components: RuntimeComponents,
+) -> RuntimeAlertMonitor | None:
+    if not settings.alerting.enabled:
+        return None
+    read_scope_factory = components.read_repository_scope_factory
+    if read_scope_factory is None:
+        raise RuntimeError("Alerting requires a read repository scope.")
+    return RuntimeAlertMonitor(
+        read_repository_scope_factory=read_scope_factory,
+        lifecycle=OperationalAlertLifecycle(
+            AlertLifecyclePolicy(
+                reminder_interval=timedelta(
+                    seconds=settings.alerting.reminder_interval_seconds
+                )
+            )
+        ),
+        sink=StructuredLoggingAlertSink(),
+        dashboard_window=timedelta(seconds=settings.alerting.dashboard_window_seconds),
+    )
+
+
+async def _refresh_alerts(
+    process: RuntimeProcess,
+    job_name: str,
+    monitor: RuntimeAlertMonitor,
+    *,
+    refresh_seconds: float,
+) -> None:
+    while True:
+        await _evaluate_alerts(process, job_name, monitor)
+        await asyncio.sleep(refresh_seconds)
+
+
+async def _evaluate_alerts(
+    process: RuntimeProcess,
+    job_name: str,
+    monitor: RuntimeAlertMonitor | None,
+) -> None:
+    if monitor is None:
+        return
+    result = process.get_last_result(job_name)
+    batch = result if isinstance(result, MarketplaceIntegrationExecutionBatch) else None
+    try:
+        evaluation = await monitor.evaluate(
+            batch=batch,
+            observed_at=datetime.now(UTC),
+        )
+    except Exception as error:
+        print(
+            f"Operational alert evaluation failed: {type(error).__name__}.",
+            file=sys.stderr,
+        )
+        return
+    if evaluation.dashboard_error_code is not None:
+        print(
+            "Operational alert dashboard read failed: "
+            f"{evaluation.dashboard_error_code}.",
+            file=sys.stderr,
+        )
+    if evaluation.delivery_failures:
+        print(
+            "Operational alert delivery failures: "
+            f"{len(evaluation.delivery_failures)}.",
+            file=sys.stderr,
+        )
 
 
 async def _refresh_metrics(

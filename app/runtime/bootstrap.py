@@ -8,6 +8,10 @@ from app.config.settings import SchedulerSettings, Settings, settings
 from app.database.repository_scope import create_postgres_repository_scope
 from app.database.session import SessionLocal
 from app.repositories.provider import RepositoryProvider
+from app.repositories.queries.provider import (
+    ReadRepositoryScopeFactory,
+    create_postgres_read_repository_scope,
+)
 from app.scheduler.factory import (
     create_memory_scheduler_service,
     create_postgres_scheduler_service,
@@ -25,17 +29,20 @@ class RuntimeComponents:
 
     repository_scope_factory: RepositoryScopeFactory
     scheduler: SchedulerService
+    read_repository_scope_factory: ReadRepositoryScopeFactory | None = None
 
 
 def create_memory_runtime_components(
     scheduler_settings: SchedulerSettings,
     *,
     provider: RepositoryProvider | None = None,
+    read_repository_scope_factory: ReadRepositoryScopeFactory | None = None,
 ) -> RuntimeComponents:
     """Create runtime components backed by in-memory infrastructure."""
     return RuntimeComponents(
         repository_scope_factory=create_memory_repository_scope(provider),
         scheduler=create_memory_scheduler_service(scheduler_settings),
+        read_repository_scope_factory=read_repository_scope_factory,
     )
 
 
@@ -50,6 +57,9 @@ def create_postgres_runtime_components(
         scheduler=create_postgres_scheduler_service(
             scheduler_settings,
             session_factory,
+        ),
+        read_repository_scope_factory=create_postgres_read_repository_scope(
+            session_factory
         ),
     )
 

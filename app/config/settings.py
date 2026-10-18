@@ -147,6 +147,22 @@ class LoggingSettings(BaseSettings):
     level: str = "INFO"
 
 
+class OperationalAlertingSettings(BaseSettings):
+    """Opt-in runtime alert evaluation and lifecycle policy."""
+
+    model_config = SettingsConfigDict(
+        env_file=".env",
+        env_file_encoding="utf-8",
+        env_prefix="ALERTING_",
+        extra="ignore",
+    )
+
+    enabled: bool = False
+    evaluation_interval_seconds: float = Field(default=30.0, gt=0)
+    dashboard_window_seconds: int = Field(default=86_400, gt=0)
+    reminder_interval_seconds: int = Field(default=1800, gt=0)
+
+
 class AdminApiSettings(BaseSettings):
     """Configuration for the authenticated administration API."""
 
@@ -220,6 +236,9 @@ class Settings(BaseSettings):
     admin_api: AdminApiSettings = Field(default_factory=AdminApiSettings)
     auth: AuthSettings = Field(default_factory=AuthSettings)
     logging: LoggingSettings = Field(default_factory=LoggingSettings)
+    alerting: OperationalAlertingSettings = Field(
+        default_factory=OperationalAlertingSettings
+    )
 
 
 settings = Settings()

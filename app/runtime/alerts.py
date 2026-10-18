@@ -212,6 +212,12 @@ class OperationalAlertEngine:
                 dashboard.generated_content_failed,
             ),
             (
+                "content_generation_attempts_exhausted",
+                AlertSeverity.CRITICAL,
+                "Content generation attempts are exhausted.",
+                dashboard.generated_content_attempts_exhausted,
+            ),
+            (
                 "publication_permanently_failed",
                 AlertSeverity.CRITICAL,
                 "Permanently failed publications require operator attention.",

@@ -2,9 +2,8 @@
 
 ## Status
 
-Tasks 1 through 3 are implemented and verified. Production sink wiring, alert
-lifecycle policy, deployment configuration, and the final operations gate
-remain separate tasks.
+Tasks 1 through 4 are implemented and verified. Deployment configuration and
+the final production-shaped operations gate remain separate tasks.
 
 ## Goal
 
@@ -84,14 +83,17 @@ Alert semantics:
 
 - Evaluation is a snapshot over supplied observations; it does not persist
   active/resolved state or notification history.
-- Dashboard counters are evaluated only when positive. The current
-  `generated_content_failed` counter proves failed generation attempts, not
-  that every retry for a content item is exhausted, so the alert is named
-  `content_generation_failed` rather than overstating terminal exhaustion.
+- Dashboard counters are evaluated only when positive. The general
+  `generated_content_failed` counter continues to report all failed attempts.
+  The separate `generated_content_attempts_exhausted` counter requires both a
+  failed attempt and the persisted `generation_attempts_exhausted` error code,
+  so only this exact signal raises the critical terminal-exhaustion alert.
 - Tenant and integration UUIDs are retained as internal routing scope but are
   not placed in user-controlled summaries or metric labels.
-- Production deduplication windows, escalation, acknowledgement, resolution,
-  and concrete delivery sinks remain deployment concerns.
+- Cross-replica durable acknowledgement and deduplication remain the external
+  alert collector's responsibility. Task 4 adds the process-local lifecycle
+  needed to avoid repeated worker notifications and emits stable fingerprints
+  for collector-side correlation.
 
 ## Task 3 - Polling-History Retention
 
@@ -128,30 +130,64 @@ Retention semantics:
 - Pruning deletes immutable history records but never mutates retained evidence
   or marketplace-integration latest-outcome metadata.
 
+## Task 4 - Alert Lifecycle and Production Log Sink
+
+Delivered:
+
+- `OperationalAlertLifecycle` tracks deterministic `opened`, `reminder`,
+  `escalated`, and `resolved` transitions by stable alert fingerprint.
+- Duplicate notifications are suppressed for an explicit reminder interval.
+  Acknowledged alerts remain active but do not emit reminders; an increase from
+  warning to critical clears acknowledgement and emits immediately.
+- `StructuredLoggingAlertSink` emits only allowlisted codes, fingerprints,
+  numeric values, stable scope IDs, and lifecycle timestamps through the
+  project's structured logging boundary. Alert summaries, source URLs, query
+  strings, exception text, provider responses, and credentials are omitted.
+- `RuntimeAlertMonitor` combines the latest marketplace execution batch with
+  tenant-scoped dashboard reads, reconciles lifecycle state after the read
+  transaction has closed, and isolates sink failures by exception class only.
+- A failed dashboard read leaves lifecycle state unchanged instead of emitting
+  false resolutions from a partial observation.
+- PostgreSQL runtime composition now exposes the existing read-repository
+  scope. The worker wiring is opt-in through `ALERTING_ENABLED=true` and uses:
+  - `ALERTING_EVALUATION_INTERVAL_SECONDS`;
+  - `ALERTING_DASHBOARD_WINDOW_SECONDS`;
+  - `ALERTING_REMINDER_INTERVAL_SECONDS`.
+- Alert delivery performs no Telegram, HTTP, AI, or other external network
+  call. Production stdout/stderr collection is the concrete sink boundary.
+
+Lifecycle limits:
+
+- Lifecycle and acknowledgement state are process-local and reset on worker
+  restart. Stable fingerprints permit the deployment's external alert manager
+  to provide durable cross-replica deduplication, acknowledgement, escalation,
+  and history.
+- Runtime source-volume alerts still require explicit per-integration baselines;
+  no production thresholds are inferred or hardcoded by the worker.
+- Alerting remains disabled by default until deployment collector and policy
+  values are explicitly configured.
+
 ## Verification
 
 - Offline runtime verifier: `12/12` checks passed.
-- Offline operational-alert verifier: `17/17` checks passed.
+- Offline operational-alert verifier: `25/25` checks passed.
 - Focused runtime/monitoring tests: `10` passed.
-- Focused operational-alert tests: `6` passed.
+- Focused operational-alert, lifecycle, and runtime-monitor tests: `12` passed.
 - Focused polling-retention and existing polling-history tests: `9` passed.
 - Isolated PostgreSQL 17 retention verifier: `16/16` checks passed, including
   memory parity, tenant isolation, rollback, concurrency, and fresh-session
   persistence.
 - Alembic current/check, downgrade to `0016`, re-upgrade to head, and offline
   SQL generation passed at `0017_marketplace_polling_runs`.
-- Full Pytest: `505 passed, 58 skipped` with one known unrelated Starlette
+- Full Pytest: `511 passed, 58 skipped` with one known unrelated Starlette
   TestClient deprecation warning.
-- Full MyPy: no issues in `439` source files.
+- Full MyPy: no issues in `444` source files.
 - Focused Ruff and Ruff format checks: passed.
 
 ## Remaining Tasks
 
-1. Wire an approved production alert sink and define alert lifecycle,
-   deduplication-window, acknowledgement, and escalation policy. Add a distinct
-   terminal content-attempt signal before alerting on retry exhaustion.
-2. Document and verify deployment configuration for worker replicas, Scheduler
+1. Document and verify deployment configuration for worker replicas, Scheduler
    leases, metrics collection, health checks, graceful shutdown, and scheduled
    bounded retention using explicitly approved policy values.
-3. Run an isolated PostgreSQL production-shaped operations verification before
+2. Run an isolated PostgreSQL production-shaped operations verification before
    declaring EPIC 21 complete.

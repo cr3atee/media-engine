@@ -174,6 +174,7 @@ class DashboardSummaryRead:
     scoring_failures: int
     generated_content_pending: int
     generated_content_failed: int
+    generated_content_attempts_exhausted: int
     generated_content_awaiting_review: int
     approved_content_awaiting_publication: int
     publications_pending: int

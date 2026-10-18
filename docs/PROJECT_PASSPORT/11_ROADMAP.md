@@ -336,6 +336,11 @@ This document tracks only work that is reflected by the current repository state
   drives tenant-scoped, bounded oldest-first pruning while preserving the
   newest N runs per integration. Memory/PostgreSQL parity, rollback,
   concurrency, tenant isolation, and fresh-session persistence are verified.
+- EPIC 21 Task 4 alert lifecycle and production log sink: an opt-in worker
+  monitor now combines marketplace batches with tenant-scoped dashboard state,
+  emits deterministic opened/reminder/escalated/resolved transitions through a
+  redacted structured-log sink, and exposes an exact terminal content-attempt
+  counter without treating every failed attempt as retry exhaustion.
 
 ## Current Status
 
@@ -367,9 +372,9 @@ through the public route/DTO layer for product cards, details, offers,
 comparisons, and price history. The first embedded `/terminal` visual shell is
 available for API contract validation. Guarded public-source polling and durable
 per-integration history are now verified; unattended production polling still
-requires deployment configuration, concrete alert sink/lifecycle wiring, and
-credential retrieval for authenticated sources. The backend core is now a
-verified release candidate.
+  requires deployment policy/configuration, collector integration, and
+  credential retrieval for authenticated sources. The backend core is now a
+  verified release candidate.
 The remaining work before public visual launch is execution of human-approved
 catalog onboarding through the now measurable operator workspace, production
 monitoring/deployment configuration, frontend hardening, and a product decision
@@ -381,10 +386,10 @@ bounded human-reviewed batch from the saved marketplace evidence.
 
 ## Not Present Yet
 
-- Production alert sink/lifecycle wiring and deployment scheduling for bounded
-  polling-history retention. The worker has an opt-in Prometheus textfile export,
-  delivery-neutral alert routing, and verified retention foundation; collector,
-  notification, and approved policy-value wiring remain.
+- Deployment scheduling for bounded polling-history retention and approved
+  production policy values. The worker has opt-in Prometheus textfile export,
+  process-local alert lifecycle, and a redacted structured-log sink; external
+  collector configuration and durable cross-replica acknowledgement remain.
 - Optional guarded live Telegram test-chat message.
 - Production AI provider integration in the pipeline.
 - Live marketplace credential storage and credential retrieval for execution.
@@ -394,9 +399,9 @@ bounded human-reviewed batch from the saved marketplace evidence.
 
 **Production operations readiness.**
 
-Continue the operations boundary with a selected production alert sink/lifecycle
-policy and deployment configuration around the verified worker, including
-explicit retention values and schedule. In parallel, use the completed review
-workspace to process a bounded initial catalog batch from human-verified
-evidence. Do not invent links, bulk-confirm `NO_MATCH` offers, or lower matching
-thresholds.
+Continue the operations boundary with deployment configuration around the
+verified worker, including collector integration, explicit retention values and
+schedule, then run the production-shaped PostgreSQL operations gate. In
+parallel, use the completed review workspace to process a bounded initial
+catalog batch from human-verified evidence. Do not invent links, bulk-confirm
+`NO_MATCH` offers, or lower matching thresholds.

@@ -68,6 +68,7 @@ class DashboardSummaryResponse(ApiModel):
     scoring_failures: int = Field(ge=0)
     generated_content_pending: int = Field(ge=0)
     generated_content_failed: int = Field(ge=0)
+    generated_content_attempts_exhausted: int = Field(ge=0)
     generated_content_awaiting_review: int = Field(ge=0)
     approved_content_awaiting_publication: int = Field(ge=0)
     publications_pending: int = Field(ge=0)

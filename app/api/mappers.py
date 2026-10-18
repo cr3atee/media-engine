@@ -139,6 +139,9 @@ def dashboard_summary_response(
         scoring_failures=summary.scoring_failures,
         generated_content_pending=summary.generated_content_pending,
         generated_content_failed=summary.generated_content_failed,
+        generated_content_attempts_exhausted=(
+            summary.generated_content_attempts_exhausted
+        ),
         generated_content_awaiting_review=summary.generated_content_awaiting_review,
         approved_content_awaiting_publication=(
             summary.approved_content_awaiting_publication

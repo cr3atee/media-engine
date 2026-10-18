@@ -498,8 +498,6 @@ marketplace execution batches and dashboard summaries. Explicit source-volume
 baselines, stable tenant/integration-aware fingerprints, delivery-neutral
 severity/code routes, per-pass deduplication, sink-failure isolation, and safe
 error classification are implemented without network or persistence coupling.
-Concrete production sinks, durable alert lifecycle policy, retention schedule
-and production policy values, and deployment wiring remain.
 
 EPIC 21 Task 3 adds explicit polling-history retention without changing the
 polling workflow. One caller-owned policy controls the UTC age cutoff,
@@ -508,6 +506,17 @@ repositories delete the same deterministic oldest-first IDs; tenant isolation,
 transaction rollback, concurrent calls, and fresh-session persistence pass
 against isolated PostgreSQL 17. Production policy values and scheduled
 invocation remain deployment decisions.
+
+EPIC 21 Task 4 adds an opt-in worker alert monitor, process-local lifecycle,
+and redacted structured-log sink. Stable fingerprints drive opened, reminder,
+escalated, and resolved transitions; acknowledgements suppress reminders until
+severity increases or the condition resolves. Tenant dashboard reads occur in
+the existing read scope and sink delivery occurs afterward. A failed dashboard
+read leaves lifecycle state unchanged, preventing false resolutions. The
+dashboard now distinguishes all failed generation attempts from exact
+`generation_attempts_exhausted` terminal failures. External collector
+configuration, cross-replica durable acknowledgement, scheduled retention,
+and final production-shaped operations verification remain.
 
 ## Known Gaps
 
@@ -549,8 +558,8 @@ invocation remain deployment decisions.
   guarded public-source polling has passed against live GGSEL, Playerok, and
   FunPay data in isolated PostgreSQL. Tenant-scoped polling history now retains
   safe success, failure, and skip evidence across restarts. Unattended polling
-  still requires deployment metrics collection, concrete alert sink/lifecycle
-  wiring, deployment configuration, and credential retrieval for authenticated
+  still requires external metrics/log collection, deployment policy values,
+  final operations verification, and credential retrieval for authenticated
   sources.
 - Public Market Terminal integration still needs a frontend location decision
   for public launch and a product decision on category exposure. An embedded
@@ -646,5 +655,6 @@ from real saved/live payloads as snapshot-ready, and a strict saved-payload
 drift guard is present. Runtime bootstrap/process helpers and the worker command
 now centralize repository scope, Scheduler construction, job registration, and
 safe shutdown. Guarded live polling and durable per-integration run history are
-verified; unattended production scheduling should still wait for metrics/alert
-routing, deployment configuration, and authenticated-source credential retrieval.
+verified; unattended production scheduling should still wait for collector and
+deployment configuration, the final operations gate, and authenticated-source
+credential retrieval.
