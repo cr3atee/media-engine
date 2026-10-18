@@ -11,13 +11,23 @@ from app.domain.marketplace_integrations import (
     MarketplaceIntegration,
     MarketplaceIntegrationStatus,
 )
+from app.domain.marketplace_polling import (
+    MarketplacePollingRun,
+    MarketplacePollingRunStatus,
+)
 from app.domain.tenancy import Tenant
 from app.runtime.bootstrap import create_memory_runtime_components
 from app.runtime.process import RuntimeJobConfig, RuntimeProcess
-from app.runtime.worker import register_enabled_marketplace_integrations_job
+from app.runtime.worker import (
+    register_enabled_marketplace_integrations_job,
+    register_marketplace_polling_retention_job,
+)
 from app.scheduler.jobs import JobExecutionState
 from app.services.marketplace_integration_execution import (
     MarketplaceIntegrationExecutionBatch,
+)
+from app.services.marketplace_polling_retention import (
+    MarketplacePollingRetentionBatch,
 )
 
 
@@ -101,4 +111,47 @@ def test_worker_job_handles_empty_integration_selection() -> None:
 
     run_async(process.execute_once("enabled-marketplace-integrations"))
 
+    assert process.list_statuses()[0].state is JobExecutionState.SUCCEEDED
+
+
+def test_worker_registers_and_executes_polling_retention_job() -> None:
+    components = create_memory_runtime_components(
+        SchedulerSettings(lease_enabled=False, tick_seconds=0.1),
+    )
+    process = RuntimeProcess(components)
+    tenant_id = UUID("10000000-0000-4000-8000-000000000611")
+    integration_id = UUID("10000000-0000-4000-8000-000000000612")
+    now = datetime.now(UTC)
+
+    async def seed() -> None:
+        async with components.repository_scope_factory() as repositories:
+            await repositories.marketplace_polling_runs.save(
+                MarketplacePollingRun(
+                    id=UUID("10000000-0000-4000-8000-000000000613"),
+                    tenant_id=tenant_id,
+                    integration_id=integration_id,
+                    marketplace="ggsel",
+                    status=MarketplacePollingRunStatus.SUCCEEDED,
+                    started_at=now,
+                    finished_at=now,
+                )
+            )
+
+    run_async(seed())
+    register_marketplace_polling_retention_job(
+        process,
+        retain_for_seconds=3600,
+        keep_latest_per_integration=1,
+        batch_size=10,
+        config=RuntimeJobConfig(interval_seconds=86400, timeout_seconds=30),
+    )
+
+    run_async(process.execute_once("marketplace-polling-retention"))
+
+    result = process.get_last_result("marketplace-polling-retention")
+    schedule = process.list_schedule_statuses()[0]
+    assert isinstance(result, MarketplacePollingRetentionBatch)
+    assert result.tenant_count == 1
+    assert result.deleted_count == 0
+    assert schedule.interval_seconds == 86400
     assert process.list_statuses()[0].state is JobExecutionState.SUCCEEDED

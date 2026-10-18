@@ -47,6 +47,29 @@ class MarketplacePollingRetentionResult:
         return len(self.deleted_run_ids)
 
 
+@dataclass(slots=True, frozen=True, kw_only=True)
+class MarketplacePollingRetentionBatch:
+    """Results from one retention pass over tenants with polling history."""
+
+    observed_at: datetime
+    tenant_results: tuple[MarketplacePollingRetentionResult, ...]
+
+    @property
+    def tenant_count(self) -> int:
+        """Return the number of tenant histories inspected."""
+        return len(self.tenant_results)
+
+    @property
+    def deleted_count(self) -> int:
+        """Return the total number of polling runs removed."""
+        return sum(result.deleted_count for result in self.tenant_results)
+
+    @property
+    def batch_limit_reached(self) -> bool:
+        """Report whether any tenant may need another bounded pass."""
+        return any(result.batch_limit_reached for result in self.tenant_results)
+
+
 class MarketplacePollingRetentionService:
     """Apply polling-history retention through one repository transaction."""
 
@@ -88,4 +111,19 @@ class MarketplacePollingRetentionService:
             cutoff=cutoff,
             deleted_run_ids=deleted_ids,
             batch_limit_reached=len(deleted_ids) == self._policy.batch_size,
+        )
+
+    async def prune_all(self, *, now: datetime) -> MarketplacePollingRetentionBatch:
+        """Prune one bounded batch for every tenant that owns polling history."""
+        observed_at = normalize_utc(now, field_name="now")
+        async with self._repository_scope_factory() as repositories:
+            tenant_ids = tuple(
+                await repositories.marketplace_polling_runs.list_tenant_ids()
+            )
+        tenant_results: list[MarketplacePollingRetentionResult] = []
+        for tenant_id in tenant_ids:
+            tenant_results.append(await self.prune(tenant_id, now=observed_at))
+        return MarketplacePollingRetentionBatch(
+            observed_at=observed_at,
+            tenant_results=tuple(tenant_results),
         )

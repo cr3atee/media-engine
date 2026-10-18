@@ -6,6 +6,15 @@ This document records notable Project Passport updates.
 
 ## Unreleased
 
+- Added EPIC 21 Task 5 production deployment configuration: lockfile-built
+  non-root image, leased worker replicas, API/worker health checks, unique
+  Prometheus textfiles, explicit daily 90-day polling-history retention,
+  graceful `SIGTERM` shutdown, and an operations runbook. Production Compose
+  validates, the image smoke test runs as UID `999`, and the offline deployment
+  verifier passes `25/25`, including missing-secret rejection. Full Pytest
+  passes `523` tests with `58` expected
+  skips, and MyPy checks `448` source files. A real container `SIGTERM` exits
+  cleanly with code `0` and no OOM.
 - Added EPIC 21 Task 4 opt-in runtime alert monitoring with deterministic
   opened/reminder/escalated/resolved lifecycle, acknowledgement and reminder
   suppression, severity escalation, redacted structured-log delivery, and

@@ -254,6 +254,11 @@ This document captures architecture notes that are important for future reviews.
 - Runtime alert evaluation must not reconcile a partial snapshot after a
   dashboard read failure, because that would emit false resolutions. Sink
   failures remain isolated and occur after the read transaction closes.
+- Production worker replicas must keep PostgreSQL Scheduler leases enabled and
+  use collision-resistant process owner IDs. Keep metrics files replica-scoped,
+  preserve `SIGTERM` shutdown, and ensure the deployment stop grace exceeds the
+  largest configured timeout/retry budget. Retention values belong in reviewed
+  deployment policy, not repository or domain defaults.
 - The core release gate is intentionally a subprocess coordinator over existing
   verifiers. Keep it free of domain logic and live-network behavior. Its local
   database-name guard permits the public UI and polling-history verifiers to

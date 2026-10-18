@@ -50,6 +50,15 @@ class MemoryMarketplacePollingRunRepository(MarketplacePollingRunRepository):
             )[:limit]
         )
 
+    async def list_tenant_ids(self) -> Sequence[UUID]:
+        """Return polling-history tenant IDs in deterministic order."""
+        return tuple(
+            sorted(
+                {run.tenant_id for run in self._runs_by_id.values()},
+                key=lambda tenant_id: tenant_id.int,
+            )
+        )
+
     async def prune_by_tenant(
         self,
         request: MarketplacePollingRunPruneRequest,

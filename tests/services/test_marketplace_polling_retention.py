@@ -19,6 +19,7 @@ from app.repositories.marketplace_polling_runs import (
 from app.repositories.memory import MemoryMarketplacePollingRunRepository
 from app.repositories.provider import create_memory_provider
 from app.services.marketplace_polling_retention import (
+    MarketplacePollingRetentionBatch,
     MarketplacePollingRetentionPolicy,
     MarketplacePollingRetentionService,
 )
@@ -104,6 +105,27 @@ def test_memory_pruning_is_bounded_deterministic_and_tenant_scoped() -> None:
     ) == (foreign,)
 
 
+def test_memory_repository_lists_only_tenants_with_polling_history() -> None:
+    repository = MemoryMarketplacePollingRunRepository()
+    tenant_run = _run(
+        number=13,
+        integration_id=FIRST_INTEGRATION_ID,
+        days_ago=5,
+    )
+    foreign_run = _run(
+        number=14,
+        tenant_id=OTHER_TENANT_ID,
+        integration_id=SECOND_INTEGRATION_ID,
+        days_ago=5,
+    )
+    run_async(_save_all(repository, (foreign_run, tenant_run)))
+
+    assert tuple(run_async(repository.list_tenant_ids())) == (
+        TENANT_ID,
+        OTHER_TENANT_ID,
+    )
+
+
 def test_pruning_uses_a_strict_cutoff() -> None:
     repository = MemoryMarketplacePollingRunRepository()
     old = _run(number=10, integration_id=FIRST_INTEGRATION_ID, days_ago=31)
@@ -170,6 +192,60 @@ def test_retention_service_commits_one_explicit_batch() -> None:
             )
         )
     ) == (runs[2], runs[1])
+
+
+def test_retention_service_prunes_one_batch_for_each_history_tenant() -> None:
+    provider = create_memory_provider()
+    scope_factory = create_memory_repository_scope(provider)
+    tenant_old = _run(
+        number=20,
+        integration_id=FIRST_INTEGRATION_ID,
+        days_ago=100,
+    )
+    tenant_new = _run(
+        number=21,
+        integration_id=FIRST_INTEGRATION_ID,
+        days_ago=1,
+    )
+    foreign_old = _run(
+        number=22,
+        tenant_id=OTHER_TENANT_ID,
+        integration_id=SECOND_INTEGRATION_ID,
+        days_ago=100,
+    )
+    foreign_new = _run(
+        number=23,
+        tenant_id=OTHER_TENANT_ID,
+        integration_id=SECOND_INTEGRATION_ID,
+        days_ago=1,
+    )
+    run_async(
+        _save_all(
+            provider.marketplace_polling_runs,
+            (tenant_old, tenant_new, foreign_old, foreign_new),
+        )
+    )
+    service = MarketplacePollingRetentionService(
+        repository_scope_factory=scope_factory,
+        policy=MarketplacePollingRetentionPolicy(
+            retain_for=timedelta(days=30),
+            keep_latest_per_integration=1,
+            batch_size=10,
+        ),
+    )
+
+    result = run_async(service.prune_all(now=NOW))
+
+    assert isinstance(result, MarketplacePollingRetentionBatch)
+    assert result.observed_at == NOW
+    assert result.tenant_count == 2
+    assert result.deleted_count == 2
+    assert result.batch_limit_reached is False
+    assert tuple(
+        deleted_id
+        for tenant_result in result.tenant_results
+        for deleted_id in tenant_result.deleted_run_ids
+    ) == (tenant_old.id, foreign_old.id)
 
 
 def test_memory_repository_scope_rolls_back_pruning() -> None:

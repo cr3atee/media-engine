@@ -6,11 +6,17 @@ ENV UV_LINK_MODE=copy
 
 WORKDIR /app
 
-RUN pip install --no-cache-dir uv
+ARG UV_VERSION=0.13.1
+RUN pip install --no-cache-dir "uv==${UV_VERSION}"
 
-COPY pyproject.toml ./
-RUN uv sync --no-dev
+COPY pyproject.toml uv.lock ./
+RUN uv sync --frozen --no-dev
 
-COPY . .
+RUN groupadd --system mediaengine \
+    && useradd --system --gid mediaengine --home-dir /app mediaengine
 
-CMD ["uv", "run", "python", "-V"]
+COPY --chown=mediaengine:mediaengine . .
+
+USER mediaengine
+
+CMD [".venv/bin/python", "-V"]

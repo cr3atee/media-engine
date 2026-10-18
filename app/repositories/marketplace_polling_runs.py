@@ -56,6 +56,10 @@ class MarketplacePollingRunRepository(BaseRepository):
         """Return newest runs for one tenant-owned integration."""
 
     @abstractmethod
+    async def list_tenant_ids(self) -> Sequence[UUID]:
+        """Return tenant IDs that currently own polling history."""
+
+    @abstractmethod
     async def prune_by_tenant(
         self,
         request: MarketplacePollingRunPruneRequest,

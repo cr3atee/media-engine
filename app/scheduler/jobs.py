@@ -97,6 +97,13 @@ class PublicationDeliveryRunner(Protocol):
         """Process one bounded publication-delivery batch."""
 
 
+class MarketplacePollingRetentionRunner(Protocol):
+    """Application boundary for bounded polling-history retention."""
+
+    async def prune_all(self, *, now: datetime) -> object:
+        """Prune one bounded batch for tenants with polling history."""
+
+
 class JobExecutionState(StrEnum):
     """Possible scheduler job execution states."""
 
@@ -409,3 +416,22 @@ class PendingPublicationDeliveryJob(BaseJob):
             limit=self._batch_size,
             now=self._clock(),
         )
+
+
+class MarketplacePollingRetentionJob(BaseJob):
+    """Invoke bounded polling-history retention without owning its policy."""
+
+    def __init__(
+        self,
+        service: MarketplacePollingRetentionRunner,
+        *,
+        clock: Callable[[], datetime] = _utc_now,
+    ) -> None:
+        """Configure application-service delegation and an injectable clock."""
+        super().__init__("marketplace-polling-retention")
+        self._service = service
+        self._clock = clock
+
+    def run(self) -> Awaitable[object]:
+        """Delegate one retention pass to the existing application service."""
+        return self._service.prune_all(now=self._clock())

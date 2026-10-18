@@ -1,0 +1,129 @@
+x-mediaengine-runtime: &mediaengine-runtime
+  image: ${MEDIAENGINE_IMAGE:-mediaengine:0.1.0}
+  build:
+    context: .
+    dockerfile: Dockerfile
+  init: true
+  restart: unless-stopped
+  security_opt:
+    - no-new-privileges:true
+  read_only: true
+  tmpfs:
+    - /tmp:size=64m,mode=1777
+
+services:
+  migrate:
+    <<: *mediaengine-runtime
+    profiles: ["operations"]
+    restart: "no"
+    command: [".venv/bin/alembic", "upgrade", "head"]
+    environment:
+      DATABASE_URL: ${DATABASE_URL:?DATABASE_URL is required}
+
+  api:
+    <<: *mediaengine-runtime
+    command:
+      - .venv/bin/uvicorn
+      - app.main:app
+      - --host
+      - 0.0.0.0
+      - --port
+      - "8000"
+    stop_grace_period: ${API_STOP_GRACE_PERIOD:-30s}
+    environment:
+      APP_ENV: production
+      DATABASE_URL: ${DATABASE_URL:?DATABASE_URL is required}
+      LOG_LEVEL: ${LOG_LEVEL:-INFO}
+      ADMIN_API_ENABLED: ${ADMIN_API_ENABLED:-true}
+      ADMIN_API_KEY: ${ADMIN_API_KEY:?ADMIN_API_KEY is required}
+      ADMIN_CURSOR_SIGNING_KEY: ${ADMIN_CURSOR_SIGNING_KEY:?ADMIN_CURSOR_SIGNING_KEY is required}
+      AUTH_ACCESS_TOKEN_SECRET: ${AUTH_ACCESS_TOKEN_SECRET:?AUTH_ACCESS_TOKEN_SECRET is required}
+    ports:
+      - "${APP_BIND_ADDRESS:-127.0.0.1}:${APP_PORT:-8000}:8000"
+    healthcheck:
+      test:
+        - CMD
+        - .venv/bin/python
+        - scripts/check_api_health.py
+        - --url
+        - http://127.0.0.1:8000/health/ready
+        - --timeout-seconds
+        - "3"
+      interval: 15s
+      timeout: 5s
+      retries: 4
+      start_period: 20s
+
+  worker:
+    <<: *mediaengine-runtime
+    command:
+      - /bin/sh
+      - -ec
+      - >-
+        exec .venv/bin/python scripts/run_mediaengine_worker.py
+        --interval-seconds "$${WORKER_POLL_INTERVAL_SECONDS}"
+        --retry-count "$${WORKER_POLL_RETRY_COUNT}"
+        --retry-delay-seconds "$${WORKER_POLL_RETRY_DELAY_SECONDS}"
+        --timeout-seconds "$${WORKER_POLL_TIMEOUT_SECONDS}"
+        --metrics-file "/metrics/mediaengine-worker-$${HOSTNAME}.prom"
+        --metrics-refresh-seconds "$${WORKER_METRICS_REFRESH_SECONDS}"
+    stop_grace_period: ${WORKER_STOP_GRACE_PERIOD:?WORKER_STOP_GRACE_PERIOD is required}
+    environment:
+      APP_ENV: production
+      DATABASE_URL: ${DATABASE_URL:?DATABASE_URL is required}
+      LOG_LEVEL: ${LOG_LEVEL:-INFO}
+      WORKER_POLL_INTERVAL_SECONDS: ${WORKER_POLL_INTERVAL_SECONDS:?WORKER_POLL_INTERVAL_SECONDS is required}
+      WORKER_POLL_RETRY_COUNT: ${WORKER_POLL_RETRY_COUNT:?WORKER_POLL_RETRY_COUNT is required}
+      WORKER_POLL_RETRY_DELAY_SECONDS: ${WORKER_POLL_RETRY_DELAY_SECONDS:?WORKER_POLL_RETRY_DELAY_SECONDS is required}
+      WORKER_POLL_TIMEOUT_SECONDS: ${WORKER_POLL_TIMEOUT_SECONDS:?WORKER_POLL_TIMEOUT_SECONDS is required}
+      WORKER_METRICS_REFRESH_SECONDS: ${WORKER_METRICS_REFRESH_SECONDS:?WORKER_METRICS_REFRESH_SECONDS is required}
+      WORKER_HEALTH_MAX_AGE_SECONDS: ${WORKER_HEALTH_MAX_AGE_SECONDS:?WORKER_HEALTH_MAX_AGE_SECONDS is required}
+      SCHEDULER_LEASE_ENABLED: "true"
+      SCHEDULER_OWNER_ID: ""
+      SCHEDULER_LEASE_TTL_SECONDS: ${SCHEDULER_LEASE_TTL_SECONDS:?SCHEDULER_LEASE_TTL_SECONDS is required}
+      POLLING_RETENTION_ENABLED: "true"
+      POLLING_RETENTION_INTERVAL_SECONDS: ${POLLING_RETENTION_INTERVAL_SECONDS:?POLLING_RETENTION_INTERVAL_SECONDS is required}
+      POLLING_RETENTION_RETAIN_FOR_SECONDS: ${POLLING_RETENTION_RETAIN_FOR_SECONDS:?POLLING_RETENTION_RETAIN_FOR_SECONDS is required}
+      POLLING_RETENTION_KEEP_LATEST_PER_INTEGRATION: ${POLLING_RETENTION_KEEP_LATEST_PER_INTEGRATION:?POLLING_RETENTION_KEEP_LATEST_PER_INTEGRATION is required}
+      POLLING_RETENTION_BATCH_SIZE: ${POLLING_RETENTION_BATCH_SIZE:?POLLING_RETENTION_BATCH_SIZE is required}
+      POLLING_RETENTION_RETRY_COUNT: ${POLLING_RETENTION_RETRY_COUNT:?POLLING_RETENTION_RETRY_COUNT is required}
+      POLLING_RETENTION_RETRY_DELAY_SECONDS: ${POLLING_RETENTION_RETRY_DELAY_SECONDS:?POLLING_RETENTION_RETRY_DELAY_SECONDS is required}
+      POLLING_RETENTION_TIMEOUT_SECONDS: ${POLLING_RETENTION_TIMEOUT_SECONDS:?POLLING_RETENTION_TIMEOUT_SECONDS is required}
+      ALERTING_ENABLED: ${ALERTING_ENABLED:-true}
+      ALERTING_EVALUATION_INTERVAL_SECONDS: ${ALERTING_EVALUATION_INTERVAL_SECONDS:-30}
+      ALERTING_DASHBOARD_WINDOW_SECONDS: ${ALERTING_DASHBOARD_WINDOW_SECONDS:-86400}
+      ALERTING_REMINDER_INTERVAL_SECONDS: ${ALERTING_REMINDER_INTERVAL_SECONDS:-1800}
+    volumes:
+      - worker_metrics:/metrics
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - >-
+          .venv/bin/python scripts/check_worker_health.py
+          --metrics-file "/metrics/mediaengine-worker-$${HOSTNAME}.prom"
+          --max-age-seconds "$${WORKER_HEALTH_MAX_AGE_SECONDS}"
+      interval: 20s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+    deploy:
+      replicas: ${WORKER_REPLICAS:-2}
+
+  metrics-collector:
+    image: ${NODE_EXPORTER_IMAGE:-quay.io/prometheus/node-exporter:v1.9.1}
+    restart: unless-stopped
+    command:
+      - --collector.disable-defaults
+      - --collector.textfile
+      - --collector.textfile.directory=/textfiles
+      - --web.listen-address=:9100
+    read_only: true
+    security_opt:
+      - no-new-privileges:true
+    volumes:
+      - worker_metrics:/textfiles:ro
+    ports:
+      - "${METRICS_BIND_ADDRESS:-127.0.0.1}:${METRICS_PORT:-9100}:9100"
+
+volumes:
+  worker_metrics:

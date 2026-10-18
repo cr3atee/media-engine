@@ -112,6 +112,9 @@ def test_worker_metrics_export_is_opt_in() -> None:
 
     assert arguments.metrics_file is None
     assert arguments.metrics_refresh_seconds == 5.0
+    assert arguments.retry_count == 1
+    assert arguments.retry_delay_seconds == 1.0
+    assert arguments.timeout_seconds is None
 
 
 def test_worker_accepts_metrics_textfile_configuration(tmp_path: Path) -> None:
@@ -123,11 +126,20 @@ def test_worker_accepts_metrics_textfile_configuration(tmp_path: Path) -> None:
             str(path),
             "--metrics-refresh-seconds",
             "0.5",
+            "--retry-count",
+            "2",
+            "--retry-delay-seconds",
+            "3",
+            "--timeout-seconds",
+            "45",
         ]
     )
 
     assert arguments.metrics_file == path
     assert arguments.metrics_refresh_seconds == 0.5
+    assert arguments.retry_count == 2
+    assert arguments.retry_delay_seconds == 3
+    assert arguments.timeout_seconds == 45
 
 
 def _successful_execution() -> MarketplaceIntegrationExecution:

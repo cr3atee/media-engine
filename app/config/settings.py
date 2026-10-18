@@ -163,6 +163,50 @@ class OperationalAlertingSettings(BaseSettings):
     reminder_interval_seconds: int = Field(default=1800, gt=0)
 
 
+class PollingRetentionSettings(BaseSettings):
+    """Fail-closed scheduling configuration for polling-history retention."""
+
+    model_config = SettingsConfigDict(
+        env_file=".env",
+        env_file_encoding="utf-8",
+        env_prefix="POLLING_RETENTION_",
+        extra="ignore",
+    )
+
+    enabled: bool = False
+    interval_seconds: int | None = Field(default=None, gt=0)
+    retain_for_seconds: int | None = Field(default=None, gt=0)
+    keep_latest_per_integration: int | None = Field(default=None, ge=1)
+    batch_size: int | None = Field(default=None, gt=0)
+    retry_count: int = Field(default=0, ge=0)
+    retry_delay_seconds: float = Field(default=0.0, ge=0)
+    timeout_seconds: float | None = Field(default=None, gt=0)
+
+    @model_validator(mode="after")
+    def validate_enabled_policy(self) -> "PollingRetentionSettings":
+        """Require every deployment-owned policy value when scheduling is enabled."""
+        if not self.enabled:
+            return self
+        required_values = {
+            "interval_seconds": self.interval_seconds,
+            "retain_for_seconds": self.retain_for_seconds,
+            "keep_latest_per_integration": self.keep_latest_per_integration,
+            "batch_size": self.batch_size,
+            "timeout_seconds": self.timeout_seconds,
+        }
+        missing = tuple(
+            name for name, value in required_values.items() if value is None
+        )
+        if missing:
+            msg = (
+                "Enabled polling retention requires explicit values for: "
+                + ", ".join(missing)
+                + "."
+            )
+            raise ValueError(msg)
+        return self
+
+
 class AdminApiSettings(BaseSettings):
     """Configuration for the authenticated administration API."""
 
@@ -238,6 +282,9 @@ class Settings(BaseSettings):
     logging: LoggingSettings = Field(default_factory=LoggingSettings)
     alerting: OperationalAlertingSettings = Field(
         default_factory=OperationalAlertingSettings
+    )
+    polling_retention: PollingRetentionSettings = Field(
+        default_factory=PollingRetentionSettings
     )
 
 

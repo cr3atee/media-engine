@@ -65,6 +65,15 @@ class PostgresMarketplacePollingRunRepository(MarketplacePollingRunRepository):
         )
         return tuple(_to_domain(record) for record in result.scalars())
 
+    async def list_tenant_ids(self) -> Sequence[UUID]:
+        """Return polling-history tenant IDs in deterministic order."""
+        result = await self._session.execute(
+            select(MarketplacePollingRunRecord.tenant_id)
+            .distinct()
+            .order_by(MarketplacePollingRunRecord.tenant_id)
+        )
+        return tuple(result.scalars())
+
     async def prune_by_tenant(
         self,
         request: MarketplacePollingRunPruneRequest,

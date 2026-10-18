@@ -46,8 +46,10 @@ candidate verification.
 - Add PostgreSQL-specific public query adapters only if direct SQL read
   optimization is explicitly approved after the repository-backed adapter is
   exercised.
-- Complete deployment configuration and the final production-shaped operations
-  gate before relying on GGSEL, Playerok, or FunPay for scheduled ingestion.
+- Complete the final isolated PostgreSQL production-shaped operations gate
+  before relying on GGSEL, Playerok, or FunPay for unattended ingestion. The
+  deployment configuration and initial policy are now recorded and verified
+  offline.
 - Define the next EPIC before implementing live marketplace credential storage
   or execution-time credential retrieval.
 - Keep tenant-owned marketplace integrations redacted and metadata-only until a
@@ -63,21 +65,18 @@ candidate verification.
 
 ## Operational
 
-- Connect the completed opt-in Prometheus textfile export and redacted
-  structured-alert log sink to the chosen deployment collector. The worker now
-  has process-local deduplication, acknowledgement, resolution, and escalation;
-  configure durable cross-replica lifecycle in the external alert manager.
-  Tenant-scoped per-run diagnostics are durable, and bounded pruning is
-  implemented; select production retention duration, newest-per-integration
-  protection, batch size, and execution schedule from observed volume and audit
-  requirements.
+- Deploy the configured Prometheus textfile collector and redacted structured
+  alert logs into the target monitoring stack. The initial retention duration,
+  newest-per-integration protection, batch, and schedule are explicit; revisit
+  them only with observed volume/audit evidence. Durable cross-replica alert
+  acknowledgement remains owned by the external alert manager.
 
 ## Known Marketplace Gap
 
 - GGSEL, Playerok, and FunPay are ready from captured-response proof, strict
   saved-payload verification, and guarded live polling verification. Production
-  scheduling still needs external collector configuration, explicit policy
-  values, and the final operations gate.
+  scheduling has explicit deployment policy; it still needs target collector
+  rollout, authenticated-source credentials, and the final operations gate.
 - Real source extraction readiness does not imply same-product comparison
   readiness. The current saved payloads contain `81` snapshot-ready offers but
   no deterministic cross-marketplace match under the existing confidence rules.

@@ -6,8 +6,9 @@ from __future__ import annotations
 
 import argparse
 import asyncio
+import signal
 import sys
-from collections.abc import Sequence
+from collections.abc import Callable, Sequence
 from contextlib import suppress
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
@@ -28,7 +29,10 @@ from app.runtime.marketplaces import create_marketplace_runner_factories
 from app.runtime.metrics import PrometheusTextfileWriter, RuntimeMetricsExporter
 from app.runtime.monitoring import RuntimeMonitor
 from app.runtime.process import RuntimeJobConfig, RuntimeProcess
-from app.runtime.worker import register_enabled_marketplace_integrations_job
+from app.runtime.worker import (
+    register_enabled_marketplace_integrations_job,
+    register_marketplace_polling_retention_job,
+)
 from app.services.marketplace_integration_execution import (
     MarketplaceIntegrationExecutionBatch,
 )
@@ -41,6 +45,9 @@ class WorkerArguments:
     once: bool
     duration_seconds: float | None
     interval_seconds: int
+    retry_count: int
+    retry_delay_seconds: float
+    timeout_seconds: float | None
     metrics_file: Path | None
     metrics_refresh_seconds: float
 
@@ -66,6 +73,24 @@ def parse_args(argv: Sequence[str] | None = None) -> WorkerArguments:
         help="Enabled marketplace integration polling interval.",
     )
     parser.add_argument(
+        "--retry-count",
+        type=_non_negative_int,
+        default=1,
+        help="Marketplace job retries after the initial attempt.",
+    )
+    parser.add_argument(
+        "--retry-delay-seconds",
+        type=_non_negative_float,
+        default=1.0,
+        help="Delay between marketplace job attempts.",
+    )
+    parser.add_argument(
+        "--timeout-seconds",
+        type=_positive_float,
+        default=None,
+        help="Optional timeout for each marketplace job attempt.",
+    )
+    parser.add_argument(
         "--metrics-file",
         type=Path,
         default=None,
@@ -82,6 +107,9 @@ def parse_args(argv: Sequence[str] | None = None) -> WorkerArguments:
         once=namespace.once,
         duration_seconds=namespace.duration_seconds,
         interval_seconds=namespace.interval_seconds,
+        retry_count=namespace.retry_count,
+        retry_delay_seconds=namespace.retry_delay_seconds,
+        timeout_seconds=namespace.timeout_seconds,
         metrics_file=namespace.metrics_file,
         metrics_refresh_seconds=namespace.metrics_refresh_seconds,
     )
@@ -111,12 +139,16 @@ async def main() -> int:
             config=RuntimeJobConfig(
                 interval_seconds=None if args.once else args.interval_seconds,
                 enabled=not args.once,
-                retry_count=1,
-                retry_delay_seconds=1.0,
+                retry_count=args.retry_count,
+                retry_delay_seconds=args.retry_delay_seconds,
+                timeout_seconds=args.timeout_seconds,
             ),
         )
 
-        job_name = process.list_statuses()[0].name
+        if not args.once:
+            _register_polling_retention(process)
+
+        job_name = "enabled-marketplace-integrations"
         if args.once:
             await process.execute_once(job_name)
             await _evaluate_alerts(process, job_name, alert_monitor)
@@ -127,6 +159,8 @@ async def main() -> int:
 
         if metrics_writer is not None:
             _write_metrics(process, job_name, metrics_writer)
+        shutdown_event = asyncio.Event()
+        remove_termination_handler = _install_termination_handler(shutdown_event)
         process.start()
         metrics_task = (
             asyncio.create_task(
@@ -153,26 +187,91 @@ async def main() -> int:
             else None
         )
         try:
-            if args.duration_seconds is None:
-                await asyncio.Event().wait()
-            else:
-                await asyncio.sleep(args.duration_seconds)
+            await _wait_for_shutdown(
+                shutdown_event,
+                duration_seconds=args.duration_seconds,
+            )
         finally:
-            await process.stop()
-            if metrics_task is not None:
-                metrics_task.cancel()
-                with suppress(asyncio.CancelledError):
-                    await metrics_task
-            if alert_task is not None:
-                alert_task.cancel()
-                with suppress(asyncio.CancelledError):
-                    await alert_task
-                await _evaluate_alerts(process, job_name, alert_monitor)
-            _write_metrics(process, job_name, metrics_writer)
-            _print_marketplace_result(process, job_name)
-            _print_statuses(process)
+            try:
+                await process.stop()
+                if metrics_task is not None:
+                    metrics_task.cancel()
+                    with suppress(asyncio.CancelledError):
+                        await metrics_task
+                if alert_task is not None:
+                    alert_task.cancel()
+                    with suppress(asyncio.CancelledError):
+                        await alert_task
+                    await _evaluate_alerts(process, job_name, alert_monitor)
+                _write_metrics(process, job_name, metrics_writer)
+                _print_marketplace_result(process, job_name)
+                _print_statuses(process)
+            finally:
+                remove_termination_handler()
 
     return 0
+
+
+def _register_polling_retention(process: RuntimeProcess) -> None:
+    configuration = settings.polling_retention
+    if not configuration.enabled:
+        return
+    interval_seconds = configuration.interval_seconds
+    retain_for_seconds = configuration.retain_for_seconds
+    keep_latest = configuration.keep_latest_per_integration
+    batch_size = configuration.batch_size
+    timeout_seconds = configuration.timeout_seconds
+    if (
+        interval_seconds is None
+        or retain_for_seconds is None
+        or keep_latest is None
+        or batch_size is None
+        or timeout_seconds is None
+    ):
+        raise RuntimeError("Enabled polling retention policy is incomplete.")
+    register_marketplace_polling_retention_job(
+        process,
+        retain_for_seconds=retain_for_seconds,
+        keep_latest_per_integration=keep_latest,
+        batch_size=batch_size,
+        config=RuntimeJobConfig(
+            interval_seconds=interval_seconds,
+            retry_count=configuration.retry_count,
+            retry_delay_seconds=configuration.retry_delay_seconds,
+            timeout_seconds=timeout_seconds,
+        ),
+    )
+
+
+def _install_termination_handler(
+    shutdown_event: asyncio.Event,
+) -> Callable[[], None]:
+    """Translate container SIGTERM into the normal async shutdown path."""
+    loop = asyncio.get_running_loop()
+    try:
+        loop.add_signal_handler(signal.SIGTERM, shutdown_event.set)
+    except (NotImplementedError, RuntimeError):
+        return lambda: None
+
+    def remove_handler() -> None:
+        loop.remove_signal_handler(signal.SIGTERM)
+
+    return remove_handler
+
+
+async def _wait_for_shutdown(
+    shutdown_event: asyncio.Event,
+    *,
+    duration_seconds: float | None,
+) -> None:
+    """Wait for SIGTERM or an optional bounded worker duration."""
+    if duration_seconds is None:
+        await shutdown_event.wait()
+        return
+    try:
+        await asyncio.wait_for(shutdown_event.wait(), timeout=duration_seconds)
+    except TimeoutError:
+        return
 
 
 def _create_alert_monitor(
@@ -327,6 +426,20 @@ def _positive_float(value: str) -> float:
     parsed = float(value)
     if parsed <= 0:
         raise argparse.ArgumentTypeError("Value must be greater than zero.")
+    return parsed
+
+
+def _non_negative_float(value: str) -> float:
+    parsed = float(value)
+    if parsed < 0:
+        raise argparse.ArgumentTypeError("Value must be greater than or equal to zero.")
+    return parsed
+
+
+def _non_negative_int(value: str) -> int:
+    parsed = int(value)
+    if parsed < 0:
+        raise argparse.ArgumentTypeError("Value must be greater than or equal to zero.")
     return parsed
 
 

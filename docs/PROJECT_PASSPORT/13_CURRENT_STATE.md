@@ -504,8 +504,8 @@ polling workflow. One caller-owned policy controls the UTC age cutoff,
 newest-per-integration protection, and bounded batch size. Memory and PostgreSQL
 repositories delete the same deterministic oldest-first IDs; tenant isolation,
 transaction rollback, concurrent calls, and fresh-session persistence pass
-against isolated PostgreSQL 17. Production policy values and scheduled
-invocation remain deployment decisions.
+against isolated PostgreSQL 17. Task 5 subsequently selects and wires the
+initial production policy through deployment configuration.
 
 EPIC 21 Task 4 adds an opt-in worker alert monitor, process-local lifecycle,
 and redacted structured-log sink. Stable fingerprints drive opened, reminder,
@@ -515,8 +515,17 @@ the existing read scope and sink delivery occurs afterward. A failed dashboard
 read leaves lifecycle state unchanged, preventing false resolutions. The
 dashboard now distinguishes all failed generation attempts from exact
 `generation_attempts_exhausted` terminal failures. External collector
-configuration, cross-replica durable acknowledgement, scheduled retention,
-and final production-shaped operations verification remain.
+configuration, cross-replica durable acknowledgement, and final
+production-shaped operations verification remained after this task.
+
+EPIC 21 Task 5 adds the production deployment boundary. The image now builds
+from `uv.lock` and runs as a non-root user; a separate Compose model provides
+API readiness, two PostgreSQL-lease-guarded worker replicas, unique textfile
+metrics per replica, a textfile collector, explicit scheduled retention, and
+`SIGTERM`-driven graceful shutdown. The initial 90-day/ten-run/500-row retention
+policy is deployment configuration rather than business logic. Offline
+deployment verification passes `25/25`; only the final isolated PostgreSQL
+operations gate remains before EPIC 21 completion.
 
 ## Known Gaps
 
@@ -527,8 +536,9 @@ and final production-shaped operations verification remain.
   the `RUB` fallback must remain documented and covered by drift monitoring.
   Optional verified game/category filters now support targeted source batches,
   but `ParsedOffer` still does not retain category metadata.
-- Saved-payload drift monitoring exists; live scheduled marketplace polling
-  still needs production runtime configuration and operational monitoring.
+- Saved-payload drift monitoring and production runtime configuration exist;
+  the combined PostgreSQL operations gate and external collector deployment
+  remain before unattended polling is approved.
 - Core readiness is no longer blocked by domain architecture; remaining work is
   production runtime and operational integration.
 - FunPay saved-response extraction now produces one snapshot-ready `ParsedOffer`
@@ -558,8 +568,10 @@ and final production-shaped operations verification remain.
   guarded public-source polling has passed against live GGSEL, Playerok, and
   FunPay data in isolated PostgreSQL. Tenant-scoped polling history now retains
   safe success, failure, and skip evidence across restarts. Unattended polling
-  still requires external metrics/log collection, deployment policy values,
-  final operations verification, and credential retrieval for authenticated
+  now has a production Compose/runbook boundary with leased replicas, health
+  checks, metrics collection, explicit retention, and graceful shutdown. It
+  still requires the final operations verification, deployment-managed
+  collector/secret infrastructure, and credential retrieval for authenticated
   sources.
 - Public Market Terminal integration still needs a frontend location decision
   for public launch and a product decision on category exposure. An embedded

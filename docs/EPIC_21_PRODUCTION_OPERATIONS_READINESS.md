@@ -2,8 +2,8 @@
 
 ## Status
 
-Tasks 1 through 4 are implemented and verified. Deployment configuration and
-the final production-shaped operations gate remain separate tasks.
+Tasks 1 through 5 are implemented and verified. Only the final isolated
+PostgreSQL production-shaped operations gate remains.
 
 ## Goal
 
@@ -179,15 +179,53 @@ Lifecycle limits:
   persistence.
 - Alembic current/check, downgrade to `0016`, re-upgrade to head, and offline
   SQL generation passed at `0017_marketplace_polling_runs`.
-- Full Pytest: `511 passed, 58 skipped` with one known unrelated Starlette
+- Full Pytest: `523 passed, 58 skipped` with one known unrelated Starlette
   TestClient deprecation warning.
-- Full MyPy: no issues in `444` source files.
+- Full MyPy: no issues in `448` source files.
 - Focused Ruff and Ruff format checks: passed.
+
+## Task 5 - Production Deployment Configuration
+
+Delivered:
+
+- A separate production Compose model for a read-only, non-root API image,
+  multiple worker replicas, a one-shot Alembic command, and a Prometheus
+  textfile collector. PostgreSQL remains external and must be supplied
+  explicitly.
+- Worker replicas share PostgreSQL Scheduler leases and use unique
+  hostname-scoped metrics files. API readiness and metrics-freshness worker
+  health checks use bounded local probes.
+- Marketplace job retry, delay, and per-attempt timeout are explicit deployment
+  inputs. The initial 125-second maximum retry budget remains below the
+  150-second base Scheduler lease and 180-second shutdown grace.
+- The worker translates container `SIGTERM` into its existing async stop path;
+  Scheduler shutdown, final metrics, alert cleanup, and HTTP-client closure
+  occur inside the configured grace period.
+- Polling-history retention is registered as a separate Scheduler job that
+  delegates to the existing retention service. It discovers only tenant IDs
+  that own polling history and keeps every tenant deletion in its own bounded
+  transaction.
+- `PollingRetentionSettings` is disabled by default and rejects enabled
+  configuration unless schedule, age, newest-record protection, batch, and
+  timeout values are explicit.
+- The reviewed initial policy is polling every five minutes, daily retention,
+  90-day history, ten newest runs per integration, and 500 deletions per tenant
+  pass. It lives in deployment configuration, not domain code.
+- `docs/EPIC_21_DEPLOYMENT_RUNBOOK.md` records deployment, migration, health,
+  metrics, shutdown, rollback, and secret-handling procedures.
+
+Task 5 verification:
+
+- Production Compose interpolation: passed.
+- Production image build: passed from `uv.lock`; runtime user UID is `999`.
+- Container `SIGTERM` smoke: graceful Scheduler stop, exit code `0`, and no OOM.
+- Offline deployment verifier: `25/25` checks passed, including fail-closed
+  rejection of missing database/API/auth secrets.
+- Focused deployment/retention/worker/metrics tests: `25` passed.
+- Focused Ruff and MyPy: passed.
+- Full Pytest: `523 passed, 58 skipped`; full MyPy: `448` source files.
 
 ## Remaining Tasks
 
-1. Document and verify deployment configuration for worker replicas, Scheduler
-   leases, metrics collection, health checks, graceful shutdown, and scheduled
-   bounded retention using explicitly approved policy values.
-2. Run an isolated PostgreSQL production-shaped operations verification before
+1. Run an isolated PostgreSQL production-shaped operations verification before
    declaring EPIC 21 complete.
