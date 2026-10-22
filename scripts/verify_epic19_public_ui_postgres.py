@@ -206,11 +206,14 @@ async def _verify_terminal_shell(
     )
     verifier.check(
         "terminal shell exposes product and detail regions",
-        'id="productGrid"' in document.text and 'id="details"' in document.text,
+        'id="productGrid"' in document.text
+        and 'id="loadMoreButton"' in document.text
+        and 'id="details"' in document.text,
     )
     verifier.check(
         "terminal script binds public API",
-        'const api = "/api/v1/public";' in script.text,
+        'const api = "/api/v1/public";' in script.text
+        and 'query.set("cursor", cursor);' in script.text,
     )
     content_security_policy = document.headers.get("content-security-policy", "")
     verifier.check(
@@ -234,6 +237,7 @@ async def _verify_public_routes(
         len(products) == len(seeded_products),
         diagnostic=f"expected={len(seeded_products)}, actual={len(products)}",
     )
+    await _verify_product_pagination(client, seeded_products, verifier)
 
     for seeded in seeded_products:
         await _verify_product_routes(client, seeded, verifier)
@@ -265,6 +269,64 @@ async def _verify_public_routes(
     verifier.check(
         "missing saved categories are represented honestly",
         _items(categories) == [],
+    )
+
+
+async def _verify_product_pagination(
+    client: AsyncClient,
+    seeded_products: tuple[SeededProduct, ...],
+    verifier: Verification,
+) -> None:
+    params: dict[str, str | int] = {
+        "limit": 2,
+        "sort": "name",
+        "direction": "asc",
+    }
+    first = await client.get("/api/v1/public/products", params=params)
+    _expect_status(first, "first public product page", verifier)
+    first_body = _object(first)
+    first_items = _items(first)
+    cursor = first_body.get("next_cursor")
+    verifier.check(
+        "first public product page exposes a signed continuation",
+        len(first_items) == 2 and isinstance(cursor, str) and bool(cursor),
+    )
+    cursor_value = cast(str, cursor)
+
+    second = await client.get(
+        "/api/v1/public/products",
+        params={**params, "cursor": cursor_value},
+    )
+    _expect_status(second, "second public product page", verifier)
+    second_body = _object(second)
+    second_items = _items(second)
+    paged_ids = [str(item.get("id")) for item in first_items + second_items]
+    expected_ids = [
+        str(seeded.product.id)
+        for seeded in sorted(
+            seeded_products,
+            key=lambda item: (item.product.name.casefold(), item.product.id.hex),
+        )
+    ]
+    verifier.check(
+        "public product cursor traverses PostgreSQL rows without overlap",
+        paged_ids == expected_ids and len(paged_ids) == len(set(paged_ids)),
+        diagnostic=f"expected={expected_ids}, actual={paged_ids}",
+    )
+    verifier.check(
+        "final public product page closes pagination",
+        second_body.get("next_cursor") is None,
+    )
+
+    mismatched = await client.get(
+        "/api/v1/public/products",
+        params={**params, "q": "different", "cursor": cursor_value},
+    )
+    verifier.check(
+        "public product cursor is bound to effective search filters",
+        mismatched.status_code == 422
+        and _object(mismatched).get("error", {}).get("code") == "invalid_cursor",
+        diagnostic=f"HTTP {mismatched.status_code}: {mismatched.text[:300]}",
     )
 
 

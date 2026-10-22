@@ -35,7 +35,7 @@ from app.repositories.public_queries.models import (
     PublicProductQuery,
 )
 from app.repositories.public_queries.provider import PublicReadRepositoryProvider
-from app.repositories.queries.models import PageRequest, ReadPage
+from app.repositories.queries.models import CursorPosition, PageRequest, ReadPage
 
 NOW = datetime(2026, 9, 14, 12, 0, tzinfo=UTC)
 
@@ -96,6 +96,8 @@ class PublicReadFixtureRepository(
         self.history_query: PublicPriceHistoryQuery | None = None
         self.price_change_query: PublicPriceChangeQuery | None = None
         self.category_query: PublicCategoryQuery | None = None
+        self.product_page: PageRequest | None = None
+        self.emit_product_cursor = False
 
     async def list_products(
         self,
@@ -103,9 +105,21 @@ class PublicReadFixtureRepository(
         page: PageRequest,
     ) -> ReadPage[ProductSummaryRead]:
         """Return one configured product summary."""
-        del page
         self.product_query = query
-        return ReadPage(items=(_product_summary(),), next_cursor=None)
+        self.product_page = page
+        position = (
+            CursorPosition(
+                resource="public_products",
+                sort=page.sort,
+                direction=page.direction,
+                timestamp=NOW,
+                item_id=UUID(int=1),
+                filter_hash=page.filter_hash,
+            )
+            if self.emit_product_cursor
+            else None
+        )
+        return ReadPage(items=(_product_summary(),), next_cursor=position)
 
     async def get_product(
         self,
@@ -247,6 +261,49 @@ def test_public_products_are_available_without_admin_authentication() -> None:
     assert body["items"][0]["best_offer"]["price"] == "790.00"
     assert repository.product_query is not None
     assert repository.product_query.search == "minecraft"
+
+
+def test_public_product_cursor_round_trip_is_signed_and_filter_bound() -> None:
+    client, repository = _client()
+    repository.emit_product_cursor = True
+
+    first = client.get(
+        "/api/v1/public/products",
+        params={"q": "minecraft", "limit": 1, "sort": "name", "direction": "asc"},
+    )
+
+    assert first.status_code == 200
+    cursor = first.json()["next_cursor"]
+    assert isinstance(cursor, str)
+    assert cursor
+
+    second = client.get(
+        "/api/v1/public/products",
+        params={
+            "q": "minecraft",
+            "limit": 1,
+            "sort": "name",
+            "direction": "asc",
+            "cursor": cursor,
+        },
+    )
+    assert second.status_code == 200
+    assert repository.product_page is not None
+    assert repository.product_page.cursor is not None
+    assert repository.product_page.cursor.item_id == UUID(int=1)
+
+    mismatched = client.get(
+        "/api/v1/public/products",
+        params={
+            "q": "different",
+            "limit": 1,
+            "sort": "name",
+            "direction": "asc",
+            "cursor": cursor,
+        },
+    )
+    assert mismatched.status_code == 422
+    assert mismatched.json()["error"]["code"] == "invalid_cursor"
 
 
 def test_public_product_detail_offers_and_comparison_are_readable() -> None:

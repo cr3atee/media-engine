@@ -177,6 +177,10 @@ run inside ingestion or scoring transactions.
   data from the existing `RepositoryProvider`; default FastAPI bootstrap wires
   that adapter to a PostgreSQL repository scope. PostgreSQL-specific public query
   adapters are not implemented yet.
+- Public product-list continuation reuses the signed, filter-bound cursor
+  contract and anchors the next page to the last canonical product UUID in the
+  deterministic repository-backed ordering. The browser only orchestrates
+  cursor forwarding and does not reproduce sorting or pagination rules.
 
 ## Read Administration Flow
 

@@ -68,10 +68,16 @@ async def list_public_products(
     q: Annotated[str | None, Query(max_length=200)] = None,
 ) -> PageResponse[PublicProductCard]:
     """List public product cards for Market Terminal browse and search."""
-    page = page_request(request, resource="public_products", params=params)
+    search = params.search or q
+    page = page_request(
+        request,
+        resource="public_products",
+        params=params,
+        extra_filters={"search": search},
+    )
     result = await service.list_products(
         PublicProductQuery(
-            search=params.search or q,
+            search=search,
             category=params.category,
             marketplace=params.marketplace,
             min_price=params.min_price,

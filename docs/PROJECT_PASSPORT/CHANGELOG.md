@@ -6,6 +6,13 @@ This document records notable Project Passport updates.
 
 ## Unreleased
 
+- Completed EPIC 22 public catalog pagination. Repository-backed product reads
+  now return signed, effective-filter-bound UUID continuations for every existing
+  product sort, and Market Terminal appends unique pages through an accessible
+  `Показать ещё` control without offset cursors. Saved-payload verification
+  passes `44/44`, isolated PostgreSQL 17 verification passes `69/69`, full
+  Pytest reports `531 passed, 58 skipped`, MyPy checks `449` files, and
+  Ruff/format plus Alembic current/check/offline SQL pass.
 - Completed EPIC 21 production operations readiness with a network-free,
   production-shaped verifier over two worker runtimes and isolated PostgreSQL
   `17.10`. All `38/38` checks pass for lease exclusion/release, durable polling

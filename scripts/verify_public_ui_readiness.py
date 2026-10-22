@@ -242,6 +242,12 @@ def _verify_terminal_shell(client: TestClient, violations: list[str]) -> int:
     )
     checks += _expect_contains(
         document.text,
+        'id="loadMoreButton"',
+        "terminal catalog pagination control",
+        violations,
+    )
+    checks += _expect_contains(
+        document.text,
         'id="details"',
         "terminal detail region",
         violations,
@@ -250,6 +256,12 @@ def _verify_terminal_shell(client: TestClient, violations: list[str]) -> int:
         script.text,
         'const api = "/api/v1/public";',
         "terminal public API root",
+        violations,
+    )
+    checks += _expect_contains(
+        script.text,
+        'query.set("cursor", cursor);',
+        "terminal product cursor forwarding",
         violations,
     )
     for endpoint in (

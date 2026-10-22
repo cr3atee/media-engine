@@ -352,6 +352,10 @@ This document tracks only work that is reflected by the current repository state
   rollback, tenant isolation, replica metrics, alert lifecycle, scheduled
   retention, fresh-process restart, and graceful shutdown. The final verifier
   passes `38/38`; EPIC 21 is complete.
+- EPIC 22 public catalog pagination: repository-backed product reads now return
+  signed, filter-bound UUID-anchored continuations for every supported product
+  sort. Market Terminal exposes accessible append-only loading without offset
+  cursors; isolated PostgreSQL 17 verification passes `69/69`.
 
 ## Current Status
 

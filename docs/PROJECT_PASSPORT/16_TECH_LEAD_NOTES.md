@@ -272,6 +272,10 @@ This document captures architecture notes that are important for future reviews.
   Human-reviewed product identity, production operations, and public UX remain
   separate launch concerns and must not trigger threshold weakening or a core
   redesign.
+- Public product pagination must remain signed and filter-bound. Its continuation
+  is anchored to the last canonical product UUID in the deterministic sorted
+  projection; do not replace it with browser offsets. Other public list DTOs
+  remain first-page-only until each has a compatible stable identity.
 
 ## Review Notes
 

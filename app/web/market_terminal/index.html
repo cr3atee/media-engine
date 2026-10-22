@@ -138,6 +138,17 @@
             </button>
           </div>
           <div class="product-grid" id="productGrid" aria-live="polite"></div>
+          <div class="catalog-pagination" id="catalogPagination" hidden>
+            <button
+              class="ghost-button"
+              id="loadMoreButton"
+              type="button"
+              aria-controls="productGrid"
+            >
+              Показать ещё
+            </button>
+            <span id="catalogPageStatus" role="status" aria-live="polite"></span>
+          </div>
         </section>
 
         <aside class="panel side-panel">

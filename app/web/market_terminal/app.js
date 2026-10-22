@@ -17,6 +17,9 @@ const elements = {
   categoryCount: document.querySelector("#categoryCount"),
   dropCount: document.querySelector("#dropCount"),
   productGrid: document.querySelector("#productGrid"),
+  catalogPagination: document.querySelector("#catalogPagination"),
+  loadMoreButton: document.querySelector("#loadMoreButton"),
+  catalogPageStatus: document.querySelector("#catalogPageStatus"),
   categoryList: document.querySelector("#categoryList"),
   changeList: document.querySelector("#changeList"),
   detailPanel: document.querySelector("#details"),
@@ -35,6 +38,9 @@ const state = {
   selectedCategoryCode: "",
   selectedCategoryName: "",
   isBusy: false,
+  isLoadingMore: false,
+  nextCatalogCursor: null,
+  catalogPageMessage: "",
   catalogRequestVersion: 0,
   categoryRequestVersion: 0,
   priceChangeRequestVersion: 0,
@@ -48,6 +54,10 @@ elements.searchForm.addEventListener("submit", (event) => {
 
 elements.refreshButton.addEventListener("click", () => {
   void loadDashboard();
+});
+
+elements.loadMoreButton.addEventListener("click", () => {
+  void loadMoreProducts();
 });
 
 elements.marketplaceFilter.addEventListener("change", () => {
@@ -106,46 +116,35 @@ async function runProductSearch(search) {
   }
 }
 
-async function loadProducts(search, requestVersion) {
+async function loadProducts(search, requestVersion, append = false) {
   try {
     const preferredProductId = state.selectedProductId;
-    const query = new URLSearchParams({ limit: "12" });
+    const query = productQuery(search, append ? state.nextCatalogCursor : null);
     const marketplace = elements.marketplaceFilter.value;
-    const minPrice = elements.minPriceInput.value.trim();
-    const maxPrice = elements.maxPriceInput.value.trim();
-    const [sort, direction] = elements.sortFilter.value.split(":", 2);
-    if (search) {
-      query.set("q", search);
-    }
-    if (marketplace) {
-      query.set("marketplace", marketplace);
-    }
-    if (state.selectedCategoryName) {
-      query.set("category", state.selectedCategoryName);
-    }
-    if (minPrice) {
-      query.set("min_price", minPrice);
-    }
-    if (maxPrice) {
-      query.set("max_price", maxPrice);
-    }
-    query.set("sort", sort);
-    query.set("direction", direction);
 
     const payload = await getJson(`/products?${query.toString()}`);
     if (!isCurrentCatalogRequest(requestVersion)) {
       return;
     }
-    state.products = payload.items ?? [];
+    const incomingProducts = payload.items ?? [];
+    state.products = append
+      ? appendUniqueProducts(state.products, incomingProducts)
+      : incomingProducts;
+    state.nextCatalogCursor = payload.next_cursor ?? null;
+    state.catalogPageMessage = "";
     elements.catalogTitle.textContent = catalogTitle(
       search,
       marketplace,
       state.selectedCategoryName,
     );
     renderProducts(state.products);
+    updateCatalogPagination();
     updateSummary();
     setApiStatus("Подключено");
 
+    if (append) {
+      return;
+    }
     if (preferredProductId) {
       await selectProduct(preferredProductId, false);
     } else if (state.products.length > 0) {
@@ -157,7 +156,14 @@ async function loadProducts(search, requestVersion) {
     if (!isCurrentCatalogRequest(requestVersion)) {
       return;
     }
+    if (append) {
+      setApiStatus("Не удалось загрузить следующую страницу", true);
+      state.catalogPageMessage = "Повторите загрузку.";
+      return;
+    }
     state.products = [];
+    state.nextCatalogCursor = null;
+    updateCatalogPagination();
     updateSummary();
     setApiStatus("API недоступен", true);
     renderEmpty(elements.productGrid, errorMessage(error));
@@ -165,7 +171,82 @@ async function loadProducts(search, requestVersion) {
   }
 }
 
+function productQuery(search, cursor) {
+  const query = new URLSearchParams({ limit: "12" });
+  const marketplace = elements.marketplaceFilter.value;
+  const minPrice = elements.minPriceInput.value.trim();
+  const maxPrice = elements.maxPriceInput.value.trim();
+  const [sort, direction] = elements.sortFilter.value.split(":", 2);
+  if (search) {
+    query.set("q", search);
+  }
+  if (marketplace) {
+    query.set("marketplace", marketplace);
+  }
+  if (state.selectedCategoryName) {
+    query.set("category", state.selectedCategoryName);
+  }
+  if (minPrice) {
+    query.set("min_price", minPrice);
+  }
+  if (maxPrice) {
+    query.set("max_price", maxPrice);
+  }
+  if (cursor) {
+    query.set("cursor", cursor);
+  }
+  query.set("sort", sort);
+  query.set("direction", direction);
+  return query;
+}
+
+async function loadMoreProducts() {
+  if (state.isBusy || state.isLoadingMore || !state.nextCatalogCursor) {
+    return;
+  }
+  state.isLoadingMore = true;
+  state.catalogPageMessage = "";
+  updateCatalogPagination();
+  const requestVersion = state.catalogRequestVersion;
+  await loadProducts(
+    elements.searchInput.value.trim(),
+    requestVersion,
+    true,
+  );
+  if (isCurrentCatalogRequest(requestVersion)) {
+    state.isLoadingMore = false;
+    updateCatalogPagination();
+  }
+}
+
+function appendUniqueProducts(current, incoming) {
+  const knownIds = new Set(current.map((product) => product.id));
+  return current.concat(
+    incoming.filter((product) => {
+      if (knownIds.has(product.id)) {
+        return false;
+      }
+      knownIds.add(product.id);
+      return true;
+    }),
+  );
+}
+
+function updateCatalogPagination() {
+  const canLoadMore = Boolean(state.nextCatalogCursor);
+  elements.catalogPagination.hidden = !canLoadMore && !state.isLoadingMore;
+  elements.loadMoreButton.disabled = state.isBusy || state.isLoadingMore;
+  elements.loadMoreButton.textContent = state.isLoadingMore
+    ? "Загрузка"
+    : "Показать ещё";
+  elements.catalogPageStatus.textContent = state.isLoadingMore
+    ? "Загружаем следующую страницу"
+    : state.catalogPageMessage || `Показано: ${state.products.length}`;
+}
+
 function beginCatalogRequest() {
+  state.isLoadingMore = false;
+  state.catalogPageMessage = "";
   state.catalogRequestVersion += 1;
   return state.catalogRequestVersion;
 }
@@ -696,6 +777,7 @@ function setDashboardBusy(isBusy) {
   elements.sortFilter.disabled = isBusy;
   elements.minPriceInput.disabled = isBusy;
   elements.maxPriceInput.disabled = isBusy;
+  elements.loadMoreButton.disabled = isBusy || state.isLoadingMore;
   for (const button of elements.categoryList.querySelectorAll(".category-filter")) {
     button.disabled = isBusy;
   }

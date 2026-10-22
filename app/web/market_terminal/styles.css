@@ -424,6 +424,24 @@ h3 {
   border-bottom: 1px solid var(--line-strong);
 }
 
+.catalog-pagination {
+  display: flex;
+  gap: 14px;
+  align-items: center;
+  justify-content: space-between;
+  padding-top: 14px;
+}
+
+.catalog-pagination[hidden] {
+  display: none;
+}
+
+#catalogPageStatus {
+  color: var(--muted);
+  font-size: 0.74rem;
+  font-weight: 700;
+}
+
 .product-card {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;

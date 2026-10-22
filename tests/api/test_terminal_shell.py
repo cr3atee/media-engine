@@ -47,6 +47,9 @@ def test_market_terminal_shell_is_served() -> None:
         assert "/terminal/styles.css" in response.text
         assert "/terminal/app.js" in response.text
         assert 'id="productCount"' in response.text
+        assert 'id="catalogPagination"' in response.text
+        assert 'id="loadMoreButton"' in response.text
+        assert 'aria-controls="productGrid"' in response.text
         assert 'id="offerCount"' in response.text
         assert 'id="categoryCount"' in response.text
         assert 'id="dropCount"' in response.text
@@ -68,7 +71,7 @@ def test_market_terminal_shell_is_served() -> None:
         assert 'aria-labelledby="offerListTitle"' in response.text
         assert 'aria-labelledby="comparisonTitle"' in response.text
         assert 'aria-labelledby="historyTitle"' in response.text
-        assert response.text.count('aria-live="polite"') == 7
+        assert response.text.count('aria-live="polite"') == 8
 
 
 def test_market_terminal_static_assets_are_served() -> None:
@@ -97,6 +100,11 @@ def test_market_terminal_static_assets_are_served() -> None:
     assert 'query.set("min_price", minPrice);' in script.text
     assert 'query.set("max_price", maxPrice);' in script.text
     assert 'query.set("sort", sort);' in script.text
+    assert 'query.set("cursor", cursor);' in script.text
+    assert "state.nextCatalogCursor = payload.next_cursor ?? null;" in script.text
+    assert "function loadMoreProducts()" in script.text
+    assert "function appendUniqueProducts(current, incoming)" in script.text
+    assert "function updateCatalogPagination()" in script.text
     assert "function renderCategories(categories)" in script.text
     assert "function selectCategory(category)" in script.text
     assert "function priceRangeIsValid()" in script.text

@@ -3,7 +3,7 @@ from __future__ import annotations
 from collections.abc import AsyncIterator, Sequence
 from contextlib import asynccontextmanager
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import UTC, datetime
 from decimal import Decimal
 from typing import cast
 from uuid import UUID
@@ -44,9 +44,11 @@ from app.repositories.public_queries.provider import (
     PublicReadRepositoryProvider,
     PublicReadRepositoryScopeFactory,
 )
-from app.repositories.queries.models import PageRequest, ReadPage
+from app.repositories.queries.models import CursorPosition, PageRequest, ReadPage
 
 _EVENT_READ_LIMIT = 1000
+_PUBLIC_PRODUCTS_RESOURCE = "public_products"
+_CURSOR_FALLBACK_TIMESTAMP = datetime.min.replace(tzinfo=UTC)
 
 
 @dataclass(slots=True, frozen=True)
@@ -84,23 +86,7 @@ class RepositoryBackedPublicReadRepository(
         contexts = [await self._product_context(product) for product in products]
         filtered = [context for context in contexts if _product_matches(context, query)]
         ordered = _sort_product_contexts(filtered, page)
-        return _read_page(
-            [
-                ProductSummaryRead(
-                    id=context.product.id,
-                    name=context.product.name,
-                    category=context.product.category,
-                    best_offer=context.best_offer,
-                    offer_count=len(context.offers),
-                    marketplace_count=len(
-                        {offer.marketplace for offer in context.offers},
-                    ),
-                    updated_at=context.updated_at,
-                )
-                for context in ordered
-            ],
-            page,
-        )
+        return _read_product_page(ordered, page)
 
     async def get_product(
         self,
@@ -378,6 +364,66 @@ def _read_page[TRead](
     page: PageRequest,
 ) -> ReadPage[TRead]:
     return ReadPage(items=tuple(items[: page.limit]), next_cursor=None)
+
+
+def _read_product_page(
+    contexts: Sequence[_ProductContext],
+    page: PageRequest,
+) -> ReadPage[ProductSummaryRead]:
+    start = _product_page_start(contexts, page.cursor)
+    selected = contexts[start : start + page.limit]
+    end = start + len(selected)
+    position = None
+    if selected and end < len(contexts):
+        last = selected[-1]
+        position = CursorPosition(
+            resource=_PUBLIC_PRODUCTS_RESOURCE,
+            sort=page.sort,
+            direction=page.direction,
+            timestamp=_cursor_timestamp(last.updated_at),
+            item_id=last.product.id,
+            filter_hash=page.filter_hash,
+        )
+    return ReadPage(
+        items=tuple(_product_summary(context) for context in selected),
+        next_cursor=position,
+    )
+
+
+def _product_page_start(
+    contexts: Sequence[_ProductContext],
+    cursor: CursorPosition | None,
+) -> int:
+    if cursor is None:
+        return 0
+    return next(
+        (
+            index + 1
+            for index, context in enumerate(contexts)
+            if context.product.id == cursor.item_id
+        ),
+        len(contexts),
+    )
+
+
+def _cursor_timestamp(value: datetime | None) -> datetime:
+    if value is None:
+        return _CURSOR_FALLBACK_TIMESTAMP
+    if value.tzinfo is None:
+        return value.replace(tzinfo=UTC)
+    return value
+
+
+def _product_summary(context: _ProductContext) -> ProductSummaryRead:
+    return ProductSummaryRead(
+        id=context.product.id,
+        name=context.product.name,
+        category=context.product.category,
+        best_offer=context.best_offer,
+        offer_count=len(context.offers),
+        marketplace_count=len({offer.marketplace for offer in context.offers}),
+        updated_at=context.updated_at,
+    )
 
 
 def _offer_summary(offer: ParsedOffer) -> OfferSummaryRead:

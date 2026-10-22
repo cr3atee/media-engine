@@ -387,10 +387,11 @@ itself is now verified against isolated PostgreSQL.
   repository scope using the existing `RepositoryProvider` and
   repository-backed public adapter; explicit unavailable-provider composition is
   still testable.
-- EPIC 19 Task 29 verifies that default PostgreSQL composition end to end:
-  `63/63` checks pass for migrated schema, persisted saved-marketplace examples,
-  terminal delivery, public products, offers, comparisons, price history,
-  marketplace filters, and fresh-pool restart reads.
+- EPIC 19 Task 29 established default PostgreSQL composition end to end. The
+  current verifier now passes `69/69` checks for migrated schema, persisted
+  saved-marketplace examples, terminal delivery, cursor-paginated public
+  products, offers, comparisons, price history, marketplace filters, and
+  fresh-pool restart reads.
 - EPIC 19 Task 30 localizes the embedded consumer shell into Russian, including
   dynamic loading, empty, failure, comparison, count, date, and accessibility
   copy without changing public API or marketplace data.
@@ -616,19 +617,22 @@ authenticated-source rollout remain deployment work.
   through independent local request versions. Keyboard users can bypass primary
   navigation into the catalog, and price-drop navigation preserves orientation
   by focusing the selected product heading with a visible focus indicator. The
-  unified offline UI verifier now passes `42` checks across delivered shell
+  unified offline UI verifier now passes `44` checks across delivered shell
   assets, strict CSP, all public endpoint bindings, and repository-backed DTOs
   seeded from real saved GGSEL, Playerok, and FunPay responses.
-  The PostgreSQL-backed verifier additionally passes `63/63` checks through the
-  default FastAPI composition root at Alembic head `0014_scheduler_leases`,
-  including committed repository rows and reads after engine-pool recreation.
+  The PostgreSQL-backed verifier additionally passes `69/69` checks through the
+  default FastAPI composition root at Alembic head
+  `0017_marketplace_polling_runs`, including signed two-page product traversal,
+  committed repository rows, and reads after engine-pool recreation.
   Shell-owned consumer copy is now Russian; marketplace, product, and currency
   names continue to be rendered exactly as supplied by public data.
-  Repository-backed public lists remain bounded
-  first pages because the shared cursor cannot yet represent every product sort;
-  no synthetic offset workaround is used. Saved marketplace
-  payloads do not contain historical previous snapshots or category fields
-  retained by `ParsedOffer`.
+  Repository-backed public products now continue across every supported sort
+  through signed, filter-bound UUID anchors, and Market Terminal exposes an
+  accessible append-only control without synthetic offsets. Offers, history,
+  changes, and categories remain bounded first pages until their projections
+  have compatible stable cursor identities. Saved marketplace payloads do not
+  contain historical previous snapshots or category fields retained by
+  `ParsedOffer`.
   PostgreSQL-specific public query adapter work can be added later only if direct
   SQL read optimization is approved.
 - Live Telegram delivery is not yet verified; credentials, exact test-chat

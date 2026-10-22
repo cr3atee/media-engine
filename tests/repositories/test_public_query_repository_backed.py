@@ -6,6 +6,8 @@ from datetime import UTC, datetime, timedelta
 from decimal import Decimal
 from uuid import UUID
 
+import pytest
+
 from app.domain.lifecycle import ScoringStatus
 from app.domain.market_events import (
     MarketEventCandidate,
@@ -27,13 +29,35 @@ from app.repositories.public_queries.models import (
 from app.repositories.public_queries.repository_backed import (
     RepositoryBackedPublicReadRepository,
 )
-from app.repositories.queries.models import PageRequest
+from app.repositories.queries.models import CursorPosition, PageRequest
 
 NOW = datetime(2026, 9, 14, 12, 0, tzinfo=UTC)
 
 
 def test_repository_backed_public_reads_project_market_terminal_data() -> None:
     asyncio.run(_assert_repository_backed_public_reads())
+
+
+@pytest.mark.parametrize(
+    ("sort", "direction"),
+    [
+        ("recently_updated", "desc"),
+        ("name", "asc"),
+        ("name", "desc"),
+        ("price_asc", "asc"),
+        ("price_desc", "desc"),
+        ("popular", "desc"),
+    ],
+)
+def test_product_pages_follow_every_supported_sort_without_overlap(
+    sort: str,
+    direction: str,
+) -> None:
+    asyncio.run(_assert_product_pages(sort=sort, direction=direction))
+
+
+def test_missing_product_cursor_anchor_ends_pagination_safely() -> None:
+    asyncio.run(_assert_missing_product_cursor_anchor())
 
 
 async def _assert_repository_backed_public_reads() -> None:
@@ -166,10 +190,107 @@ async def _assert_repository_backed_public_reads() -> None:
     assert categories.items[0].code == "games"
 
 
-def _page(*, sort: str, direction: str) -> PageRequest:
+async def _assert_product_pages(*, sort: str, direction: str) -> None:
+    repository = await _pagination_repository()
+    expected = await repository.list_products(
+        PublicProductQuery(),
+        _page(sort=sort, direction=direction, limit=100),
+    )
+
+    seen_ids: list[UUID] = []
+    cursor: CursorPosition | None = None
+    for _ in range(10):
+        result = await repository.list_products(
+            PublicProductQuery(),
+            _page(
+                sort=sort,
+                direction=direction,
+                limit=2,
+                cursor=cursor,
+            ),
+        )
+        seen_ids.extend(item.id for item in result.items)
+        cursor = result.next_cursor
+        if cursor is None:
+            break
+        assert cursor.resource == "public_products"
+        assert cursor.sort == sort
+        assert cursor.direction == direction
+        assert cursor.filter_hash == "test"
+        assert cursor.timestamp.tzinfo is not None
+    else:
+        pytest.fail("Product pagination did not terminate.")
+
+    expected_ids = [item.id for item in expected.items]
+    assert seen_ids == expected_ids
+    assert len(seen_ids) == len(set(seen_ids))
+
+
+async def _assert_missing_product_cursor_anchor() -> None:
+    repository = await _pagination_repository()
+    result = await repository.list_products(
+        PublicProductQuery(),
+        _page(
+            sort="name",
+            direction="asc",
+            limit=2,
+            cursor=CursorPosition(
+                resource="public_products",
+                sort="name",
+                direction="asc",
+                timestamp=NOW,
+                item_id=UUID(int=999),
+                filter_hash="test",
+            ),
+        ),
+    )
+
+    assert result.items == ()
+    assert result.next_cursor is None
+
+
+async def _pagination_repository() -> RepositoryBackedPublicReadRepository:
+    provider = create_memory_provider()
+    products = (
+        (1, "Alpha", Decimal("500.00")),
+        (2, "Bravo", Decimal("300.00")),
+        (3, "Charlie", Decimal("900.00")),
+        (4, "Delta", Decimal("100.00")),
+        (5, "Echo", Decimal("700.00")),
+    )
+    for product_id, name, price in products:
+        product = CanonicalProduct(
+            id=UUID(int=product_id),
+            name=name,
+            category="Games",
+            aliases=(),
+        )
+        await provider.canonical_products.save(product)
+        await provider.offers.save(
+            ParsedOffer(
+                marketplace="ggsel",
+                external_id=f"ggsel-{product_id}",
+                title=name,
+                url=f"https://example.com/{product_id}",
+                price=price,
+                currency="RUB",
+                canonical_product_id=product.id,
+            ),
+        )
+    return RepositoryBackedPublicReadRepository(provider)
+
+
+def _page(
+    *,
+    sort: str,
+    direction: str,
+    limit: int = 10,
+    cursor: CursorPosition | None = None,
+) -> PageRequest:
     return PageRequest(
-        limit=10,
+        limit=limit,
         sort=sort,
         direction=direction,
         filter_hash="test",
+        cursor=cursor,
     )

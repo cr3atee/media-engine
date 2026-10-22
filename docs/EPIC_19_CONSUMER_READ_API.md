@@ -1563,14 +1563,19 @@ Verification:
 - Detailed release boundaries are recorded in
   `docs/CORE_RELEASE_READINESS.md`.
 
-## Deferred Runtime Constraint
+## Product Pagination Follow-Up
 
-The repository-backed public read adapter currently returns bounded first
-pages with `next_cursor=None`. The shared cursor position carries a timestamp
-and UUID, which is insufficient for stable continuation of every public
-product sort, including name and price. Cursor pagination should be completed
-only through an explicit contract design; the embedded shell does not add an
-offset or synthetic-cursor workaround.
+EPIC 22 resolves the product-list portion of the former runtime constraint.
+The repository-backed product adapter now uses the existing signed,
+filter-bound cursor with the last canonical product UUID as a deterministic
+continuation anchor across every supported product sort. Market Terminal
+forwards that cursor through an accessible `Показать ещё` control and appends
+unique products without introducing offsets.
+
+Offer, price-history, price-change, and category projections remain bounded
+first pages because they do not all expose a stable UUID identity compatible
+with the shared cursor contract. That remaining work must not be implemented
+through a synthetic offset cursor.
 
 ## Documentation Updates
 
