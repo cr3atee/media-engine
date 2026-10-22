@@ -827,6 +827,7 @@ function marketplaceProgressCard(summary) {
 }
 
 function proposalCandidateHtml(proposal) {
+  const sourceLink = externalLinkHtml(proposal.offer_url);
   if (!proposal.nearest_canonical_product_id) {
     return `
       <div class="candidate-link missing">
@@ -834,6 +835,7 @@ function proposalCandidateHtml(proposal) {
           <strong>Похожий товар не найден</strong>
           <small>Доступно только создание нового канонического товара.</small>
         </span>
+        ${sourceLink}
       </div>
     `;
   }
@@ -843,7 +845,7 @@ function proposalCandidateHtml(proposal) {
         <strong>${escapeHtml(proposal.nearest_canonical_product_name)}</strong>
         <small>Ближайший существующий товар · ${formatSimilarity(proposal.nearest_similarity)}</small>
       </span>
-      ${externalLinkHtml(proposal.offer_url)}
+      ${sourceLink}
     </div>
   `;
 }

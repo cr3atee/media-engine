@@ -231,6 +231,8 @@ def test_market_terminal_catalog_review_assets_are_served() -> None:
     assert "function queueItemMatches(item)" in script.text
     assert "function paginate(items, requestedPage, pageSize)" in script.text
     assert "const proposalPageSize = 9;" in script.text
+    assert "const sourceLink = externalLinkHtml(proposal.offer_url);" in script.text
+    assert script.text.count("${sourceLink}") == 2
     assert "`/catalog/reviews/${endpoint}`" in script.text
     assert "let endpoint = `${base}/confirm`;" in script.text
     assert "endpoint = `${base}/resolve-existing`;" in script.text
