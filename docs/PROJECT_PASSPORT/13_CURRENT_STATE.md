@@ -446,7 +446,7 @@ itself is now verified against isolated PostgreSQL.
   stable after a fresh-engine restart; the seller API reproduces all `81`
   proposals while leaving products, links, and decisions empty.
 - EPIC 19 Task 46 adds complete live review evidence for all three source
-  pairings. The latest run evaluates `108,880` aligned pairs and exposes full
+  pairings. The latest run evaluates `114,640` aligned pairs and exposes full
   source context, while preserving `NO_MATCH` for every pair and persisting no
   human decision.
 - EPIC 20 Task 1 adds complete catalog-onboarding progress and one consistent
@@ -474,8 +474,8 @@ itself is now verified against isolated PostgreSQL.
 - A bounded aligned-live mode is available in the existing catalog review
   preview. It selects at most one highest-scoring `NO_MATCH` pair per available
   marketplace combination, deduplicates shared offers, persists nothing, and
-  leaves every catalog action to the authenticated human reviewer. The first
-  check contains two proposals across FunPay and GGSEL.
+  leaves every catalog action to the authenticated human reviewer. The current
+  complete check contains five proposals across FunPay, GGSEL, and Playerok.
 - EPIC 20 Task 4 closes the software acceptance boundary with one deterministic
   offline command. Its `4/4` stages cover saved marketplace contracts, the
   mutation-free saved-data workspace, explicit operator onboarding through
@@ -556,7 +556,7 @@ authenticated-source rollout remain deployment work.
 - The current real saved payloads do not yet prove a same-product comparison:
   none of `1,280` cross-marketplace title pairs reaches `REVIEW` or
   `AUTO_MATCH`. Aligned live Minecraft key categories improve the strongest
-  score to `0.714` across `106,240` pairs but still produce no `REVIEW` or
+  score to `0.714` across `114,640` current pairs but still produce no `REVIEW` or
   `AUTO_MATCH`. A curated canonical catalog and confirmed exact-variant links
   are needed before presenting that core user value as live-ready. The internal
   positive-link service and audited match-review API are ready, but no
@@ -644,6 +644,16 @@ authenticated-source rollout remain deployment work.
 - Password hashing currently uses a standard-library PBKDF2 boundary so Task 2
   could remain dependency-neutral; production hardening should revisit Argon2id
   if adding a dependency is approved.
+
+## Catalog Launch Batch
+
+EPIC 23 preparation completed against live GGSEL, Playerok, and FunPay data on
+2026-10-22. The sources yielded `1,498` snapshot-ready offers and `114,640`
+cross-marketplace pairs; all remained `NO_MATCH` under unchanged thresholds.
+The bounded review check exposes five deduplicated proposals and creates no
+catalog mutation. Current Playerok cape-bundle evidence must not be linked to
+base-game offers. Durable source-page inspection and explicit operator
+decisions remain the next catalog-launch action.
 
 ## Architecture Review
 

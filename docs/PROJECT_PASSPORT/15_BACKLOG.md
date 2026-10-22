@@ -7,37 +7,29 @@ candidate verification.
 
 ## Immediate
 
-- Bootstrap a curated canonical catalog and confirmed same-product marketplace
-  links. Current saved real payloads have no `AUTO_MATCH` or `REVIEW` result
-  across `1,280` cross-marketplace title pairs, so weakening matching thresholds
-  or inventing preview links is not acceptable. Equivalent Minecraft key
-  categories are now live-verified for all three sources, but all `108,880`
-  aligned-category pairs remain below `REVIEW`. Use the tenant-scoped
-  `CanonicalOfferLinkService` to populate only reviewed exact variants. The
-  PostgreSQL schema now prevents cross-tenant canonical links; catalog
-  population remains. Immutable confirm/reject persistence and atomic review
-  orchestration now exist. The tenant-authorized HTTP review queue excludes
-  terminal pairs before matching; use it to populate production links only when
-  source candidates reach the unchanged `REVIEW` threshold. Curated aliases now
-  participate in matching, so catalog bootstrap should add aliases only from
-  verified product evidence rather than copying arbitrary marketplace titles.
-  Authorized sellers can now read stable source-backed proposals for
-  `NO_MATCH` offers and atomically confirm a new product plus its source link.
-  They can also resolve a proposal to its displayed existing canonical product
-  with immutable human evidence, without creating duplicates or lowering
-  thresholds. The authenticated catalog-review workspace now exposes these
-  completed commands. Its saved-data preview now exposes all `81` captured real
-  offers as unresolved proposals without pre-seeding products or links, and the
-  PostgreSQL onboarding verifier proves replay-safe persistence and restart
-  recovery. Use the review workspace to make evidence-backed catalog decisions,
-  then populate production only through explicitly approved operator actions
-  and record source coverage. The current live candidate evidence is recorded
-  in `docs/CATALOG_REVIEW_EVIDENCE.md`; all candidates remain unapproved. The
-  workspace now reports complete tenant and per-marketplace onboarding progress
-  from one consistent state, including unresolved records outside actionable
-  queues. A bounded FunPay/GGSEL batch is now available in the isolated preview;
-  execute the human decisions next and do not infer completion from the queue
-  page limit.
+- Execute human decisions for the prepared five-offer EPIC 23 launch batch,
+  then bootstrap a curated canonical catalog and confirmed same-product
+  marketplace links. Current saved real payloads have no `AUTO_MATCH` or
+  `REVIEW` result across `1,280` cross-marketplace title pairs, so weakening
+  matching thresholds or inventing preview links is not acceptable. Equivalent
+  Minecraft key categories are live-verified for all three sources, but all
+  `114,640` current aligned-category pairs remain below `REVIEW`. Use the
+  tenant-scoped `CanonicalOfferLinkService` to populate only reviewed exact
+  variants. The PostgreSQL schema prevents cross-tenant canonical links;
+  catalog population remains. Immutable confirm/reject persistence and atomic
+  review orchestration exist. Current live candidates do not reach the
+  unchanged `REVIEW` threshold, so source evidence and explicit proposal
+  decisions remain authoritative. Curated aliases participate in matching;
+  add them only from verified product evidence rather than arbitrary listing
+  titles. The authenticated catalog-review workspace exposes proposal
+  confirmation and existing-product resolution. Its saved-data preview exposes
+  all `81` captured real offers as unresolved proposals without pre-seeding
+  products or links, and PostgreSQL verification proves replay-safe persistence
+  and restart recovery. Current evidence is recorded in
+  `docs/CATALOG_REVIEW_EVIDENCE.md`; the exact five-offer batch is recorded in
+  `docs/EPIC_23_CATALOG_LAUNCH_BATCH.md`. All candidates remain unapproved.
+  Execute explicit operator decisions next and do not infer completion from a
+  queue page limit.
 - Decide whether the embedded Market Terminal shell remains inside this
   repository or moves to a separate frontend project before public launch.
 - Decide whether public category browse must require parser/category retention

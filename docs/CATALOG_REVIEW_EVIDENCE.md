@@ -6,47 +6,34 @@ This document records source-backed evidence for human canonical-product
 review. It is not an approval manifest and must not be used to create automatic
 links.
 
-## Latest Refresh Attempt
-
-Observed on 2026-10-12 through the same public adapter boundaries. The run was
-intentionally marked incomplete because Playerok first timed out and then
-returned `HTTP 502` on a repeated request.
-
-| Marketplace | Result | Source count | Parsed | Snapshot-ready |
-| --- | --- | ---: | ---: | ---: |
-| GGSEL | available | 60 | 60 | 60 |
-| Playerok | `HTTP 502` | - | - | - |
-| FunPay | available | 1,284 | 1,284 | 1,284 |
-
-Failure isolation preserved the successful evidence: GGSEL and FunPay produced
-`77,040` title pairs, all remained `NO_MATCH`, and the highest similarity was
-still `0.714`. The leading pair remains FunPay offer `25007196` and GGSEL offer
-`102169338`; observed prices were `21.62 EUR` and `1699 RUB` respectively.
-
-This partial result does not replace the last complete three-source observation
-below. The verifier returned a non-zero status, persisted nothing, and did not
-create or approve any canonical link.
-
-The same live result was reduced to a bounded memory-only operator preview: one
-FunPay offer and one GGSEL offer, zero review candidates, and two `NO_MATCH`
-product proposals. The selection takes only the highest existing evidence per
-available source pair and does not convert similarity into a decision.
-
 ## Latest Live Observation
 
-Observed on 2026-10-05 through the existing public GGSEL, Playerok, and FunPay
+Observed on 2026-10-22 through the existing public GGSEL, Playerok, and FunPay
 adapter boundaries:
 
 | Marketplace | Source count | Parsed | Snapshot-ready |
 | --- | ---: | ---: | ---: |
 | GGSEL | 60 | 60 | 60 |
-| Playerok | 173 | 20 | 20 |
-| FunPay | 1,346 | 1,346 | 1,346 |
+| Playerok | 201 | 20 | 20 |
+| FunPay | 1,418 | 1,418 | 1,418 |
 
-The aligned Minecraft key batches produced `1,426` offers and `108,880`
+The aligned Minecraft key batches produced `1,498` offers and `114,640`
 cross-marketplace title pairs. Existing deterministic matching classified all
 pairs as `NO_MATCH`; the highest similarity was `0.714`. No threshold was
-changed and no record was persisted.
+changed and no record was persisted. The complete three-source verifier passed.
+
+The same live input was reduced to a bounded memory-only operator preview. It
+selected two FunPay, two GGSEL, and one Playerok offer, producing five
+`NO_MATCH` proposals and zero review candidates. The exact batch and operator
+procedure are recorded in `docs/EPIC_23_CATALOG_LAUNCH_BATCH.md`.
+
+## Previous Availability Incident
+
+On 2026-10-12, GGSEL and FunPay remained available while Playerok returned
+`HTTP 502`. Failure isolation retained successful source evidence, returned a
+non-zero status for the incomplete three-source run, and persisted no catalog
+decision. The successful 2026-10-22 refresh supersedes that availability result
+without changing the safety boundary.
 
 ## Candidate Evidence
 
@@ -54,40 +41,39 @@ changed and no record was persisted.
 
 Status: `NEEDS HUMAN CONFIRMATION`.
 
-- FunPay `25007196`: `Minecraft: Java & Bedrock Edition PC`, `21.64 EUR`,
+- FunPay `25007196`: `Minecraft: Java & Bedrock Edition PC`, `22.60 EUR`,
   seller `NWKeKsIKNW`, with `KEY+VPN` wording.
 - GGSEL `102169338`: `Minecraft: Java & Bedrock Edition | PC | GLOBAL`,
-  `1699 RUB`, seller `BaronAutomaton`.
+  `1899.0 RUB`, seller `BaronAutomaton`.
 - Similarity: `0.714`.
 - Risk: VPN and GLOBAL wording may represent different activation or region
   constraints. Currencies also differ, so the current comparator must mark the
   price comparison unavailable.
 
-### FunPay / Playerok Account-Key Variant
+### FunPay / Playerok Current Highest Pair
 
-Status: `NEEDS HUMAN CONFIRMATION`.
+Status: `DO NOT LINK FROM CURRENT EVIDENCE`.
 
-- FunPay `65294767`: `Minecraft: Java + Bedrock PC Key to your account`,
-  `19.89 EUR`, seller `thousis13`.
-- Playerok `1f18fda8-28e1-6c70-d6fa-23b1b5d0b29c`: `Minecraft Java +
-  Bedrock key to your account`, `1999 RUB`, seller `NightWalker9`.
-- Similarity: `0.357`.
-- Risk: the listing response does not expose enough description or activation
-  detail to prove equivalent delivery terms. Currencies differ.
+- FunPay `75886527`: `Minecraft: Java & Bedrock Edition`, PC digital key,
+  `35.12 EUR`, seller `terusu`.
+- Playerok `1f1cdf3f-373d-6e00-b2b0-a0e7e51b90e5`: a Minecraft Java &
+  Bedrock mega cape bundle, `1190 RUB`, seller `phoenikz`.
+- Similarity: `0.462`.
+- Risk: the Playerok title describes a cape bundle rather than the base game.
+  The listings must remain separate unless current source detail proves exact
+  product equivalence. Currencies also differ.
 
-### GGSEL / Playerok Same-Currency Inspection
+### GGSEL / Playerok Current Highest Pair
 
-Status: `NEEDS HUMAN CONFIRMATION`.
+Status: `DO NOT LINK FROM CURRENT EVIDENCE`.
 
-- GGSEL `103219667`: `Minecraft: Java + Bedrock for PC Key GLOBAL`,
-  `1855.54 RUB`, seller `geiwoaichide`.
-- Playerok `1f18fda8-28e1-6c70-d6fa-23b1b5d0b29c`: `Minecraft Java +
-  Bedrock key to your account`, `1999 RUB`, seller `NightWalker9`.
-- Similarity: `0.182`.
-- Benefit: both prices use RUB, so an approved canonical link would exercise
-  the existing comparator without currency conversion.
-- Risk: GLOBAL and account-bound wording must be checked on both source pages
-  before approval.
+- GGSEL `102083633`: `Minecraft Java & Bedrock Edition (PC) GLOBAL KEY`,
+  `1745.0 RUB`, seller `Hann`.
+- Playerok `1f1cdf3f-373d-6e00-b2b0-a0e7e51b90e5`: a Minecraft Java &
+  Bedrock mega cape bundle, `1190 RUB`, seller `phoenikz`.
+- Similarity: `0.455`.
+- Risk: both prices use RUB, but the source titles describe different sellable
+  content. Currency compatibility is not product-identity evidence.
 
 ### False Strongest GGSEL / Playerok Pair
 

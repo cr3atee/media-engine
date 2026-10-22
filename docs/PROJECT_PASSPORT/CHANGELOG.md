@@ -6,6 +6,12 @@ This document records notable Project Passport updates.
 
 ## Unreleased
 
+- Prepared the guarded EPIC 23 catalog launch batch from a complete live
+  GGSEL, Playerok, and FunPay refresh. The adapters produced `1,498`
+  snapshot-ready offers and `114,640` deterministic cross-marketplace pairs;
+  all remain `NO_MATCH`. The bounded review workspace check exposes five
+  deduplicated proposals, records unsafe bundle evidence, and creates no
+  product, link, alias, or decision before human source-page review.
 - Completed EPIC 22 public catalog pagination. Repository-backed product reads
   now return signed, effective-filter-bound UUID continuations for every existing
   product sort, and Market Terminal appends unique pages through an accessible

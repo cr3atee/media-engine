@@ -356,6 +356,11 @@ This document tracks only work that is reflected by the current repository state
   signed, filter-bound UUID-anchored continuations for every supported product
   sort. Market Terminal exposes accessible append-only loading without offset
   cursors; isolated PostgreSQL 17 verification passes `69/69`.
+- EPIC 23 guarded catalog launch-batch preparation: a complete live refresh
+  produced `1,498` snapshot-ready GGSEL, Playerok, and FunPay offers and
+  `114,640` cross-marketplace pairs. The bounded operator batch exposes five
+  honest `NO_MATCH` proposals with no automatic catalog mutation; exact product
+  identity remains a human decision.
 
 ## Current Status
 
@@ -398,6 +403,11 @@ decision on category data exposure.
 The complete operator-decision-to-public-read path is now integration-verified
 with isolated synthetic data. Production catalog readiness still depends on a
 bounded human-reviewed batch from the saved marketplace evidence.
+
+EPIC 23 has prepared that bounded batch from a successful 2026-10-22 live
+three-source refresh. The loopback check exposes five deduplicated proposals and
+makes no catalog mutation. Durable source-page inspection and explicit operator
+decisions remain the next catalog-launch action.
 
 ## Not Present Yet
 
