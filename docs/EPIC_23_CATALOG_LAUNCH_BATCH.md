@@ -65,22 +65,33 @@ change.
 
 ## Operator Decision Procedure
 
-1. Start the bounded workspace with
-   `python scripts/run_catalog_review_preview.py --aligned-live-data`.
-2. Sign in with the preview credentials printed by the command.
-3. Open every source URL and verify edition, included content, platform,
+1. Provision an isolated loopback PostgreSQL database whose name starts with
+   `epic23_catalog_review_`.
+2. Set `EPIC23_CATALOG_REVIEW_DATABASE_URL` for that database and start the
+   durable workspace with
+   `python scripts/run_catalog_review_postgres.py --aligned-live-data`.
+3. Sign in with the local reviewer credentials printed by the command.
+4. Open every source URL and verify edition, included content, platform,
    region, delivery model, availability, and currency.
-4. Confirm a new canonical product only when the source offer itself is clear.
-5. Resolve a later proposal to an existing product only when both source pages
+5. Confirm a new canonical product only when the source offer itself is clear.
+6. Resolve a later proposal to an existing product only when both source pages
    prove the exact same sellable variant.
-6. Record a concrete evidence reason for every decision.
-7. Reject an unsafe pair rather than weakening thresholds or creating a broad
+7. Record a concrete evidence reason for every decision.
+8. Reject an unsafe pair rather than weakening thresholds or creating a broad
    alias.
 
-The preview is loopback-only and memory-only. It is suitable for reviewing the
-batch shape, not for retaining production decisions. Durable launch decisions
-must use the authenticated workspace backed by the intended non-production or
-production PostgreSQL environment under the normal tenant boundary.
+For a non-mutating startup check, add `--check`. The runner refuses non-loopback
+hosts and database names outside the dedicated prefix, applies the existing
+Alembic head, seeds identity and offers idempotently, and redacts credentials
+from startup errors.
+
+The memory-only preview remains available for disposable UI inspection:
+
+`python scripts/run_catalog_review_preview.py --aligned-live-data`
+
+It is not suitable for retaining launch decisions. Durable decisions must use
+the PostgreSQL runner or the intended deployed environment under the normal
+tenant boundary.
 
 ## Verification
 
@@ -93,10 +104,13 @@ production PostgreSQL environment under the normal tenant boundary.
   offline acceptance gates; all saved real offers remained unreviewed.
 - `python scripts/run_catalog_review_preview.py --saved-data --check`: passed
   with `81` proposals and zero candidates.
+- `python scripts/run_catalog_review_postgres.py --aligned-live-data --check`:
+  passed twice against isolated PostgreSQL 17 at migration `0017`; both runs
+  retained exactly five offers and five proposals with zero links or decisions.
 
 ## Status
 
-Launch-batch preparation is complete. Product identity approval is deliberately
-not complete: it requires a human operator to inspect current source pages and
-record durable decisions. Until then, the public catalog must not claim these
-offers are the same product.
+Launch-batch preparation and the durable local operator workspace are complete.
+Product identity approval is deliberately not complete: it requires a human
+operator to inspect current source pages and record decisions. Until then, the
+public catalog must not claim these offers are the same product.

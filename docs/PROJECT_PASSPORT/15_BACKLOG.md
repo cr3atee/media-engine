@@ -28,8 +28,9 @@ candidate verification.
   and restart recovery. Current evidence is recorded in
   `docs/CATALOG_REVIEW_EVIDENCE.md`; the exact five-offer batch is recorded in
   `docs/EPIC_23_CATALOG_LAUNCH_BATCH.md`. All candidates remain unapproved.
-  Execute explicit operator decisions next and do not infer completion from a
-  queue page limit.
+  The isolated PostgreSQL runner retains those decisions across application
+  restarts. Execute explicit operator decisions next and do not infer
+  completion from a queue page limit.
 - Decide whether the embedded Market Terminal shell remains inside this
   repository or moves to a separate frontend project before public launch.
 - Decide whether public category browse must require parser/category retention

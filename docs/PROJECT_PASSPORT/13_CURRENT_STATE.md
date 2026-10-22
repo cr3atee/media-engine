@@ -652,8 +652,10 @@ EPIC 23 preparation completed against live GGSEL, Playerok, and FunPay data on
 cross-marketplace pairs; all remained `NO_MATCH` under unchanged thresholds.
 The bounded review check exposes five deduplicated proposals and creates no
 catalog mutation. Current Playerok cape-bundle evidence must not be linked to
-base-game offers. Durable source-page inspection and explicit operator
-decisions remain the next catalog-launch action.
+base-game offers. A loopback-only PostgreSQL runner now applies the existing
+migrations, seeds the batch idempotently, and retains authenticated operator
+decisions across application restarts. Durable source-page inspection and
+explicit operator decisions remain the next catalog-launch action.
 
 ## Architecture Review
 

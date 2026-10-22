@@ -12,6 +12,11 @@ This document records notable Project Passport updates.
   all remain `NO_MATCH`. The bounded review workspace check exposes five
   deduplicated proposals, records unsafe bundle evidence, and creates no
   product, link, alias, or decision before human source-page review.
+- Added a loopback-only PostgreSQL catalog-review runner for that batch. It
+  enforces a dedicated database-name prefix, applies the existing migrations,
+  seeds reviewer identity and offers idempotently, redacts startup secrets, and
+  preserves operator decisions across application restarts. Two live-backed
+  checks retained exactly five offers and five proposals without duplicates.
 - Completed EPIC 22 public catalog pagination. Repository-backed product reads
   now return signed, effective-filter-bound UUID continuations for every existing
   product sort, and Market Terminal appends unique pages through an accessible
