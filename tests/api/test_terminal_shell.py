@@ -233,6 +233,8 @@ def test_market_terminal_catalog_review_assets_are_served() -> None:
     assert "const proposalPageSize = 9;" in script.text
     assert "const sourceLink = externalLinkHtml(proposal.offer_url);" in script.text
     assert script.text.count("${sourceLink}") == 2
+    assert "card.dataset.canonicalProductName" in script.text
+    assert "Связать объявление с каноническим товаром" in script.text
     assert "`/catalog/reviews/${endpoint}`" in script.text
     assert "let endpoint = `${base}/confirm`;" in script.text
     assert "endpoint = `${base}/resolve-existing`;" in script.text

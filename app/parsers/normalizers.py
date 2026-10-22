@@ -5,7 +5,7 @@ from urllib.parse import urljoin, urlsplit
 
 from app.parsers.models import ParsedOffer, RawMarketplaceOffer
 
-_GGSEL_CATALOG_BASE_URL = "https://ggsel.net/catalog/"
+_GGSEL_CATALOG_BASE_URL = "https://ggsel.net/en/catalog/product/"
 _CURRENCY_ALIASES = {
     "RUR": "RUB",
     "RUB": "RUB",

@@ -12,7 +12,7 @@ def test_ggsel_normalizer_builds_absolute_urls_from_slugs() -> None:
         _raw_offer(url="minecraft-premium-123"),
     )
 
-    assert parsed.url == "https://ggsel.net/catalog/minecraft-premium-123"
+    assert parsed.url == "https://ggsel.net/en/catalog/product/minecraft-premium-123"
 
 
 def test_ggsel_normalizer_preserves_absolute_urls() -> None:

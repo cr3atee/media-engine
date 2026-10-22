@@ -495,6 +495,7 @@ function proposalCard(proposal) {
   card.dataset.marketplace = proposal.marketplace;
   card.dataset.externalId = proposal.external_id;
   card.dataset.canonicalProductId = nearestId;
+  card.dataset.canonicalProductName = proposal.nearest_canonical_product_name || "";
   card.innerHTML = `
     <div class="review-card-header">
       <div>
@@ -519,7 +520,7 @@ function proposalCard(proposal) {
         </label>
         <div class="review-actions">
           <button class="action-button create" data-action="create-product" type="button">Создать новый товар</button>
-          <button class="action-button resolve" data-action="resolve-existing" type="button" ${nearestId ? "" : "disabled"}>Связать с показанным</button>
+          <button class="action-button resolve" data-action="resolve-existing" type="button" ${nearestId ? "" : "disabled"}>Связать с товаром выше</button>
         </div>
       </div>
     </details>
@@ -574,6 +575,14 @@ async function handleProposalAction(event) {
   if (action === "resolve-existing" && !reason) {
     setWorkspaceMessage("Для существующего товара укажите проверенные факты.", true);
     card.querySelector(".review-reason").focus();
+    return;
+  }
+  if (
+    action === "resolve-existing" &&
+    !window.confirm(
+      `Связать объявление с каноническим товаром «${card.dataset.canonicalProductName}»?`,
+    )
+  ) {
     return;
   }
   const base = `/catalog/product-proposals/${encodeURIComponent(card.dataset.proposalId)}`;
@@ -843,7 +852,7 @@ function proposalCandidateHtml(proposal) {
     <div class="candidate-link">
       <span>
         <strong>${escapeHtml(proposal.nearest_canonical_product_name)}</strong>
-        <small>Ближайший существующий товар · ${formatSimilarity(proposal.nearest_similarity)}</small>
+        <small>Целевой товар для связи · сходство ${formatSimilarity(proposal.nearest_similarity)}</small>
       </span>
       ${sourceLink}
     </div>
