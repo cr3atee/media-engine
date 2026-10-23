@@ -127,7 +127,14 @@ Important gaps:
 
 ## Visual Direction
 
-The visual style should follow the brief:
+The current interface rebuild specification is
+[Market Terminal Interface Rebuild](MARKET_TERMINAL_INTERFACE_REBUILD.md),
+based on the user's references supplied on 2026-10-23. It supersedes the older
+visual guidance below where they differ: opaque graphite surfaces, restrained
+purple actions, square artwork, and explicit product/review navigation take
+priority. This is a design plan; the current shell still uses the light theme.
+
+The earlier brief described the following direction:
 
 - Minimal Black + Liquid Glass.
 - Dark, calm, premium interface.
