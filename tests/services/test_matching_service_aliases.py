@@ -5,6 +5,7 @@ from uuid import UUID
 
 from app.matching.confidence import MatchDecision
 from app.matching.service import MatchingService
+from app.matching.title_normalizer import TitleNormalizer
 from app.models.canonical_product import CanonicalProduct
 from app.parsers.models import ParsedOffer
 
@@ -73,6 +74,39 @@ def test_equal_alias_scores_preserve_candidate_order() -> None:
 
     assert result.canonical_product == first
     assert result.similarity == 0.8
+
+
+def test_title_normalizer_uses_marketplace_punctuation_as_separators() -> None:
+    normalized = TitleNormalizer().normalize(
+        "MINECRAFT: Java+Bedrock | КЛЮЧ🔑 для PC",
+    )
+
+    assert normalized == "minecraft java bedrock ключ для pc"
+
+
+def test_matching_prefers_pc_product_over_ios_for_punctuated_real_titles() -> None:
+    offer = _offer(
+        "АВТОВЫДАЧА |КЛЮЧ MINECRAFT JAVA+BEDROCK | ПОЛНЫЙ ДОСТУП",
+    )
+    pc_product = _product(
+        product_id=PRODUCT_A_ID,
+        name="⚫ Minecraft: Java & Bedrock Edition PC ⚫🔑КЛЮЧ+VPN🌐",
+        aliases=(),
+    )
+    ios_product = _product(
+        product_id=PRODUCT_B_ID,
+        name=(
+            "24/7🌲 MINECRAFT НА IOS 🔑 АКТИВАЦИЯ ПРОМОКОДОМ "
+            "✅ БЕЗ ЗАХОДА В ICLOUD, PC, Цифровой ключ"
+        ),
+        aliases=(),
+    )
+
+    result = MatchingService().match(offer, (ios_product, pc_product))
+
+    assert result.canonical_product == pc_product
+    assert result.similarity == 4 / 9
+    assert result.decision is MatchDecision.NO_MATCH
 
 
 def _product(

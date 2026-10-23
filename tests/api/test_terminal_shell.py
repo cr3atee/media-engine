@@ -235,6 +235,8 @@ def test_market_terminal_catalog_review_assets_are_served() -> None:
     assert script.text.count("${sourceLink}") == 2
     assert "card.dataset.canonicalProductName" in script.text
     assert "Связать объявление с каноническим товаром" in script.text
+    assert "Для нового товара поле необязательно" in script.text
+    assert "PC, Java + Bedrock, ключ Microsoft, GLOBAL" in script.text
     assert "`/catalog/reviews/${endpoint}`" in script.text
     assert "let endpoint = `${base}/confirm`;" in script.text
     assert "endpoint = `${base}/resolve-existing`;" in script.text

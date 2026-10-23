@@ -515,8 +515,8 @@ function proposalCard(proposal) {
       <div class="decision-body">
         <label class="reason-label">
           Проверенные факты
-          <small>Обязательны для связи с существующим товаром.</small>
-          <textarea class="review-reason" maxlength="2000" placeholder="Почему это новый или уже существующий товар?"></textarea>
+          <small>Для нового товара поле необязательно. Для связи укажите платформу, издание, тип выдачи и регион.</small>
+          <textarea class="review-reason" maxlength="2000" placeholder="Например: PC, Java + Bedrock, ключ Microsoft, GLOBAL; не аккаунт и не DLC."></textarea>
         </label>
         <div class="review-actions">
           <button class="action-button create" data-action="create-product" type="button">Создать новый товар</button>
