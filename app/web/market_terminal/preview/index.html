@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="dark">
+  <title>Market Terminal · Новый интерфейс</title>
+  <link rel="preload" href="/terminal/preview/onest.ttf" as="font" type="font/ttf" crossorigin>
+  <link rel="stylesheet" href="/terminal/preview/preview.css">
+  <script type="module" src="/terminal/preview/preview.js"></script>
+</head>
+<body>
+  <a class="skip" href="#main">Перейти к содержимому</a>
+  <div class="design-strip">
+    <span><i class="live-dot"></i> Предпросмотр нового интерфейса</span>
+    <button type="button" id="previewTools">Экраны и роли <span aria-hidden="true">↗</span></button>
+  </div>
+  <div class="shell">
+    <header class="header">
+      <a class="brand" href="/terminal/preview" aria-label="Market Terminal, главная">
+        <svg viewBox="0 0 40 40" aria-hidden="true"><path d="M5 31V9l15 12L35 9v22M5 10l15 12v13"/></svg>
+        <span>market<span class="brand-second">terminal</span></span>
+      </a>
+      <form id="searchForm" class="search" role="search">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m16 16 5 5"/></svg>
+        <label class="sr-only" for="searchInput">Поиск товаров</label>
+        <input id="searchInput" type="search" placeholder="Игра, подписка или сервис" maxlength="200" autocomplete="off">
+        <button type="submit" aria-label="Найти товары"><span aria-hidden="true">↵</span></button>
+      </form>
+      <button class="header-help" id="aboutButton" type="button">Как это работает</button>
+      <button class="profile" id="profileButton" type="button" aria-label="Роль и доступ">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="3.5"/><path d="M5 21v-2a7 7 0 0 1 14 0v2"/></svg>
+        <span id="roleLabel">Пользователь</span>
+      </button>
+    </header>
+    <main id="main" tabindex="-1" aria-busy="true">
+      <div class="loading"><span class="spinner" aria-hidden="true"></span> Открываем каталог…</div>
+    </main>
+    <footer class="footer">
+      <span class="footer-brand">Market Terminal <span>на базе MediaEngine</span></span>
+      <span>Сравнение предложений. Покупка на сайте площадки.</span>
+      <a href="/terminal">Текущий интерфейс <span aria-hidden="true">↗</span></a>
+    </footer>
+  </div>
+  <dialog id="infoDialog" aria-labelledby="dialogTitle">
+    <div class="dialog-header"><h2 id="dialogTitle"></h2><button class="icon-button" id="closeDialog" type="button" aria-label="Закрыть">×</button></div>
+    <div id="dialogBody"></div>
+  </dialog>
+  <div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
+  <noscript><p class="noscript">Для интерактивного предпросмотра включите JavaScript. <a href="/terminal">Текущий каталог</a>.</p></noscript>
+</body>
+</html>

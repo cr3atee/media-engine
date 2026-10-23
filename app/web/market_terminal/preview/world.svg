@@ -1,0 +1,40 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="560" viewBox="0 0 1200 560">
+  <defs>
+    <linearGradient id="sky" x2="1" y2="1"><stop stop-color="#201b3b"/><stop offset=".52" stop-color="#353064"/><stop offset="1" stop-color="#1d5961"/></linearGradient>
+    <linearGradient id="portal" x2="0" y2="1"><stop stop-color="#e2b5ff"/><stop offset=".5" stop-color="#a477fb"/><stop offset="1" stop-color="#644aab"/></linearGradient>
+    <radialGradient id="halo"><stop stop-color="#ae7cff" stop-opacity=".4"/><stop offset="1" stop-color="#ae7cff" stop-opacity="0"/></radialGradient>
+    <linearGradient id="shade"><stop stop-color="#211c36"/><stop offset=".55" stop-color="#211c36" stop-opacity=".55"/><stop offset=".9" stop-color="#211c36" stop-opacity="0"/></linearGradient>
+    <g id="tree"><path d="M-4 0v-50h8V0" fill="#655379"/><path d="m0-146 45 64L0-64l-45-18Z" fill="#427d84"/><path d="m0-120 54 66L0-32l-54-22Z" fill="#4f9696"/><path d="m0-85 60 65L0 5l-60-25Z" fill="#61aba2"/><path d="m0-146 45 64L0-64Zm0 26 54 66L0-32Zm0 35 60 65L0 5Z" fill="#327c83"/></g>
+  </defs>
+  <path fill="url(#sky)" d="M0 0h1200v560H0z"/>
+  <circle cx="860" cy="220" r="300" fill="url(#halo)"/>
+  <circle cx="1080" cy="105" r="58" fill="#9cbbcb" opacity=".17"/>
+  <circle cx="1097" cy="88" r="51" fill="#303e63"/>
+  <g fill="#c7bde4" opacity=".6"><circle cx="638" cy="81" r="2"/><circle cx="746" cy="45" r="2"/><circle cx="946" cy="85" r="2"/><circle cx="1007" cy="32" r="1.5"/><circle cx="1160" cy="207" r="2"/><circle cx="590" cy="139" r="1.5"/><circle cx="1030" cy="199" r="1.5"/></g>
+  <path d="m560 310 115-65 145 60 180-84 200 84v255H560Z" fill="#294451"/>
+  <path d="m680 437 208-107 234 74-191 110Z" fill="#659f99"/>
+  <path d="m680 437 251 77v77l-251-76Z" fill="#384652"/>
+  <path d="m931 514 191-110v82L931 591Z" fill="#273846"/>
+  <path d="m599 382 242-133 251 89-242 140Z" fill="#648a82"/>
+  <path d="m599 382 251 96v62l-251-95Z" fill="#46506a"/>
+  <path d="m850 478 242-140v61L850 540Z" fill="#33394f"/>
+  <path d="m622 386 230-122 225 77-227 130Z" fill="#87b99d"/>
+  <path d="m775 374 109-62 127 41-110 66Z" fill="#d4c2cf"/>
+  <path d="m775 374 126 45v26l-126-47Z" fill="#9e8fae"/>
+  <path d="m901 419 110-66v27l-110 65Z" fill="#6c6989"/>
+  <path d="m801 352 83-45 97 32-83 50Z" fill="#ead1ef"/>
+  <path d="m801 352 97 37v18l-97-36Z" fill="#b39fc7"/>
+  <path d="m898 389 83-50v18l-83 50Z" fill="#83749f"/>
+  <path d="m837 326 0-186 105 35v187Z" fill="#201e39"/>
+  <path d="m837 140 18-10 105 35-18 10Z" fill="#b4a2ce"/>
+  <path d="m942 175 18-10v187l-18 10Z" fill="#6b5d8f"/>
+  <path d="m849 158 81 27v158l-81-27Z" fill="url(#portal)"/>
+  <path d="m854 165 71 24v146l-71-23Z" fill="none" stroke="#dab8ff" stroke-width="2"/>
+  <path d="m866 297 47 15M873 278l32 11M880 257l18 6" stroke="#dec5ff" stroke-width="3" opacity=".6"/>
+  <use href="#tree" x="724" y="357"/>
+  <use href="#tree" x="1074" y="315" transform="translate(323 102) scale(.7)"/>
+  <use href="#tree" x="1152" y="426"/>
+  <path d="m674 395 13-7 14 5-13 8Z" fill="#c5b5c3"/><path d="m674 395 14 6v11l-14-6Zm14 6 13-8v11l-13 8Z" fill="#858497"/>
+  <path d="m989 412 18-9 21 7-18 10Z" fill="#aca9c0"/><path d="m989 412 21 8v17l-21-8Zm21 8 18-10v17l-18 10Z" fill="#73778f"/>
+  <path d="M0 0h1200v560H0z" fill="url(#shade)"/>
+</svg>

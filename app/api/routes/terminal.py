@@ -2,8 +2,8 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from fastapi import APIRouter
-from fastapi.responses import HTMLResponse, Response
+from fastapi import APIRouter, HTTPException
+from fastapi.responses import FileResponse, HTMLResponse, Response
 
 _TERMINAL_ROOT = Path(__file__).resolve().parents[2] / "web" / "market_terminal"
 _DOCUMENT_HEADERS = {
@@ -20,6 +20,41 @@ _DOCUMENT_HEADERS = {
 _ASSET_HEADERS = {"X-Content-Type-Options": "nosniff"}
 
 router = APIRouter(tags=["Market Terminal"])
+
+_PREVIEW_ASSETS = {
+    "preview.css": "text/css",
+    "preview.js": "application/javascript",
+    "world.svg": "image/svg+xml",
+    "cube.svg": "image/svg+xml",
+    "onest.ttf": "font/ttf",
+}
+
+
+@router.get("/terminal/preview", include_in_schema=False)
+@router.get("/terminal/preview/", include_in_schema=False)
+async def market_terminal_preview() -> HTMLResponse:
+    """Serve the read-only interface prototype without replacing the live UI."""
+    return HTMLResponse(_read_asset("preview/index.html"), headers=_DOCUMENT_HEADERS)
+
+
+@router.get("/terminal/preview/not-found", include_in_schema=False)
+async def market_terminal_preview_not_found() -> HTMLResponse:
+    """Demonstrate an HTML missing-page state with an actual 404 status."""
+    return HTMLResponse(
+        _read_asset("preview/index.html"), status_code=404, headers=_DOCUMENT_HEADERS
+    )
+
+
+@router.get("/terminal/preview/{name}", include_in_schema=False)
+async def market_terminal_preview_asset(name: str) -> FileResponse:
+    """Expose only the explicit prototype assets, never arbitrary local files."""
+    if name not in _PREVIEW_ASSETS:
+        raise HTTPException(status_code=404)
+    return FileResponse(
+        _TERMINAL_ROOT / "preview" / name,
+        media_type=_PREVIEW_ASSETS[name],
+        headers=_ASSET_HEADERS,
+    )
 
 
 @router.get("/terminal", include_in_schema=False, response_class=HTMLResponse)
