@@ -41,6 +41,9 @@ def test_preview_is_separate_from_existing_terminal(
         ("world.svg", "image/svg+xml"),
         ("cube.svg", "image/svg+xml"),
         ("onest.ttf", "font/ttf"),
+        ("funpay.ico", "image/vnd.microsoft.icon"),
+        ("ggsel.ico", "image/vnd.microsoft.icon"),
+        ("playerok.svg", "image/svg+xml"),
     ],
 )
 def test_preview_assets_are_local_and_typed(

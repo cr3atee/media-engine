@@ -38,6 +38,57 @@ def test_repository_backed_public_reads_project_market_terminal_data() -> None:
     asyncio.run(_assert_repository_backed_public_reads())
 
 
+def test_product_marketplace_identities_are_sorted_unique_and_product_scoped() -> None:
+    asyncio.run(_assert_marketplace_identities())
+
+
+async def _assert_marketplace_identities() -> None:
+    provider = create_memory_provider()
+    product = CanonicalProduct(
+        id=UUID(int=1), name="Minecraft", category=None, aliases=()
+    )
+    empty_product = replace(product, id=UUID(int=2), name="Empty product")
+    await provider.canonical_products.save(product)
+    await provider.canonical_products.save(empty_product)
+    for index, marketplace in enumerate(("playerok", "ggsel", "ggsel")):
+        await provider.offers.save(
+            ParsedOffer(
+                marketplace=marketplace,
+                external_id=str(index),
+                title="Minecraft",
+                url=None,
+                price=Decimal("790"),
+                currency="RUB",
+                canonical_product_id=product.id,
+            )
+        )
+    await provider.offers.save(
+        ParsedOffer(
+            marketplace="funpay",
+            external_id="unlinked",
+            title="Unlinked offer",
+            url=None,
+            price=None,
+            currency=None,
+        )
+    )
+    repository = RepositoryBackedPublicReadRepository(provider)
+    page = await repository.list_products(
+        PublicProductQuery(marketplace="ggsel"), _page(sort="name", direction="asc")
+    )
+    assert len(page.items) == 1
+    assert page.items[0].marketplaces == ("ggsel", "playerok")
+    assert page.items[0].marketplace_count == 2
+    assert page.items[0].offer_count == 3
+    detail = await repository.get_product(product.id)
+    assert detail is not None
+    assert detail.marketplaces == page.items[0].marketplaces
+    empty = await repository.get_product(empty_product.id)
+    assert empty is not None
+    assert empty.marketplaces == ()
+    assert empty.marketplace_count == 0
+
+
 @pytest.mark.parametrize(
     ("sort", "direction"),
     [
@@ -173,6 +224,7 @@ async def _assert_repository_backed_public_reads() -> None:
     )
 
     assert products.items[0].name == "Minecraft Premium"
+    assert products.items[0].marketplaces == ("ggsel", "playerok")
     assert products.items[0].best_offer is not None
     assert products.items[0].best_offer.price == Decimal("790.00")
     assert len(offers.items) == 2

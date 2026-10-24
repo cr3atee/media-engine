@@ -27,6 +27,9 @@ _PREVIEW_ASSETS = {
     "world.svg": "image/svg+xml",
     "cube.svg": "image/svg+xml",
     "onest.ttf": "font/ttf",
+    "funpay.ico": "image/vnd.microsoft.icon",
+    "ggsel.ico": "image/vnd.microsoft.icon",
+    "playerok.svg": "image/svg+xml",
 }
 
 

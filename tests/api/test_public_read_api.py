@@ -62,6 +62,7 @@ def _product_summary() -> ProductSummaryRead:
         best_offer=_offer(),
         offer_count=2,
         marketplace_count=2,
+        marketplaces=("ggsel", "playerok"),
         updated_at=NOW,
     )
 
@@ -75,6 +76,7 @@ def _product_detail() -> ProductDetailRead:
         best_offer=_offer(),
         offer_count=2,
         marketplace_count=2,
+        marketplaces=("ggsel", "playerok"),
         updated_at=NOW,
     )
 
@@ -248,6 +250,17 @@ def _client() -> tuple[TestClient, PublicReadFixtureRepository]:
         public_read_repository_scope_factory=scope,
     )
     return TestClient(app), repository
+
+
+def test_product_responses_include_marketplace_identities() -> None:
+    client, _ = _client()
+
+    catalog = client.get("/api/v1/public/products").json()
+    detail = client.get(f"/api/v1/public/products/{UUID(int=1)}").json()
+
+    assert catalog["items"][0]["marketplaces"] == ["ggsel", "playerok"]
+    assert detail["marketplaces"] == ["ggsel", "playerok"]
+    assert detail["marketplace_count"] == len(detail["marketplaces"])
 
 
 def test_public_products_are_available_without_admin_authentication() -> None:

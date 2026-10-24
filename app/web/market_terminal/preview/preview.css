@@ -89,18 +89,18 @@ main { min-height: 62vh; padding-top: 24px; outline: none; }
 .tile-symbol { display: grid; place-items: center; color: var(--accent); background: #2a2440; }
 .tile-symbol svg { width: 26px; height: 26px; }
 .game-tile small { display: block; margin-top: 3px; color: var(--muted); font-size: 12px; }
-.game-strip-note { margin-left: auto; color: var(--muted); font-size: 13px; max-width: 270px; text-align: right; }
 .market-nav { display: flex; gap: 26px; align-items: center; border-bottom: 1px solid var(--line); min-height: 58px; }
 .market-nav a { display: flex; gap: 9px; align-items: center; min-height: 58px; padding: 10px 2px; border-bottom: 2px solid transparent; color: var(--muted); font-size: 15px; white-space: nowrap; }
 .market-nav a[aria-current="page"] { color: var(--accent); border-color: var(--accent); }
 .market-nav a:hover { color: var(--text); }
-.market-mark { display: inline-grid; place-items: center; width: 29px; height: 29px; flex-shrink: 0; border-radius: 8px; font-size: 11px; font-weight: 750; letter-spacing: -.04em; background: #303542; color: var(--text); }
-.market-mark.ggsel { background: #3a3023; color: #f1c679; }
-.market-mark.playerok { background: #342b48; color: #c6a6ff; }
-.market-mark.funpay { background: #233b4c; color: #8bc8f6; }
+.market-mark { display: inline-grid; place-items: center; width: 30px; height: 30px; flex-shrink: 0; color: var(--text); }
+.market-logo { width: 28px; height: 28px; object-fit: contain; }
+.logo-fallback { display: none; }
+.market-mark.image-unavailable { width: auto; min-width: 30px; font-size: 11px; }
+.image-unavailable .logo-fallback { display: inline; }
 .catalog-heading { display: flex; justify-content: space-between; align-items: center; gap: 16px; margin: 26px 0 20px; }
 .catalog-heading h2 { display: inline; }
-.count { color: var(--muted); font-weight: 400; font-size: 14px; margin-left: 12px; }
+.count { display: inline-grid; place-items: center; min-width: 28px; height: 28px; padding-inline: 7px; vertical-align: middle; background: var(--surface); border-radius: 7px; color: var(--muted); font-weight: 550; font-size: 13px; margin-left: 10px; font-variant-numeric: tabular-nums; }
 .subtle { color: var(--muted); font-size: 13px; }
 .product-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 24px; }
 .product-grid.compact { grid-template-columns: repeat(2, minmax(0, 1fr)); max-width: 900px; }
@@ -117,10 +117,13 @@ main { min-height: 62vh; padding-top: 24px; outline: none; }
 .card-copy > p { color: var(--muted); font-size: 14px; }
 .card-price { display: block; margin-top: 14px; font-size: 14px; font-weight: 550; }
 .card-copy .subtle { margin-top: 4px; }
-.card-marketplaces { display: flex; align-items: center; gap: 5px; margin-top: 13px; color: var(--muted); font-size: 11px; }
-.card-marketplaces .market-mark { width: 24px; height: 24px; font-size: 9px; }
-.card-marketplaces > span:last-child { margin-left: 4px; }
-.catalog-bottom { margin-top: 34px; padding: 22px 0; border-top: 1px solid var(--line); display: flex; justify-content: space-between; gap: 16px; font-size: 13px; color: var(--muted); }
+.offer-footprint { display: flex; flex-wrap: wrap; align-items: center; gap: 14px; margin-top: 16px; }
+.marketplace-logos { display: flex; flex-wrap: wrap; align-items: center; gap: 7px; }
+.marketplace-logos:empty { display: none; }
+.offer-count { display: inline-flex; align-items: center; gap: 6px; font-size: 14px; font-weight: 550; font-variant-numeric: tabular-nums; color: var(--muted); white-space: nowrap; }
+.marketplace-logos:not(:empty) + .offer-count { border-left: 1px solid var(--line); padding-left: 14px; }
+.offer-count svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 1.4; }
+.product-hero .offer-footprint { margin-bottom: 22px; }
 .footer { margin-top: 42px; padding: 24px 0; border-top: 1px solid var(--line); display: flex; justify-content: space-between; align-items: center; gap: 20px; color: var(--muted); font-size: 12px; }
 .footer-brand { color: var(--text); font-weight: 600; }
 .footer-brand > span { display: block; font-size: 11px; font-weight: 400; color: var(--muted); margin-top: 3px; }
@@ -245,7 +248,6 @@ dialog::backdrop { background: #07090fbb; }
   .game-tile { gap: 9px; font-size: 13px; }
   .game-tile img, .tile-symbol { width: 48px; height: 48px; border-radius: 12px; }
   .game-tile small { font-size: 11px; }
-  .game-strip-note { display: none; }
   .market-nav { gap: 16px; overflow-x: auto; }
   .market-nav a { gap: 6px; font-size: 13px; min-height: 54px; }
   .market-nav .market-mark { display: none; }
@@ -260,9 +262,15 @@ dialog::backdrop { background: #07090fbb; }
   .card-copy > p { font-size: 12px; }
   .card-copy .subtle { font-size: 11px; }
   .card-price { font-size: 13px; margin-top: 10px; }
-  .card-marketplaces { flex-wrap: wrap; gap: 4px; }
-  .card-marketplaces > span:last-child { margin-left: 0; font-size: 10px; }
-  .catalog-bottom, .footer { flex-direction: column; gap: 12px; align-items: start; }
+  .card-copy .offer-footprint { gap: 9px; margin-top: 13px; }
+  .card-copy .marketplace-logos { gap: 5px; }
+  .card-copy .market-mark { width: 24px; height: 24px; }
+  .card-copy .market-mark.image-unavailable { width: auto; }
+  .card-copy .market-logo { width: 24px; height: 24px; }
+  .card-copy .offer-count { font-size: 12px; gap: 4px; }
+  .card-copy .marketplace-logos:not(:empty) + .offer-count { padding-left: 9px; }
+  .card-copy .offer-count svg { width: 15px; height: 15px; }
+  .footer { flex-direction: column; gap: 12px; align-items: start; }
   .footer { margin-top: 28px; font-size: 11px; }
   .product-hero { padding: 20px; grid-template-columns: 80px minmax(0, 1fr); align-items: start; gap: 16px; }
   .product-hero h1 { font-size: 24px; }

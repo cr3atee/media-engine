@@ -73,8 +73,8 @@ async function check(name, expression) {
   checks++;
   console.log(`PASS ${name}`);
 }
-async function screenshot(name) {
-  await evaluate("window.scrollTo(0, 0)");
+async function screenshot(name, fromTop = true) {
+  if (fromTop) await evaluate("window.scrollTo(0, 0)");
   const capture = await send("Page.captureScreenshot", { format: "png", captureBeyondViewport: false });
   await writeFile(join(output, `${name}.png`), Buffer.from(capture.data, "base64"));
 }
@@ -95,7 +95,12 @@ try {
   await check("square artwork", '[...document.querySelectorAll(".card-image")].every(el=>Math.abs(el.offsetWidth-el.offsetHeight)<2)');
   await check("desktop has no horizontal overflow", 'document.documentElement.scrollWidth <= innerWidth');
   await check("images loaded", '[...document.images].every(el=>el.complete && el.naturalWidth>0)');
+  await check("service captions removed", '!["Цена и условия покупки уточняются", "Данные подключённого каталога", "Оригинальные предложения.", "Без выдуманных скидок."].some(text=>document.querySelector("main").textContent.includes(text))');
+  await check("offer counts are compact numbers with accessible labels", '[...document.querySelectorAll(".product-card .offer-count")].every(el=>/^\\d+$/.test(el.innerText.trim()) && el.getAttribute("aria-label").includes("предложени"))');
+  await check("card logos come from real product memberships", `(async()=>{const response=await fetch('/api/v1/public/products?limit=50');const data=await response.json();const names={ggsel:'GGSEL',playerok:'Playerok',funpay:'FunPay'};return [...document.querySelectorAll('.product-card')].every(card=>{const product=data.items.find(p=>p.id===new URL(card.href).searchParams.get('product'));const actual=[...card.querySelectorAll('.marketplace-logos .market-mark')].map(el=>el.getAttribute('aria-label'));return product.marketplaces.length>0 && JSON.stringify(actual)===JSON.stringify(product.marketplaces.map(code=>names[code]??code)) && card.querySelector('.offer-count').innerText.trim()===String(product.offer_count);});})()`);
   await screenshot("01-catalog-desktop");
+  await evaluate('document.querySelector(".product-card .market-logo").dispatchEvent(new Event("error"))');
+  await check("failed logo preserves marketplace name", '(() => { const el = document.querySelector(".product-card .image-unavailable"); return !!el && el.querySelector("img").hidden && el.innerText.trim() === el.getAttribute("aria-label"); })()');
   await click(".product-card");
   await ready();
   await check("product opens in a distinct page", '!!document.querySelector("#productTitle") && !document.querySelector(".hero")');
@@ -138,7 +143,13 @@ try {
   await size(390, 844);
   await navigate();
   await check("mobile catalog fits", 'document.documentElement.scrollWidth<=innerWidth');
+  await check("mobile marketplace strip stays inside each card", '[...document.querySelectorAll(".product-card")].every(card=>card.querySelector(".offer-footprint").getBoundingClientRect().right<=card.getBoundingClientRect().right+1)');
   await screenshot("04-catalog-mobile");
+  await evaluate('document.querySelector("#catalog").scrollIntoView({block:"start"})');
+  await screenshot("04b-catalog-mobile-offers", false);
+  await size(320, 740);
+  await check("small mobile offer rows fit", 'document.documentElement.scrollWidth<=innerWidth && [...document.querySelectorAll(".product-card .offer-count")].every(el=>el.getBoundingClientRect().right<=el.closest(".product-card").getBoundingClientRect().right+1)');
+  await size(390, 844);
   await click(".product-card");
   await ready();
   await check("mobile product fits", 'document.documentElement.scrollWidth<=innerWidth');

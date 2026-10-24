@@ -50,6 +50,7 @@ def public_product_card(product: ProductSummaryRead) -> PublicProductCard:
         ),
         offer_count=product.offer_count,
         marketplace_count=product.marketplace_count,
+        marketplaces=list(product.marketplaces),
         updated_at=product.updated_at,
     )
 
@@ -68,6 +69,7 @@ def public_product_detail(product: ProductDetailRead) -> PublicProductDetail:
         ),
         offer_count=product.offer_count,
         marketplace_count=product.marketplace_count,
+        marketplaces=list(product.marketplaces),
         updated_at=product.updated_at,
     )
 

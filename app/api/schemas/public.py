@@ -164,6 +164,7 @@ class PublicProductCard(ApiModel):
     best_offer: PublicOfferSummary | None
     offer_count: int = Field(ge=0)
     marketplace_count: int = Field(ge=0)
+    marketplaces: list[str] = Field(default_factory=list)
     updated_at: datetime | None = None
 
     _normalize_updated_at = field_validator("updated_at")(_optional_utc_datetime)
@@ -179,6 +180,7 @@ class PublicProductDetail(ApiModel):
     best_offer: PublicOfferSummary | None
     offer_count: int = Field(ge=0)
     marketplace_count: int = Field(ge=0)
+    marketplaces: list[str] = Field(default_factory=list)
     updated_at: datetime | None = None
 
     _normalize_updated_at = field_validator("updated_at")(_optional_utc_datetime)

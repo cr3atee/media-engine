@@ -85,6 +85,7 @@ class ProductSummaryRead:
     offer_count: int
     marketplace_count: int
     updated_at: datetime | None
+    marketplaces: tuple[str, ...] = ()
 
 
 @dataclass(slots=True, frozen=True)
@@ -99,6 +100,7 @@ class ProductDetailRead:
     offer_count: int
     marketplace_count: int
     updated_at: datetime | None
+    marketplaces: tuple[str, ...] = ()
 
 
 @dataclass(slots=True, frozen=True)

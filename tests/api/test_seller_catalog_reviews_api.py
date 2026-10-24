@@ -287,6 +287,7 @@ def test_product_proposal_confirmation_is_atomic_audited_and_idempotent() -> Non
             },
             "offer_count": 1,
             "marketplace_count": 1,
+            "marketplaces": ["playerok"],
             "updated_at": None,
         }
     ]

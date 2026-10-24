@@ -7,7 +7,7 @@ const dialogBody = document.querySelector("#dialogBody");
 const searchInput = document.querySelector("#searchInput");
 const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
 const brands = { ggsel: "GGSEL", playerok: "Playerok", funpay: "FunPay" };
-const marks = { ggsel: "GG", playerok: "P", funpay: "FP" };
+const brandAssets = { ggsel: "ggsel.ico", playerok: "playerok.svg", funpay: "funpay.ico" };
 const roles = {
   user: ["Пользователь", "Каталог, поиск, сравнение предложений и переход на площадку."],
   partner: ["Партнёр", "Работа со своими объявлениями и источниками в своём рабочем пространстве."],
@@ -43,7 +43,16 @@ function link(params = {}) {
 
 function brandMark(marketplace) {
   const known = Object.hasOwn(brands, marketplace);
-  return `<span class="market-mark ${known ? marketplace : ""}" aria-hidden="true">${known ? marks[marketplace] : "·"}</span>`;
+  const name = known ? brands[marketplace] : marketplace;
+  return `<span class="market-mark ${known ? marketplace : "image-unavailable"}" role="img" aria-label="${escapeHtml(name)}" title="${escapeHtml(name)}">${known ? `<img src="${root}/${brandAssets[marketplace]}" alt="" width="28" height="28" class="market-logo">` : ""}<span class="logo-fallback" aria-hidden="true">${escapeHtml(name)}</span></span>`;
+}
+
+function offerFootprint(product) {
+  const marketplaces = [...new Set(Array.isArray(product.marketplaces) ? product.marketplaces : [])];
+  const countLabel = plural(product.offer_count, ["предложение", "предложения", "предложений"]);
+  return `<div class="offer-footprint"><div class="marketplace-logos">${marketplaces.map(brandMark).join("")}</div>
+    <span class="offer-count" role="img" aria-label="${escapeHtml(countLabel)}" title="${escapeHtml(countLabel)}"><svg viewBox="0 0 20 20" aria-hidden="true"><rect x="6" y="6" width="11" height="11" rx="2"/><path d="M3 13V5a2 2 0 0 1 2-2h8"/></svg><span aria-hidden="true">${escapeHtml(product.offer_count)}</span></span>
+  </div>`;
 }
 
 function marketplaceName(value) {
@@ -133,7 +142,7 @@ function marketplaceNav(params) {
   }).join("")}</nav>`;
 }
 
-function productCard(product, params, density = false) {
+function productCard(product, params) {
   const art = infoFor(product);
   const price = product.best_offer ? money(product.best_offer) : "Все цены в сравнении";
   const query = { screen: "product", product: product.id, ...(params.get("q") ? { q: params.get("q") } : {}), ...(params.get("marketplace") ? { marketplace: params.get("marketplace") } : {}) };
@@ -141,8 +150,7 @@ function productCard(product, params, density = false) {
     <div class="card-image"><img src="${root}/${art.image}" width="600" height="600" alt="" loading="lazy"><span class="art-label">${escapeHtml(art.label)}</span></div>
     <div class="card-copy"><h3>${escapeHtml(art.title)}</h3><p>${escapeHtml(art.subtitle)}</p>
       <span class="card-price">${escapeHtml(price)} <span aria-hidden="true">↗</span></span>
-      <p class="subtle">${escapeHtml(plural(product.offer_count, ["предложение", "предложения", "предложений"]))}</p>
-      <div class="card-marketplaces"><span>${density ? "Тест плотности" : escapeHtml(plural(product.marketplace_count, ["площадка", "площадки", "площадок"]))}</span></div>
+      ${offerFootprint(product)}
     </div></a>`;
 }
 
@@ -150,21 +158,21 @@ function catalogMarkup(products, params, nextCursor) {
   const query = params.get("q") ?? "";
   const density = params.get("screen") === "density";
   const tiles = density && products.length ? Array.from({ length: 50 }, (_, index) => products[index % products.length]) : products;
-  const title = query ? `Результаты: «${query}»` : "В каталоге сейчас";
+  const title = query ? `Результаты: «${query}»` : "Каталог";
   return `${!query && !params.get("marketplace") ? `<section class="hero" aria-labelledby="heroTitle"><div class="hero-copy">
       <span class="eyebrow">Меньше поиска. Больше игры.</span><h1 id="heroTitle">Ваш следующий мир.<span class="hero-continuation">В одном поиске.</span></h1>
       <p>Сравните предложения площадок и выберите подходящий вариант игры.</p>
       <a class="primary" href="#catalog">Выбрать игру <span aria-hidden="true">↗</span></a>
     </div></section>
-    <div class="game-strip"><a data-nav class="game-tile" href="${root}"><span class="tile-symbol" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="6" height="6" rx="1"/><rect x="15" y="3" width="6" height="6" rx="1"/><rect x="3" y="15" width="6" height="6" rx="1"/><rect x="15" y="15" width="6" height="6" rx="1"/></svg></span><span>Все товары<small>Подключённый каталог</small></span></a>
+    <div class="game-strip"><a data-nav class="game-tile" href="${root}"><span class="tile-symbol" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="6" height="6" rx="1"/><rect x="15" y="3" width="6" height="6" rx="1"/><rect x="3" y="15" width="6" height="6" rx="1"/><rect x="15" y="15" width="6" height="6" rx="1"/></svg></span><span>Все товары</span></a>
     ${products.some(product => Object.hasOwn(artwork, product.id)) ? `<a data-nav class="game-tile" href="${root}?q=Minecraft"><img src="${root}/cube.svg" width="64" height="64" alt=""><span>Minecraft<small>PC и iOS</small></span></a>` : ""}
-    <p class="game-strip-note">Оригинальные предложения.<br>Без выдуманных скидок.</p></div>` : ""}
+    </div>` : ""}
     ${marketplaceNav(params)}
-    <section id="catalog" aria-labelledby="catalogTitle"><div class="catalog-heading"><div><h2 id="catalogTitle">${escapeHtml(title)}</h2><span class="count">${tiles.length}${nextCursor ? "+" : ""}</span></div><span class="subtle">${density ? "50 тестовых повторов, не новые товары" : "Данные подключённого каталога"}</span></div>
+    <section id="catalog" aria-labelledby="catalogTitle"><div class="catalog-heading"><div><h2 id="catalogTitle">${escapeHtml(title)}</h2><span class="count" title="Товаров загружено" aria-label="Товаров загружено: ${tiles.length}${nextCursor ? "+" : ""}">${tiles.length}${nextCursor ? "+" : ""}</span></div></div>
     ${density ? '<p class="notice neutral">Тест плотности: реальные карточки повторены 50 раз только в браузере. В каталог ничего не добавлено.</p>' : ""}
-    ${tiles.length ? `<div class="product-grid ${tiles.length <= 2 ? "compact" : ""}">${tiles.map(product => productCard(product, params, density)).join("")}</div>` : '<div class="empty"><span class="tile-symbol" aria-hidden="true">⌕</span><h2>Ничего не нашлось</h2><p>Попробуйте другое название или снимите фильтр площадки.</p><a class="secondary" data-nav href="/terminal/preview">Сбросить поиск</a></div>'}
+    ${tiles.length ? `<div class="product-grid ${tiles.length <= 2 ? "compact" : ""}">${tiles.map(product => productCard(product, params)).join("")}</div>` : '<div class="empty"><span class="tile-symbol" aria-hidden="true">⌕</span><h2>Ничего не нашлось</h2><p>Попробуйте другое название или снимите фильтр площадки.</p><a class="secondary" data-nav href="/terminal/preview">Сбросить поиск</a></div>'}
     ${nextCursor ? '<button class="secondary" data-action="more">Показать ещё</button>' : ""}
-    <div class="catalog-bottom"><span>Цена и условия покупки уточняются на сайте продавца.</span><button class="text-button" data-action="about">Как мы сравниваем <span aria-hidden="true">↗</span></button></div></section>`;
+    </section>`;
 }
 
 function offerRow(offer) {
@@ -183,7 +191,7 @@ function productMarkup(product, comparison, params) {
   return `<a class="back" data-nav href="${escapeHtml(link(backQuery))}"><span aria-hidden="true">←</span> Назад к товарам</a>
     <section class="product-hero" aria-labelledby="productTitle"><img class="product-cover" src="${root}/${art.image}" width="220" height="220" alt="Иллюстрация оформления; не официальная обложка">
     <div><span class="eyebrow">${escapeHtml(art.subtitle)}</span><h1 id="productTitle">${escapeHtml(art.title)}</h1>
-    <p class="product-description">${escapeHtml(plural(product.offer_count, ["предложение", "предложения", "предложений"]))} · ${escapeHtml(plural(product.marketplace_count, ["площадка", "площадки", "площадок"]))}</p>
+    ${offerFootprint(product)}
     <a class="primary" href="#offers">Все предложения <span aria-hidden="true">↓</span></a>
     <details class="original-name"><summary>Исходное название товара</summary><p>${escapeHtml(product.name)}</p>${artwork[product.id] ? '<p>Краткий заголовок подготовлен для макета. Название в каталоге не изменено.</p>' : ""}</details></div></section>
     <section id="offers" aria-labelledby="offersTitle"><div class="offers-heading"><h2 id="offersTitle">Предложения площадок</h2><span class="subtle">${product.updated_at ? `Обновлено ${escapeHtml(new Date(product.updated_at).toLocaleDateString("ru-RU"))}` : "Время обновления не передано источником"}</span></div>
@@ -345,6 +353,12 @@ document.querySelector("#aboutButton").addEventListener("click", about);
 document.querySelector("#previewTools").addEventListener("click", tools);
 document.querySelector("#profileButton").addEventListener("click", tools);
 document.querySelector("#closeDialog").addEventListener("click", () => dialog.close());
+document.addEventListener("error", (event) => {
+  if (event.target instanceof HTMLImageElement && event.target.classList.contains("market-logo")) {
+    event.target.hidden = true;
+    event.target.parentElement.classList.add("image-unavailable");
+  }
+}, true);
 document.addEventListener("click", (event) => {
   const anchor = event.target.closest("a[data-nav]");
   if (anchor && !event.ctrlKey && !event.metaKey && !event.shiftKey && !event.altKey && event.button === 0) {

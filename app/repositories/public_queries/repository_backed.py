@@ -415,14 +415,16 @@ def _cursor_timestamp(value: datetime | None) -> datetime:
 
 
 def _product_summary(context: _ProductContext) -> ProductSummaryRead:
+    marketplaces = tuple(sorted({offer.marketplace for offer in context.offers}))
     return ProductSummaryRead(
         id=context.product.id,
         name=context.product.name,
         category=context.product.category,
         best_offer=context.best_offer,
         offer_count=len(context.offers),
-        marketplace_count=len({offer.marketplace for offer in context.offers}),
+        marketplace_count=len(marketplaces),
         updated_at=context.updated_at,
+        marketplaces=marketplaces,
     )
 
 
@@ -461,6 +463,7 @@ def _best_offer(
 
 
 def _product_detail(context: _ProductContext) -> ProductDetailRead:
+    marketplaces = tuple(sorted({offer.marketplace for offer in context.offers}))
     return ProductDetailRead(
         id=context.product.id,
         name=context.product.name,
@@ -468,8 +471,9 @@ def _product_detail(context: _ProductContext) -> ProductDetailRead:
         aliases=context.product.aliases,
         best_offer=context.best_offer,
         offer_count=len(context.offers),
-        marketplace_count=len({offer.marketplace for offer in context.offers}),
+        marketplace_count=len(marketplaces),
         updated_at=context.updated_at,
+        marketplaces=marketplaces,
     )
 
 
