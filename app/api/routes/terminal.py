@@ -30,6 +30,9 @@ _PREVIEW_ASSETS = {
     "funpay.ico": "image/vnd.microsoft.icon",
     "ggsel.ico": "image/vnd.microsoft.icon",
     "playerok.svg": "image/svg+xml",
+    "minecraft-pc.jpg": "image/jpeg",
+    "minecraft-ios.jpg": "image/jpeg",
+    "product-placeholder.svg": "image/svg+xml",
 }
 
 

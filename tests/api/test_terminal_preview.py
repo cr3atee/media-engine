@@ -44,6 +44,9 @@ def test_preview_is_separate_from_existing_terminal(
         ("funpay.ico", "image/vnd.microsoft.icon"),
         ("ggsel.ico", "image/vnd.microsoft.icon"),
         ("playerok.svg", "image/svg+xml"),
+        ("minecraft-pc.jpg", "image/jpeg"),
+        ("minecraft-ios.jpg", "image/jpeg"),
+        ("product-placeholder.svg", "image/svg+xml"),
     ],
 )
 def test_preview_assets_are_local_and_typed(
@@ -64,6 +67,18 @@ def test_preview_not_found_has_real_html_404(client: TestClient) -> None:
     assert response.headers["content-type"].startswith("text/html")
     assert "content-security-policy" in response.headers
     assert '<main id="main"' in response.text
+
+
+@pytest.mark.parametrize("asset", ["minecraft-pc.jpg", "minecraft-ios.jpg"])
+def test_product_artwork_is_a_bounded_local_jpeg(
+    client: TestClient, asset: str
+) -> None:
+    """Reject HTML/error bodies and unexpectedly oversized product assets."""
+    response = client.get(f"/terminal/preview/{asset}")
+
+    assert response.status_code == 200
+    assert response.content.startswith(b"\xff\xd8\xff")
+    assert len(response.content) < 100_000
 
 
 @pytest.mark.parametrize("name", ["index.html", "OFL.txt", "secrets.env", "../.env"])

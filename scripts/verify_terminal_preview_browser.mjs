@@ -95,6 +95,7 @@ try {
   await check("square artwork", '[...document.querySelectorAll(".card-image")].every(el=>Math.abs(el.offsetWidth-el.offsetHeight)<2)');
   await check("desktop has no horizontal overflow", 'document.documentElement.scrollWidth <= innerWidth');
   await check("images loaded", '[...document.images].every(el=>el.complete && el.naturalWidth>0)');
+  await check("official artwork is square and edition specific", `(() => { const expected = {'7c862a70-5619-5b6d-a2aa-798560d29f18':'minecraft-pc.jpg','9a520758-e499-5837-90bb-9e6b67d7a591':'minecraft-ios.jpg'}; return [...document.querySelectorAll('.product-card')].every(card=>{const img=card.querySelector('.product-art');const id=new URL(card.href).searchParams.get('product');return new URL(img.src).origin===location.origin && img.src.endsWith(expected[id]??'product-placeholder.svg') && img.naturalWidth===img.naturalHeight && getComputedStyle(img).objectFit==='contain' && img.alt.length>0;});})()`);
   await check("service captions removed", '!["Цена и условия покупки уточняются", "Данные подключённого каталога", "Оригинальные предложения.", "Без выдуманных скидок."].some(text=>document.querySelector("main").textContent.includes(text))');
   await check("offer counts are compact numbers with accessible labels", '[...document.querySelectorAll(".product-card .offer-count")].every(el=>/^\\d+$/.test(el.innerText.trim()) && el.getAttribute("aria-label").includes("предложени"))');
   await check("card logos come from real product memberships", `(async()=>{const response=await fetch('/api/v1/public/products?limit=50');const data=await response.json();const names={ggsel:'GGSEL',playerok:'Playerok',funpay:'FunPay'};return [...document.querySelectorAll('.product-card')].every(card=>{const product=data.items.find(p=>p.id===new URL(card.href).searchParams.get('product'));const actual=[...card.querySelectorAll('.marketplace-logos .market-mark')].map(el=>el.getAttribute('aria-label'));return product.marketplaces.length>0 && JSON.stringify(actual)===JSON.stringify(product.marketplaces.map(code=>names[code]??code)) && card.querySelector('.offer-count').innerText.trim()===String(product.offer_count);});})()`);
@@ -108,6 +109,11 @@ try {
   await check("source links safe", '[...document.querySelectorAll(".offer-row a")].every(a=>a.protocol==="https:" && a.rel.includes("noopener"))');
   await check("mixed currencies not presented as a lowest price", '!document.querySelector(".notice")?.textContent.includes("Цены в разных валютах") || !document.querySelector(".notice")?.textContent.includes("Лучшее предложение:")');
   await screenshot("02-product-desktop");
+  await evaluate('document.querySelector(".product-cover").src="/terminal/preview/missing-artwork.jpg"');
+  await until('document.querySelector(".product-cover").src.endsWith("product-placeholder.svg") && document.querySelector(".product-cover").complete');
+  await check("failed artwork uses neutral local fallback", 'document.querySelector(".product-cover").naturalWidth>0 && document.querySelector(".product-cover").alt==="Изображение товара недоступно"');
+  await evaluate('document.querySelector(".product-cover").dispatchEvent(new Event("error"))');
+  await check("fallback failure keeps layout without a retry loop", 'document.querySelector(".product-cover").classList.contains("art-unavailable") && document.querySelector(".product-cover").src.endsWith("product-placeholder.svg") && document.querySelector(".product-cover").offsetWidth===220');
   await evaluate("history.back()");
   await ready();
   await check("browser back restores catalog", '!!document.querySelector("#catalog")');
@@ -144,6 +150,7 @@ try {
   await navigate();
   await check("mobile catalog fits", 'document.documentElement.scrollWidth<=innerWidth');
   await check("mobile marketplace strip stays inside each card", '[...document.querySelectorAll(".product-card")].every(card=>card.querySelector(".offer-footprint").getBoundingClientRect().right<=card.getBoundingClientRect().right+1)');
+  await check("platform badges leave the artwork title visible", '[...document.querySelectorAll(".card-image .art-label")].every(el=>el.getBoundingClientRect().top>el.parentElement.getBoundingClientRect().top+el.parentElement.offsetHeight/2 && el.offsetHeight<32)');
   await screenshot("04-catalog-mobile");
   await evaluate('document.querySelector("#catalog").scrollIntoView({block:"start"})');
   await screenshot("04b-catalog-mobile-offers", false);
@@ -197,6 +204,7 @@ try {
   await click('[data-action="retry"]');
   await ready();
   await check("retry recovers catalog", 'document.querySelectorAll(".product-card").length>0');
+  await check("product imagery never hotlinks external hosts", '[...document.querySelectorAll(".product-art")].every(img=>new URL(img.currentSrc||img.src).origin===location.origin)');
   assert.deepEqual(errors, [], "No runtime or CSP errors");
   checks++;
   assert(requests.filter(request=>request.url.startsWith(base)).every(request=>request.method==="GET"), "Preview must not mutate backend");

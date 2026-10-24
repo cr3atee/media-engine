@@ -17,8 +17,8 @@ const roles = {
 
 // Editorial titles are limited to these reviewed local records. They never alter domain data.
 const artwork = {
-  "7c862a70-5619-5b6d-a2aa-798560d29f18": { title: "Minecraft", subtitle: "Java & Bedrock Edition · PC", label: "PC", image: "cube.svg" },
-  "9a520758-e499-5837-90bb-9e6b67d7a591": { title: "Minecraft", subtitle: "Активация промокодом · iOS", label: "iOS", image: "world.svg" },
+  "7c862a70-5619-5b6d-a2aa-798560d29f18": { title: "Minecraft", subtitle: "Java & Bedrock Edition · PC", label: "PC", image: "minecraft-pc.jpg", alt: "Minecraft: Java & Bedrock Edition для PC, обложка Microsoft Store" },
+  "9a520758-e499-5837-90bb-9e6b67d7a591": { title: "Minecraft", subtitle: "Активация промокодом · iOS", label: "iOS", image: "minecraft-ios.jpg", alt: "Minecraft для iOS, иконка приложения Mojang из App Store" },
 };
 
 let activeRequest;
@@ -87,7 +87,11 @@ function plural(value, forms) {
 }
 
 function infoFor(product) {
-  return artwork[product.id] ?? { title: product.name, subtitle: product.category ?? "Цифровой товар", label: "Товар", image: "cube.svg" };
+  return artwork[product.id] ?? { title: product.name, subtitle: product.category ?? "Цифровой товар", label: "Товар", image: "product-placeholder.svg", alt: "Изображение товара отсутствует" };
+}
+
+function productImage(art, className = "", size = 512, lazy = false) {
+  return `<img class="product-art ${className}" src="${root}/${art.image}" width="${size}" height="${size}" alt="${escapeHtml(art.alt)}" ${lazy ? 'loading="lazy"' : ""} decoding="async">`;
 }
 
 async function getJson(path, signal) {
@@ -147,7 +151,7 @@ function productCard(product, params) {
   const price = product.best_offer ? money(product.best_offer) : "Все цены в сравнении";
   const query = { screen: "product", product: product.id, ...(params.get("q") ? { q: params.get("q") } : {}), ...(params.get("marketplace") ? { marketplace: params.get("marketplace") } : {}) };
   return `<a class="product-card" data-nav href="${escapeHtml(link(query))}">
-    <div class="card-image"><img src="${root}/${art.image}" width="600" height="600" alt="" loading="lazy"><span class="art-label">${escapeHtml(art.label)}</span></div>
+    <div class="card-image">${productImage(art, "", 512, true)}<span class="art-label">${escapeHtml(art.label)}</span></div>
     <div class="card-copy"><h3>${escapeHtml(art.title)}</h3><p>${escapeHtml(art.subtitle)}</p>
       <span class="card-price">${escapeHtml(price)} <span aria-hidden="true">↗</span></span>
       ${offerFootprint(product)}
@@ -165,7 +169,7 @@ function catalogMarkup(products, params, nextCursor) {
       <a class="primary" href="#catalog">Выбрать игру <span aria-hidden="true">↗</span></a>
     </div></section>
     <div class="game-strip"><a data-nav class="game-tile" href="${root}"><span class="tile-symbol" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="6" height="6" rx="1"/><rect x="15" y="3" width="6" height="6" rx="1"/><rect x="3" y="15" width="6" height="6" rx="1"/><rect x="15" y="15" width="6" height="6" rx="1"/></svg></span><span>Все товары</span></a>
-    ${products.some(product => Object.hasOwn(artwork, product.id)) ? `<a data-nav class="game-tile" href="${root}?q=Minecraft"><img src="${root}/cube.svg" width="64" height="64" alt=""><span>Minecraft<small>PC и iOS</small></span></a>` : ""}
+    ${products.some(product => Object.hasOwn(artwork, product.id)) ? `<a data-nav class="game-tile" href="${root}?q=Minecraft">${productImage({ image: "minecraft-ios.jpg", alt: "Minecraft" }, "", 64)}<span>Minecraft<small>PC и iOS</small></span></a>` : ""}
     </div>` : ""}
     ${marketplaceNav(params)}
     <section id="catalog" aria-labelledby="catalogTitle"><div class="catalog-heading"><div><h2 id="catalogTitle">${escapeHtml(title)}</h2><span class="count" title="Товаров загружено" aria-label="Товаров загружено: ${tiles.length}${nextCursor ? "+" : ""}">${tiles.length}${nextCursor ? "+" : ""}</span></div></div>
@@ -189,7 +193,7 @@ function productMarkup(product, comparison, params) {
   const backQuery = { ...(params.get("q") ? { q: params.get("q") } : {}), ...(params.get("marketplace") ? { marketplace: params.get("marketplace") } : {}) };
   const mismatch = comparison.status === "currency_mismatch";
   return `<a class="back" data-nav href="${escapeHtml(link(backQuery))}"><span aria-hidden="true">←</span> Назад к товарам</a>
-    <section class="product-hero" aria-labelledby="productTitle"><img class="product-cover" src="${root}/${art.image}" width="220" height="220" alt="Иллюстрация оформления; не официальная обложка">
+    <section class="product-hero" aria-labelledby="productTitle">${productImage(art, "product-cover", 220)}
     <div><span class="eyebrow">${escapeHtml(art.subtitle)}</span><h1 id="productTitle">${escapeHtml(art.title)}</h1>
     ${offerFootprint(product)}
     <a class="primary" href="#offers">Все предложения <span aria-hidden="true">↓</span></a>
@@ -210,7 +214,7 @@ function reviewMarkup() {
     <div class="review-layout"><aside class="queue" aria-label="Объявления для просмотра"><p>Примеры из каталога</p><select class="queue-select" id="reviewSelect" aria-label="Объявление для просмотра">${reviewOffers.map((item, index) => `<option value="${index}" ${index === reviewSelection ? "selected" : ""}>${escapeHtml(marketplaceName(item.marketplace))} · ${escapeHtml(money(item))}</option>`).join("")}</select>${reviewOffers.map((item, index) => `<button type="button" data-review-index="${index}" aria-pressed="${reviewSelection === index}">${brandMark(item.marketplace)}<strong>${escapeHtml(marketplaceName(item.marketplace))}</strong><small>${escapeHtml(money(item))}</small></button>`).join("")}</aside>
     <section aria-label="Сопоставление объявления"><div class="pair">
       <article class="pair-card"><span class="eyebrow">01 · Исходное объявление</span><div class="offer-market">${brandMark(offer.marketplace)}${escapeHtml(marketplaceName(offer.marketplace))}</div><h3>${escapeHtml(offer.title ?? "Название не указано")}</h3><p>${escapeHtml(money(offer))} · ${escapeHtml(offer.seller_name ?? "Продавец не указан")}</p><p>ID объявления</p><code>${escapeHtml(offer.external_id ?? "не указан")}</code></article>
-      <article class="pair-card target"><span class="eyebrow">02 · Товар, к которому привязываем</span><img src="${root}/${art.image}" alt="" width="60" height="60"><h3>${escapeHtml(art.title)} · ${escapeHtml(art.subtitle)}</h3><p>${escapeHtml(product.name)}</p><p>ID товара в каталоге</p><code>${escapeHtml(product.id)}</code></article>
+      <article class="pair-card target"><span class="eyebrow">02 · Товар, к которому привязываем</span>${productImage(art, "", 60)}<h3>${escapeHtml(art.title)} · ${escapeHtml(art.subtitle)}</h3><p>${escapeHtml(product.name)}</p><p>ID товара в каталоге</p><code>${escapeHtml(product.id)}</code></article>
     </div>
     <form class="decision-form" id="decisionForm"><fieldset><legend>Какое решение принимаем?</legend><div class="decision-options">
       <label class="decision-choice"><input type="radio" name="decision" value="link" checked> Связать с этим товаром</label>
@@ -327,7 +331,7 @@ function openDialog(title, content) {
 }
 
 function about() {
-  openDialog("Найти. Сравнить. Выбрать.", `<ol><li>Найдите игру или сервис в подключённом каталоге.</li><li>Сравните предложения одного варианта товара. Разные валюты не пересчитываем.</li><li>Проверьте условия и перейдите на сайт площадки для покупки.</li></ol><p>Сейчас это новый визуальный предпросмотр. Каталог и цены читаются из действующего API. Покупок, сохранения решений и выдачи прав здесь нет.</p><p>Иллюстрации созданы для оформления и не являются официальными обложками игр.</p>`);
+  openDialog("Найти. Сравнить. Выбрать.", `<ol><li>Найдите игру или сервис в подключённом каталоге.</li><li>Сравните предложения одного варианта товара. Разные валюты не пересчитываем.</li><li>Проверьте условия и перейдите на сайт площадки для покупки.</li></ol><p>Сейчас это новый визуальный предпросмотр. Каталог и цены читаются из действующего API. Покупок, сохранения решений и выдачи прав здесь нет.</p><p>Обложка Minecraft для PC получена из Microsoft Store, иконка iOS — из App Store. Они обозначают игру, но не подтверждают условия конкретного продавца. Баннер — собственная иллюстрация Market Terminal.</p><p>Market Terminal — независимый сервис, не официальный продукт Minecraft. Не одобрен Mojang или Microsoft и не связан с ними.</p>`);
 }
 
 function tools() {
@@ -354,9 +358,18 @@ document.querySelector("#previewTools").addEventListener("click", tools);
 document.querySelector("#profileButton").addEventListener("click", tools);
 document.querySelector("#closeDialog").addEventListener("click", () => dialog.close());
 document.addEventListener("error", (event) => {
-  if (event.target instanceof HTMLImageElement && event.target.classList.contains("market-logo")) {
-    event.target.hidden = true;
-    event.target.parentElement.classList.add("image-unavailable");
+  const image = event.target;
+  if (!(image instanceof HTMLImageElement)) return;
+  if (image.classList.contains("market-logo")) {
+    image.hidden = true;
+    image.parentElement.classList.add("image-unavailable");
+  } else if (image.classList.contains("product-art")) {
+    image.alt = "Изображение товара недоступно";
+    if (image.getAttribute("src") !== `${root}/product-placeholder.svg`) {
+      image.src = `${root}/product-placeholder.svg`;
+    } else {
+      image.classList.add("art-unavailable");
+    }
   }
 }, true);
 document.addEventListener("click", (event) => {
