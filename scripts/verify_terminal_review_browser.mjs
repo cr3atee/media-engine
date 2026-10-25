@@ -27,10 +27,16 @@ let empty = false;
 let forbidden = false;
 let expireOnce = false;
 let refreshCount = 0;
+let workspaceError = null;
+let mutationError = null;
+let holdPath = null;
+let heldReply = null;
+let heldRequest = null;
 let settingsTarget;
 let settingsSession;
 let originalZoom;
 const tenant = "11111111-1111-4111-8111-111111111111";
+const secondTenant = "33333333-3333-4333-8333-333333333333";
 const canonical = "22222222-2222-4222-8222-222222222222";
 const title = "Minecraft Java & Bedrock Edition · PC · ключ Microsoft · GLOBAL";
 const candidate = { marketplace: "funpay", external_id: "fixture-review", canonical_product_id: canonical, canonical_product_name: title, canonical_product_category: "Игры", offer_title: `${title} <тест>`, offer_price: "990.00", currency: "RUB", similarity: .9, match_decision: "review", offer_url: "https://example.com/offer" };
@@ -65,11 +71,13 @@ async function intercept({ requestId, request }) {
     refreshCount++;
     body = { access_token: "fixture-renewed", refresh_token: "fixture-refresh" };
   } else if (path.endsWith("/me")) {
-    body = { user: { display_name: "Тестовый продавец", email: "review@example.test" }, memberships: [{ is_active: true, tenant_id: tenant, tenant_name: "Проверка интерфейса (fixture)", role: "owner" }] };
+    body = { user: { display_name: "Тестовый продавец", email: "review@example.test" }, memberships: [tenant, secondTenant].map(id => ({ is_active: true, tenant_id: id, tenant_name: id === tenant ? "Проверка интерфейса (fixture)" : "Второе пространство (fixture)", role: "owner" })) };
   } else if (path.endsWith("/context")) {
-    body = { tenant_id: tenant, tenant_name: "Проверка интерфейса (fixture)", role: forbidden ? "viewer" : "owner", permissions: forbidden ? [] : ["catalog_review"] };
+    const selected = path.split("/")[4];
+    body = { tenant_id: selected, tenant_name: selected === tenant ? "Проверка интерфейса (fixture)" : "Второе пространство (fixture)", role: forbidden ? "viewer" : "owner", permissions: forbidden ? [] : ["catalog_review"] };
   } else if (path.endsWith("/onboarding-workspace")) {
-    if (expireOnce) { expireOnce = false; responseCode = 401; }
+    if (workspaceError) { responseCode = workspaceError.status; body = { error: { code: workspaceError.code } }; }
+    else if (expireOnce) { expireOnce = false; responseCode = 401; }
     else body = { summary: empty ? { ...summary, linked_offers: 3, review_candidates: 0, product_proposals: 0, unresolved_offers: 0 } : summary, review_candidates: empty ? [] : [candidate], product_proposals: empty ? [] : proposals };
   } else if (path.endsWith("/auth/logout")) {
     body = {};
@@ -77,11 +85,19 @@ async function intercept({ requestId, request }) {
     mutations.push(request);
     responseCode = mutationStatus;
     body = mutationStatus === 409 ? { error: { code: "canonical_offer_link_conflict" } } : {};
+    if (mutationError) body = { error: { code: mutationError } };
     if (mutationStatus === 200) empty = true;
   } else {
     throw new Error(`Unexpected fixture API request: ${request.method} ${path}`);
   }
-  await send("Fetch.fulfillRequest", { requestId, responseCode, responseHeaders: [{ name: "Content-Type", value: "application/json" }], body: Buffer.from(JSON.stringify(body)).toString("base64") });
+  const reply = () => send("Fetch.fulfillRequest", { requestId, responseCode, responseHeaders: [{ name: "Content-Type", value: "application/json" }], body: Buffer.from(JSON.stringify(body)).toString("base64") });
+  if (holdPath && path.endsWith(holdPath)) {
+    holdPath = null;
+    heldRequest = request;
+    heldReply = reply;
+    return;
+  }
+  await reply();
 }
 socket.addEventListener("message", event => {
   const message = JSON.parse(event.data);
@@ -157,8 +173,16 @@ async function submit() {
   await until('document.querySelector("#workspaceMessage").textContent !== "Сохраняем решение…" && document.querySelector("#reviewWorkspace").getAttribute("aria-busy") === "false"');
 }
 async function login() {
+  await until('!document.querySelector("#loginButton").disabled');
   await evaluate('document.querySelector("#emailInput").value="review@example.test"; document.querySelector("#passwordInput").value="fixture-only"');
   await click("#loginButton");
+}
+async function waitForHeldReply() {
+  for (let attempt = 0; attempt < 100; attempt++) {
+    if (heldReply) return;
+    await new Promise(resolve => setTimeout(resolve, 50));
+  }
+  throw new Error("Expected intercepted request did not arrive");
 }
 try {
   await send("Page.enable");
@@ -262,7 +286,7 @@ try {
   await check("reduced motion disables transitions", 'getComputedStyle(document.querySelector("#reloadButton")).transitionDuration === "0s"');
   expireOnce = true;
   await click("#reloadButton");
-  await until('document.querySelector("#reviewWorkspace").getAttribute("aria-busy") === "false"');
+  await until('!document.querySelector("#reviewWorkspace").hidden && document.querySelectorAll(".review-card").length === 3 && document.querySelector("#reviewWorkspace").getAttribute("aria-busy") === "false"');
   assert.equal(refreshCount, 1); checks++;
   await click('[data-external-id="fixture-missing"] summary');
   await click('[data-external-id="fixture-missing"] .create');
@@ -286,6 +310,93 @@ try {
   await login();
   await until('document.querySelector("#sessionStatus").textContent === "Недостаточно прав"');
   await check("missing permission hides decisions", 'document.querySelector("#reviewWorkspace").hidden');
+  forbidden = false;
+  empty = false;
+  const readyWorkspace = () => until('!document.querySelector("#reviewWorkspace").hidden && document.querySelectorAll(".review-card").length === 3 && !document.querySelector("#reloadButton").disabled');
+  const reload = async () => { await click("#reloadButton"); await readyWorkspace(); };
+  const cleared = 'document.querySelector("#reviewWorkspace").hidden && document.querySelectorAll(".review-card").length === 0 && document.querySelector("#decisionSource").textContent === "" && document.querySelector("#decisionFacts").textContent === ""';
+  await reload();
+  for (const issue of [{ status: 403, code: "permission_denied" }, { status: 404, code: "tenant_not_found" }]) {
+    workspaceError = issue;
+    await click("#reloadButton");
+    await until('document.querySelector("#sessionStatus").textContent === "Доступ изменился"');
+    await check(`${issue.code} purges protected data`, cleared);
+    await check("revocation leaves recovery controls available", '!document.querySelector("#tenantSelect").disabled && !document.querySelector("#reloadButton").disabled && !document.querySelector("#sessionPanel").hidden');
+    workspaceError = null;
+    await reload();
+  }
+  mutationStatus = 403;
+  mutationError = "permission_denied";
+  await click(`${source} summary`);
+  await evaluate(`document.querySelector('${source} textarea').value='Facts before revoked action'`);
+  await openResolve(); await submit();
+  await until('document.querySelector("#sessionStatus").textContent === "Доступ изменился"');
+  await check("write permission revocation purges form and dialog", cleared);
+  await reload();
+  mutationStatus = 404;
+  mutationError = "canonical_review_target_not_found";
+  await click(`${source} summary`);
+  await evaluate(`document.querySelector('${source} textarea').value='Facts for missing target'`);
+  await openResolve(); await submit();
+  await check("missing object is not mistaken for revoked workspace", `!document.querySelector('#reviewWorkspace').hidden && document.querySelector('${source} textarea').value.includes('missing target')`);
+  mutationStatus = 503;
+  mutationError = null;
+  await reload();
+  // A delayed mutation from A must not write status or queue into workspace B.
+  await click(`${source} summary`);
+  await evaluate(`document.querySelector('${source} textarea').value='Pending workspace A facts'`);
+  holdPath = "/resolve-existing";
+  await openResolve();
+  await click("#decisionConfirm");
+  await waitForHeldReply();
+  const oldReply = heldReply;
+  const oldKey = Object.entries(heldRequest.headers).find(([name]) => name.toLowerCase() === "idempotency-key")[1];
+  heldReply = null;
+  await evaluate(`document.querySelector('#tenantSelect').value='${secondTenant}'; document.querySelector('#tenantSelect').dispatchEvent(new Event('change'))`);
+  await readyWorkspace();
+  await oldReply();
+  await evaluate('new Promise(resolve=>setTimeout(resolve,100))');
+  await check("late mutation cannot overwrite new workspace", 'document.querySelector("#tenantLabel").textContent.startsWith("Второе") && !document.querySelector("#workspaceMessage").classList.contains("error")');
+  await click(`${source} summary`);
+  await evaluate(`document.querySelector('${source} textarea').value='Pending workspace A facts'`);
+  await openResolve(); await submit();
+  assert.notEqual(Object.entries(mutations.at(-1).headers).find(([name]) => name.toLowerCase() === "idempotency-key")[1], oldKey); checks++;
+  assert(mutations.at(-1).url.includes(secondTenant)); checks++;
+  // Force two overlapping context selections to verify stale-response guards.
+  holdPath = "/context";
+  await evaluate(`document.querySelector('#tenantSelect').value='${tenant}'; document.querySelector('#tenantSelect').dispatchEvent(new Event('change'))`);
+  await waitForHeldReply();
+  const contextReply = heldReply;
+  heldReply = null;
+  await check("switch hides previous workspace before response", cleared);
+  await evaluate(`document.querySelector('#tenantSelect').value='${secondTenant}'; document.querySelector('#tenantSelect').dispatchEvent(new Event('change'))`);
+  await readyWorkspace();
+  await contextReply();
+  await evaluate('new Promise(resolve=>setTimeout(resolve,100))');
+  await check("late context cannot select the old tenant", `document.querySelector('#tenantSelect').value === '${secondTenant}' && document.querySelector('#tenantLabel').textContent.startsWith('Второе')`);
+  workspaceError = { status: 403, code: "account_disabled" };
+  await click("#reloadButton");
+  await until('!document.querySelector("#loginForm").hidden');
+  await check("disabled account clears identity and protected data", `${cleared} && document.querySelector('#sellerEmail').textContent === '' && document.querySelector('#tenantSelect').options.length === 0`);
+  workspaceError = null;
+  await login(); await readyWorkspace();
+  // A pending successful read must not resurrect a logged-out session.
+  empty = true;
+  mutationStatus = 200;
+  holdPath = "/onboarding-workspace";
+  await click('[data-external-id="fixture-missing"] summary');
+  await click('[data-external-id="fixture-missing"] .create');
+  await until('document.querySelector("dialog").open');
+  await click("#decisionConfirm");
+  await waitForHeldReply();
+  const queueReply = heldReply;
+  heldReply = null;
+  await click("#logoutButton");
+  await until('!document.querySelector("#loginForm").hidden');
+  await queueReply();
+  await evaluate('new Promise(resolve=>setTimeout(resolve,100))');
+  await check("late successful queue cannot resurrect logged-out data", cleared);
+  await screenshot("09-access-revoked");
   assert.equal(errors.length, 0, JSON.stringify(errors)); checks++;
   console.log(`${checks} browser checks passed. API FIXTURES ONLY; no database writes. Screenshots: ${output}`);
 } finally {

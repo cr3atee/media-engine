@@ -6,6 +6,7 @@ from datetime import UTC, datetime
 from decimal import Decimal
 from uuid import UUID, uuid4
 
+import pytest
 from fastapi.testclient import TestClient
 from pydantic import SecretStr
 
@@ -31,6 +32,108 @@ PRODUCT_ID = UUID("3a000000-0000-4000-8000-000000002001")
 REVIEWER_ID = UUID("3a000000-0000-4000-8000-000000003001")
 VIEWER_ID = UUID("3a000000-0000-4000-8000-000000003002")
 PASSWORD = "correct horse battery staple"
+
+
+@pytest.mark.parametrize(
+    ("role", "allowed"),
+    [
+        (TenantRole.OWNER, True),
+        (TenantRole.ADMINISTRATOR, True),
+        (TenantRole.REVIEWER, True),
+        (TenantRole.OPERATOR, False),
+        (TenantRole.VIEWER, False),
+    ],
+)
+def test_workspace_roles_do_not_grant_foreign_or_client_claimed_access(
+    role: TenantRole,
+    allowed: bool,
+) -> None:
+    """Verify existing scoped roles directly, never treating tenant admin as global."""
+    provider = _seeded_provider()
+    run_async(_change_reviewer_role(provider, role))
+    client = _client(provider)
+    headers = {
+        **_login_headers(client, "reviewer@example.com"),
+        "X-Role": "admin",
+        "X-Tenant-Role": "owner",
+        "X-Product-Role": "admin",
+    }
+    path = f"/api/v1/tenants/{TENANT_A_ID}/catalog/onboarding-workspace"
+    own = client.get(f"{path}?role=admin&level=4", headers=headers)
+    foreign = client.get(
+        path.replace(str(TENANT_A_ID), str(TENANT_B_ID)), headers=headers
+    )
+    mutation = client.post(
+        f"/api/v1/tenants/{TENANT_A_ID}/catalog/reviews/confirm",
+        headers={**headers, "Idempotency-Key": f"scope-matrix-{role.value}"},
+        json={
+            "marketplace": "ggsel",
+            "external_id": "offer-1",
+            "canonical_product_id": str(PRODUCT_ID),
+        },
+    )
+    assert own.status_code == (200 if allowed else 403)
+    assert mutation.status_code == (200 if allowed else 403)
+    assert foreign.status_code == 404
+    assert foreign.json()["error"]["code"] == "tenant_not_found"
+    if not allowed:
+        assert own.json()["error"]["code"] == "permission_denied"
+        assert mutation.json()["error"]["code"] == "permission_denied"
+
+
+@pytest.mark.parametrize("revoke_membership", [False, True])
+def test_catalog_access_revocation_applies_to_existing_token_and_mutations(
+    revoke_membership: bool,
+) -> None:
+    """An open client's old token must not retain reads or writes after revocation."""
+    provider = _seeded_provider()
+    client = _client(provider)
+    headers = _login_headers(client, "reviewer@example.com")
+    path = f"/api/v1/tenants/{TENANT_A_ID}/catalog"
+    assert (
+        client.get(f"{path}/onboarding-workspace", headers=headers).status_code == 200
+    )
+    if revoke_membership:
+        membership = run_async(
+            provider.memberships.get_by_user_and_tenant(REVIEWER_ID, TENANT_A_ID)
+        )
+        assert membership is not None
+        run_async(
+            provider.memberships.set_active(
+                REVIEWER_ID, TENANT_A_ID, False, membership.version
+            )
+        )
+    else:
+        run_async(_change_reviewer_role(provider, TenantRole.VIEWER))
+    read = client.get(f"{path}/onboarding-workspace", headers=headers)
+    write = client.post(
+        f"{path}/reviews/confirm",
+        headers={**headers, "Idempotency-Key": "revoked-review"},
+        json={
+            "marketplace": "ggsel",
+            "external_id": "offer-1",
+            "canonical_product_id": str(PRODUCT_ID),
+        },
+    )
+    expected = 404 if revoke_membership else 403
+    assert read.status_code == expected
+    assert write.status_code == expected
+    assert not run_async(
+        provider.canonical_offer_decisions.list_for_offer(
+            TENANT_A_ID, "ggsel", "offer-1"
+        )
+    )
+
+
+async def _change_reviewer_role(provider: RepositoryProvider, role: TenantRole) -> None:
+    membership = await provider.memberships.get_by_user_and_tenant(
+        REVIEWER_ID, TENANT_A_ID
+    )
+    assert membership is not None
+    changed = await provider.memberships.update_role(
+        REVIEWER_ID, TENANT_A_ID, role, membership.version
+    )
+    assert changed is not None
 
 
 def test_onboarding_summary_is_complete_and_permission_scoped() -> None:

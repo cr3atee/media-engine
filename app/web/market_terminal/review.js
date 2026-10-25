@@ -71,13 +71,16 @@ const state = {
   pendingMutations: new Map(),
   refreshPromise: null,
   sessionEpoch: 0,
+  workspaceEpoch: 0,
+  queueEpoch: 0,
 };
 
 class ApiRequestError extends Error {
-  constructor(message, status = 0) {
+  constructor(message, status = 0, code = "") {
     super(message);
     this.name = "ApiRequestError";
     this.status = status;
+    this.code = code;
   }
 }
 
@@ -91,7 +94,7 @@ elements.tenantSelect.addEventListener("change", () => {
 });
 
 elements.reloadButton.addEventListener("click", () => {
-  void loadQueues();
+  void selectTenant(elements.tenantSelect.value);
 });
 
 elements.logoutButton.addEventListener("click", () => {
@@ -224,34 +227,38 @@ async function selectTenant(tenantId) {
   if (!tenantId) {
     return;
   }
+  invalidateWorkspace();
+  const workspaceEpoch = state.workspaceEpoch;
+  const sessionEpoch = state.sessionEpoch;
+  const isCurrent = () => workspaceEpoch === state.workspaceEpoch && sessionEpoch === state.sessionEpoch;
   setSessionBusy(true);
   setSessionStatus("Проверка доступа");
   try {
     const context = await requestJson(`/tenants/${encodeURIComponent(tenantId)}/context`);
-    state.activeTenantId = context.tenant_id;
-    state.activeTenant = context;
+    if (!isCurrent()) return;
     elements.tenantSelect.value = context.tenant_id;
     elements.tenantRole.textContent = roleLabel(context.role);
     elements.tenantLabel.textContent = context.tenant_name;
 
     if (!context.permissions.includes("catalog_review")) {
-      elements.permissionSummary.textContent = "Нет права catalog_review";
+      elements.permissionSummary.textContent = "В этом пространстве вам недоступна проверка каталога.";
       elements.reviewWorkspace.hidden = true;
       setSessionStatus("Недостаточно прав", true);
       return;
     }
 
+    state.activeTenantId = context.tenant_id;
+    state.activeTenant = context;
     elements.permissionSummary.textContent = "Проверка каталога разрешена";
     elements.reviewWorkspace.hidden = false;
     await loadQueues();
   } catch (error) {
-    state.activeTenantId = null;
-    state.activeTenant = null;
-    elements.reviewWorkspace.hidden = true;
+    if (!isCurrent()) return;
+    if (handleAccessLoss(error)) return;
     elements.permissionSummary.textContent = errorMessage(error);
     setSessionStatus("Ошибка доступа", true);
   } finally {
-    setSessionBusy(false);
+    if (isCurrent()) setSessionBusy(false);
   }
 }
 
@@ -261,6 +268,9 @@ async function loadQueues() {
   }
   const tenantId = state.activeTenantId;
   const sessionEpoch = state.sessionEpoch;
+  const workspaceEpoch = state.workspaceEpoch;
+  const queueEpoch = ++state.queueEpoch;
+  const isCurrent = () => sessionEpoch === state.sessionEpoch && workspaceEpoch === state.workspaceEpoch && queueEpoch === state.queueEpoch && tenantId === state.activeTenantId;
   setWorkspaceBusy(true);
   setWorkspaceMessage("Обновляем очереди…");
   try {
@@ -268,12 +278,7 @@ async function loadQueues() {
     const workspace = await requestJson(
       `/tenants/${tenant}/catalog/onboarding-workspace?limit=100`,
     );
-    if (
-      sessionEpoch !== state.sessionEpoch ||
-      tenantId !== state.activeTenantId
-    ) {
-      return;
-    }
+    if (!isCurrent()) return;
     state.onboardingSummary = workspace.summary;
     state.candidates = workspace.review_candidates;
     state.proposals = workspace.product_proposals;
@@ -283,10 +288,12 @@ async function loadQueues() {
     setWorkspaceMessage(onboardingSummaryMessage(workspace.summary));
     setSessionStatus("Данные актуальны");
   } catch (error) {
+    if (!isCurrent()) return;
+    if (handleAccessLoss(error)) return;
     setWorkspaceMessage(errorMessage(error), true);
     setSessionStatus("Ошибка загрузки", true);
   } finally {
-    setWorkspaceBusy(false);
+    if (isCurrent()) setWorkspaceBusy(false);
   }
 }
 
@@ -627,18 +634,24 @@ async function handleProposalAction(event) {
 }
 
 async function runCatalogMutation(card, identity, endpoint, payload, successMessage) {
+  const workspaceEpoch = state.workspaceEpoch;
+  const sessionEpoch = state.sessionEpoch;
+  const isCurrent = () => workspaceEpoch === state.workspaceEpoch && sessionEpoch === state.sessionEpoch;
   setCardBusy(card, true);
   setCardMessage(card, "");
   setWorkspaceMessage("Сохраняем решение…");
   try {
     await executeMutation(identity, endpoint, payload);
+    if (!isCurrent()) return;
     setWorkspaceMessage(successMessage);
     await loadQueues();
   } catch (error) {
+    if (!isCurrent()) return;
+    if (handleAccessLoss(error)) return;
     setCardMessage(card, errorMessage(error));
     setWorkspaceMessage(errorMessage(error), true);
   } finally {
-    setCardBusy(card, false);
+    if (isCurrent() && card.isConnected) setCardBusy(card, false);
   }
 }
 
@@ -680,6 +693,8 @@ async function confirmDecision(card, action, reason) {
 }
 
 async function executeMutation(identity, endpoint, payload) {
+  // Identical marketplace IDs in different workspaces must never share retries.
+  identity = `${state.activeTenantId}:${identity}`;
   const fingerprint = JSON.stringify(payload);
   const pending = state.pendingMutations.get(identity);
   if (pending && pending.fingerprint !== fingerprint) {
@@ -688,7 +703,8 @@ async function executeMutation(identity, endpoint, payload) {
     );
   }
   const idempotencyKey = pending?.idempotencyKey || createIdempotencyKey();
-  state.pendingMutations.set(identity, { fingerprint, idempotencyKey });
+  const attempt = { fingerprint, idempotencyKey };
+  state.pendingMutations.set(identity, attempt);
   try {
     const result = await requestJson(
       `/tenants/${encodeURIComponent(state.activeTenantId)}${endpoint}`,
@@ -698,10 +714,10 @@ async function executeMutation(identity, endpoint, payload) {
         body: JSON.stringify(payload),
       },
     );
-    state.pendingMutations.delete(identity);
+    if (state.pendingMutations.get(identity) === attempt) state.pendingMutations.delete(identity);
     return result;
   } catch (error) {
-    if (error instanceof ApiRequestError && error.status > 0 && error.status < 500) {
+    if (state.pendingMutations.get(identity) === attempt && error instanceof ApiRequestError && error.status > 0 && error.status < 500) {
       state.pendingMutations.delete(identity);
     }
     throw error;
@@ -710,7 +726,10 @@ async function executeMutation(identity, endpoint, payload) {
 
 async function logout() {
   const refreshToken = state.refreshToken;
+  clearSession("Сессия завершена");
+  const sessionEpoch = state.sessionEpoch;
   setSessionBusy(true);
+  setLoginBusy(true);
   try {
     if (refreshToken) {
       await requestJson(
@@ -723,14 +742,19 @@ async function logout() {
       );
     }
   } catch (error) {
-    setWorkspaceMessage(errorMessage(error), true);
+    if (sessionEpoch === state.sessionEpoch) {
+      setLoginMessage("Вы вышли из кабинета на этом устройстве. Серверный отзыв сессии не подтверждён из-за ошибки запроса.", true);
+    }
   } finally {
-    clearSession("Сессия завершена");
-    setSessionBusy(false);
+    if (sessionEpoch === state.sessionEpoch) {
+      setSessionBusy(false);
+      setLoginBusy(false);
+    }
   }
 }
 
 async function requestJson(path, options = {}, configuration = {}) {
+  const sessionEpoch = state.sessionEpoch;
   const authenticated = configuration.authenticated !== false;
   const retryAuthentication = configuration.retryAuthentication !== false;
   const headers = new Headers(options.headers || {});
@@ -766,11 +790,17 @@ async function requestJson(path, options = {}, configuration = {}) {
     retryAuthentication &&
     state.refreshToken
   ) {
+    if (sessionEpoch !== state.sessionEpoch) {
+      throw new ApiRequestError("Сессия завершена. Войдите снова.", 401);
+    }
     try {
       await refreshSession();
     } catch {
-      clearSession("Сессия истекла. Войдите снова.");
+      if (sessionEpoch === state.sessionEpoch) clearSession("Сессия истекла. Войдите снова.");
       throw new ApiRequestError("Сессия истекла. Войдите снова.", 401);
+    }
+    if (sessionEpoch !== state.sessionEpoch) {
+      throw new ApiRequestError("Сессия завершена. Войдите снова.", 401);
     }
     return requestJson(path, options, {
       authenticated: true,
@@ -781,7 +811,7 @@ async function requestJson(path, options = {}, configuration = {}) {
   const text = await response.text();
   const body = parseJson(text, response.headers.get("content-type") || "");
   if (!response.ok) {
-    throw new ApiRequestError(apiErrorMessage(body, response.status), response.status);
+    throw new ApiRequestError(apiErrorMessage(body, response.status), response.status, body?.error?.code || "");
   }
   return body;
 }
@@ -820,12 +850,7 @@ function clearSession(message) {
   state.accessToken = null;
   state.refreshToken = null;
   state.memberships = [];
-  state.activeTenantId = null;
-  state.activeTenant = null;
-  state.onboardingSummary = null;
-  state.candidates = [];
-  state.proposals = [];
-  resetQueueFilters();
+  invalidateWorkspace();
   state.pendingMutations.clear();
   state.refreshPromise = null;
   document.body.classList.remove("review-authenticated");
@@ -833,9 +858,53 @@ function clearSession(message) {
   elements.sessionPanel.hidden = true;
   elements.reviewWorkspace.hidden = true;
   elements.loginForm.reset();
+  elements.sellerName.textContent = "Продавец";
+  elements.sellerEmail.textContent = "";
+  elements.tenantSelect.replaceChildren();
   setLoginMessage(message);
   setSessionStatus("Требуется вход");
   renderEmptyQueues();
+}
+
+/** Drop protected data immediately, including any open confirmation dialog. */
+function invalidateWorkspace() {
+  state.workspaceEpoch += 1;
+  state.queueEpoch += 1;
+  state.activeTenantId = null;
+  state.activeTenant = null;
+  state.onboardingSummary = null;
+  state.candidates = [];
+  state.proposals = [];
+  const dialog = document.querySelector("#decisionDialog");
+  if (dialog.open) dialog.close("cancel");
+  for (const id of ["decisionSource", "decisionSourceId", "decisionTarget", "decisionTargetId", "decisionFacts"]) {
+    document.getElementById(id).textContent = "";
+  }
+  resetQueueFilters();
+  renderEmptyQueues();
+  elements.reviewWorkspace.hidden = true;
+  elements.tenantRole.textContent = "—";
+  elements.permissionSummary.textContent = "Проверка прав";
+  setWorkspaceMessage("");
+  setWorkspaceBusy(false);
+  setSessionBusy(false);
+}
+
+function handleAccessLoss(error) {
+  if (!(error instanceof ApiRequestError)) return false;
+  if (error.status === 401 || error.code === "account_disabled") {
+    clearSession("Доступ к аккаунту изменился. Войдите снова.");
+    setLoginMessage("Доступ к аккаунту изменился. Войдите снова.", true);
+    return true;
+  }
+  if (error.status === 403 || error.code === "tenant_not_found") {
+    invalidateWorkspace();
+    elements.permissionSummary.textContent = "Права доступа изменились. Выберите доступное пространство или обновите доступ.";
+    setSessionStatus("Доступ изменился", true);
+    elements.tenantSelect.focus();
+    return true;
+  }
+  return false;
 }
 
 function renderEmptyQueues() {
@@ -984,8 +1053,9 @@ function decisionLabel(decision) {
 function roleLabel(role) {
   return {
     owner: "Владелец",
-    admin: "Администратор",
+    administrator: "Администратор пространства",
     reviewer: "Ревьюер",
+    operator: "Оператор",
     viewer: "Наблюдатель",
   }[role] || role;
 }
@@ -1068,6 +1138,7 @@ function apiErrorMessage(body, status) {
     invalid_credentials: "Неверная почта или пароль.",
     authentication_unavailable: "Вход временно недоступен.",
     token_revoked: "Сессия завершена. Войдите снова.",
+    account_disabled: "Доступ к аккаунту отключён.",
     tenant_not_found: "Рабочее пространство недоступно.",
     permission_denied: "Недостаточно прав для этого действия.",
     idempotency_conflict: "Запрос изменился. Обновите очередь и повторите решение.",

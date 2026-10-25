@@ -43,7 +43,7 @@ Native browser zoom is restored and test tabs are closed on completion.
 
 ### Results
 
-- Review browser: **42 checks passed**. Login errors, permissions, filtering,
+- Review browser: **55 checks passed**. Login errors, permissions, filtering,
   exact target, escaped titles, safe source links, optional/required facts,
   cancel without submission, keyboard dialog, 409 conflict, 503 retry with
   identical idempotency key, changed ambiguous payload refusal, refresh,
@@ -51,7 +51,7 @@ Native browser zoom is restored and test tabs are closed on completion.
 - Desktop, 800/390/320 px, native 200% browser zoom and reduced motion passed.
   No runtime/CSP errors. Desktop, mobile and zoom screenshots visually inspected.
 - Existing preview + working public catalog: **99 checks passed**, GET only.
-- Full Pytest: **570 passed, 58 skipped**. Existing optional integration skips
+- Full Pytest: **577 passed, 58 skipped**. Existing optional integration skips
   remain; this run does not establish that those skipped checks passed.
 - Full MyPy with `--explicit-package-bases app scripts tests`: **452 files passed**.
 - Ruff and Ruff format check: changed Python test file passed. Ruff does not
@@ -74,3 +74,31 @@ Existing owner/admin/reviewer/viewer memberships retain their existing meaning.
 Public asset licensing/release review and final integrated acceptance remain.
 The real queue is already completed, so this pass intentionally did not perform
 new real catalog mutations; browser mutation coverage is fixture-based.
+
+## Access-revocation follow-up
+
+The working cabinet now clears protected state and dialog contents when the API
+returns permission denial, `tenant_not_found`, or account disablement. A missing
+individual product is not confused with removal of workspace access. Reload
+revalidates the context; switching workspaces clears the previous form before
+the new response arrives. Context, queue and mutation responses are guarded by
+session/workspace generations, including stale failure responses. Logout clears
+local identity immediately, without waiting for the network; failed server
+revocation is reported rather than claimed successful. Existing administrator
+and operator workspace roles have accurate Russian labels, not global-role labels.
+
+Retry keys are scoped by tenant as well as action identity. Switching to another
+authorized tenant cannot reuse the first tenant's key for identical marketplace
+IDs. Existing idempotency behavior within a tenant remains unchanged.
+
+New browser fixtures exercise read/write revocation, inaccessible tenant,
+missing object, account disablement, delayed context and mutation responses,
+tenant-specific retry keys and a successful queue response arriving after logout.
+All fixture API calls are intercepted; no user decisions or roles are changed.
+
+Seven additional direct API cases cover all five existing workspace roles,
+ignored client-supplied role headers/query parameters, foreign-tenant denial,
+and revocation of reads and writes for an already-issued access token. The
+revocation cases verify that no decision was persisted. Focused auth/catalog/UI
+test run: **26 passed**. These tests use isolated memory repositories and do not
+claim a new PostgreSQL permissions migration or four-product-role implementation.
