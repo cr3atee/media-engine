@@ -216,7 +216,7 @@ def test_market_terminal_catalog_review_workspace_is_served() -> None:
         assert 'id="reviewCandidates"' in response.text
         assert 'id="productProposals"' in response.text
         assert 'aria-busy="false"' in response.text
-        assert "/terminal/styles.css" in response.text
+        assert "/terminal/preview/preview.css" in response.text
         assert "/terminal/review.css" in response.text
         assert "/terminal/review.js" in response.text
 
@@ -256,8 +256,8 @@ def test_market_terminal_catalog_review_assets_are_served() -> None:
     assert "function queueItemMatches(item)" in script.text
     assert "function paginate(items, requestedPage, pageSize)" in script.text
     assert "const proposalPageSize = 9;" in script.text
-    assert "const sourceLink = externalLinkHtml(proposal.offer_url);" in script.text
-    assert script.text.count("${sourceLink}") == 2
+    assert "${externalLinkHtml(proposal.offer_url)}" in script.text
+    assert "${externalLinkHtml(candidate.offer_url)}" in script.text
     assert "card.dataset.canonicalProductName" in script.text
     assert "Связать объявление с каноническим товаром" in script.text
     assert "Для нового товара поле необязательно" in script.text
@@ -272,3 +272,27 @@ def test_market_terminal_catalog_review_assets_are_served() -> None:
     assert "state.refreshPromise" in script.text
     assert "localStorage" not in script.text
     assert "sessionStorage" not in script.text
+
+
+def test_review_uses_shared_presentation_and_explicit_pair_confirmation() -> None:
+    """Protect the real cabinet's confirmation and locally scoped error feedback."""
+    client = _client()
+    page = client.get("/terminal/review").text
+    script = client.get("/terminal/review.js").text
+    styles = client.get("/terminal/review.css").text
+
+    assert 'id="decisionDialog"' in page
+    assert 'aria-labelledby="decisionDialogTitle"' in page
+    assert 'id="decisionSource"' in page
+    assert 'id="decisionTargetId"' in page
+    assert 'value="cancel" autofocus' in page
+    assert 'src="/terminal/review.js" type="module"' in page
+    assert 'from "/terminal/preview/presentation.js"' in script
+    assert "window.confirm" not in script
+    assert "async function confirmDecision(card, action, reason)" in script
+    assert "tenantId === state.activeTenantId" in script
+    assert "sessionEpoch === state.sessionEpoch" in script
+    assert "setCardMessage(card, errorMessage(error))" in script
+    assert 'control.dataset.previouslyDisabled === "true"' in script
+    assert "prefers-reduced-motion: reduce" in styles
+    assert "text-overflow: ellipsis" not in styles

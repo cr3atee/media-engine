@@ -1,3 +1,7 @@
+import { brandMark, handleImageError } from "/terminal/preview/presentation.js";
+
+document.addEventListener("error", handleImageError, true);
+
 const api = "/api/v1";
 const requestTimeoutMs = 15_000;
 const candidatePageSize = 6;
@@ -141,6 +145,20 @@ elements.proposalList.addEventListener("click", (event) => {
 });
 
 renderEmptyQueues();
+
+document.querySelector("#decisionDialog").addEventListener("keydown", (event) => {
+  if (event.key !== "Tab") return;
+  const buttons = event.currentTarget.querySelectorAll("button:not(:disabled)");
+  const first = buttons[0];
+  const last = buttons[buttons.length - 1];
+  if (event.shiftKey && document.activeElement === first) {
+    event.preventDefault();
+    last.focus();
+  } else if (!event.shiftKey && document.activeElement === last) {
+    event.preventDefault();
+    first.focus();
+  }
+});
 
 async function login() {
   const email = elements.emailInput.value.trim();
@@ -418,25 +436,31 @@ function candidateCard(candidate) {
   card.dataset.marketplace = candidate.marketplace;
   card.dataset.externalId = candidate.external_id;
   card.dataset.canonicalProductId = candidate.canonical_product_id;
+  card.dataset.canonicalProductName = candidate.canonical_product_name;
+  card.dataset.offerTitle = candidate.offer_title;
   card.innerHTML = `
+    <div class="review-source">
     <div class="review-card-header">
       <div>
-        <span class="review-card-kicker">${escapeHtml(candidate.marketplace)}</span>
+        <span class="review-card-kicker">${brandMark(candidate.marketplace)} Объявление · ${escapeHtml(candidate.marketplace)}</span>
         <h3>${escapeHtml(candidate.offer_title)}</h3>
       </div>
-      <span class="confidence-badge">${formatSimilarity(candidate.similarity)}</span>
+      <span class="confidence-badge">Сходство ${formatSimilarity(candidate.similarity)}</span>
     </div>
     <div class="review-facts">
       ${factHtml("Цена", money(candidate.offer_price, candidate.currency))}
       ${factHtml("ID объявления", candidate.external_id)}
       ${factHtml("Решение", decisionLabel(candidate.match_decision))}
     </div>
+    ${externalLinkHtml(candidate.offer_url)}
+    </div>
     <div class="candidate-link">
       <span>
+        <span class="review-card-kicker">Товар каталога для связи</span>
         <strong>${escapeHtml(candidate.canonical_product_name)}</strong>
         <small>${escapeHtml(candidate.canonical_product_category || "Категория не задана")}</small>
+        <small>ID: ${escapeHtml(candidate.canonical_product_id)}</small>
       </span>
-      ${externalLinkHtml(candidate.offer_url)}
     </div>
     <details class="decision-details">
       <summary>Принять решение</summary>
@@ -452,6 +476,7 @@ function candidateCard(candidate) {
         </div>
       </div>
     </details>
+    <p class="card-message" role="status" aria-live="polite"></p>
   `;
   return card;
 }
@@ -496,18 +521,22 @@ function proposalCard(proposal) {
   card.dataset.externalId = proposal.external_id;
   card.dataset.canonicalProductId = nearestId;
   card.dataset.canonicalProductName = proposal.nearest_canonical_product_name || "";
+  card.dataset.offerTitle = proposal.proposed_name;
   card.innerHTML = `
+    <div class="review-source">
     <div class="review-card-header">
       <div>
-        <span class="review-card-kicker">${escapeHtml(proposal.marketplace)}</span>
+        <span class="review-card-kicker">${brandMark(proposal.marketplace)} Объявление · ${escapeHtml(proposal.marketplace)}</span>
         <h3>${escapeHtml(proposal.proposed_name)}</h3>
       </div>
-      <span class="confidence-badge">${formatSimilarity(proposal.nearest_similarity)}</span>
+      <span class="confidence-badge">Сходство ${formatSimilarity(proposal.nearest_similarity)}</span>
     </div>
     <div class="review-facts">
       ${factHtml("Цена", money(proposal.offer_price, proposal.currency))}
       ${factHtml("ID объявления", proposal.external_id)}
       ${factHtml("Решение", decisionLabel(proposal.match_decision))}
+    </div>
+    ${externalLinkHtml(proposal.offer_url)}
     </div>
     ${proposalCandidateHtml(proposal)}
     <details class="decision-details">
@@ -524,6 +553,7 @@ function proposalCard(proposal) {
         </div>
       </div>
     </details>
+    <p class="card-message" role="status" aria-live="polite"></p>
   `;
   return card;
 }
@@ -540,10 +570,11 @@ async function handleCandidateAction(event) {
   const reason = card.querySelector(".review-reason").value.trim();
   const action = button.dataset.action;
   if (action === "reject-candidate" && !reason) {
-    setWorkspaceMessage("Для отклонения укажите проверенную причину.", true);
+    setCardMessage(card, "Для отклонения укажите проверенную причину.");
     card.querySelector(".review-reason").focus();
     return;
   }
+  if (!await confirmDecision(card, action, reason)) return;
   const endpoint = action === "confirm-candidate" ? "confirm" : "reject";
   const payload = {
     marketplace: card.dataset.marketplace,
@@ -573,18 +604,11 @@ async function handleProposalAction(event) {
   const action = button.dataset.action;
   const reason = card.querySelector(".review-reason").value.trim();
   if (action === "resolve-existing" && !reason) {
-    setWorkspaceMessage("Для существующего товара укажите проверенные факты.", true);
+    setCardMessage(card, "Для существующего товара укажите проверенные факты.");
     card.querySelector(".review-reason").focus();
     return;
   }
-  if (
-    action === "resolve-existing" &&
-    !window.confirm(
-      `Связать объявление с каноническим товаром «${card.dataset.canonicalProductName}»?`,
-    )
-  ) {
-    return;
-  }
+  if (!await confirmDecision(card, action, reason)) return;
   const base = `/catalog/product-proposals/${encodeURIComponent(card.dataset.proposalId)}`;
   const payload = {
     marketplace: card.dataset.marketplace,
@@ -604,16 +628,55 @@ async function handleProposalAction(event) {
 
 async function runCatalogMutation(card, identity, endpoint, payload, successMessage) {
   setCardBusy(card, true);
+  setCardMessage(card, "");
   setWorkspaceMessage("Сохраняем решение…");
   try {
     await executeMutation(identity, endpoint, payload);
     setWorkspaceMessage(successMessage);
     await loadQueues();
   } catch (error) {
+    setCardMessage(card, errorMessage(error));
     setWorkspaceMessage(errorMessage(error), true);
   } finally {
     setCardBusy(card, false);
   }
+}
+
+function setCardMessage(card, message) {
+  card.querySelector(".card-message").textContent = message;
+}
+
+/** Confirm the exact pair, without sending or changing any request payload. */
+async function confirmDecision(card, action, reason) {
+  const dialog = document.querySelector("#decisionDialog");
+  if (dialog.open) return false;
+  const tenantId = state.activeTenantId;
+  const sessionEpoch = state.sessionEpoch;
+  const opener = document.activeElement;
+  const creating = action === "create-product";
+  const rejecting = action === "reject-candidate";
+  document.querySelector("#decisionDialogTitle").textContent = creating
+    ? "Создать новый товар?" : rejecting ? "Отклонить эту пару?" : "Связать объявление с товаром?";
+  document.querySelector("#decisionDialogHint").textContent = creating
+    ? "Будет создан отдельный товар с названием объявления. Проверьте, нет ли его уже в каталоге."
+    : rejecting ? "Эта пара будет отклонена. Исходное объявление не удаляется."
+      : "Связать объявление с каноническим товаром ниже. Совпадения названий недостаточно: проверьте условия на площадке.";
+  document.querySelector("#decisionSource").textContent = card.dataset.offerTitle;
+  document.querySelector("#decisionSourceId").textContent = `${card.dataset.marketplace} · ID ${card.dataset.externalId}`;
+  document.querySelector("#decisionTargetLabel").textContent = creating ? "Новый товар" : "Товар каталога";
+  document.querySelector("#decisionTarget").textContent = creating ? card.dataset.offerTitle : card.dataset.canonicalProductName;
+  document.querySelector("#decisionTargetId").textContent = creating ? "Будет создан после подтверждения" : `ID ${card.dataset.canonicalProductId}`;
+  document.querySelector("#decisionFacts").textContent = reason ? `Ваши факты: ${reason}` : "Комментарий не добавлен.";
+  document.querySelector("#decisionConfirm").textContent = creating ? "Создать товар" : rejecting ? "Отклонить пару" : "Подтвердить связь";
+  dialog.returnValue = "cancel";
+  const confirmed = new Promise((resolve) => {
+    dialog.addEventListener("close", () => {
+      if (opener?.isConnected) opener.focus();
+      resolve(dialog.returnValue === "confirm");
+    }, { once: true });
+  });
+  dialog.showModal();
+  return await confirmed && card.isConnected && tenantId === state.activeTenantId && sessionEpoch === state.sessionEpoch;
 }
 
 async function executeMutation(identity, endpoint, payload) {
@@ -825,7 +888,7 @@ function marketplaceProgressCard(summary) {
   card.className = "marketplace-progress-card";
 
   const heading = document.createElement("strong");
-  heading.textContent = summary.marketplace.toUpperCase();
+  heading.innerHTML = `${brandMark(summary.marketplace)} ${escapeHtml(summary.marketplace.toUpperCase())}`;
   const counts = document.createElement("span");
   counts.textContent = `${summary.linked_offers} из ${summary.total_offers} связано`;
   const pending = document.createElement("small");
@@ -836,7 +899,6 @@ function marketplaceProgressCard(summary) {
 }
 
 function proposalCandidateHtml(proposal) {
-  const sourceLink = externalLinkHtml(proposal.offer_url);
   if (!proposal.nearest_canonical_product_id) {
     return `
       <div class="candidate-link missing">
@@ -844,17 +906,17 @@ function proposalCandidateHtml(proposal) {
           <strong>Похожий товар не найден</strong>
           <small>Доступно только создание нового канонического товара.</small>
         </span>
-        ${sourceLink}
       </div>
     `;
   }
   return `
     <div class="candidate-link">
       <span>
+        <span class="review-card-kicker">Товар каталога для связи</span>
         <strong>${escapeHtml(proposal.nearest_canonical_product_name)}</strong>
         <small>Целевой товар для связи · сходство ${formatSimilarity(proposal.nearest_similarity)}</small>
+        <small>ID: ${escapeHtml(proposal.nearest_canonical_product_id)}</small>
       </span>
-      ${sourceLink}
     </div>
   `;
 }
@@ -958,7 +1020,8 @@ function setWorkspaceBusy(isBusy) {
 
 function setCardBusy(card, isBusy) {
   for (const control of card.querySelectorAll("button, textarea")) {
-    control.disabled = isBusy;
+    if (isBusy) control.dataset.previouslyDisabled = String(control.disabled);
+    control.disabled = isBusy || control.dataset.previouslyDisabled === "true";
   }
 }
 

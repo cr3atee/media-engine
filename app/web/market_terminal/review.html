@@ -4,7 +4,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Проверка каталога | Market Terminal</title>
-    <link rel="stylesheet" href="/terminal/styles.css" />
+    <link rel="stylesheet" href="/terminal/preview/preview.css" />
     <link rel="stylesheet" href="/terminal/review.css" />
   </head>
   <body class="review-page">
@@ -55,10 +55,7 @@
         <form class="login-card" id="loginForm">
           <div>
             <h2>Вход продавца</h2>
-            <p class="form-hint">
-              Токены живут только в памяти этой вкладки и удаляются при выходе
-              или обновлении страницы.
-            </p>
+            <p class="form-hint">Войдите, чтобы проверить объявления и связать их с товарами каталога.</p>
           </div>
           <label for="emailInput">
             <span>Электронная почта</span>
@@ -133,6 +130,8 @@
           </div>
         </header>
 
+        <details class="workspace-overview">
+        <summary>Статистика и прогресс каталога</summary>
         <dl class="review-metrics" aria-label="Состояние очередей">
           <div class="review-metric">
             <dt>Все объявления</dt>
@@ -183,6 +182,7 @@
           id="marketplaceProgress"
           aria-label="Прогресс по маркетплейсам"
         ></div>
+        </details>
 
         <p
           class="workspace-message"
@@ -231,8 +231,8 @@
               <span class="queue-marker">Проверка</span>
             </div>
             <p class="panel-copy">
-              Здесь появляются пары внутри действующего review-порога. Решение
-              фиксируется как неизменяемое доказательство.
+              Сравните объявление слева с товаром справа. Проверьте платформу,
+              издание и способ получения перед подтверждением связи.
             </p>
             <div
               class="review-list"
@@ -295,6 +295,21 @@
       </section>
     </main>
 
-    <script src="/terminal/review.js" defer></script>
+    <dialog id="decisionDialog" aria-labelledby="decisionDialogTitle" aria-describedby="decisionDialogHint">
+      <form method="dialog">
+        <h2 id="decisionDialogTitle">Подтвердить решение</h2>
+        <p id="decisionDialogHint" class="form-hint"></p>
+        <dl class="confirmation-pair">
+          <div><dt>Объявление</dt><dd id="decisionSource"></dd><small id="decisionSourceId"></small></div>
+          <div><dt id="decisionTargetLabel">Товар каталога</dt><dd id="decisionTarget"></dd><small id="decisionTargetId"></small></div>
+        </dl>
+        <p id="decisionFacts" class="confirmation-facts"></p>
+        <div class="review-actions">
+          <button class="ghost-button" value="cancel" autofocus>Вернуться</button>
+          <button class="primary-button" id="decisionConfirm" value="confirm">Подтвердить</button>
+        </div>
+      </form>
+    </dialog>
+    <script src="/terminal/review.js" type="module"></script>
   </body>
 </html>
