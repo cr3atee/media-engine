@@ -1,4 +1,5 @@
 /** Read-only design preview. Role switches and review actions never grant access or write data. */
+import { artwork, brands, brandMark, escapeHtml, handleImageError, infoFor, offerFootprint, productImage, money } from "./presentation.js";
 const root = "/terminal/preview";
 const api = "/api/v1/public";
 const main = document.querySelector("#main");
@@ -6,19 +7,11 @@ const dialog = document.querySelector("#infoDialog");
 const dialogBody = document.querySelector("#dialogBody");
 const searchInput = document.querySelector("#searchInput");
 const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
-const brands = { ggsel: "GGSEL", playerok: "Playerok", funpay: "FunPay" };
-const brandAssets = { ggsel: "ggsel.ico", playerok: "playerok.svg", funpay: "funpay.ico" };
 const roles = {
   user: ["Пользователь", "Каталог, поиск, сравнение предложений и переход на площадку."],
   partner: ["Партнёр", "Работа со своими объявлениями и источниками в своём рабочем пространстве."],
   moderator: ["Модератор", "Проверка соответствий и решений по каталогу в разрешённом рабочем пространстве."],
   admin: ["Админ", "Управление доступом и просмотр технических ошибок с отдельным серверным разрешением."],
-};
-
-// Editorial titles are limited to these reviewed local records. They never alter domain data.
-const artwork = {
-  "7c862a70-5619-5b6d-a2aa-798560d29f18": { title: "Minecraft", subtitle: "Java & Bedrock Edition · PC", label: "PC", image: "minecraft-pc.jpg", alt: "Minecraft: Java & Bedrock Edition для PC, обложка Microsoft Store" },
-  "9a520758-e499-5837-90bb-9e6b67d7a591": { title: "Minecraft", subtitle: "Активация промокодом · iOS", label: "iOS", image: "minecraft-ios.jpg", alt: "Minecraft для iOS, иконка приложения Mojang из App Store" },
 };
 
 let activeRequest;
@@ -32,27 +25,9 @@ let reviewProduct;
 let reviewSelection = 0;
 let catalogCache;
 
-function escapeHtml(value) {
-  return String(value ?? "").replace(/[&<>"']/g, (char) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[char]);
-}
-
 function link(params = {}) {
   const query = new URLSearchParams(params);
   return `${root}${query.size ? `?${query}` : ""}`;
-}
-
-function brandMark(marketplace) {
-  const known = Object.hasOwn(brands, marketplace);
-  const name = known ? brands[marketplace] : marketplace;
-  return `<span class="market-mark ${known ? marketplace : "image-unavailable"}" role="img" aria-label="${escapeHtml(name)}" title="${escapeHtml(name)}">${known ? `<img src="${root}/${brandAssets[marketplace]}" alt="" width="28" height="28" class="market-logo">` : ""}<span class="logo-fallback" aria-hidden="true">${escapeHtml(name)}</span></span>`;
-}
-
-function offerFootprint(product) {
-  const marketplaces = [...new Set(Array.isArray(product.marketplaces) ? product.marketplaces : [])];
-  const countLabel = plural(product.offer_count, ["предложение", "предложения", "предложений"]);
-  return `<div class="offer-footprint"><div class="marketplace-logos">${marketplaces.map(brandMark).join("")}</div>
-    <span class="offer-count" role="img" aria-label="${escapeHtml(countLabel)}" title="${escapeHtml(countLabel)}"><svg viewBox="0 0 20 20" aria-hidden="true"><rect x="6" y="6" width="11" height="11" rx="2"/><path d="M3 13V5a2 2 0 0 1 2-2h8"/></svg><span aria-hidden="true">${escapeHtml(product.offer_count)}</span></span>
-  </div>`;
 }
 
 function marketplaceName(value) {
@@ -69,30 +44,6 @@ function safeSource(value) {
   }
 }
 
-function money(offer) {
-  if (offer.price === null || offer.price === undefined || offer.price === "") return "Цена не указана";
-  const value = Number(offer.price);
-  if (!Number.isFinite(value) || value < 0) return "Цена не указана";
-  if (!offer.currency) return `${new Intl.NumberFormat("ru-RU").format(value)} · валюта не указана`;
-  try {
-    return new Intl.NumberFormat("ru-RU", { style: "currency", currency: offer.currency, maximumFractionDigits: 2 }).format(value);
-  } catch {
-    return `${new Intl.NumberFormat("ru-RU").format(value)} ${offer.currency}`;
-  }
-}
-
-function plural(value, forms) {
-  const category = new Intl.PluralRules("ru-RU").select(value);
-  return `${value} ${forms[{ one: 0, few: 1, many: 2, other: 2 }[category]]}`;
-}
-
-function infoFor(product) {
-  return artwork[product.id] ?? { title: product.name, subtitle: product.category ?? "Цифровой товар", label: "Товар", image: "product-placeholder.svg", alt: "Изображение товара отсутствует" };
-}
-
-function productImage(art, className = "", size = 512, lazy = false) {
-  return `<img class="product-art ${className}" src="${root}/${art.image}" width="${size}" height="${size}" alt="${escapeHtml(art.alt)}" ${lazy ? 'loading="lazy"' : ""} decoding="async">`;
-}
 
 async function getJson(path, signal) {
   const response = await fetch(`${api}${path}`, { signal, headers: { Accept: "application/json" } });
@@ -372,21 +323,7 @@ dialog.addEventListener("keydown", (event) => {
     first.focus();
   }
 });
-document.addEventListener("error", (event) => {
-  const image = event.target;
-  if (!(image instanceof HTMLImageElement)) return;
-  if (image.classList.contains("market-logo")) {
-    image.hidden = true;
-    image.parentElement.classList.add("image-unavailable");
-  } else if (image.classList.contains("product-art")) {
-    image.alt = "Изображение товара недоступно";
-    if (image.getAttribute("src") !== `${root}/product-placeholder.svg`) {
-      image.src = `${root}/product-placeholder.svg`;
-    } else {
-      image.classList.add("art-unavailable");
-    }
-  }
-}, true);
+document.addEventListener("error", handleImageError, true);
 document.addEventListener("click", (event) => {
   const anchor = event.target.closest("a[data-nav]");
   if (anchor && !event.ctrlKey && !event.metaKey && !event.shiftKey && !event.altKey && event.button === 0) {

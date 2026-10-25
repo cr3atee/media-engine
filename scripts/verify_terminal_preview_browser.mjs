@@ -117,6 +117,17 @@ async function setBrowserZoom(factor) {
   await send("Page.bringToFront");
 }
 
+async function catalogReady() {
+  await until('document.querySelector(".shell")?.getAttribute("aria-busy") === "false"');
+  await evaluate("document.fonts.ready.then(() => true)");
+}
+
+async function workingCatalog(query = "") {
+  await send("Page.navigate", { url: `${base}/terminal${query}` });
+  await new Promise(resolve => setTimeout(resolve, 200));
+  await catalogReady();
+}
+
 try {
   await send("Page.enable");
   await send("Runtime.enable");
@@ -321,6 +332,95 @@ try {
   await check("200-percent dialog fits viewport and scrolls vertically", '(() => {const el=document.querySelector("dialog");const r=el.getBoundingClientRect();return r.left>=0 && r.right<=innerWidth && r.top>=0 && r.bottom<=innerHeight+1 && el.scrollWidth<=el.clientWidth;})()');
   await screenshot("13-native-zoom-dialog");
   await press("Escape", "Escape", 27);
+  await setBrowserZoom(originalZoom);
+  await size(1440);
+  await workingCatalog();
+  await check("working catalog uses real products without preview tools", 'document.querySelectorAll(".product-card").length===2 && !document.querySelector("#previewTools") && !document.querySelector("#profileButton") && document.querySelector("#details").hidden');
+  await check("working catalog has local official artwork", '[...document.querySelectorAll(".product-art")].every(img=>img.complete && img.naturalWidth>0 && img.src.startsWith(location.origin))');
+  await check("working catalog starts above fold", 'document.querySelector(".product-card").getBoundingClientRect().top<innerHeight-120');
+  await screenshot("14-working-catalog");
+  await click("#filtersButton");
+  await check("working filters expose previous sort and price controls", '!document.querySelector("#catalogFilters").hidden && document.querySelectorAll("#sortFilter option").length===4');
+  await evaluate('document.querySelector("#minPriceInput").value="100";document.querySelector("#maxPriceInput").value="10"');
+  await click('#catalogFilters button[type="submit"]');
+  await check("working price range rejects inverted bounds", '!document.querySelector("#maxPriceInput").checkValidity() && document.activeElement.id==="maxPriceInput"');
+  await evaluate('document.querySelector("#minPriceInput").value="";document.querySelector("#maxPriceInput").value="";document.querySelector("#maxPriceInput").dispatchEvent(new Event("input"));document.querySelector("#searchInput").value="Minecraft";document.querySelector("#sortFilter").value="name:asc";document.querySelector("#searchForm").requestSubmit()');
+  await catalogReady();
+  await check("working search and sort survive in URL", 'new URLSearchParams(location.search).get("q")==="Minecraft" && new URLSearchParams(location.search).get("sort")==="name" && document.querySelectorAll(".product-card").length===2');
+  await click('[data-marketplace="playerok"]');
+  await catalogReady();
+  await check("working marketplace filter preserves query and sort", 'new URLSearchParams(location.search).get("marketplace")==="playerok" && document.querySelector("#sortFilter").value==="name:asc" && document.querySelector("#searchInput").value==="Minecraft"');
+  await screenshot("15-working-filters");
+  const catalogQuery = await evaluate("location.search");
+  await click(".product-card");
+  await until('document.querySelector("#details").getAttribute("aria-busy")==="false"');
+  await check("working product is a distinct view with source rows", 'document.querySelector("#catalogView").hidden && !document.querySelector("#details").hidden && document.querySelectorAll(".offer-row").length>0');
+  await check("working detail shows original name and truthful currency status", 'document.querySelector("#originalName").textContent.length>0 && document.querySelector("#comparisonCard").textContent.includes("разных валютах")');
+  await check("working history section remains available", 'document.querySelector("#historyCard").textContent.trim().length>0');
+  await check("working source links are safe", '[...document.querySelectorAll(".offer-row a")].every(a=>a.protocol==="https:" && a.rel.includes("noopener") && a.rel.includes("noreferrer"))');
+  await screenshot("16-working-product");
+  await click("#backToCatalog");
+  await until(`location.search===${JSON.stringify(catalogQuery)} && !document.querySelector("#catalogView").hidden`);
+  await catalogReady();
+  await check("working back restores filters and page title", 'document.querySelector("#marketplaceFilter").value==="playerok" && document.querySelector("#sortFilter").value==="name:asc" && document.title.startsWith("Каталог")');
+  if (await evaluate('!!document.querySelector(\'.category-filter[data-category-index="0"]\')')) {
+    await click('.category-filter[data-category-index="0"]');
+    await catalogReady();
+    await check("working category uses existing API state", 'new URLSearchParams(location.search).has("category")');
+  } else {
+    await check("missing real categories have an explicit empty state", 'document.querySelector("#categoryList").textContent.includes("пока недоступны")');
+  }
+  await workingCatalog("?q=not-a-real-product-xyz");
+  await check("working empty search never shows stale product", '!document.querySelector(".product-card") && document.querySelector("#details").hidden');
+  await workingCatalog("?category=not-a-real-category-xyz");
+  await check("category deep link sends filter and returns honest empty result", '!document.querySelector(".product-card") && performance.getEntriesByType("resource").some(entry=>entry.name.includes("/api/v1/public/products?") && new URL(entry.name).searchParams.get("category")==="not-a-real-category-xyz")');
+  await workingCatalog("?product=7c862a70-5619-5b6d-a2aa-798560d29f18");
+  await check("working product deep link loads", '!document.querySelector("#details").hidden && document.querySelector("#detailTitle").textContent==="Minecraft"');
+  await click("#backToCatalog");
+  await catalogReady();
+  await check("direct product can return without browser history", '!document.querySelector("#catalogView").hidden && !new URLSearchParams(location.search).has("product")');
+  await size(390, 844);
+  await workingCatalog();
+  await check("working mobile catalog fits", 'document.documentElement.scrollWidth<=innerWidth');
+  await screenshot("17-working-mobile");
+  await click("#filtersButton");
+  await check("working mobile filters fit", 'document.documentElement.scrollWidth<=innerWidth && document.querySelector("#maxPriceInput").getBoundingClientRect().right<=innerWidth');
+  await click(".product-card");
+  await until('document.querySelector("#details").getAttribute("aria-busy")==="false"');
+  await check("working mobile product fits", 'document.documentElement.scrollWidth<=innerWidth');
+  await screenshot("18-working-mobile-product");
+  await size(320, 844);
+  await check("working narrow product fits", 'document.documentElement.scrollWidth<=innerWidth');
+  await size(1440);
+  await workingCatalog();
+  await send("Network.emulateNetworkConditions", { offline: true, latency: 0, downloadThroughput: -1, uploadThroughput: -1 });
+  await click("#refreshButton");
+  await catalogReady();
+  await check("working offline state retains explained retry", 'document.querySelector("#apiStatus").classList.contains("error") && !document.querySelector("#refreshButton").disabled && document.querySelector("#productGrid").textContent.includes("Проверьте соединение")');
+  await send("Network.emulateNetworkConditions", { offline: false, latency: 0, downloadThroughput: -1, uploadThroughput: -1 });
+  await click("#refreshButton");
+  await catalogReady();
+  await check("working retry restores real catalog", 'document.querySelectorAll(".product-card").length===2');
+  await check("working cabinet link retains authenticated workspace", 'document.querySelector(".header .profile").getAttribute("href")==="/terminal/review"');
+  await workingCatalog();
+  await press("Tab", "Tab", 9);
+  await press("Enter", "Enter", 13);
+  await check("working keyboard skip reaches content", 'document.activeElement.id==="main"');
+  await tabTo(".product-card");
+  await check("working keyboard card focus is visible", 'document.activeElement.matches(":focus-visible") && parseFloat(getComputedStyle(document.activeElement).outlineWidth)>=2');
+  await press("Enter", "Enter", 13);
+  await until('document.querySelector("#details").getAttribute("aria-busy")==="false"');
+  await check("working keyboard product focuses new view", 'document.activeElement.id==="main" && !document.querySelector("#details").hidden');
+  await send("Emulation.clearDeviceMetricsOverride");
+  await setBrowserZoom(2);
+  await workingCatalog();
+  await check("working catalog supports native 200-percent zoom", 'devicePixelRatio>=2 && document.documentElement.scrollWidth<=innerWidth');
+  await screenshot("19-working-zoom");
+  await click(".product-card");
+  await until('document.querySelector("#details").getAttribute("aria-busy")==="false"');
+  await check("working zoom preserves prices and actions", 'document.documentElement.scrollWidth<=innerWidth && [...document.querySelectorAll(".offer-row a")].every(a=>a.getBoundingClientRect().right<=innerWidth)');
+  await evaluate('document.querySelector(".offer-row").scrollIntoView({block:"start"})');
+  await screenshot("20-working-zoom-prices", false);
   await setBrowserZoom(originalZoom);
   assert.deepEqual(errors, [], "No runtime or CSP errors");
   checks++;

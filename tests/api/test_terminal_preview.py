@@ -38,6 +38,7 @@ def test_preview_is_separate_from_existing_terminal(
     [
         ("preview.css", "text/css"),
         ("preview.js", "application/javascript"),
+        ("presentation.js", "application/javascript"),
         ("world.svg", "image/svg+xml"),
         ("cube.svg", "image/svg+xml"),
         ("onest.ttf", "font/ttf"),

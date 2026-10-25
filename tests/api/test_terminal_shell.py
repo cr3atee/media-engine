@@ -37,27 +37,28 @@ def test_market_terminal_shell_is_served() -> None:
         assert '<html lang="ru">' in response.text
         assert '<body class="terminal-page">' in response.text
         assert "Market Terminal" in response.text
-        assert "Найдите цифровой товар по лучшей цене." in response.text
-        assert "Сравнивайте предложения популярных площадок" in response.text
-        assert ">Каталог</a>" in response.text
-        assert ">Скидки</a>" in response.text
+        assert "Ваш следующий мир." in response.text
+        assert "Сравните предложения площадок" in response.text
+        assert 'id="catalogView"' in response.text
+        assert 'id="backToCatalog"' in response.text
         assert 'href="/terminal/review">Кабинет продавца</a>' in response.text
-        assert ">Найти</button>" in response.text
+        assert 'aria-label="Найти товары"' in response.text
         assert "Find the best marketplace price" not in response.text
-        assert "/terminal/styles.css" in response.text
+        assert "/terminal/catalog.css" in response.text
+        assert "/terminal/preview/preview.css" in response.text
         assert "/terminal/app.js" in response.text
         assert 'id="productCount"' in response.text
         assert 'id="catalogPagination"' in response.text
         assert 'id="loadMoreButton"' in response.text
         assert 'aria-controls="productGrid"' in response.text
-        assert 'id="offerCount"' in response.text
-        assert 'id="categoryCount"' in response.text
+        assert 'id="filtersButton"' in response.text
+        assert 'id="catalogFilters"' in response.text
         assert 'id="dropCount"' in response.text
         assert 'id="marketplaceFilter"' in response.text
         assert 'id="sortFilter"' in response.text
         assert 'id="minPriceInput"' in response.text
         assert 'id="maxPriceInput"' in response.text
-        assert 'class="skip-link" href="#products"' in response.text
+        assert 'class="skip" href="#main"' in response.text
         assert 'id="products"' in response.text
         assert 'aria-labelledby="catalogTitle"' in response.text
         assert 'aria-labelledby="detailTitle"' in response.text
@@ -72,6 +73,9 @@ def test_market_terminal_shell_is_served() -> None:
         assert 'aria-labelledby="comparisonTitle"' in response.text
         assert 'aria-labelledby="historyTitle"' in response.text
         assert response.text.count('aria-live="polite"') == 8
+        assert 'id="previewTools"' not in response.text
+        assert 'id="roleSelect"' not in response.text
+        assert 'type="module" src="/terminal/app.js"' in response.text
 
 
 def test_market_terminal_static_assets_are_served() -> None:
@@ -158,6 +162,27 @@ def test_market_terminal_static_assets_are_served() -> None:
     assert "response.statusText" not in script.text
     assert ".skip-link:focus" in styles.text
     assert "#detailTitle:focus-visible" in styles.text
+
+
+def test_working_catalog_reuses_preview_assets_without_mock_actions() -> None:
+    """Keep shared artwork local and demonstration tools out of the live shell."""
+    client = _client()
+    styles = client.get("/terminal/catalog.css")
+    presentation = client.get("/terminal/preview/presentation.js")
+    script = client.get("/terminal/app.js").text
+
+    assert styles.status_code == 200
+    assert styles.headers["content-type"].startswith("text/css")
+    assert ".catalog-filters" in styles.text
+    assert ".history-height-100" in styles.text
+    assert presentation.status_code == 200
+    assert "export function offerFootprint" in presentation.text
+    assert "export function handleImageError" in presentation.text
+    assert 'from "/terminal/preview/presentation.js"' in script
+    assert 'comparison.status === "currency_mismatch"' in script
+    assert 'method: "POST"' not in script
+    assert "previewRole" not in script
+    assert "localStorage" not in script
 
 
 def test_market_terminal_catalog_review_workspace_is_served() -> None:

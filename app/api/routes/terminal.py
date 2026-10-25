@@ -24,6 +24,7 @@ router = APIRouter(tags=["Market Terminal"])
 _PREVIEW_ASSETS = {
     "preview.css": "text/css",
     "preview.js": "application/javascript",
+    "presentation.js": "application/javascript",
     "world.svg": "image/svg+xml",
     "cube.svg": "image/svg+xml",
     "onest.ttf": "font/ttf",
@@ -112,6 +113,14 @@ async def market_terminal_script() -> Response:
         _read_asset("app.js"),
         media_type="application/javascript",
         headers=_ASSET_HEADERS,
+    )
+
+
+@router.get("/terminal/catalog.css", include_in_schema=False)
+async def market_terminal_catalog_styles() -> Response:
+    """Serve public catalog layout without changing the review workspace styles."""
+    return Response(
+        _read_asset("catalog.css"), media_type="text/css", headers=_ASSET_HEADERS
     )
 
 

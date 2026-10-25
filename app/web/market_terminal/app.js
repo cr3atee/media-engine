@@ -1,3 +1,5 @@
+import { brands, brandMark, handleImageError, infoFor, offerFootprint, productImage, money as offerMoney } from "/terminal/preview/presentation.js";
+
 const api = "/api/v1/public";
 const requestTimeoutMs = 15_000;
 
@@ -13,8 +15,6 @@ const elements = {
   refreshButton: document.querySelector("#refreshButton"),
   catalogTitle: document.querySelector("#catalogTitle"),
   productCount: document.querySelector("#productCount"),
-  offerCount: document.querySelector("#offerCount"),
-  categoryCount: document.querySelector("#categoryCount"),
   dropCount: document.querySelector("#dropCount"),
   productGrid: document.querySelector("#productGrid"),
   catalogPagination: document.querySelector("#catalogPagination"),
@@ -28,7 +28,69 @@ const elements = {
   offerList: document.querySelector("#offerList"),
   comparisonCard: document.querySelector("#comparisonCard"),
   historyCard: document.querySelector("#historyCard"),
+  main: document.querySelector("#main"),
+  catalogView: document.querySelector("#catalogView"),
+  filters: document.querySelector("#catalogFilters"),
+  filtersButton: document.querySelector("#filtersButton"),
+  marketplaceNav: document.querySelector("#marketplaceNav"),
+  back: document.querySelector("#backToCatalog"),
 };
+const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
+let pageAnimation;
+let locationSearch = window.location.search;
+
+document.addEventListener("error", handleImageError, true);
+elements.filtersButton.addEventListener("click", () => setFiltersOpen(elements.filters.hidden));
+document.querySelector("#retryDetails").addEventListener("click", () => void selectProduct(state.selectedProductId, false));
+elements.back.addEventListener("click", event => {
+  if (event.button || event.ctrlKey || event.metaKey || event.shiftKey || event.altKey) return;
+  event.preventDefault();
+  if (history.state?.fromCatalog) history.back();
+  else {
+    state.selectedProductId = null;
+    syncLocationState("replace");
+    setView(false, true);
+    void loadDashboard();
+  }
+});
+document.addEventListener("keydown", event => {
+  if (event.key === "/" && !event.ctrlKey && !event.metaKey && !event.altKey && !/INPUT|TEXTAREA|SELECT/.test(document.activeElement.tagName)) {
+    event.preventDefault();
+    elements.searchInput.focus();
+  }
+});
+reducedMotion.addEventListener("change", () => { if (reducedMotion.matches) pageAnimation?.cancel(); });
+
+function setFiltersOpen(open) {
+  elements.filters.hidden = !open;
+  elements.filtersButton.setAttribute("aria-expanded", String(open));
+}
+
+function setView(product, focus = false) {
+  elements.catalogView.hidden = product;
+  elements.detailPanel.hidden = !product;
+  if (!product) document.title = "Каталог · Market Terminal";
+  const backUrl = new URL(location.href);
+  backUrl.searchParams.delete("product");
+  backUrl.hash = "";
+  elements.back.href = backUrl.href;
+  pageAnimation?.cancel();
+  if (!reducedMotion.matches) pageAnimation = elements.main.animate([
+    { opacity: .65, transform: "translateY(10px)" }, { opacity: 1, transform: "translateY(0)" },
+  ], { duration: 220, easing: "cubic-bezier(.25,1,.5,1)" });
+  if (focus) {
+    elements.main.focus({ preventScroll: true });
+    window.scrollTo({ top: 0, behavior: "instant" });
+  }
+}
+
+function renderMarketplaceNav() {
+  elements.marketplaceNav.innerHTML = [["", "Все площадки"], ...Object.entries(brands)].map(([value, name]) => `<button type="button" data-marketplace="${value}" aria-pressed="${elements.marketplaceFilter.value === value}">${value ? brandMark(value) : ""}${name}</button>`).join("");
+  for (const button of elements.marketplaceNav.querySelectorAll("button")) button.addEventListener("click", () => {
+    elements.marketplaceFilter.value = button.dataset.marketplace;
+    void runProductSearch(elements.searchInput.value.trim());
+  });
+}
 
 const state = {
   products: [],
@@ -74,9 +136,14 @@ for (const input of [elements.minPriceInput, elements.maxPriceInput]) {
   });
 }
 
-window.addEventListener("popstate", () => {
+window.addEventListener("popstate", async (event) => {
+  // In-page anchors must not reload the catalog or race with opening a product.
+  if (window.location.search === locationSearch) return;
+  locationSearch = window.location.search;
   restoreLocationState();
-  void loadDashboard();
+  await loadDashboard();
+  elements.main.focus({ preventScroll: true });
+  window.scrollTo({ top: event.state?.scroll ?? 0, behavior: "instant" });
 });
 
 restoreLocationState();
@@ -87,6 +154,8 @@ async function loadDashboard() {
     return;
   }
   const requestVersion = beginCatalogRequest();
+  setView(Boolean(state.selectedProductId));
+  renderMarketplaceNav();
   setDashboardBusy(true);
   setApiStatus("Подключение");
   await Promise.all([
@@ -108,6 +177,8 @@ async function runProductSearch(search) {
   state.detailRequestVersion += 1;
   state.selectedProductId = null;
   syncLocationState("replace");
+  setView(false, true);
+  renderMarketplaceNav();
   const requestVersion = beginCatalogRequest();
   setDashboardBusy(true);
   await loadProducts(search, requestVersion);
@@ -118,7 +189,6 @@ async function runProductSearch(search) {
 
 async function loadProducts(search, requestVersion, append = false) {
   try {
-    const preferredProductId = state.selectedProductId;
     const query = productQuery(search, append ? state.nextCatalogCursor : null);
     const marketplace = elements.marketplaceFilter.value;
 
@@ -145,12 +215,11 @@ async function loadProducts(search, requestVersion, append = false) {
     if (append) {
       return;
     }
+    const preferredProductId = state.selectedProductId;
     if (preferredProductId) {
       await selectProduct(preferredProductId, false);
-    } else if (state.products.length > 0) {
-      await selectProduct(state.products[0].id, false);
     } else {
-      clearProductDetails("Товары не найдены");
+      setView(false);
     }
   } catch (error) {
     if (!isCurrentCatalogRequest(requestVersion)) {
@@ -341,6 +410,7 @@ async function selectProduct(productId, updateLocation = true) {
   if (updateLocation) {
     syncLocationState("push");
   }
+  setView(true, updateLocation);
   renderProducts(state.products);
   prepareProductDetails(productId);
 
@@ -392,19 +462,13 @@ async function selectProduct(productId, updateLocation = true) {
 function renderDetailSummary(result, productId) {
   if (result.status === "fulfilled") {
     const detail = result.value;
-    elements.detailTitle.textContent = detail.name;
-    elements.detailMeta.textContent = [
-      detail.category,
-      countLabel(detail.offer_count, "предложение", "предложения", "предложений"),
-      countLabel(
-        detail.marketplace_count,
-        "площадка",
-        "площадки",
-        "площадок",
-      ),
-    ]
-      .filter(Boolean)
-      .join(" / ");
+    const art = infoFor(detail);
+    elements.detailTitle.textContent = art.title;
+    document.querySelector("#detailSubtitle").textContent = art.subtitle;
+    document.querySelector("#originalName").textContent = detail.name;
+    document.querySelector("#detailArtwork").innerHTML = productImage(art, "product-cover", 220);
+    elements.detailMeta.innerHTML = offerFootprint(detail);
+    document.title = `${art.title} · Market Terminal`;
     return;
   }
 
@@ -427,6 +491,9 @@ function prepareProductDetails(productId) {
   const product = state.products.find((item) => item.id === productId);
   elements.detailTitle.textContent = product?.name ?? "Загрузка товара";
   elements.detailMeta.textContent = "Загружаем данные площадок";
+  document.querySelector("#detailSubtitle").textContent = "";
+  document.querySelector("#originalName").textContent = product?.name ?? "";
+  document.querySelector("#detailArtwork").innerHTML = productImage(infoFor(product ?? { id: productId, name: "Товар" }), "product-cover", 220);
   renderEmpty(elements.offerList, "Загружаем предложения...");
   renderEmpty(elements.comparisonCard, "Готовим сравнение...");
   renderEmpty(elements.historyCard, "Загружаем историю цены...");
@@ -445,6 +512,7 @@ function setProductDetailsBusy(isBusy) {
 }
 
 function renderProducts(products) {
+  elements.productGrid.classList.toggle("compact", products.length <= 2);
   if (products.length === 0) {
     renderEmpty(elements.productGrid, "Товары пока недоступны.");
     return;
@@ -452,25 +520,27 @@ function renderProducts(products) {
 
   elements.productGrid.innerHTML = products
     .map((product) => {
-      const active = product.id === state.selectedProductId ? " active" : "";
       const bestOffer = product.best_offer;
+      const art = infoFor(product);
+      const url = new URL(location.href);
+      url.hash = "";
+      url.searchParams.set("product", product.id);
       return `
-        <button class="product-card${active}" type="button" data-product-id="${escapeHtml(product.id)}">
-          <span>
-            <span class="tile-mark">${escapeHtml(initials(product.name))}</span>
-            <strong>${escapeHtml(product.name)}</strong>
-          </span>
-          <span>
-            <span class="price">${bestOffer ? moneyHtml(bestOffer.price, bestOffer.currency) : "Цена не указана"}</span>
-            <small>${escapeHtml(countLabel(product.offer_count, "предложение", "предложения", "предложений"))} / ${escapeHtml(countLabel(product.marketplace_count, "площадка", "площадки", "площадок"))}</small>
-          </span>
-        </button>
+        <a class="product-card" href="${escapeHtml(url.href)}" data-product-id="${escapeHtml(product.id)}">
+          <div class="card-image">${productImage(art, "", 512, true)}<span class="art-label">${escapeHtml(art.label)}</span></div>
+          <div class="card-copy"><h3>${escapeHtml(art.title)}</h3><p>${escapeHtml(art.subtitle)}</p>
+            <span class="card-price">${bestOffer ? moneyHtml(bestOffer.price, bestOffer.currency) : "Все цены в сравнении"} <span aria-hidden="true">↗</span></span>
+            ${offerFootprint(product)}
+          </div>
+        </a>
       `;
     })
     .join("");
 
   for (const card of elements.productGrid.querySelectorAll(".product-card")) {
-    card.addEventListener("click", () => {
+    card.addEventListener("click", (event) => {
+      if (event.button || event.ctrlKey || event.metaKey || event.shiftKey || event.altKey) return;
+      event.preventDefault();
       void selectProduct(card.dataset.productId ?? null);
     });
   }
@@ -582,20 +652,22 @@ function renderOffers(offers) {
   elements.offerList.innerHTML = offers
     .map(
       (offer) => `
-        <a class="offer-row" href="${escapeAttribute(offer.url ?? "#")}" target="_blank" rel="noopener noreferrer">
-          <span>
-            <span class="marketplace">${escapeHtml(offer.marketplace)}</span>
-            <strong>${escapeHtml(offer.title ?? "Предложение без названия")}</strong>
-            <small>${escapeHtml(offer.seller_name ?? "Продавец не указан")}</small>
-          </span>
-          <span class="price">${moneyHtml(offer.price, offer.currency)}</span>
-        </a>
+        <article class="offer-row">
+          <div class="offer-market">${brandMark(offer.marketplace)}${escapeHtml(brands[offer.marketplace] ?? offer.marketplace)}</div>
+          <div class="offer-description"><p class="offer-name">${escapeHtml(offer.title ?? "Предложение без названия")}</p><p class="offer-seller">${escapeHtml(offer.seller_name ?? "Продавец не указан")}</p></div>
+          <span class="offer-price">${moneyHtml(offer.price, offer.currency)}</span>
+          ${escapeAttribute(offer.url ?? "") !== "#" ? `<a class="secondary" href="${escapeAttribute(offer.url)}" target="_blank" rel="noopener noreferrer">На площадку <span aria-hidden="true">↗</span></a>` : '<span class="subtle">Ссылка недоступна</span>'}
+        </article>
       `,
     )
     .join("");
 }
 
 function renderComparison(comparison) {
+  if (comparison.status === "currency_mismatch") {
+    elements.comparisonCard.innerHTML = '<p class="notice">Цены в разных валютах. Показываем их без пересчёта и не выбираем общее самое дешёвое предложение.</p>';
+    return;
+  }
   if (!comparison.best_offer) {
     renderEmpty(elements.comparisonCard, "Сопоставимых цен пока нет.");
     return;
@@ -728,6 +800,9 @@ async function getJson(path) {
     if (controller.signal.aborted) {
       throw new Error("Время ожидания истекло. Попробуйте ещё раз.");
     }
+    if (error instanceof TypeError) {
+      throw new Error("Не удалось подключиться. Проверьте соединение и попробуйте ещё раз.");
+    }
     throw error;
   } finally {
     window.clearTimeout(timeoutId);
@@ -778,6 +853,7 @@ function setDashboardBusy(isBusy) {
   elements.minPriceInput.disabled = isBusy;
   elements.maxPriceInput.disabled = isBusy;
   elements.loadMoreButton.disabled = isBusy || state.isLoadingMore;
+  for (const button of elements.marketplaceNav.querySelectorAll("button")) button.disabled = isBusy;
   for (const button of elements.categoryList.querySelectorAll(".category-filter")) {
     button.disabled = isBusy;
   }
@@ -788,15 +864,11 @@ function setDashboardBusy(isBusy) {
 }
 
 function updateSummary() {
-  const offerCount = state.products.reduce(
-    (total, product) => total + Number(product.offer_count ?? 0),
-    0,
-  );
-
-  elements.productCount.textContent = String(state.products.length);
-  elements.offerCount.textContent = String(offerCount);
-  elements.categoryCount.textContent = String(state.categories.length);
+  const count = `${state.products.length}${state.nextCatalogCursor ? "+" : ""}`;
+  elements.productCount.textContent = count;
+  elements.productCount.setAttribute("aria-label", `Товаров загружено: ${count}`);
   elements.dropCount.textContent = String(state.priceChanges.length);
+  document.querySelector("#catalogHero").hidden = Boolean(elements.searchInput.value || elements.marketplaceFilter.value || state.selectedCategoryName);
 }
 
 function renderEmpty(target, message) {
@@ -826,6 +898,7 @@ function restoreLocationState() {
   state.selectedCategoryCode = "";
   state.selectedCategoryName = params.get("category") ?? "";
   state.selectedProductId = params.get("product");
+  setFiltersOpen(Boolean(params.get("min_price") || params.get("max_price") || params.get("sort") || params.get("category")));
 }
 
 function syncLocationState(mode) {
@@ -844,7 +917,9 @@ function syncLocationState(mode) {
   if (url.href === window.location.href) {
     return;
   }
-  window.history[mode === "push" ? "pushState" : "replaceState"]({}, "", url);
+  if (mode === "push") window.history.replaceState({ scroll: window.scrollY }, "", location.href);
+  window.history[mode === "push" ? "pushState" : "replaceState"](mode === "push" ? { fromCatalog: true } : {}, "", url);
+  locationSearch = url.search;
 }
 
 function setSelectValue(select, value, fallback) {
@@ -869,12 +944,14 @@ function priceRangeIsValid() {
 
   for (const input of [elements.minPriceInput, elements.maxPriceInput]) {
     if (!input.checkValidity()) {
+      setFiltersOpen(true);
       input.reportValidity();
       return false;
     }
   }
 
   if (minPrice && maxPrice && Number(minPrice) > Number(maxPrice)) {
+    setFiltersOpen(true);
     elements.maxPriceInput.setCustomValidity(
       "Максимальная цена должна быть не меньше минимальной.",
     );
@@ -892,7 +969,7 @@ function catalogTitle(search, marketplace, category) {
   if (filters.length > 0) {
     return `Товары: ${filters.join(" / ")}`;
   }
-  return "Популярные товары";
+  return "Каталог";
 }
 
 function marketplaceLabel(value) {
@@ -941,10 +1018,7 @@ function countLabel(value, one, few, many) {
 }
 
 function money(value, currency) {
-  if (value === null || value === undefined) {
-    return "Цена не указана";
-  }
-  return `${String(value)} ${currency ?? ""}`.trim();
+  return offerMoney({ price: value, currency });
 }
 
 function moneyHtml(value, currency) {
@@ -978,16 +1052,6 @@ function formatDate(value) {
     month: "short",
     year: "numeric",
   }).format(date);
-}
-
-function initials(value) {
-  return value
-    .split(/\s+/)
-    .filter(Boolean)
-    .slice(0, 2)
-    .map((part) => part[0])
-    .join("")
-    .toUpperCase();
 }
 
 function errorMessage(error) {

@@ -1,231 +1,79 @@
 <!doctype html>
 <html lang="ru">
-  <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Market Terminal</title>
-    <link rel="stylesheet" href="/terminal/styles.css" />
-  </head>
-  <body class="terminal-page">
-    <a class="skip-link" href="#products">Перейти к каталогу товаров</a>
-    <main class="shell">
-      <header class="topbar">
-        <a class="brand" href="/terminal" aria-label="Главная Market Terminal">
-          <span class="brand-mark">MT</span>
-          <span>
-            <strong>Market Terminal</strong>
-            <small>Сравнение цен на цифровые товары</small>
-          </span>
-        </a>
-        <nav class="nav" aria-label="Основная навигация">
-          <a href="#products">Каталог</a>
-          <a href="#changes">Скидки</a>
-          <a href="#details">О товаре</a>
-          <a href="/terminal/review">Кабинет продавца</a>
-        </nav>
-        <span
-          class="api-status"
-          id="apiStatus"
-          role="status"
-          aria-live="polite"
-          aria-atomic="true"
-        >
-          Подключение
-        </span>
-      </header>
-
-      <section class="hero">
-        <div class="hero-copy">
-          <p class="eyebrow">GGSEL / Playerok / FunPay</p>
-          <h1>Найдите цифровой товар по лучшей цене.</h1>
-          <p class="lead">
-            Сравнивайте предложения популярных площадок в одном месте
-            и выбирайте подходящую цену без лишних вкладок.
-          </p>
-        </div>
-        <form class="search" id="searchForm">
-          <label for="searchInput">Поиск товара</label>
-          <div class="search-row">
-            <input
-              id="searchInput"
-              name="q"
-              type="search"
-              placeholder="Minecraft Premium"
-              autocomplete="off"
-            />
-            <button id="searchButton" type="submit">Найти</button>
-          </div>
-          <div class="filter-row">
-            <label class="filter-control" for="marketplaceFilter">
-              <span>Площадка</span>
-              <select id="marketplaceFilter" name="marketplace">
-                <option value="">Все площадки</option>
-                <option value="ggsel">GGSEL</option>
-                <option value="playerok">Playerok</option>
-                <option value="funpay">FunPay</option>
-              </select>
-            </label>
-            <label class="filter-control" for="sortFilter">
-              <span>Сортировка</span>
-              <select id="sortFilter" name="sort">
-                <option value="recently_updated:desc">Недавно обновлённые</option>
-                <option value="price_asc:asc">Сначала дешевле</option>
-                <option value="price_desc:desc">Сначала дороже</option>
-                <option value="name:asc">По названию</option>
-              </select>
-            </label>
-            <label class="filter-control" for="minPriceInput">
-              <span>Цена от</span>
-              <input
-                id="minPriceInput"
-                name="min_price"
-                type="number"
-                inputmode="decimal"
-                min="0"
-                step="0.01"
-                placeholder="0"
-              />
-            </label>
-            <label class="filter-control" for="maxPriceInput">
-              <span>Цена до</span>
-              <input
-                id="maxPriceInput"
-                name="max_price"
-                type="number"
-                inputmode="decimal"
-                min="0"
-                step="0.01"
-                placeholder="Без ограничения"
-              />
-            </label>
-          </div>
-        </form>
-      </section>
-
-      <section class="metric-strip" aria-label="Сводка текущего каталога">
-        <article class="metric">
-          <span class="metric-label">Товаров показано</span>
-          <strong id="productCount">--</strong>
-        </article>
-        <article class="metric">
-          <span class="metric-label">Предложений</span>
-          <strong id="offerCount">--</strong>
-        </article>
-        <article class="metric">
-          <span class="metric-label">Категорий</span>
-          <strong id="categoryCount">--</strong>
-        </article>
-        <article class="metric">
-          <span class="metric-label">Новых скидок</span>
-          <strong id="dropCount">--</strong>
-        </article>
-      </section>
-
-      <section class="grid-layout">
-        <section
-          class="panel"
-          id="products"
-          tabindex="-1"
-          aria-labelledby="catalogTitle"
-        >
-          <div class="panel-heading">
-            <span>
-              <p class="eyebrow">Открытый каталог</p>
-              <h2 id="catalogTitle">Популярные товары</h2>
-            </span>
-            <button class="ghost-button" id="refreshButton" type="button">
-              Обновить
-            </button>
-          </div>
-          <div class="product-grid" id="productGrid" aria-live="polite"></div>
-          <div class="catalog-pagination" id="catalogPagination" hidden>
-            <button
-              class="ghost-button"
-              id="loadMoreButton"
-              type="button"
-              aria-controls="productGrid"
-            >
-              Показать ещё
-            </button>
-            <span id="catalogPageStatus" role="status" aria-live="polite"></span>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="dark">
+  <title>Market Terminal</title>
+  <link rel="preload" href="/terminal/preview/onest.ttf" as="font" type="font/ttf" crossorigin>
+  <link rel="stylesheet" href="/terminal/preview/preview.css">
+  <link rel="stylesheet" href="/terminal/catalog.css">
+  <script type="module" src="/terminal/app.js"></script>
+</head>
+<body class="terminal-page">
+  <a class="skip" href="#main">Перейти к содержимому</a>
+  <div class="shell">
+    <header class="header">
+      <a class="brand" href="/terminal" aria-label="Market Terminal, главная">
+        <svg viewBox="0 0 40 40" aria-hidden="true"><path d="M5 31V9l15 12L35 9v22M5 10l15 12v13"/></svg>
+        <span>market<span class="brand-second">terminal</span></span>
+      </a>
+      <form id="searchForm" class="search" role="search" novalidate>
+        <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m16 16 5 5"/></svg>
+        <label class="sr-only" for="searchInput">Поиск товаров</label>
+        <input id="searchInput" name="q" type="search" placeholder="Игра, подписка или сервис" maxlength="200" autocomplete="off">
+        <button id="searchButton" type="submit" aria-label="Найти товары"><span aria-hidden="true">↵</span></button>
+      </form>
+      <a class="profile" href="/terminal/review">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="3.5"/><path d="M5 21v-2a7 7 0 0 1 14 0v2"/></svg>
+        <span>Кабинет продавца</span>
+      </a>
+    </header>
+    <main id="main" tabindex="-1">
+      <div id="catalogView">
+        <section class="hero" id="catalogHero" aria-labelledby="heroTitle">
+          <div class="hero-copy">
+            <span class="eyebrow">Меньше поиска. Больше игры.</span>
+            <h1 id="heroTitle">Ваш следующий мир.<span class="hero-continuation">В одном поиске.</span></h1>
+            <p>Сравните предложения площадок и выберите подходящий вариант игры.</p>
+            <a class="primary" href="#products">Выбрать игру <span aria-hidden="true">↗</span></a>
           </div>
         </section>
-
-        <aside class="panel side-panel">
-          <div class="panel-heading">
-            <span>
-              <p class="eyebrow">Навигация</p>
-              <h2>Категории</h2>
-            </span>
+        <nav class="market-nav" id="marketplaceNav" aria-label="Площадки"></nav>
+        <section id="products" tabindex="-1" aria-labelledby="catalogTitle">
+          <div class="catalog-heading">
+            <div><h2 id="catalogTitle">Каталог</h2><span class="count" id="productCount" aria-label="Товаров загружено">0</span></div>
+            <div class="catalog-actions">
+              <button class="secondary" id="refreshButton" type="button">Обновить</button>
+              <button class="secondary" id="filtersButton" type="button" aria-expanded="false" aria-controls="catalogFilters">Фильтры</button>
+            </div>
           </div>
-          <div
-            class="category-list"
-            id="categoryList"
-            aria-live="polite"
-          ></div>
-
-          <div class="panel-heading compact" id="changes">
-            <span>
-              <p class="eyebrow">Последние</p>
-              <h2>Снижения цен</h2>
-            </span>
+          <div id="catalogFilters" class="catalog-filters" hidden>
+            <label for="marketplaceFilter">Площадка<select id="marketplaceFilter" name="marketplace" form="searchForm"><option value="">Все площадки</option><option value="ggsel">GGSEL</option><option value="playerok">Playerok</option><option value="funpay">FunPay</option></select></label>
+            <label for="sortFilter">Сортировка<select id="sortFilter" name="sort" form="searchForm"><option value="recently_updated:desc">Недавно обновлённые</option><option value="price_asc:asc">Сначала дешевле</option><option value="price_desc:desc">Сначала дороже</option><option value="name:asc">По названию</option></select></label>
+            <label for="minPriceInput">Цена от<input id="minPriceInput" name="min_price" type="number" min="0" step="0.01" inputmode="decimal" form="searchForm" placeholder="0"></label>
+            <label for="maxPriceInput">Цена до<input id="maxPriceInput" name="max_price" type="number" min="0" step="0.01" inputmode="decimal" form="searchForm" placeholder="Без ограничения"></label>
+            <button class="secondary" type="submit" form="searchForm">Применить</button>
+            <div class="category-section"><h3>Категории</h3><div id="categoryList" class="category-list" aria-live="polite"></div></div>
           </div>
-          <div
-            class="change-list"
-            id="changeList"
-            aria-live="polite"
-          ></div>
-        </aside>
-      </section>
-
-      <section
-        class="panel detail-panel"
-        id="details"
-        aria-labelledby="detailTitle"
-        aria-busy="false"
-      >
-        <div class="panel-heading">
-          <span>
-            <p class="eyebrow">Выбранный товар</p>
-            <h2 id="detailTitle" tabindex="-1">Выберите товар</h2>
-          </span>
-          <span class="soft-label" id="detailMeta">Товар пока не выбран</span>
+          <div class="product-grid" id="productGrid" aria-live="polite"></div>
+          <div class="catalog-pagination" id="catalogPagination" hidden><button class="secondary" id="loadMoreButton" type="button" aria-controls="productGrid">Показать ещё</button><span id="catalogPageStatus" role="status" aria-live="polite"></span></div>
+        </section>
+        <details class="changes-section" id="changes"><summary>Снижения цен <span class="count" id="dropCount">0</span></summary><div class="change-list" id="changeList" aria-live="polite"></div></details>
+      </div>
+      <section id="details" aria-labelledby="detailTitle" aria-busy="false" hidden>
+        <a class="back" id="backToCatalog" href="/terminal"><span aria-hidden="true">←</span> Назад к товарам</a>
+        <div class="product-hero">
+          <div id="detailArtwork"></div>
+          <div><p class="eyebrow" id="detailSubtitle"></p><h1 id="detailTitle" tabindex="-1">Загрузка товара</h1><div id="detailMeta"></div><a class="primary" href="#offerListTitle">Все предложения <span aria-hidden="true">↓</span></a><details class="original-name"><summary>Исходное название товара</summary><p id="originalName"></p></details></div>
         </div>
-        <div class="detail-grid">
-          <div>
-            <h3 id="offerListTitle">Предложения площадок</h3>
-            <div
-              class="offer-list"
-              id="offerList"
-              role="region"
-              aria-labelledby="offerListTitle"
-              aria-live="polite"
-            ></div>
-          </div>
-          <div>
-            <h3 id="comparisonTitle">Сравнение</h3>
-            <div
-              class="comparison-card"
-              id="comparisonCard"
-              role="region"
-              aria-labelledby="comparisonTitle"
-              aria-live="polite"
-            ></div>
-          </div>
-          <div>
-            <h3 id="historyTitle">История цены</h3>
-            <div
-              class="history-card"
-              id="historyCard"
-              role="region"
-              aria-labelledby="historyTitle"
-              aria-live="polite"
-            ></div>
-          </div>
-        </div>
+        <section aria-labelledby="offerListTitle"><div class="offers-heading"><h2 id="offerListTitle">Предложения площадок</h2><button class="secondary" id="retryDetails" type="button">Обновить товар</button></div><div id="offerList" role="region" aria-labelledby="offerListTitle" aria-live="polite"></div></section>
+        <section class="detail-section" aria-labelledby="comparisonTitle"><h2 id="comparisonTitle">Сравнение</h2><div id="comparisonCard" role="region" aria-labelledby="comparisonTitle" aria-live="polite"></div></section>
+        <section class="detail-section" aria-labelledby="historyTitle"><h2 id="historyTitle">История цены</h2><div id="historyCard" role="region" aria-labelledby="historyTitle" aria-live="polite"></div></section>
       </section>
     </main>
-
-    <script src="/terminal/app.js" defer></script>
-  </body>
+    <footer class="footer"><span class="footer-brand">Market Terminal <span>на базе MediaEngine</span></span><span id="apiStatus" role="status" aria-live="polite" aria-atomic="true">Подключение</span><a href="/terminal/review">Кабинет продавца</a></footer>
+  </div>
+  <noscript><p class="noscript">Для поиска и просмотра каталога включите JavaScript.</p></noscript>
+</body>
 </html>
