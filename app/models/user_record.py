@@ -14,6 +14,11 @@ class UserRecord(Base):
 
     __tablename__ = "users"
     __table_args__ = (
+        CheckConstraint(
+            "product_role IN ('user', 'partner', 'moderator', 'admin')",
+            name="ck_users_product_role",
+        ),
+        Index("ix_users_product_role_enabled", "product_role", "enabled"),
         CheckConstraint("length(btrim(email)) > 0", name="ck_users_email_nonempty"),
         CheckConstraint("version >= 1", name="ck_users_version"),
         CheckConstraint(
@@ -28,6 +33,9 @@ class UserRecord(Base):
     email: Mapped[str] = mapped_column(String(320), nullable=False)
     display_name: Mapped[str | None] = mapped_column(String(255), nullable=True)
     enabled: Mapped[bool] = mapped_column(Boolean, nullable=False)
+    product_role: Mapped[str] = mapped_column(
+        String(16), nullable=False, server_default="user"
+    )
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         nullable=False,
@@ -37,4 +45,3 @@ class UserRecord(Base):
         nullable=False,
     )
     version: Mapped[int] = mapped_column(Integer, nullable=False)
-

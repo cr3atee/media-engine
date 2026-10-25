@@ -39,6 +39,9 @@ from app.repositories.memory import (
     MemoryTenantRepository,
     MemoryUserRepository,
 )
+from app.repositories.memory.memory_product_role_actions import (
+    MemoryProductRoleActionRepository,
+)
 from app.repositories.offers import OfferRepository
 from app.repositories.postgres import (
     PostgresAdminActionRepository,
@@ -58,7 +61,11 @@ from app.repositories.postgres import (
     PostgresTenantRepository,
     PostgresUserRepository,
 )
+from app.repositories.postgres.postgres_product_role_actions import (
+    PostgresProductRoleActionRepository,
+)
 from app.repositories.price_history import PriceHistoryRepository
+from app.repositories.product_role_actions import ProductRoleActionRepository
 from app.repositories.publications import PublicationRepository
 from app.repositories.scheduler_leases import SchedulerLeaseRepository
 from app.repositories.tenants import TenantRepository
@@ -91,6 +98,9 @@ class RepositoryProvider:
         default_factory=MemoryAdminActionRepository,
     )
     users: UserRepository = field(default_factory=MemoryUserRepository)
+    product_role_actions: ProductRoleActionRepository = field(
+        default_factory=MemoryProductRoleActionRepository
+    )
     tenants: TenantRepository = field(default_factory=MemoryTenantRepository)
     memberships: MembershipRepository = field(
         default_factory=MemoryMembershipRepository,
@@ -148,6 +158,7 @@ def create_postgres_provider(
         marketplace_integrations=PostgresMarketplaceIntegrationRepository(session),
         marketplace_polling_runs=PostgresMarketplacePollingRunRepository(session),
         users=PostgresUserRepository(session),
+        product_role_actions=PostgresProductRoleActionRepository(session),
         tenants=PostgresTenantRepository(session),
         memberships=PostgresMembershipRepository(session),
         password_credentials=PostgresPasswordCredentialRepository(session),

@@ -123,6 +123,7 @@ async def me(
             email=profile.user.email,
             display_name=profile.user.display_name,
             enabled=profile.user.enabled,
+            product_role=profile.user.product_role,
         ),
         memberships=[
             TenantMembershipResponse(

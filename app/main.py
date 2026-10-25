@@ -34,6 +34,7 @@ from app.api.routes.admin_publications import (
 )
 from app.api.routes.auth import router as auth_router
 from app.api.routes.health import router as health_router
+from app.api.routes.product_roles import router as product_roles_router
 from app.api.routes.public import router as public_router
 from app.api.routes.seller_catalog_reviews import (
     router as seller_catalog_reviews_router,
@@ -118,6 +119,7 @@ def create_app(
     application.include_router(event_content_router)
     application.include_router(event_publication_router)
     application.include_router(auth_router)
+    application.include_router(product_roles_router)
     application.include_router(seller_workflows_router)
     application.include_router(seller_catalog_reviews_router)
     application.include_router(seller_marketplace_integrations_router)

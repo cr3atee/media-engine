@@ -38,6 +38,7 @@ from app.services.canonical_offer_review_queue import (
 from app.services.canonical_product_proposals import CanonicalProductProposalService
 from app.services.marketplace_integrations import MarketplaceIntegrationService
 from app.services.passwords import PasswordHasher
+from app.services.product_roles import ProductRoleService
 from app.services.public_categories import PublicCategoryReadService
 from app.services.public_comparisons import PublicComparisonReadService
 from app.services.public_offers import PublicOfferReadService
@@ -306,6 +307,11 @@ async def get_authentication_service(request: Request) -> AuthenticationService:
 async def get_authorization_service(request: Request) -> AuthorizationService:
     """Build the tenant authorization service from app repositories."""
     return AuthorizationService(_repository_scope_factory(request))
+
+
+async def get_product_role_service(request: Request) -> ProductRoleService:
+    """Compose product role commands with the existing transactional provider."""
+    return ProductRoleService(_repository_scope_factory(request))
 
 
 async def require_seller_principal(

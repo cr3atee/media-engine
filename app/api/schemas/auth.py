@@ -5,6 +5,7 @@ from uuid import UUID
 from pydantic import Field
 
 from app.api.schemas.common import ApiModel
+from app.domain.product_access import ProductRole
 
 
 class LoginRequest(ApiModel):
@@ -61,6 +62,7 @@ class UserResponse(ApiModel):
     email: str
     display_name: str | None
     enabled: bool
+    product_role: ProductRole = ProductRole.USER
 
 
 class TenantMembershipResponse(ApiModel):

@@ -7,6 +7,7 @@ from enum import StrEnum
 from uuid import UUID
 
 from app.domain.identity import normalize_utc
+from app.domain.product_access import ProductRole
 
 LEGACY_TENANT_ID = UUID("00000000-0000-4000-8000-000000000001")
 LEGACY_TENANT_SLUG = "legacy"
@@ -38,8 +39,11 @@ class User:
     created_at: datetime
     updated_at: datetime
     version: int = 1
+    product_role: ProductRole = ProductRole.USER
 
     def __post_init__(self) -> None:
+        if not isinstance(self.product_role, ProductRole):
+            raise ValueError("User product_role must be a ProductRole.")
         email = normalize_email(self.email)
         display_name = _normalize_optional_text(
             self.display_name,
@@ -72,7 +76,9 @@ class Tenant:
 
     def __post_init__(self) -> None:
         name = _require_text(self.name, field_name="tenant name", maximum_length=255)
-        slug = normalize_tenant_slug(self.slug, allow_legacy=self.id == LEGACY_TENANT_ID)
+        slug = normalize_tenant_slug(
+            self.slug, allow_legacy=self.id == LEGACY_TENANT_ID
+        )
         created_at = normalize_utc(self.created_at, field_name="created_at")
         updated_at = normalize_utc(self.updated_at, field_name="updated_at")
         _validate_version(self.version, field_name="Tenant version")
@@ -112,8 +118,10 @@ class Membership:
 def normalize_email(value: str) -> str:
     """Normalize the MVP email identity without claiming RFC completeness."""
     normalized = value.strip().lower()
-    if not normalized or len(normalized) > 320 or not _EMAIL_PATTERN.fullmatch(
-        normalized
+    if (
+        not normalized
+        or len(normalized) > 320
+        or not _EMAIL_PATTERN.fullmatch(normalized)
     ):
         msg = "Email must be a non-empty normalized address."
         raise ValueError(msg)
@@ -163,4 +171,3 @@ def _validate_version(value: int, *, field_name: str) -> None:
     if value < 1:
         msg = f"{field_name} must be positive."
         raise ValueError(msg)
-
