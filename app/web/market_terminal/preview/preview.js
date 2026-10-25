@@ -357,6 +357,21 @@ document.querySelector("#aboutButton").addEventListener("click", about);
 document.querySelector("#previewTools").addEventListener("click", tools);
 document.querySelector("#profileButton").addEventListener("click", tools);
 document.querySelector("#closeDialog").addEventListener("click", () => dialog.close());
+dialog.addEventListener("keydown", (event) => {
+  if (event.key !== "Tab" || event.ctrlKey || event.metaKey || event.altKey) return;
+  const focusable = [...dialog.querySelectorAll('a[href], button, input, select, textarea, [tabindex]')]
+    .filter(element => element.tabIndex >= 0 && !element.matches(":disabled") && element.getClientRects().length > 0 && getComputedStyle(element).visibility !== "hidden");
+  const first = focusable[0];
+  const last = focusable.at(-1);
+  if (!first) return;
+  if (event.shiftKey && document.activeElement === first) {
+    event.preventDefault();
+    last.focus();
+  } else if (!event.shiftKey && document.activeElement === last) {
+    event.preventDefault();
+    first.focus();
+  }
+});
 document.addEventListener("error", (event) => {
   const image = event.target;
   if (!(image instanceof HTMLImageElement)) return;

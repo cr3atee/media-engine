@@ -228,6 +228,9 @@ dialog::backdrop { background: #07090fbb; }
   .review-layout { grid-template-columns: 210px minmax(0, 1fr); gap: 16px; }
   .pair { grid-template-columns: 1fr; }
 }
+@media (min-width: 701px) and (max-width: 900px) {
+  .product-grid.compact { grid-template-columns: 1fr; }
+}
 @media (max-width: 700px) {
   .shell, .design-strip { width: calc(100% - 32px); }
   .design-strip { font-size: 10px; gap: 8px; }

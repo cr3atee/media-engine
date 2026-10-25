@@ -19,6 +19,9 @@ let checks = 0;
 const pending = new Map();
 const errors = [];
 const requests = [];
+let settingsTarget;
+let settingsSession;
+let originalZoom;
 socket.addEventListener("message", event => {
   const message = JSON.parse(event.data);
   if (message.id) {
@@ -33,16 +36,16 @@ socket.addEventListener("message", event => {
   if (message.method === "Log.entryAdded" && message.params.entry.source === "security") errors.push(message.params);
   if (message.method === "Network.requestWillBeSent") requests.push(message.params.request);
 });
-function send(method, params = {}) {
+function send(method, params = {}, sessionId) {
   return new Promise((resolve, reject) => {
     const id = ++sequence;
     const timer = setTimeout(() => { pending.delete(id); reject(new Error(`CDP timeout: ${method}`)); }, 20000);
     pending.set(id, { resolve, reject, timer });
-    socket.send(JSON.stringify({ id, method, params }));
+    socket.send(JSON.stringify({ id, method, params, sessionId }));
   });
 }
-async function evaluate(expression) {
-  const response = await send("Runtime.evaluate", { expression, returnByValue: true, awaitPromise: true });
+async function evaluate(expression, sessionId) {
+  const response = await send("Runtime.evaluate", { expression, returnByValue: true, awaitPromise: true }, sessionId);
   assert(!response.exceptionDetails, JSON.stringify(response.exceptionDetails));
   return response.result.value;
 }
@@ -69,12 +72,15 @@ async function click(selector) {
   await send("Input.dispatchMouseEvent", { type: "mouseReleased", button: "left", clickCount: 1, ...point });
 }
 async function check(name, expression) {
-  assert(await evaluate(expression), name);
+  const passed = await evaluate(expression);
+  if (!passed) console.error("Browser state:", await evaluate('({focusedTag:document.activeElement.tagName,focusedId:document.activeElement.id,modal:document.querySelector("dialog")?.matches(":modal"),width:innerWidth,ratio:devicePixelRatio})'));
+  assert(passed, name);
   checks++;
   console.log(`PASS ${name}`);
 }
 async function screenshot(name, fromTop = true) {
   if (fromTop) await evaluate("window.scrollTo(0, 0)");
+  await until('document.getAnimations().every(animation => animation.playState !== "running" || animation.effect?.getComputedTiming().iterations === Infinity)');
   const capture = await send("Page.captureScreenshot", { format: "png", captureBeyondViewport: false });
   await writeFile(join(output, `${name}.png`), Buffer.from(capture.data, "base64"));
 }
@@ -82,11 +88,41 @@ async function size(width, height = 900) {
   await send("Emulation.setDeviceMetricsOverride", { width, height, deviceScaleFactor: 1, mobile: false });
 }
 
+async function press(key, code, windowsVirtualKeyCode, modifiers = 0) {
+  const params = { key, code, windowsVirtualKeyCode, nativeVirtualKeyCode: windowsVirtualKeyCode, modifiers };
+  const text = key === "Enter" ? "\r" : key.length === 1 && !modifiers ? key : undefined;
+  await send("Input.dispatchKeyEvent", { type: "keyDown", ...params, text });
+  await send("Input.dispatchKeyEvent", { type: "keyUp", ...params });
+}
+
+async function tabTo(selector) {
+  for (let index = 0; index < 60; index++) {
+    if (await evaluate(`document.activeElement.matches(${JSON.stringify(selector)})`)) return;
+    await press("Tab", "Tab", 9);
+  }
+  throw new Error(`Keyboard cannot reach ${selector}`);
+}
+
+async function setBrowserZoom(factor) {
+  if (!settingsSession) {
+    ({ targetId: settingsTarget } = await send("Target.createTarget", { url: "chrome://settings/appearance" }));
+    ({ sessionId: settingsSession } = await send("Target.attachToTarget", { targetId: settingsTarget, flatten: true }));
+    for (let index = 0; index < 50; index++) {
+      if (await evaluate('typeof chrome.settingsPrivate?.getDefaultZoom === "function"', settingsSession)) break;
+      await new Promise(resolve => setTimeout(resolve, 100));
+    }
+    originalZoom = await evaluate("new Promise(resolve => chrome.settingsPrivate.getDefaultZoom(resolve))", settingsSession);
+  }
+  await evaluate(`new Promise(resolve => chrome.settingsPrivate.setDefaultZoom(${factor}, resolve))`, settingsSession);
+  await send("Page.bringToFront");
+}
+
 try {
   await send("Page.enable");
   await send("Runtime.enable");
   await send("Log.enable");
   await send("Network.enable");
+  await send("Network.setCacheDisabled", { cacheDisabled: true });
   await size(1440);
   await navigate();
   await check("real public catalog loaded", 'document.querySelectorAll(".product-card").length > 0');
@@ -205,6 +241,87 @@ try {
   await ready();
   await check("retry recovers catalog", 'document.querySelectorAll(".product-card").length>0');
   await check("product imagery never hotlinks external hosts", '[...document.querySelectorAll(".product-art")].every(img=>new URL(img.currentSrc||img.src).origin===location.origin)');
+
+  await navigate();
+  await press("Tab", "Tab", 9);
+  await check("keyboard starts at visible skip link", 'document.activeElement.matches(".skip") && document.activeElement.getBoundingClientRect().top>=0');
+  await press("Enter", "Enter", 13);
+  await check("skip link moves focus to content", 'document.activeElement.id==="main"');
+  await tabTo("#searchInput");
+  await send("Input.insertText", { text: "Minecraft" });
+  await press("Enter", "Enter", 13);
+  await ready();
+  await check("keyboard search announces new content through focus", 'document.activeElement.id==="main" && document.querySelector("#catalogTitle").textContent.includes("Minecraft")');
+  await tabTo(".product-card");
+  await check("keyboard product link has visible focus", 'document.activeElement.matches(":focus-visible") && parseFloat(getComputedStyle(document.activeElement).outlineWidth)>=2');
+  await screenshot("09-keyboard-card-focus", false);
+  await press("Enter", "Enter", 13);
+  await ready();
+  await check("keyboard opens product with content focus", 'document.activeElement.id==="main" && !!document.querySelector("#productTitle")');
+  await tabTo(".back");
+  await press("Enter", "Enter", 13);
+  await ready();
+  await check("keyboard return preserves search", 'document.querySelector("#catalogTitle").textContent.includes("Minecraft")');
+  await tabTo("#profileButton");
+  await press("Enter", "Enter", 13);
+  await check("dialog has an accessible name and initial focus", 'document.querySelector("dialog").open && document.activeElement.id==="closeDialog" && document.getElementById(document.querySelector("dialog").getAttribute("aria-labelledby")).textContent.length>0');
+  await press("Tab", "Tab", 9, 8);
+  await check("dialog reverse tab stays inside", 'document.activeElement.closest("dialog")!==null');
+  await press("Tab", "Tab", 9);
+  await check("dialog forward tab stays inside", 'document.activeElement.closest("dialog")!==null');
+  await press("Escape", "Escape", 27);
+  await check("escape restores focus to dialog opener", '!document.querySelector("dialog").open && document.activeElement.id==="profileButton"');
+  await press("Enter", "Enter", 13);
+  await tabTo('.screen-links a[href$="screen=review"]');
+  await press("Enter", "Enter", 13);
+  await ready();
+  await tabTo("#facts");
+  await send("Input.insertText", { text: "   " });
+  await tabTo('#decisionForm button[type="submit"]');
+  await press("Enter", "Enter", 13);
+  await check("invalid keyboard submission focuses explained error", 'document.activeElement.id==="facts" && document.activeElement.getAttribute("aria-invalid")==="true" && document.activeElement.getAttribute("aria-describedby").includes("factsError") && !document.querySelector("#factsError").hidden');
+  await send("Input.insertText", { text: "PC, Java & Bedrock" });
+  await press("/", "Slash", 191);
+  await check("search shortcut does not steal textarea focus", 'document.activeElement.id==="facts"');
+  await tabTo('#decisionForm button[type="submit"]');
+  await press("Enter", "Enter", 13);
+  await check("keyboard confirmation identifies target", 'document.querySelector("dialog").open && document.querySelector("#dialogBody").textContent.includes(document.querySelector(".target code").textContent)');
+  await press("Escape", "Escape", 27);
+  await check("dismiss returns to decision without losing facts", 'document.activeElement.matches("#decisionForm button[type=submit]") && document.querySelector("#facts").value.includes("Bedrock")');
+
+  // Set native zoom only in the dedicated test profile, not CSS zoom or pinch scale.
+  await send("Emulation.clearDeviceMetricsOverride");
+  const { windowId } = await send("Browser.getWindowForTarget");
+  await send("Browser.setWindowBounds", { windowId, bounds: { width: 1440, height: 1000 } });
+  await setBrowserZoom(1);
+  await navigate();
+  const baseline = await evaluate('({width:innerWidth,ratio:devicePixelRatio})');
+  await setBrowserZoom(2);
+  await navigate();
+  await check("native browser zoom is actually 200 percent", `Math.abs(devicePixelRatio/${baseline.ratio}-2)<0.05 && Math.abs(innerWidth/${baseline.width}-.5)<0.02`);
+  await check("200-percent catalog reflows without overflow", 'document.documentElement.scrollWidth<=innerWidth && document.querySelectorAll(".product-card").length>0');
+  await check("200-percent compact cards keep logos and count together", '[...document.querySelectorAll(".compact .offer-footprint")].every(row=>Math.abs(row.querySelector(".marketplace-logos").getBoundingClientRect().top-row.querySelector(".offer-count").getBoundingClientRect().top)<8)');
+  await screenshot("10-native-zoom-catalog");
+  await evaluate('document.querySelector("#catalogTitle").scrollIntoView({block:"start"})');
+  await screenshot("10b-native-zoom-cards", false);
+  await tabTo(".product-card");
+  await press("Enter", "Enter", 13);
+  await ready();
+  await check("200-percent product preserves prices and source actions", 'document.documentElement.scrollWidth<=innerWidth && [...document.querySelectorAll(".offer-row")].every(row=>row.querySelector(".offer-price").getBoundingClientRect().width>0 && row.querySelector("a").getBoundingClientRect().right<=innerWidth)');
+  await screenshot("11-native-zoom-product");
+  await evaluate('document.querySelector(".offer-row").scrollIntoView({block:"start"})');
+  await screenshot("11b-native-zoom-prices", false);
+  await navigate("?screen=review");
+  await check("200-percent review preserves form and action", 'document.documentElement.scrollWidth<=innerWidth && document.querySelector("#facts").getBoundingClientRect().right<=innerWidth && document.querySelector("#decisionForm button[type=submit]").getBoundingClientRect().right<=innerWidth');
+  await screenshot("12-native-zoom-review");
+  await evaluate('document.querySelector("#facts").scrollIntoView({block:"center"})');
+  await screenshot("12b-native-zoom-form", false);
+  await tabTo("#profileButton");
+  await press("Enter", "Enter", 13);
+  await check("200-percent dialog fits viewport and scrolls vertically", '(() => {const el=document.querySelector("dialog");const r=el.getBoundingClientRect();return r.left>=0 && r.right<=innerWidth && r.top>=0 && r.bottom<=innerHeight+1 && el.scrollWidth<=el.clientWidth;})()');
+  await screenshot("13-native-zoom-dialog");
+  await press("Escape", "Escape", 27);
+  await setBrowserZoom(originalZoom);
   assert.deepEqual(errors, [], "No runtime or CSP errors");
   checks++;
   assert(requests.filter(request=>request.url.startsWith(base)).every(request=>request.method==="GET"), "Preview must not mutate backend");
@@ -212,6 +329,8 @@ try {
   console.log(`PASS ${checks} browser checks; no runtime/CSP errors; all application requests GET`);
   console.log(`Screenshots: ${output}`);
 } finally {
+  if (settingsSession && originalZoom !== undefined) await setBrowserZoom(originalZoom).catch(error=>console.error("Could not restore test-profile zoom:", error.message));
+  if (settingsTarget) await send("Target.closeTarget", { targetId: settingsTarget }).catch(()=>{});
   await send("Network.emulateNetworkConditions", { offline: false, latency: 0, downloadThroughput: -1, uploadThroughput: -1 }).catch(()=>{});
   socket.close();
   await fetch(`${debug}/json/close/${target.id}`).catch(()=>{});
