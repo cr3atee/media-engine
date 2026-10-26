@@ -32,6 +32,7 @@ let malformed = false;
 let failIdentity = false;
 let expire = false;
 let refreshes = 0;
+let browserSession = false;
 let settingsTarget;
 let settingsSession;
 let originalZoom;
@@ -56,9 +57,12 @@ async function intercept({ requestId, request }) {
   let code = 200;
   let data = {};
   const path = url.pathname;
-  if (path.endsWith("/auth/login")) data = { access_token: "fixture-access", refresh_token: "fixture-refresh" };
-  else if (path.endsWith("/auth/logout")) data = {};
-  else if (path.endsWith("/auth/refresh")) { refreshes++; data = { access_token: "fixture-renewed", refresh_token: "fixture-refresh" }; }
+  if (path.endsWith("/auth/browser/login")) { browserSession = true; data = { access_token: "fixture-access" }; }
+  else if (path.endsWith("/auth/browser/logout")) { browserSession = false; data = {}; }
+  else if (path.endsWith("/auth/browser/refresh")) {
+    if (browserSession) { refreshes++; data = { access_token: "fixture-renewed" }; }
+    else { code = 401; data = { error: { code: "browser_session_missing" } }; }
+  }
   else if (path.endsWith("/me")) {
     data = { user: { id: actor, product_role: role, display_name: "Анна · администратор", email: "admin@example.test" }, memberships: [] };
     if (failIdentity) { code = 503; data = { error: { code: "unavailable" } }; }
@@ -169,7 +173,7 @@ try {
   await check("role controls hidden before login", 'document.querySelector("#productAccess").hidden && document.querySelector("#productAccessLink").hidden');
   for (const value of ["user", "partner", "moderator"]) {
     role = value; await login();
-    await check(`${value} gets identity without admin controls or a workspace`, `document.querySelector('#productAccessLink').hidden && document.querySelector('#reviewWorkspace').hidden && document.querySelector('#productIdentity').textContent.includes('${actor}')`);
+    await check(`${value} gets identity without admin controls or a workspace`, `document.querySelector('#productAccessLink').hidden && document.querySelector('#reviewWorkspace').hidden && document.querySelector('#accountId').textContent.includes('${actor}')`);
     await click("#logoutButton"); await until('!document.querySelector("#loginButton").disabled');
   }
   role = "admin"; await login();

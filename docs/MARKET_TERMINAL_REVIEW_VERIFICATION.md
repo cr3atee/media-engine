@@ -1,12 +1,16 @@
 # Working review cabinet verification
 
-Date: 2026-10-25. Scope: `/terminal/review`, its presentation and confirmation
-interactions. No backend, repository, authorization policy or migration changes.
+Updated: 2026-10-27. Scope: `/terminal/review`, its shared application shell,
+browser session continuity, presentation and confirmation interactions. The
+repository model, authorization policy and database schema were not changed.
 
 ## Delivered
 
 - Shared local Onest font, dark catalog tokens and existing marketplace logos.
-- Compact header/session, collapsible statistics and visible queue first.
+- The catalog and cabinet now use the same shell width, header surface, logo,
+  wordmark, spacing, radii, icon treatment and responsive breakpoints. The
+  project plan records this as a permanent cross-screen acceptance rule.
+- Compact session area, collapsible statistics and visible queue first.
 - Clearly labelled source offer and canonical target with full names and IDs.
   The marketplace source link belongs to the source, not the target.
 - Native confirmation dialog for create, link, confirm and reject. It repeats
@@ -14,8 +18,13 @@ interactions. No backend, repository, authorization policy or migration changes.
 - Tab/Shift+Tab containment, Escape dismissal and opener focus restoration.
 - Existing required-reason rules retained. Failures appear beside the form;
   comments survive failed requests and cancellation.
-- Existing tokens remain in tab memory. Tenant context, refresh, request
-  timeout, endpoint/payload construction and idempotency mechanism preserved.
+- Only the short-lived access token remains in tab memory. The rotating refresh
+  credential is an `HttpOnly`, `SameSite=Strict` session cookie scoped to the
+  browser-auth endpoint. It is not exposed to JavaScript or web storage.
+- Reload, browser Back and cabinet → catalog → cabinet restore the identity from
+  that cookie. Logout revokes the server session and clears restoration.
+- Tenant context, request timeout, endpoint/payload construction and
+  idempotency mechanism are preserved.
 - UI defect fixed: a failed create request used to re-enable a disabled link
   button even when no canonical target existed. Busy-state restoration now
   preserves each control's prior disabled state.
@@ -41,6 +50,10 @@ Override using `TERMINAL_PREVIEW_URL` and `TERMINAL_CDP_URL`. Screenshots are
 saved in a new OS temporary directory, not committed to the repository.
 Native browser zoom is restored and test tabs are closed on completion.
 
+`scripts/verify_browser_session.mjs` is a separate real-cookie check. It starts
+an isolated loopback app with memory repositories, uses the actual authentication
+service and browser cookie jar, and does not intercept authentication requests.
+
 ### Results
 
 - Review browser: **55 checks passed**. Login errors, permissions, filtering,
@@ -50,11 +63,15 @@ Native browser zoom is restored and test tabs are closed on completion.
   no-target disabled state, completed queue and logout covered.
 - Desktop, 800/390/320 px, native 200% browser zoom and reduced motion passed.
   No runtime/CSP errors. Desktop, mobile and zoom screenshots visually inspected.
+- Product-access browser: **39 checks passed** after the shared-header change.
+- Real-cookie browser: **8 checks passed**. The run covers an invisible
+  `HttpOnly` refresh credential, catalog round-trip, reload, browser Back,
+  rotation, logout and non-restoration after logout.
 - Existing preview + working public catalog: **99 checks passed**, GET only.
-- Full Pytest: **577 passed, 58 skipped**. Existing optional integration skips
+- Full Pytest: **595 passed, 59 skipped**. Existing optional integration skips
   remain; this run does not establish that those skipped checks passed.
-- Full MyPy with `--explicit-package-bases app scripts tests`: **452 files passed**.
-- Ruff and Ruff format check: changed Python test file passed. Ruff does not
+- Full MyPy with `--explicit-package-bases app scripts tests`: **468 files passed**.
+- Ruff and Ruff format check: all changed Python files passed. Ruff does not
   validate JavaScript/CSS; browser checks and Node syntax checks cover JS.
 - Existing Starlette/httpx TestClient deprecation warning remains unchanged.
 
@@ -68,8 +85,8 @@ The seed runner was not executed. User decisions were not reset or replaced.
 
 ## Remaining work
 
-This completes the cabinet presentation transfer, not the whole UI plan.
-Four product-level roles and durable error diagnostics remain separate work.
+This completes the cabinet presentation transfer and browser navigation-session
+repair, not the whole UI plan. Durable error diagnostics remain separate work.
 Existing owner/admin/reviewer/viewer memberships retain their existing meaning.
 Public asset licensing/release review and final integrated acceptance remain.
 The real queue is already completed, so this pass intentionally did not perform

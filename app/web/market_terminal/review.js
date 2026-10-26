@@ -58,7 +58,6 @@ const elements = {
 
 const state = {
   accessToken: null,
-  refreshToken: null,
   memberships: [],
   activeTenantId: null,
   activeTenant: null,
@@ -93,7 +92,8 @@ const productAccess = createProductAccess({
 
 function renderProductIdentity(user) {
   document.querySelector("#productIdentity").textContent = user
-    ? `${productRoleLabel(user.product_role)} · ID: ${user.id}` : "";
+    ? productRoleLabel(user.product_role) : "";
+  document.querySelector("#accountId").textContent = user?.id || "";
 }
 
 function showReviewNavigation(visible) {
@@ -166,6 +166,35 @@ elements.proposalList.addEventListener("click", (event) => {
 });
 
 renderEmptyQueues();
+void restoreSession();
+
+window.addEventListener("pageshow", event => {
+  if (event.persisted) void restoreSession();
+});
+window.addEventListener("pagehide", () => clearSession(""));
+
+/** Rehydrate from an HttpOnly cookie; no credential is written to web storage. */
+async function restoreSession() {
+  clearSession("");
+  const epoch = state.sessionEpoch;
+  setLoginBusy(true);
+  setLoginMessage("Восстанавливаем вход…");
+  try {
+    await refreshSession();
+    if (epoch !== state.sessionEpoch) return;
+    await loadIdentity();
+  } catch (error) {
+    if (epoch !== state.sessionEpoch) return;
+    clearSession(error.status === 401 ? "" : "Не удалось восстановить вход. Проверьте соединение и обновите страницу.");
+  } finally {
+    setLoginBusy(false);
+  }
+}
+
+function browserAuth(path, options = {}) {
+  const run = () => requestJson(`/auth/browser/${path}`, { method: "POST", ...options }, { authenticated: false, retryAuthentication: false });
+  return navigator.locks ? navigator.locks.request("mt-browser-session", run) : run();
+}
 
 document.querySelector("#decisionDialog").addEventListener("keydown", (event) => {
   if (event.key !== "Tab") return;
@@ -187,13 +216,12 @@ async function login() {
   setLoginBusy(true);
   setLoginMessage("Проверяем данные…");
   try {
-    const tokens = await requestJson(
-      "/auth/login",
+    const tokens = await browserAuth(
+      "login",
       {
         method: "POST",
         body: JSON.stringify({ email, password }),
       },
-      { authenticated: false, retryAuthentication: false },
     );
     setTokens(tokens);
     elements.passwordInput.value = "";
@@ -215,7 +243,7 @@ async function loadIdentity() {
   if (sessionEpoch !== state.sessionEpoch) return;
   state.memberships = profile.memberships.filter((membership) => membership.is_active);
 
-  elements.sellerName.textContent = profile.user.display_name || "Продавец";
+  elements.sellerName.textContent = profile.user.display_name || profile.user.email.split("@")[0];
   elements.sellerEmail.textContent = profile.user.email;
   elements.loginForm.hidden = true;
   elements.sessionPanel.hidden = false;
@@ -752,22 +780,12 @@ async function executeMutation(identity, endpoint, payload) {
 }
 
 async function logout() {
-  const refreshToken = state.refreshToken;
   clearSession("Сессия завершена");
   const sessionEpoch = state.sessionEpoch;
   setSessionBusy(true);
   setLoginBusy(true);
   try {
-    if (refreshToken) {
-      await requestJson(
-        "/auth/logout",
-        {
-          method: "POST",
-          body: JSON.stringify({ refresh_token: refreshToken }),
-        },
-        { authenticated: false, retryAuthentication: false },
-      );
-    }
+    await browserAuth("logout");
   } catch (error) {
     if (sessionEpoch === state.sessionEpoch) {
       setLoginMessage("Вы вышли из кабинета на этом устройстве. Серверный отзыв сессии не подтверждён из-за ошибки запроса.", true);
@@ -786,6 +804,7 @@ async function requestJson(path, options = {}, configuration = {}) {
   const retryAuthentication = configuration.retryAuthentication !== false;
   const headers = new Headers(options.headers || {});
   headers.set("Accept", "application/json");
+  if (path.startsWith("/auth/browser/")) headers.set("X-Terminal-Request", "1");
   if (options.body) {
     headers.set("Content-Type", "application/json");
   }
@@ -801,6 +820,7 @@ async function requestJson(path, options = {}, configuration = {}) {
       ...options,
       headers,
       signal: controller.signal,
+      credentials: "same-origin",
     });
   } catch (error) {
     if (error instanceof DOMException && error.name === "AbortError") {
@@ -815,7 +835,7 @@ async function requestJson(path, options = {}, configuration = {}) {
     response.status === 401 &&
     authenticated &&
     retryAuthentication &&
-    state.refreshToken
+    state.accessToken
   ) {
     if (sessionEpoch !== state.sessionEpoch) {
       throw new ApiRequestError("Сессия завершена. Войдите снова.", 401);
@@ -846,14 +866,7 @@ async function requestJson(path, options = {}, configuration = {}) {
 async function refreshSession() {
   if (!state.refreshPromise) {
     const sessionEpoch = state.sessionEpoch;
-    state.refreshPromise = requestJson(
-      "/auth/refresh",
-      {
-        method: "POST",
-        body: JSON.stringify({ refresh_token: state.refreshToken }),
-      },
-      { authenticated: false, retryAuthentication: false },
-    )
+    state.refreshPromise = browserAuth("refresh")
       .then((tokens) => {
         if (sessionEpoch !== state.sessionEpoch) {
           throw new ApiRequestError("Сессия завершена. Войдите снова.", 401);
@@ -869,14 +882,12 @@ async function refreshSession() {
 
 function setTokens(tokens) {
   state.accessToken = tokens.access_token;
-  state.refreshToken = tokens.refresh_token;
 }
 
 function clearSession(message) {
   productAccess.reset();
   state.sessionEpoch += 1;
   state.accessToken = null;
-  state.refreshToken = null;
   state.memberships = [];
   invalidateWorkspace();
   state.pendingMutations.clear();

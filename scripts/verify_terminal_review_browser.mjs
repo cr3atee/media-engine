@@ -27,6 +27,7 @@ let empty = false;
 let forbidden = false;
 let expireOnce = false;
 let refreshCount = 0;
+let browserSession = false;
 let workspaceError = null;
 let mutationError = null;
 let holdPath = null;
@@ -64,11 +65,13 @@ async function intercept({ requestId, request }) {
   let responseCode = 200;
   let body = {};
   const path = url.pathname;
-  if (path.endsWith("/auth/login")) {
+  if (path.endsWith("/auth/browser/login")) {
     responseCode = loginStatus;
+    browserSession = loginStatus === 200;
     body = loginStatus === 200 ? { access_token: "fixture-access", refresh_token: "fixture-refresh" } : { error: { code: "invalid_credentials" } };
-  } else if (path.endsWith("/auth/refresh")) {
-    refreshCount++;
+  } else if (path.endsWith("/auth/browser/refresh")) {
+    if (browserSession) refreshCount++;
+    else responseCode = 401;
     body = { access_token: "fixture-renewed", refresh_token: "fixture-refresh" };
   } else if (path.endsWith("/me")) {
     body = { user: { display_name: "Тестовый продавец", email: "review@example.test" }, memberships: [tenant, secondTenant].map(id => ({ is_active: true, tenant_id: id, tenant_name: id === tenant ? "Проверка интерфейса (fixture)" : "Второе пространство (fixture)", role: "owner" })) };
@@ -79,7 +82,8 @@ async function intercept({ requestId, request }) {
     if (workspaceError) { responseCode = workspaceError.status; body = { error: { code: workspaceError.code } }; }
     else if (expireOnce) { expireOnce = false; responseCode = 401; }
     else body = { summary: empty ? { ...summary, linked_offers: 3, review_candidates: 0, product_proposals: 0, unresolved_offers: 0 } : summary, review_candidates: empty ? [] : [candidate], product_proposals: empty ? [] : proposals };
-  } else if (path.endsWith("/auth/logout")) {
+  } else if (path.endsWith("/auth/browser/logout")) {
+    browserSession = false;
     body = {};
   } else if (path.includes("/catalog/") && request.method === "POST") {
     mutations.push(request);

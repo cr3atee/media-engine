@@ -3,44 +3,53 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Проверка каталога | Market Terminal</title>
+    <meta name="color-scheme" content="dark" />
+    <title>Личный кабинет | Market Terminal</title>
+    <link
+      rel="preload"
+      href="/terminal/preview/onest.ttf"
+      as="font"
+      type="font/ttf"
+      crossorigin
+    />
     <link rel="stylesheet" href="/terminal/preview/preview.css" />
     <link rel="stylesheet" href="/terminal/review.css" />
   </head>
   <body class="review-page">
     <a class="skip-link" href="#reviewWorkspace">Перейти к проверке каталога</a>
     <main class="shell review-shell">
-      <header class="topbar">
-        <a class="brand" href="/terminal" aria-label="Каталог Market Terminal">
-          <span class="brand-mark">MT</span>
-          <span>
-            <strong>Market Terminal</strong>
-            <small>Рабочее место продавца</small>
-          </span>
+      <header class="header">
+        <a class="brand" href="/terminal" aria-label="Market Terminal, каталог">
+          <svg viewBox="0 0 40 40" aria-hidden="true">
+            <path d="M5 31V9l15 12L35 9v22M5 10l15 12v13" />
+          </svg>
+          <span>market<span class="brand-second">terminal</span></span>
         </a>
-        <nav class="nav" aria-label="Навигация рабочего места">
+        <nav class="cabinet-nav" aria-label="Навигация личного кабинета">
           <a href="/terminal">Каталог</a>
           <a id="reviewCandidatesLink" href="#reviewCandidates" hidden>Совпадения</a>
           <a id="productProposalsLink" href="#productProposals" hidden>Новые товары</a>
           <a id="productAccessLink" href="#productAccess" hidden>Доступ</a>
         </nav>
-        <span
-          class="api-status"
-          id="sessionStatus"
-          role="status"
-          aria-live="polite"
-          aria-atomic="true"
-        >
-          Требуется вход
-        </span>
+        <div class="profile cabinet-profile">
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <circle cx="12" cy="8" r="3.5" />
+            <path d="M5 21v-2a7 7 0 0 1 14 0v2" />
+          </svg>
+          <span
+            id="sessionStatus"
+            role="status"
+            aria-live="polite"
+            aria-atomic="true"
+          >Требуется вход</span>
+        </div>
       </header>
 
       <section class="review-intro">
         <div>
-          <h1>Проверка каталога</h1>
+          <h1>Личный кабинет</h1>
           <p class="lead">
-            Разберите объявления, для которых система не смогла принять
-            однозначное решение.
+            Управляйте каталогом и доступом в одном месте.
           </p>
         </div>
         <aside class="review-rule" aria-label="Правило проверки">
@@ -55,8 +64,8 @@
       <section class="auth-layout" id="authArea">
         <form class="login-card" id="loginForm">
           <div>
-            <h2>Вход продавца</h2>
-            <p class="form-hint">Войдите, чтобы проверить объявления и связать их с товарами каталога.</p>
+            <h2>С возвращением</h2>
+            <p class="form-hint">Войдите в свой аккаунт Market Terminal.</p>
           </div>
           <label for="emailInput">
             <span>Электронная почта</span>
@@ -78,7 +87,7 @@
               required
             />
           </label>
-          <button class="primary-button" id="loginButton" type="submit">
+          <button class="primary-button" id="loginButton" type="submit" disabled>
             Войти в рабочее место
           </button>
           <p
@@ -91,10 +100,11 @@
 
         <section class="session-card" id="sessionPanel" hidden>
           <div class="session-identity">
-            <p class="section-label">Активная сессия</p>
+            <p class="section-label">Ваш аккаунт</p>
             <h2 id="sellerName">Продавец</h2>
             <p class="form-hint" id="sellerEmail"></p>
-            <p class="form-hint" id="productIdentity"></p>
+            <span class="account-role" id="productIdentity"></span>
+            <details class="account-details"><summary>Данные аккаунта</summary><span>ID</span><code id="accountId"></code></details>
           </div>
           <label class="tenant-control" for="tenantSelect">
             <span>Рабочее пространство</span>
@@ -117,7 +127,7 @@
 
       <section id="productAccess" class="product-access" aria-labelledby="accessTitle" hidden>
         <header class="workspace-heading">
-          <div><p class="section-label">Администрирование</p><h2 id="accessTitle" tabindex="-1">Доступ к приложению</h2></div>
+          <div><p class="section-label">Администрирование</p><h2 id="accessTitle" tabindex="-1">Управление доступом</h2></div>
           <button id="accessClose" type="button" class="ghost-button">Закрыть раздел</button>
         </header>
         <p class="form-hint">Роль в приложении не заменяет права в рабочих пространствах.</p>
@@ -125,7 +135,7 @@
           <label for="accessUserId">ID аккаунта<input id="accessUserId" name="user_id" required autocomplete="off" spellcheck="false" placeholder="UUID аккаунта" aria-describedby="accessLookupHint" /></label>
           <button id="accessLoad" class="ghost-button" type="submit">Найти аккаунт</button>
         </form>
-        <p id="accessLookupHint" class="form-hint">Владелец аккаунта может взять свой ID под именем в кабинете.</p>
+        <p id="accessLookupHint" class="form-hint">ID находится в разделе «Данные аккаунта» в личном кабинете пользователя.</p>
         <p id="accessMessage" class="workspace-message" role="status" aria-live="polite"></p>
         <div id="accessDetails" class="access-layout" hidden>
           <form id="accessForm" class="access-editor">

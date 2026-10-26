@@ -116,9 +116,9 @@ ordinary offline suite. Recreate the disposable DB for an independent repeat.
 ## Cabinet Integration: 2026-10-26
 
 The existing `/terminal/review` cabinet now includes an administrator-only
-**Access** section using the same in-memory bearer/refresh session and existing
-role APIs. No independent login, browser credential storage, new dependency or
-backend authorization policy was added.
+**Access** section using the existing authentication service and role APIs. No
+independent login, JavaScript credential storage, new dependency or backend
+authorization policy was added.
 
 - Explicit account lookup by UUID, current role/version, four role choices,
   required reason, native confirmation dialog and a read-only audit timeline.
@@ -166,6 +166,28 @@ dedicated Chromium debugging profile on 9224, then run the browser verifier.
 `TERMINAL_PREVIEW_URL` defaults to `http://127.0.0.1:8003` and
 `TERMINAL_CDP_URL` defaults to `http://127.0.0.1:9224`; non-loopback targets are
 refused. Screenshots go to a new OS temporary directory, never into the catalog.
+
+## Browser Session Continuity: 2026-10-27
+
+The cabinet no longer loses authentication when navigation destroys its
+in-memory JavaScript state. Browser login, refresh and logout reuse the existing
+`AuthenticationService` through a dedicated same-origin transport:
+
+- the rotating refresh token is held only in an `HttpOnly`, `SameSite=Strict`
+  session cookie scoped to `/api/v1/auth/browser`;
+- JavaScript receives only the short-lived access token and keeps it in memory;
+- cookie mutations require the exact request origin plus `X-Terminal-Request`;
+- HTTPS is mandatory outside explicit loopback development;
+- invalid refresh clears the cookie, and logout revokes the server session;
+- no localStorage or sessionStorage fallback was introduced.
+
+An isolated real Edge run with memory repositories passed **8 checks** for
+login, cookie visibility and rotation, cabinet → catalog → cabinet, reload,
+browser Back, logout and failed restoration after logout. The existing fixture
+runs also passed: **55 cabinet checks** and **39 product-access checks**. Full
+Pytest: **595 passed, 59 skipped**; MyPy: **468 files**, no issues. Ruff, Ruff
+format, Node syntax and `git diff --check` passed. No application database or
+real account was used by the session verifier.
 
 ## Local Working Deployment: 2026-10-26
 

@@ -197,11 +197,17 @@ def test_market_terminal_catalog_review_workspace_is_served() -> None:
         assert "default-src 'self'" in response.headers["content-security-policy"]
         assert "style-src 'self'" in response.headers["content-security-policy"]
         assert "'unsafe-inline'" not in response.headers["content-security-policy"]
-        assert "Рабочее место продавца" in response.text
-        assert "Проверка каталога" in response.text
+        assert (
+            '<span>market<span class="brand-second">terminal</span></span>'
+            in response.text
+        )
+        assert 'class="header"' in response.text
+        assert 'class="cabinet-nav"' in response.text
+        assert "Личный кабинет" in response.text
         assert 'class="review-page"' in response.text
         assert " glass" not in response.text
         assert 'id="loginForm"' in response.text
+        assert 'id="loginButton" type="submit" disabled' in response.text
         assert 'autocomplete="username"' in response.text
         assert 'autocomplete="current-password"' in response.text
         assert 'id="tenantSelect"' in response.text
@@ -236,6 +242,10 @@ def test_market_terminal_catalog_review_assets_are_served() -> None:
     assert ".queue-pagination" in styles.text
     assert ".decision-details" in styles.text
     assert ".action-button.resolve" in styles.text
+    assert ".cabinet-nav" in styles.text
+    assert ".topbar" not in styles.text
+    assert ".brand-mark" not in styles.text
+    assert ".review-shell { width:" not in styles.text
     assert "@media (max-width: 560px)" in styles.text
     assert "linear-gradient" not in styles.text
     assert "border-radius: 999px" not in styles.text
@@ -245,9 +255,9 @@ def test_market_terminal_catalog_review_assets_are_served() -> None:
     assert script.headers["content-type"].startswith("application/javascript")
     assert script.headers["x-content-type-options"] == "nosniff"
     assert 'const api = "/api/v1";' in script.text
-    assert '"/auth/login"' in script.text
-    assert '"/auth/refresh"' in script.text
-    assert '"/auth/logout"' in script.text
+    assert 'browserAuth("refresh")' in script.text
+    assert 'browserAuth("logout")' in script.text
+    assert "requestJson(`/auth/browser/${path}`" in script.text
     assert 'requestJson("/me")' in script.text
     assert "/catalog/onboarding-workspace?limit=100" in script.text
     assert "function renderOnboardingSummary(summary)" in script.text

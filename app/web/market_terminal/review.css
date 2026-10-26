@@ -1,10 +1,18 @@
 /* Working cabinet: shared catalog tokens, independent layout and real controls. */
-.product-access { padding: 32px 0; border-bottom: 1px solid var(--line); scroll-margin-top: 20px; }
+.product-access { padding: 24px 0; border-bottom: 1px solid var(--line); scroll-margin-top: 20px; }
+.account-role { display: inline-block; color: var(--accent); font-size: 13px; margin-top: 8px; }
+.account-details { margin-top: 10px; color: var(--muted); font-size: 12px; }
+.account-details summary { cursor: pointer; min-height: 28px; }
+.account-details code { display: block; overflow-wrap: anywhere; user-select: all; color: var(--text); margin-top: 6px; }
+.product-access .workspace-heading { margin-bottom: 12px; }
+.product-access .workspace-heading h2 { font-size: clamp(23px, 2.5vw, 30px); }
+.product-access .access-lookup { margin-top: 18px; }
+.product-access .workspace-message:empty { display: none; }
 .access-lookup { display: flex; align-items: end; gap: 16px; margin-top: 24px; }
 .access-lookup label { flex: 1; max-width: 560px; }
 .product-access label { display: grid; gap: 8px; font-size: 14px; }
 .product-access .workspace-message { margin-block: 20px; }
-.access-layout { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 48px; }
+.access-layout { display: grid; grid-template-columns: minmax(0, .9fr) minmax(0, 1.1fr); gap: 32px; padding-top: 8px; }
 .access-editor { display: grid; gap: 16px; align-content: start; }
 .access-editor .form-hint { margin: 0; }
 .access-id, #productIdentity { overflow-wrap: anywhere; font-variant-numeric: tabular-nums; }
@@ -22,17 +30,17 @@
   .access-lookup label { max-width: none; }
 }
 .review-page { min-height: 100vh; }
-.review-shell { width: min(1360px, calc(100% - 64px)); padding: 24px 0 72px; }
+.review-shell { padding: 24px 0 72px; }
 .skip-link { position: fixed; top: 8px; left: 8px; transform: translateY(-200%); z-index: 30; background: var(--primary); padding: 12px; }
 .skip-link:focus { transform: none; }
-.topbar { display: flex; align-items: center; gap: 32px; padding: 18px 24px; background: var(--surface); border-radius: 20px; }
-.review-page .brand > span { line-height: 1.4; }
-.review-page .brand-mark { display: grid; place-items: center; width: 42px; height: 42px; background: var(--raised); color: var(--accent); border-radius: 12px; font-size: 16px; }
-.review-page .brand small { display: block; color: var(--muted); font-size: 12px; font-weight: 400; letter-spacing: 0; }
-.nav { display: flex; gap: 24px; margin-left: auto; flex-wrap: wrap; }
-.nav a { display: inline-flex; min-height: 44px; align-items: center; color: var(--muted); border-bottom: 2px solid transparent; }
-.nav a:hover { color: var(--text); border-color: var(--accent); }
-.api-status { color: var(--muted); font-size: 13px; }
+.cabinet-nav { flex: 1; display: flex; align-items: center; gap: 24px; min-width: 0; min-height: 48px; padding: 0 16px; overflow-x: auto; background: var(--canvas); border: 1px solid transparent; border-radius: 12px; scrollbar-width: none; }
+.cabinet-nav::-webkit-scrollbar { display: none; }
+.cabinet-nav a { display: inline-flex; flex: 0 0 auto; min-height: 48px; align-items: center; color: var(--muted); border-bottom: 2px solid transparent; font-size: 14px; }
+.cabinet-nav a:hover, .cabinet-nav a:focus-visible { color: var(--text); border-color: var(--accent); }
+.cabinet-profile { flex: 0 0 auto; color: var(--muted); }
+.cabinet-profile svg { width: 22px; height: 22px; fill: none; stroke: var(--accent); stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
+.cabinet-profile > span { max-width: 128px; overflow-wrap: anywhere; text-align: center; }
+.cabinet-profile > span.error { color: var(--error); }
 .review-intro { display: grid; grid-template-columns: minmax(0, 1fr) minmax(240px, .5fr); align-items: end; gap: 48px; padding: 48px 0 28px; }
 .review-intro .lead { margin-top: 14px; max-width: 580px; color: var(--muted); }
 .review-rule { border-left: 2px solid var(--accent); padding-left: 20px; font-size: 14px; }
@@ -133,8 +141,7 @@
 .confirmation-pair dd { margin: 6px 0; font-weight: 550; }
 .confirmation-facts { white-space: pre-wrap; overflow-wrap: anywhere; font-size: 14px; }
 @media (max-width: 1100px) {
-  .topbar { flex-wrap: wrap; gap: 12px 24px; }
-  .api-status { width: 100%; }
+  .cabinet-nav { gap: 18px; }
   .queue-toolbar { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
   .session-card { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
   .session-meta { grid-column: 1; }
@@ -143,7 +150,7 @@
   .review-card-header { flex-direction: column; gap: 4px; }
 }
 @media (max-width: 800px) {
-  .review-shell { width: calc(100% - 32px); padding-top: 16px; }
+  .review-shell { padding-top: 16px; }
   .review-intro, .review-card { grid-template-columns: 1fr; gap: 20px; }
   .review-intro { padding-top: 32px; }
   .marketplace-progress { grid-template-columns: 1fr; gap: 14px; }
@@ -154,8 +161,8 @@
   .review-metric:nth-child(3) { padding-left: 0; }
 }
 @media (max-width: 560px) {
-  .topbar { padding: 16px; }
-  .nav { margin-left: 0; width: 100%; gap: 16px; font-size: 14px; }
+  .cabinet-nav { grid-column: 1 / -1; grid-row: 2; width: 100%; gap: 18px; padding-inline: 14px; }
+  .cabinet-profile { grid-column: 2; grid-row: 1; }
   .session-card, .queue-toolbar { grid-template-columns: minmax(0, 1fr); }
   .session-meta, .session-actions { grid-column: 1; grid-row: auto; }
   .session-actions > button { flex: 1; }
