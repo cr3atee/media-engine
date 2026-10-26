@@ -45,6 +45,11 @@ async function until(expression) {
 }
 async function check(name, expression) { assert(await evaluate(expression), name); checks++; console.log(`PASS ${name}`); }
 async function ready() { await until('document.querySelector("#sessionPanel") && !document.querySelector("#sessionPanel").hidden'); }
+async function reloadPage() {
+  const previousTimeOrigin = await evaluate("performance.timeOrigin");
+  await send("Page.reload");
+  await until(`performance.timeOrigin !== ${previousTimeOrigin} && document.readyState === "complete"`);
+}
 async function shellMetrics() {
   return evaluate(`(() => {
     document.documentElement.style.overflowY = "scroll";
@@ -120,14 +125,14 @@ try {
   await evaluate('document.querySelector("a.profile").click()');
   await ready();
   await check("catalog to cabinet keeps signed-in identity", 'document.querySelector("#sellerEmail").textContent === "seller@example.com" && document.querySelector("#loginForm").hidden');
-  await send("Page.reload"); await ready();
+  await reloadPage(); await ready();
   await check("page reload restores login", 'document.querySelector("#sellerEmail").textContent === "seller@example.com"');
   const rotated = await send("Network.getCookies", { urls: [`${base}/api/v1/auth/browser/refresh`] });
   assert.notEqual(rotated.cookies.find(item => item.name === "mt_refresh_local").value, cookie.value); checks++;
   await until('!document.querySelector("#logoutButton").disabled');
   await evaluate('document.querySelector("#logoutButton").click()');
   await until('!document.querySelector("#loginForm").hidden && !document.querySelector("#loginButton").disabled');
-  await send("Page.reload");
+  await reloadPage();
   await until('document.querySelector("#loginButton") && !document.querySelector("#loginButton").disabled');
   await check("logout survives reload and revokes restoration", 'document.querySelector("#sessionPanel").hidden && !document.querySelector("#loginForm").hidden');
   await login();

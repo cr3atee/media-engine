@@ -271,7 +271,8 @@ def test_market_terminal_catalog_review_assets_are_served() -> None:
     assert ".queue-toolbar" in styles.text
     assert ".queue-pagination" in styles.text
     assert ".decision-details" in styles.text
-    assert ".action-button.resolve" in styles.text
+    assert ".decision-choice" in styles.text
+    assert ".decision-option:has(.decision-choice-input:checked)" in styles.text
     assert ".cabinet-nav" in styles.text
     assert ".topbar" not in styles.text
     assert ".brand-mark" not in styles.text
@@ -300,8 +301,11 @@ def test_market_terminal_catalog_review_assets_are_served() -> None:
     assert "${externalLinkHtml(candidate.offer_url)}" in script.text
     assert "card.dataset.canonicalProductName" in script.text
     assert "Связать объявление с каноническим товаром" in script.text
-    assert "Для нового товара поле необязательно" in script.text
-    assert "PC, Java + Bedrock, ключ Microsoft, GLOBAL" in script.text
+    assert '"create-product": {' in script.text
+    assert '"resolve-existing": {' in script.text
+    assert "function handleDecisionChoice(event)" in script.text
+    assert "reason.required = guidance.required;" in script.text
+    assert "Сверьте издание, платформу, способ получения и регион" in script.text
     assert "`/catalog/reviews/${endpoint}`" in script.text
     assert "let endpoint = `${base}/confirm`;" in script.text
     assert "endpoint = `${base}/resolve-existing`;" in script.text

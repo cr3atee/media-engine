@@ -7,6 +7,41 @@ const api = "/api/v1";
 const requestTimeoutMs = 15_000;
 const candidatePageSize = 6;
 const proposalPageSize = 9;
+const decisionGuidance = Object.freeze({
+  "confirm-candidate": {
+    label: "Комментарий к проверке",
+    requirement: "Необязательно",
+    hint: "Укажите, какие признаки вы сверили в объявлении и товаре каталога.",
+    placeholder: "Например: одинаковые платформа, издание и способ получения.",
+    required: false,
+    submitLabel: "Проверить связь",
+  },
+  "reject-candidate": {
+    label: "Почему товары различаются?",
+    requirement: "Обязательно",
+    hint: "Назовите конкретное отличие: платформу, издание, регион или способ получения.",
+    placeholder: "Например: объявление для Xbox, а товар каталога для PC.",
+    required: true,
+    submitLabel: "Проверить отклонение",
+  },
+  "create-product": {
+    label: "Комментарий к созданию",
+    requirement: "Необязательно",
+    hint: "Можно зафиксировать проверенные особенности нового товара. Название будет взято из объявления.",
+    placeholder: "Например: отдельное издание для iOS.",
+    required: false,
+    submitLabel: "Проверить создание",
+  },
+  "resolve-existing": {
+    label: "Почему это один товар?",
+    requirement: "Обязательно",
+    hint: "Сверьте издание, платформу, способ получения и регион. Пример: в обоих источниках указаны Java + Bedrock для PC и цифровой ключ.",
+    placeholder: "Перечислите только факты, которые удалось проверить.",
+    required: true,
+    submitLabel: "Проверить связь",
+  },
+});
+let decisionFormSequence = 0;
 
 const elements = {
   sessionStatus: document.querySelector("#sessionStatus"),
@@ -160,10 +195,14 @@ elements.proposalNext.addEventListener("click", () => {
 elements.candidateList.addEventListener("click", (event) => {
   void handleCandidateAction(event);
 });
+elements.candidateList.addEventListener("change", handleDecisionChoice);
+elements.candidateList.addEventListener("input", handleDecisionReasonInput);
 
 elements.proposalList.addEventListener("click", (event) => {
   void handleProposalAction(event);
 });
+elements.proposalList.addEventListener("change", handleDecisionChoice);
+elements.proposalList.addEventListener("input", handleDecisionReasonInput);
 
 renderEmptyQueues();
 void restoreSession();
@@ -486,6 +525,50 @@ function queueFiltersActive() {
   return Boolean(state.queueQuery || state.queueMarketplace);
 }
 
+function decisionFormHtml(options) {
+  const formId = `catalog-decision-${++decisionFormSequence}`;
+  const choices = options.map((option) => `
+    <label class="decision-option${option.disabled ? " is-disabled" : ""}">
+      <input
+        class="decision-choice-input ${option.className}"
+        type="radio"
+        name="${formId}"
+        value="${option.action}"
+        ${option.disabled ? "disabled" : ""}
+      >
+      <span>
+        <strong>${option.title}</strong>
+        <small>${option.description}</small>
+      </span>
+    </label>
+  `).join("");
+  return `
+    <fieldset class="decision-choice">
+      <legend>Как поступить?</legend>
+      <div class="decision-options">${choices}</div>
+    </fieldset>
+    <label class="reason-label" for="${formId}-reason">
+      <span class="reason-heading">
+        <span data-reason-label>Комментарий к решению</span>
+        <small data-reason-requirement>Сначала выберите действие</small>
+      </span>
+      <small id="${formId}-hint" data-reason-hint>После выбора здесь появится точное правило и пример.</small>
+      <textarea
+        id="${formId}-reason"
+        class="review-reason"
+        maxlength="2000"
+        aria-describedby="${formId}-hint ${formId}-error"
+        placeholder="Выберите решение выше"
+        disabled
+      ></textarea>
+      <small id="${formId}-error" class="reason-error" role="alert" hidden></small>
+    </label>
+    <div class="review-actions">
+      <button class="primary-button decision-submit" data-submit-decision type="button" disabled>Выберите решение</button>
+    </div>
+  `;
+}
+
 function candidateCard(candidate) {
   const card = document.createElement("article");
   card.className = "review-card";
@@ -521,15 +604,20 @@ function candidateCard(candidate) {
     <details class="decision-details">
       <summary>Принять решение</summary>
       <div class="decision-body">
-        <label class="reason-label">
-          Причина решения
-          <small>Обязательна для отклонения, рекомендуется для подтверждения.</small>
-          <textarea class="review-reason" maxlength="2000" placeholder="Что проверено в исходном объявлении?"></textarea>
-        </label>
-        <div class="review-actions">
-          <button class="action-button confirm" data-action="confirm-candidate" type="button">Подтвердить связь</button>
-          <button class="action-button reject" data-action="reject-candidate" type="button">Отклонить пару</button>
-        </div>
+        ${decisionFormHtml([
+          {
+            action: "confirm-candidate",
+            className: "confirm",
+            title: "Это тот же товар",
+            description: "Связать объявление с товаром справа. Комментарий рекомендуется.",
+          },
+          {
+            action: "reject-candidate",
+            className: "reject",
+            title: "Это разные товары",
+            description: "Отклонить предложенную пару. Причина обязательна.",
+          },
+        ])}
       </div>
     </details>
     <p class="card-message" role="status" aria-live="polite"></p>
@@ -598,15 +686,23 @@ function proposalCard(proposal) {
     <details class="decision-details">
       <summary>Принять решение</summary>
       <div class="decision-body">
-        <label class="reason-label">
-          Проверенные факты
-          <small>Для нового товара поле необязательно. Для связи укажите платформу, издание, тип выдачи и регион.</small>
-          <textarea class="review-reason" maxlength="2000" placeholder="Например: PC, Java + Bedrock, ключ Microsoft, GLOBAL; не аккаунт и не DLC."></textarea>
-        </label>
-        <div class="review-actions">
-          <button class="action-button create" data-action="create-product" type="button">Создать новый товар</button>
-          <button class="action-button resolve" data-action="resolve-existing" type="button" ${nearestId ? "" : "disabled"}>Связать с товаром выше</button>
-        </div>
+        ${decisionFormHtml([
+          {
+            action: "create-product",
+            className: "create",
+            title: "Это новый товар",
+            description: "Создать товар с названием объявления. Комментарий необязателен.",
+          },
+          {
+            action: "resolve-existing",
+            className: "resolve",
+            title: "Это товар, показанный выше",
+            description: nearestId
+              ? "Связать с предложенным товаром. Проверенные факты обязательны."
+              : "Подходящий товар не найден; доступно только создание нового.",
+            disabled: !nearestId,
+          },
+        ])}
       </div>
     </details>
     <p class="card-message" role="status" aria-live="polite"></p>
@@ -614,22 +710,73 @@ function proposalCard(proposal) {
   return card;
 }
 
+function handleDecisionChoice(event) {
+  if (!(event.target instanceof HTMLInputElement) || !event.target.matches(".decision-choice-input")) {
+    return;
+  }
+  const card = event.target.closest(".review-card");
+  const guidance = decisionGuidance[event.target.value];
+  if (!card || !guidance) return;
+
+  const reason = card.querySelector(".review-reason");
+  const requirement = card.querySelector("[data-reason-requirement]");
+  card.querySelector("[data-reason-label]").textContent = guidance.label;
+  card.querySelector("[data-reason-hint]").textContent = guidance.hint;
+  requirement.textContent = guidance.requirement;
+  requirement.classList.toggle("is-required", guidance.required);
+  reason.disabled = false;
+  reason.required = guidance.required;
+  reason.setAttribute("aria-required", String(guidance.required));
+  reason.placeholder = guidance.placeholder;
+  card.querySelector("[data-submit-decision]").disabled = false;
+  card.querySelector("[data-submit-decision]").textContent = guidance.submitLabel;
+  setReasonError(card, "");
+}
+
+function handleDecisionReasonInput(event) {
+  if (!(event.target instanceof HTMLTextAreaElement) || !event.target.matches(".review-reason")) {
+    return;
+  }
+  const card = event.target.closest(".review-card");
+  if (card) setReasonError(card, "");
+}
+
+function selectedDecision(card) {
+  return card.querySelector(".decision-choice-input:checked")?.value || "";
+}
+
+function setReasonError(card, message) {
+  const reason = card.querySelector(".review-reason");
+  const error = card.querySelector(".reason-error");
+  error.textContent = message;
+  error.hidden = !message;
+  if (message) reason.setAttribute("aria-invalid", "true");
+  else reason.removeAttribute("aria-invalid");
+}
+
+function validateDecisionReason(card, action, reason) {
+  const guidance = decisionGuidance[action];
+  if (!guidance?.required || reason) return true;
+  const message = action === "reject-candidate"
+    ? "Для отклонения укажите конкретное различие."
+    : "Для связи укажите проверенные факты.";
+  setReasonError(card, message);
+  card.querySelector(".review-reason").focus();
+  return false;
+}
+
 async function handleCandidateAction(event) {
   if (!(event.target instanceof Element)) {
     return;
   }
-  const button = event.target.closest("button[data-action]");
+  const button = event.target.closest("button[data-submit-decision]");
   const card = button?.closest(".review-card");
   if (!button || !card || !state.activeTenantId) {
     return;
   }
   const reason = card.querySelector(".review-reason").value.trim();
-  const action = button.dataset.action;
-  if (action === "reject-candidate" && !reason) {
-    setCardMessage(card, "Для отклонения укажите проверенную причину.");
-    card.querySelector(".review-reason").focus();
-    return;
-  }
+  const action = selectedDecision(card);
+  if (!action || !validateDecisionReason(card, action, reason)) return;
   if (!await confirmDecision(card, action, reason)) return;
   const endpoint = action === "confirm-candidate" ? "confirm" : "reject";
   const payload = {
@@ -652,18 +799,14 @@ async function handleProposalAction(event) {
   if (!(event.target instanceof Element)) {
     return;
   }
-  const button = event.target.closest("button[data-action]");
+  const button = event.target.closest("button[data-submit-decision]");
   const card = button?.closest(".review-card");
   if (!button || !card || !state.activeTenantId) {
     return;
   }
-  const action = button.dataset.action;
+  const action = selectedDecision(card);
   const reason = card.querySelector(".review-reason").value.trim();
-  if (action === "resolve-existing" && !reason) {
-    setCardMessage(card, "Для существующего товара укажите проверенные факты.");
-    card.querySelector(".review-reason").focus();
-    return;
-  }
+  if (!action || !validateDecisionReason(card, action, reason)) return;
   if (!await confirmDecision(card, action, reason)) return;
   const base = `/catalog/product-proposals/${encodeURIComponent(card.dataset.proposalId)}`;
   const payload = {

@@ -18,7 +18,10 @@ repository model, authorization policy and database schema were not changed.
 - Native confirmation dialog for create, link, confirm and reject. It repeats
   the exact source, target and supplied facts; cancel is initially focused.
 - Tab/Shift+Tab containment, Escape dismissal and opener focus restoration.
-- Existing required-reason rules retained. Failures appear beside the form;
+- Each record now asks for one explicit decision before submission. The selected
+  action updates the field label, visible example, required state and submit
+  label: create is optional, proposal linking and rejection are required, and
+  candidate confirmation remains optional. Field errors stay beside the field;
   comments survive failed requests and cancellation.
 - Only the short-lived access token remains in tab memory. The rotating refresh
   credential is an `HttpOnly`, `SameSite=Strict` session cookie scoped to the
@@ -58,8 +61,8 @@ service and browser cookie jar, and does not intercept authentication requests.
 
 ### Results
 
-- Review browser: **55 checks passed**. Login errors, permissions, filtering,
-  exact target, escaped titles, safe source links, optional/required facts,
+- Review browser: **59 checks passed**. Login errors, permissions, filtering,
+  exact target, escaped titles, safe source links, action-dependent facts,
   cancel without submission, keyboard dialog, 409 conflict, 503 retry with
   identical idempotency key, changed ambiguous payload refusal, refresh,
   no-target disabled state, completed queue and logout covered.

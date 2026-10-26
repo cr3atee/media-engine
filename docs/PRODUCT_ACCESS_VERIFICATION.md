@@ -184,7 +184,7 @@ in-memory JavaScript state. Browser login, refresh and logout reuse the existing
 An isolated real Edge run with memory repositories passed **9 checks** for
 exact catalog/cabinet shell parity, login, cookie visibility and rotation,
 cabinet → catalog → cabinet, reload, browser Back, logout and failed restoration
-after logout. The existing fixture runs also passed: **55 cabinet checks** and
+after logout. The existing fixture runs also passed: **59 cabinet checks** and
 **39 product-access checks**. Full
 Pytest: **596 passed, 59 skipped**; MyPy: **468 files**, no issues. Ruff, Ruff
 format, Node syntax and `git diff --check` passed. No application database or

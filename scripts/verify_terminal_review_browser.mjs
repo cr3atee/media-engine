@@ -167,8 +167,20 @@ async function setBrowserZoom(factor) {
   await send("Page.bringToFront");
 }
 const source = '[data-external-id="fixture-new"]';
-const resolve = `${source} [data-action="resolve-existing"]`;
-async function openResolve() { await click(resolve); await until('document.querySelector("#decisionDialog").open'); }
+const candidateSource = '[data-external-id="fixture-review"]';
+const missingSource = '[data-external-id="fixture-missing"]';
+async function chooseDecision(card, action) {
+  if (!await evaluate(`document.querySelector('${card} .decision-details').open`)) {
+    await click(`${card} summary`);
+  }
+  await click(`${card} input[value="${action}"]`);
+}
+async function openDecision(card, action) {
+  await chooseDecision(card, action);
+  await click(`${card} [data-submit-decision]`);
+  await until('document.querySelector("#decisionDialog").open');
+}
+async function openResolve() { await openDecision(source, "resolve-existing"); }
 async function submit() {
   await click("#decisionConfirm");
   await until('!document.querySelector("#decisionDialog").open');
@@ -223,17 +235,21 @@ try {
   await evaluate('document.querySelector("#queueSearchInput").value="fixture-new"; document.querySelector("#queueSearchInput").dispatchEvent(new Event("input"))');
   await check("queue search selects exact source ID", 'document.querySelectorAll(".review-card").length === 1 && document.querySelector(".review-card").dataset.externalId === "fixture-new"');
   await click('#resetQueueFilters');
-  await click('[data-external-id="fixture-review"] summary');
-  await click('[data-external-id="fixture-review"] .reject');
-  await check("rejection requires explanation", 'document.querySelector("[data-external-id=fixture-review] .card-message").textContent.includes("причину") && !document.querySelector("dialog").open');
-  await click('[data-external-id="fixture-review"] .confirm');
+  await chooseDecision(candidateSource, "reject-candidate");
+  await check("rejection explains required reason before submit", `document.querySelector('${candidateSource} textarea').required && document.querySelector('${candidateSource} [data-reason-label]').textContent.includes('различаются') && document.querySelector('${candidateSource} [data-reason-hint]').textContent.includes('платформу')`);
+  await click(`${candidateSource} [data-submit-decision]`);
+  await check("rejection requires explanation", `document.querySelector('${candidateSource} .reason-error').textContent.includes('различие') && document.activeElement.matches('${candidateSource} .review-reason') && !document.querySelector("dialog").open`);
+  await chooseDecision(candidateSource, "confirm-candidate");
+  await check("candidate confirmation makes comment optional", `!document.querySelector('${candidateSource} textarea').required && document.querySelector('${candidateSource} [data-reason-requirement]').textContent === 'Необязательно'`);
+  await click(`${candidateSource} [data-submit-decision]`);
   await until('document.querySelector("dialog").open');
   await check("candidate confirm uses exact target too", `document.querySelector('#decisionTargetId').textContent.includes('${canonical}') && document.querySelector('#decisionFacts').textContent.includes('не добавлен')`);
   await key("Escape", "Escape", 27);
   await until('!document.querySelector("dialog").open');
-  await click(`${source} summary`);
-  await click(resolve);
-  await check("link requires facts inline without losing focus", `!document.querySelector('#decisionDialog').open && document.querySelector('${source} .card-message').textContent.includes('проверенные факты') && document.activeElement.matches('.review-reason')`);
+  await chooseDecision(source, "resolve-existing");
+  await check("link explains required facts before submit", `document.querySelector('${source} textarea').required && document.querySelector('${source} [data-reason-label]').textContent.includes('один товар') && document.querySelector('${source} [data-reason-hint]').textContent.includes('Java + Bedrock')`);
+  await click(`${source} [data-submit-decision]`);
+  await check("link requires facts inline without losing focus", `!document.querySelector('#decisionDialog').open && document.querySelector('${source} .reason-error').textContent.includes('проверенные факты') && document.activeElement.matches('.review-reason')`);
   await evaluate(`document.querySelector('${source} textarea').value='PC, ключ Microsoft, GLOBAL; не аккаунт.'`);
   await openResolve();
   await check("dialog names both entities and target ID", `document.querySelector('#decisionSource').textContent.includes('цифровой ключ') && document.querySelector('#decisionTargetId').textContent.includes('${canonical}')`);
@@ -245,7 +261,7 @@ try {
   await screenshot("03-confirmation");
   await key("Escape", "Escape", 27);
   await until('!document.querySelector("#decisionDialog").open');
-  await check("escape restores opener and facts", `document.activeElement.matches('${resolve}') && document.querySelector('${source} textarea').value.includes('GLOBAL')`);
+  await check("escape restores opener and facts", `document.activeElement.matches('${source} [data-submit-decision]') && document.querySelector('${source} textarea').value.includes('GLOBAL')`);
   assert.equal(mutations.length, 0, "No mutation on opening or cancelling dialog"); checks++;
   mutationStatus = 409;
   await openResolve(); await submit();
@@ -293,7 +309,9 @@ try {
   await until('!document.querySelector("#reviewWorkspace").hidden && document.querySelectorAll(".review-card").length === 3 && document.querySelector("#reviewWorkspace").getAttribute("aria-busy") === "false"');
   assert.equal(refreshCount, 1); checks++;
   await click('[data-external-id="fixture-missing"] summary');
-  await click('[data-external-id="fixture-missing"] .create');
+  await chooseDecision(missingSource, "create-product");
+  await check("new product choice makes comment optional", `!document.querySelector('${missingSource} textarea').required && document.querySelector('${missingSource} [data-reason-label]').textContent.includes('созданию')`);
+  await click(`${missingSource} [data-submit-decision]`);
   await until('document.querySelector("dialog").open');
   await check("create is optional facts and names new product", 'document.querySelector("#decisionTargetLabel").textContent === "Новый товар" && document.querySelector("#decisionFacts").textContent.includes("не добавлен")');
   mutationStatus = 503;
@@ -301,8 +319,7 @@ try {
   await until('document.querySelector("[data-external-id=fixture-missing] .card-message").textContent.length > 0');
   await check("failure does not enable unavailable target", 'document.querySelector("[data-external-id=fixture-missing] .resolve").disabled');
   mutationStatus = 200;
-  await click('[data-external-id="fixture-missing"] .create');
-  await until('document.querySelector("dialog").open');
+  await openDecision(missingSource, "create-product");
   await submit();
   await until('document.querySelectorAll(".review-card").length === 0');
   await check("empty completed queue is explicit", 'document.querySelector("#workspaceMessage").textContent.includes("все объявления связаны")');
@@ -388,9 +405,7 @@ try {
   empty = true;
   mutationStatus = 200;
   holdPath = "/onboarding-workspace";
-  await click('[data-external-id="fixture-missing"] summary');
-  await click('[data-external-id="fixture-missing"] .create');
-  await until('document.querySelector("dialog").open');
+  await openDecision(missingSource, "create-product");
   await click("#decisionConfirm");
   await waitForHeldReply();
   const queueReply = heldReply;
