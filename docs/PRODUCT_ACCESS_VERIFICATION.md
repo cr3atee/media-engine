@@ -167,6 +167,61 @@ dedicated Chromium debugging profile on 9224, then run the browser verifier.
 `TERMINAL_CDP_URL` defaults to `http://127.0.0.1:9224`; non-loopback targets are
 refused. Screenshots go to a new OS temporary directory, never into the catalog.
 
+## Local Working Deployment: 2026-10-26
+
+This supersedes the earlier statements that the working database had not been
+migrated and no first administrator had been selected. The owner explicitly
+selected a new account, approved separate account creation and requested a
+private local password-entry window. The email and account identifiers are not
+included in this repository documentation.
+
+- Started the existing `mediaengine-epic23-review-postgres` container; no fresh
+  catalog seed or reset was executed.
+- Saved a custom-format PostgreSQL 17.10 backup under untracked `tmp/backups/`,
+  checked its archive listing and computed SHA-256. No dump or credential is
+  committed. This was archive readability verification, not a restore rehearsal.
+- Upgraded `0017_marketplace_polling_runs` to `0018_product_roles`. Alembic current
+  reports head; Alembic check reports no new upgrade operations.
+- Before/after: **6 offers, 6 canonical links, 2 canonical products, 6 decisions**.
+  Existing account retains product role `user` and its previous memberships.
+- Added `scripts/create_local_account.py`, a trusted local operator tool reusing
+  the existing repositories and PasswordHasher. It refuses existing emails,
+  requires a confirmed email and explicit apply, and limits DB targets to the
+  loopback catalog-review namespace. Default execution is inspection only.
+- The owner entered the password twice in a separate console with hidden input.
+  No password was sent through chat, arguments, environment variables or logs.
+  The identity and salted verifier are created in one repository transaction;
+  user creation grants no membership and starts with product role `user`.
+- Existing guarded bootstrap assigned the selected account `admin`, version 2.
+  An identical rerun returned the same audit action; exactly **one** bootstrap
+  audit entry exists. No other user was promoted or modified.
+- Updated app runs on loopback port 8001 using this database, no seed runner,
+  no external API calls and a process-local random signing secret. Restarting
+  with a different secret requires users to log in again; production needs a
+  persistent managed signing secret and normal deployment configuration.
+- Authenticated the old local review account, read its workspace and logged out:
+  **6 offers, 6 links, 2 products, 6 decisions, 0 unresolved**. New browser module
+  serves HTTP 200. The new administrator's browser login still requires the
+  owner to enter their private password; it was not impersonated by the agent.
+- Provisioning tests cover initial unprivileged creation, no implicit membership,
+  duplicate email refusal without credential replacement, transactional rollback,
+  redirected-input rejection and password mismatch retry without secret output.
+  Full Pytest: **591 passed, 59 skipped, 1 existing warning**. MyPy: **466 files**,
+  no issues. Ruff and format checks passed for the two added Python files.
+
+Example for another explicitly approved new local account (no role grant):
+
+```powershell
+# Set PRODUCT_ACCESS_DATABASE_URL privately to the intended local DB first.
+python scripts/create_local_account.py --email <new-email>
+python scripts/create_local_account.py --email <new-email> --confirm-email <same-email> --apply
+```
+
+The account setup is not public signup, email ownership verification or password
+recovery. No confirmation email was sent. The proposed email-verification flow
+remains separate work; product-admin access came from the operator's explicit
+bootstrap approval, not from claiming an email address.
+
 ## Remaining Work
 
 The existing tenant permission model remains authoritative for workspace data.
@@ -175,11 +230,9 @@ existing memberships remain effective even when product role is `user`.
 Product `admin` only grants the new product-role administration boundary, not
 automatic access to all tenants or conversion of older API-key admin endpoints.
 
-Next: deploy migration 0018 to the intended working database with a backup and
-bootstrap the first administrator only after the operator confirms the exact
-account. No real account has been selected or elevated in this work. Restart the
-updated application after migration; the new browser module has its own explicit
-asset route, so mixing old Python routes with new static files is unsupported.
-Apply the remaining product permission matrix without silently revoking or
+Next: owner acceptance of the new administrator's login and Access section.
+The app and static files must be deployed together; the new browser module has
+its own explicit asset route. Apply the remaining product permission matrix
+without silently revoking or
 elevating existing memberships. Then implement durable error diagnostics and
 complete browser/release acceptance.
