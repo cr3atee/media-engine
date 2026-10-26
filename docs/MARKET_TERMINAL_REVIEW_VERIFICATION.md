@@ -8,8 +8,10 @@ repository model, authorization policy and database schema were not changed.
 
 - Shared local Onest font, dark catalog tokens and existing marketplace logos.
 - The catalog and cabinet now use the same shell width, header surface, logo,
-  wordmark, spacing, radii, icon treatment and responsive breakpoints. The
-  project plan records this as a permanent cross-screen acceptance rule.
+  wordmark, search, profile slot, spacing, radii, icon treatment, footer and
+  responsive breakpoints. Cabinet sections use the same underlined navigation
+  pattern as the catalog marketplace row. The project plan records this as a
+  permanent cross-screen acceptance rule.
 - Compact session area, collapsible statistics and visible queue first.
 - Clearly labelled source offer and canonical target with full names and IDs.
   The marketplace source link belongs to the source, not the target.
@@ -64,11 +66,12 @@ service and browser cookie jar, and does not intercept authentication requests.
 - Desktop, 800/390/320 px, native 200% browser zoom and reduced motion passed.
   No runtime/CSP errors. Desktop, mobile and zoom screenshots visually inspected.
 - Product-access browser: **39 checks passed** after the shared-header change.
-- Real-cookie browser: **8 checks passed**. The run covers an invisible
-  `HttpOnly` refresh credential, catalog round-trip, reload, browser Back,
-  rotation, logout and non-restoration after logout.
+- Real-cookie browser: **9 checks passed**. The run covers exact computed shell
+  geometry/style parity, an invisible `HttpOnly` refresh credential, catalog
+  round-trip, reload, browser Back, rotation, logout and non-restoration after
+  logout.
 - Existing preview + working public catalog: **99 checks passed**, GET only.
-- Full Pytest: **595 passed, 59 skipped**. Existing optional integration skips
+- Full Pytest: **596 passed, 59 skipped**. Existing optional integration skips
   remain; this run does not establish that those skipped checks passed.
 - Full MyPy with `--explicit-package-bases app scripts tests`: **468 files passed**.
 - Ruff and Ruff format check: all changed Python files passed. Ruff does not

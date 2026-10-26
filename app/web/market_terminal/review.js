@@ -259,12 +259,6 @@ async function loadIdentity() {
     return;
   }
   await selectTenant(state.memberships[0].tenant_id);
-  if (!elements.reviewWorkspace.hidden) {
-    const behavior = window.matchMedia("(prefers-reduced-motion: reduce)").matches
-      ? "auto"
-      : "smooth";
-    elements.reviewWorkspace.scrollIntoView({ behavior, block: "start" });
-  }
 }
 
 function renderTenantOptions() {

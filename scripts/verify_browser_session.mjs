@@ -45,6 +45,30 @@ async function until(expression) {
 }
 async function check(name, expression) { assert(await evaluate(expression), name); checks++; console.log(`PASS ${name}`); }
 async function ready() { await until('document.querySelector("#sessionPanel") && !document.querySelector("#sessionPanel").hidden'); }
+async function shellMetrics() {
+  return evaluate(`(() => {
+    document.documentElement.style.overflowY = "scroll";
+    const measurement = selector => {
+      const element = document.querySelector(selector);
+      const rect = element.getBoundingClientRect();
+      const style = getComputedStyle(element);
+      return {
+        x: Math.round(rect.x), y: Math.round(rect.y),
+        width: Math.round(rect.width), height: Math.round(rect.height),
+        background: style.backgroundColor, borderRadius: style.borderRadius,
+        padding: style.padding, font: style.fontFamily,
+      };
+    };
+    const shell = measurement(".shell");
+    delete shell.height;
+    return {
+      shell, header: measurement(".header"),
+      brand: measurement(".brand"), mark: measurement(".brand > svg"),
+      wordmark: measurement(".brand > span"), search: measurement(".header .search"),
+      profile: measurement(".header .profile"),
+    };
+  })()`);
+}
 async function login() {
   await until('document.querySelector("#loginButton") && !document.querySelector("#loginButton").disabled');
   await evaluate(`document.querySelector('#emailInput').value='seller@example.com';document.querySelector('#passwordInput').value='correct horse battery staple';document.querySelector('#loginForm').requestSubmit()`);
@@ -79,14 +103,20 @@ try {
     if (message.method === "Runtime.exceptionThrown") errors.push(message.params);
   });
   await send("Runtime.enable"); await send("Page.enable"); await send("Network.enable");
+  await send("Emulation.setDeviceMetricsOverride", { width: 1440, height: 1000, deviceScaleFactor: 1, mobile: false });
   await send("Page.navigate", { url: `${base}/terminal/review` });
+  await until('document.readyState === "complete" && document.querySelector("#cabinetSearchForm")');
+  const cabinetShell = await shellMetrics();
   await login();
   const cookies = await send("Network.getCookies", { urls: [`${base}/api/v1/auth/browser/refresh`] });
   const cookie = cookies.cookies.find(item => item.name === "mt_refresh_local");
   assert(cookie?.httpOnly && cookie.sameSite === "Strict" && cookie.path === "/api/v1/auth/browser"); checks++;
   await check("refresh credential is invisible to page JavaScript", '!document.cookie.includes("mt_refresh") && localStorage.length === 0 && sessionStorage.length === 0');
   await evaluate(`document.querySelector('.cabinet-nav a[href="/terminal"]').click()`);
-  await until('location.pathname === "/terminal" && document.querySelector("a.profile")');
+  await until('location.pathname === "/terminal" && document.querySelector("a.profile") && document.readyState === "complete"');
+  assert.deepEqual(await shellMetrics(), cabinetShell);
+  checks++;
+  console.log("PASS catalog and cabinet share exact shell geometry and styles");
   await evaluate('document.querySelector("a.profile").click()');
   await ready();
   await check("catalog to cabinet keeps signed-in identity", 'document.querySelector("#sellerEmail").textContent === "seller@example.com" && document.querySelector("#loginForm").hidden');

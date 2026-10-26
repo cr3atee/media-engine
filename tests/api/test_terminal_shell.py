@@ -202,7 +202,9 @@ def test_market_terminal_catalog_review_workspace_is_served() -> None:
             in response.text
         )
         assert 'class="header"' in response.text
-        assert 'class="cabinet-nav"' in response.text
+        assert 'id="cabinetSearchForm"' in response.text
+        assert 'class="market-nav cabinet-nav"' in response.text
+        assert "<span>Кабинет продавца</span>" in response.text
         assert "Личный кабинет" in response.text
         assert 'class="review-page"' in response.text
         assert " glass" not in response.text
@@ -225,6 +227,34 @@ def test_market_terminal_catalog_review_workspace_is_served() -> None:
         assert "/terminal/preview/preview.css" in response.text
         assert "/terminal/review.css" in response.text
         assert "/terminal/review.js" in response.text
+
+
+def test_catalog_and_cabinet_share_the_canonical_application_shell() -> None:
+    client = _client()
+    catalog = client.get("/terminal").text
+    cabinet = client.get("/terminal/review").text
+    shared_fragments = (
+        'class="header"',
+        '<path d="M5 31V9l15 12L35 9v22M5 10l15 12v13"',
+        '<span>market<span class="brand-second">terminal</span></span>',
+        'class="search"',
+        'placeholder="Игра, подписка или сервис"',
+        'class="profile"',
+        "<span>Кабинет продавца</span>",
+        'class="footer"',
+        "Market Terminal <span>на базе MediaEngine</span>",
+    )
+
+    for fragment in shared_fragments:
+        assert fragment in catalog
+        assert fragment in cabinet
+
+    review_styles = client.get("/terminal/review.css").text
+    assert ".topbar" not in review_styles
+    assert ".brand-mark" not in review_styles
+    assert ".header {" not in review_styles
+    assert ".brand {" not in review_styles
+    assert ".profile {" not in review_styles
 
 
 def test_market_terminal_catalog_review_assets_are_served() -> None:
