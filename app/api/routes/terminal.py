@@ -144,5 +144,15 @@ async def market_terminal_review_script() -> Response:
     )
 
 
+@router.get("/terminal/product-access.js", include_in_schema=False)
+async def market_terminal_product_access_script() -> Response:
+    """Serve product role controls; data authorization remains in the API."""
+    return Response(
+        _read_asset("product-access.js"),
+        media_type="application/javascript",
+        headers=_ASSET_HEADERS,
+    )
+
+
 def _read_asset(name: str) -> str:
     return (_TERMINAL_ROOT / name).read_text(encoding="utf-8")

@@ -274,6 +274,26 @@ def test_market_terminal_catalog_review_assets_are_served() -> None:
     assert "sessionStorage" not in script.text
 
 
+def test_product_access_panel_uses_existing_session_and_explicit_asset() -> None:
+    """Static shell exposes no role grants; all account data comes from guarded APIs."""
+    client = _client()
+    page = client.get("/terminal/review")
+    script = client.get("/terminal/product-access.js")
+    assert script.status_code == 200
+    assert script.headers["content-type"].startswith("application/javascript")
+    assert script.headers["x-content-type-options"] == "nosniff"
+    assert 'id="productAccessLink" href="#productAccess" hidden' in page.text
+    assert 'id="accessDialog" aria-labelledby="accessDialogTitle"' in page.text
+    assert 'id="accessReason"' in page.text
+    assert 'maxlength="1000"' in page.text
+    assert "localStorage" not in script.text
+    assert "sessionStorage" not in script.text
+    assert "innerHTML" not in script.text
+    assert 'headers: { "Idempotency-Key": command.key }' in script.text
+    assert "createProductAccess" in script.text
+    assert "bootstrap" not in script.text
+
+
 def test_review_uses_shared_presentation_and_explicit_pair_confirmation() -> None:
     """Protect the real cabinet's confirmation and locally scoped error feedback."""
     client = _client()

@@ -113,6 +113,60 @@ or pre-existing product admins. It does not drop/truncate tables or clean up an
 existing database to make itself pass. Without its explicit URL it skips in the
 ordinary offline suite. Recreate the disposable DB for an independent repeat.
 
+## Cabinet Integration: 2026-10-26
+
+The existing `/terminal/review` cabinet now includes an administrator-only
+**Access** section using the same in-memory bearer/refresh session and existing
+role APIs. No independent login, browser credential storage, new dependency or
+backend authorization policy was added.
+
+- Explicit account lookup by UUID, current role/version, four role choices,
+  required reason, native confirmation dialog and a read-only audit timeline.
+- The dialog names the exact target, old/new role and reason; self-demotion is
+  clearly identified. Keyboard focus is contained and Escape returns to the form.
+- A missing, disabled or stale target cannot be silently submitted. Conflict
+  responses clear the stale editor and require a fresh lookup.
+- On an ambiguous network/5xx result, the command stays locked with the same
+  idempotency key and body for an explicit retry. Focus checks do not discard an
+  uncertain command. This pending state is in memory only, not durable across a
+  page reload; after reload inspect the current role/history before a new change.
+- Logout, a rejected authorization request or confirmed role revocation clears
+  account details and audit. Late responses cannot restore a previous session.
+  Focus/visibility checks refresh access while idle; during a pending operation
+  server-side authorization remains authoritative. There is no push revocation.
+- Account identity is visible without a workspace membership. Product admins
+  can manage roles without tenant grants; other roles cannot. Catalog-review
+  navigation follows actual tenant permissions, not the product role label.
+- UUID lookup is deliberate: no email search or user directory endpoint exists
+  in this slice. An account holder can see their own UUID below their name.
+
+Verification used a separate loopback app on port 8003 and isolated headless Edge
+with a temporary profile. **All browser API traffic was intercepted with explicit
+fixtures**; only static GETs reached the app. These are UI interaction tests, not
+additional live PostgreSQL or real-account role assignment evidence.
+
+- `node scripts/verify_product_access_browser.mjs`: **39 checks passed**. Covers
+  all four role views, invalid IDs, blank reasons, confirmation/cancel/focus,
+  lost-success replay without duplicate audit, version/idempotency/last-admin
+  conflicts, malformed responses, disabled targets, token refresh, revocation,
+  late responses after logout, self-demotion and safe rendering of audit text.
+- `verify_terminal_review_browser.mjs` on the same isolated app: **55 checks
+  passed**, preserving existing workspace, queue and mutation behavior.
+- Visually inspected desktop, 390px mobile and native 200% zoom screenshots.
+  No horizontal overflow; reduced-motion and keyboard behavior passed.
+- Full Pytest: **587 passed, 59 skipped, 1 existing deprecation warning**.
+- MyPy (`app scripts tests --explicit-package-bases`): **464 files**, no issues.
+- Ruff and Ruff format check passed for both touched Python files. Node syntax
+  checks passed for the browser modules; `git diff --check` passed.
+- No application database was migrated, no existing decisions were changed,
+  and no real user was assigned a privileged role during UI verification.
+
+To repeat: serve the current application on a separate loopback port, start a
+dedicated Chromium debugging profile on 9224, then run the browser verifier.
+`TERMINAL_PREVIEW_URL` defaults to `http://127.0.0.1:8003` and
+`TERMINAL_CDP_URL` defaults to `http://127.0.0.1:9224`; non-loopback targets are
+refused. Screenshots go to a new OS temporary directory, never into the catalog.
+
 ## Remaining Work
 
 The existing tenant permission model remains authoritative for workspace data.
@@ -121,8 +175,11 @@ existing memberships remain effective even when product role is `user`.
 Product `admin` only grants the new product-role administration boundary, not
 automatic access to all tenants or conversion of older API-key admin endpoints.
 
-Next: connect role-aware navigation and an admin role-management screen with
-explicit target, current version, reason, confirmation and readable audit. Apply
-the remaining product permission matrix without silently revoking or elevating
-existing memberships. Then implement durable error diagnostics and complete
-browser/release acceptance. No frontend design changes were made in this slice.
+Next: deploy migration 0018 to the intended working database with a backup and
+bootstrap the first administrator only after the operator confirms the exact
+account. No real account has been selected or elevated in this work. Restart the
+updated application after migration; the new browser module has its own explicit
+asset route, so mixing old Python routes with new static files is unsupported.
+Apply the remaining product permission matrix without silently revoking or
+elevating existing memberships. Then implement durable error diagnostics and
+complete browser/release acceptance.

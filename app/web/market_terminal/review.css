@@ -1,4 +1,26 @@
 /* Working cabinet: shared catalog tokens, independent layout and real controls. */
+.product-access { padding: 32px 0; border-bottom: 1px solid var(--line); scroll-margin-top: 20px; }
+.access-lookup { display: flex; align-items: end; gap: 16px; margin-top: 24px; }
+.access-lookup label { flex: 1; max-width: 560px; }
+.product-access label { display: grid; gap: 8px; font-size: 14px; }
+.product-access .workspace-message { margin-block: 20px; }
+.access-layout { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 48px; }
+.access-editor { display: grid; gap: 16px; align-content: start; }
+.access-editor .form-hint { margin: 0; }
+.access-id, #productIdentity { overflow-wrap: anywhere; font-variant-numeric: tabular-nums; }
+.access-history { min-width: 0; border-left: 1px solid var(--line); padding-left: 32px; }
+.access-history ol { list-style: none; padding: 0; }
+.access-history li { padding: 18px 0; border-bottom: 1px solid var(--line); overflow-wrap: anywhere; }
+.access-history li p { margin-top: 6px; font-size: 14px; white-space: pre-wrap; }
+.access-history li small { display: block; color: var(--muted); margin-top: 8px; }
+#accessDialog form { display: grid; gap: 20px; }
+#accessConfirmation { white-space: pre-wrap; overflow-wrap: anywhere; }
+@media (max-width: 760px) {
+  .access-layout { grid-template-columns: 1fr; gap: 28px; }
+  .access-history { border-left: 0; padding-left: 0; }
+  .access-lookup { flex-direction: column; align-items: stretch; }
+  .access-lookup label { max-width: none; }
+}
 .review-page { min-height: 100vh; }
 .review-shell { width: min(1360px, calc(100% - 64px)); padding: 24px 0 72px; }
 .skip-link { position: fixed; top: 8px; left: 8px; transform: translateY(-200%); z-index: 30; background: var(--primary); padding: 12px; }

@@ -20,8 +20,9 @@
         </a>
         <nav class="nav" aria-label="Навигация рабочего места">
           <a href="/terminal">Каталог</a>
-          <a href="#reviewCandidates">Совпадения</a>
-          <a href="#productProposals">Новые товары</a>
+          <a id="reviewCandidatesLink" href="#reviewCandidates" hidden>Совпадения</a>
+          <a id="productProposalsLink" href="#productProposals" hidden>Новые товары</a>
+          <a id="productAccessLink" href="#productAccess" hidden>Доступ</a>
         </nav>
         <span
           class="api-status"
@@ -93,6 +94,7 @@
             <p class="section-label">Активная сессия</p>
             <h2 id="sellerName">Продавец</h2>
             <p class="form-hint" id="sellerEmail"></p>
+            <p class="form-hint" id="productIdentity"></p>
           </div>
           <label class="tenant-control" for="tenantSelect">
             <span>Рабочее пространство</span>
@@ -111,6 +113,39 @@
             </button>
           </div>
         </section>
+      </section>
+
+      <section id="productAccess" class="product-access" aria-labelledby="accessTitle" hidden>
+        <header class="workspace-heading">
+          <div><p class="section-label">Администрирование</p><h2 id="accessTitle" tabindex="-1">Доступ к приложению</h2></div>
+          <button id="accessClose" type="button" class="ghost-button">Закрыть раздел</button>
+        </header>
+        <p class="form-hint">Роль в приложении не заменяет права в рабочих пространствах.</p>
+        <form id="accessLookup" class="access-lookup">
+          <label for="accessUserId">ID аккаунта<input id="accessUserId" name="user_id" required autocomplete="off" spellcheck="false" placeholder="UUID аккаунта" aria-describedby="accessLookupHint" /></label>
+          <button id="accessLoad" class="ghost-button" type="submit">Найти аккаунт</button>
+        </form>
+        <p id="accessLookupHint" class="form-hint">Владелец аккаунта может взять свой ID под именем в кабинете.</p>
+        <p id="accessMessage" class="workspace-message" role="status" aria-live="polite"></p>
+        <div id="accessDetails" class="access-layout" hidden>
+          <form id="accessForm" class="access-editor">
+            <div><p class="section-label">Выбранный аккаунт</p><strong id="accessTarget" class="access-id"></strong></div>
+            <p id="accessCurrent" class="form-hint"></p>
+            <label for="accessRole">Новая роль<select id="accessRole" required>
+              <option value="user">Пользователь</option><option value="partner">Партнёр</option>
+              <option value="moderator">Модератор</option><option value="admin">Администратор</option>
+            </select></label>
+            <p id="accessRoleHint" class="form-hint"></p>
+            <label for="accessReason">Причина изменения<textarea id="accessReason" class="review-reason" required maxlength="1000" rows="3" placeholder="Зачем этому аккаунту новая роль?"></textarea></label>
+            <button id="accessReview" class="primary-button" type="submit">Проверить изменение</button>
+            <button id="accessRetry" class="ghost-button" type="button" hidden>Проверить результат повторным запросом</button>
+          </form>
+          <section class="access-history" aria-labelledby="accessHistoryTitle">
+            <h3 id="accessHistoryTitle">История доступа</h3>
+            <p class="form-hint">Последние 100 изменений. Сохранённые записи нельзя редактировать.</p>
+            <ol id="accessAudit"></ol>
+          </section>
+        </div>
       </section>
 
       <section
@@ -307,6 +342,17 @@
         <div class="review-actions">
           <button class="ghost-button" value="cancel" autofocus>Вернуться</button>
           <button class="primary-button" id="decisionConfirm" value="confirm">Подтвердить</button>
+        </div>
+      </form>
+    </dialog>
+    <dialog id="accessDialog" aria-labelledby="accessDialogTitle" aria-describedby="accessConfirmation">
+      <form method="dialog">
+        <h2 id="accessDialogTitle">Изменить доступ?</h2>
+        <p id="accessConfirmation" class="confirmation-facts"></p>
+        <p class="form-hint">Права вступят в силу сразу. Последнего активного администратора нельзя понизить.</p>
+        <div class="review-actions">
+          <button class="ghost-button" value="cancel" autofocus>Вернуться</button>
+          <button class="primary-button" value="confirm">Сохранить роль</button>
         </div>
       </form>
     </dialog>

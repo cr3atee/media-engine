@@ -1,4 +1,5 @@
 import { brandMark, handleImageError } from "/terminal/preview/presentation.js";
+import { createProductAccess, productRoleLabel } from "/terminal/product-access.js";
 
 document.addEventListener("error", handleImageError, true);
 
@@ -84,6 +85,22 @@ class ApiRequestError extends Error {
   }
 }
 
+const productAccess = createProductAccess({
+  request: requestJson,
+  onSessionLost: () => clearSession("Сессия завершена. Войдите снова."),
+  onProfile: renderProductIdentity,
+});
+
+function renderProductIdentity(user) {
+  document.querySelector("#productIdentity").textContent = user
+    ? `${productRoleLabel(user.product_role)} · ID: ${user.id}` : "";
+}
+
+function showReviewNavigation(visible) {
+  document.querySelector("#reviewCandidatesLink").hidden = !visible;
+  document.querySelector("#productProposalsLink").hidden = !visible;
+}
+
 elements.loginForm.addEventListener("submit", (event) => {
   event.preventDefault();
   void login();
@@ -94,6 +111,7 @@ elements.tenantSelect.addEventListener("change", () => {
 });
 
 elements.reloadButton.addEventListener("click", () => {
+  void productAccess.revalidate();
   void selectTenant(elements.tenantSelect.value);
 });
 
@@ -192,18 +210,26 @@ async function login() {
 }
 
 async function loadIdentity() {
+  const sessionEpoch = state.sessionEpoch;
   const profile = await requestJson("/me");
+  if (sessionEpoch !== state.sessionEpoch) return;
   state.memberships = profile.memberships.filter((membership) => membership.is_active);
-  if (state.memberships.length === 0) {
-    throw new ApiRequestError("Нет доступных рабочих пространств.", 403);
-  }
 
   elements.sellerName.textContent = profile.user.display_name || "Продавец";
   elements.sellerEmail.textContent = profile.user.email;
   elements.loginForm.hidden = true;
   elements.sessionPanel.hidden = false;
   document.body.classList.add("review-authenticated");
+  productAccess.setProfile(profile.user);
   renderTenantOptions();
+  elements.tenantSelect.closest("label").hidden = state.memberships.length === 0;
+  elements.reloadButton.textContent = state.memberships.length ? "Обновить очереди" : "Обновить доступ";
+  if (state.memberships.length === 0) {
+    elements.permissionSummary.textContent = "Нет подключённых рабочих пространств";
+    setSessionStatus("Вход выполнен");
+    if (profile.user.product_role === "admin") await productAccess.open();
+    return;
+  }
   await selectTenant(state.memberships[0].tenant_id);
   if (!elements.reviewWorkspace.hidden) {
     const behavior = window.matchMedia("(prefers-reduced-motion: reduce)").matches
@@ -249,6 +275,7 @@ async function selectTenant(tenantId) {
 
     state.activeTenantId = context.tenant_id;
     state.activeTenant = context;
+    showReviewNavigation(true);
     elements.permissionSummary.textContent = "Проверка каталога разрешена";
     elements.reviewWorkspace.hidden = false;
     await loadQueues();
@@ -846,6 +873,7 @@ function setTokens(tokens) {
 }
 
 function clearSession(message) {
+  productAccess.reset();
   state.sessionEpoch += 1;
   state.accessToken = null;
   state.refreshToken = null;
@@ -868,6 +896,7 @@ function clearSession(message) {
 
 /** Drop protected data immediately, including any open confirmation dialog. */
 function invalidateWorkspace() {
+  showReviewNavigation(false);
   state.workspaceEpoch += 1;
   state.queueEpoch += 1;
   state.activeTenantId = null;
