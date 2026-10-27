@@ -17,3 +17,6 @@ htmlcov/
 
 dist/
 build/
+
+# Runtime operational diagnostics (mount this path to persistent storage).
+var/

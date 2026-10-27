@@ -12,6 +12,9 @@ from app.repositories.memory.memory_canonical_offer_decisions import (
 from app.repositories.memory.memory_canonical_products import (
     MemoryCanonicalProductRepository,
 )
+from app.repositories.memory.memory_diagnostic_incidents import (
+    MemoryDiagnosticIncidentRepository,
+)
 from app.repositories.memory.memory_events import MemoryMarketEventRepository
 from app.repositories.memory.memory_generated_contents import (
     MemoryGeneratedContentRepository,
@@ -37,6 +40,7 @@ __all__ = (
     "MemoryAuthSessionRepository",
     "MemoryCanonicalProductRepository",
     "MemoryCanonicalOfferDecisionRepository",
+    "MemoryDiagnosticIncidentRepository",
     "MemoryGeneratedContentRepository",
     "MemoryMarketEventRepository",
     "MemoryMarketplaceIntegrationRepository",

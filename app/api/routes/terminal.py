@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from html import escape
 from pathlib import Path
 
 from fastapi import APIRouter, HTTPException
@@ -152,6 +153,51 @@ async def market_terminal_product_access_script() -> Response:
         media_type="application/javascript",
         headers=_ASSET_HEADERS,
     )
+
+
+@router.get("/terminal/diagnostics.js", include_in_schema=False)
+async def market_terminal_diagnostics_script() -> Response:
+    """Serve the bounded browser reporter and admin journal controller."""
+    return Response(
+        _read_asset("diagnostics.js"),
+        media_type="application/javascript",
+        headers=_ASSET_HEADERS,
+    )
+
+
+@router.api_route(
+    "/terminal/{path:path}",
+    methods=["GET", "HEAD"],
+    include_in_schema=False,
+)
+async def market_terminal_not_found(path: str) -> Response:
+    """Return a real HTML 404 for documents without masquerading as an asset."""
+    if Path(path).suffix.lower() in {
+        ".css",
+        ".ico",
+        ".jpeg",
+        ".jpg",
+        ".js",
+        ".json",
+        ".png",
+        ".svg",
+        ".ttf",
+        ".webp",
+    }:
+        return Response(status_code=404, media_type="text/plain")
+    return HTMLResponse(
+        _read_asset("not_found.html"),
+        status_code=404,
+        headers=_DOCUMENT_HEADERS,
+    )
+
+
+def terminal_error_response(*, request_id: str, incident_id: str) -> HTMLResponse:
+    """Render the safe terminal failure document with correlation identifiers."""
+    document = _read_asset("error.html")
+    document = document.replace("{{REQUEST_ID}}", escape(request_id))
+    document = document.replace("{{INCIDENT_ID}}", escape(incident_id))
+    return HTMLResponse(document, status_code=500, headers=_DOCUMENT_HEADERS)
 
 
 def _read_asset(name: str) -> str:

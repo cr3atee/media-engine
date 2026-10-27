@@ -1,3 +1,5 @@
+from pathlib import Path
+
 from pydantic import Field, SecretStr, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
@@ -147,6 +149,27 @@ class LoggingSettings(BaseSettings):
     level: str = "INFO"
 
 
+class DiagnosticSettings(BaseSettings):
+    """Sanitized incident persistence and bounded fallback policy."""
+
+    model_config = SettingsConfigDict(
+        env_file=".env",
+        env_file_encoding="utf-8",
+        env_prefix="DIAGNOSTICS_",
+        extra="ignore",
+    )
+
+    environment: str = Field(default="development", min_length=1, max_length=64)
+    release: str = Field(default="unknown", min_length=1, max_length=128)
+    retention_days: int = Field(default=30, ge=1, le=365)
+    fallback_path: Path = Path("var/diagnostics/incidents.jsonl")
+    fallback_max_bytes: int = Field(default=5_000_000, ge=1024)
+    fallback_backups: int = Field(default=3, ge=1, le=20)
+    persistence_timeout_seconds: float = Field(default=1.0, gt=0, le=10)
+    fallback_timeout_seconds: float = Field(default=0.5, gt=0, le=5)
+    frontend_reports_per_minute: int = Field(default=12, ge=1, le=120)
+
+
 class OperationalAlertingSettings(BaseSettings):
     """Opt-in runtime alert evaluation and lifecycle policy."""
 
@@ -280,6 +303,7 @@ class Settings(BaseSettings):
     admin_api: AdminApiSettings = Field(default_factory=AdminApiSettings)
     auth: AuthSettings = Field(default_factory=AuthSettings)
     logging: LoggingSettings = Field(default_factory=LoggingSettings)
+    diagnostics: DiagnosticSettings = Field(default_factory=DiagnosticSettings)
     alerting: OperationalAlertingSettings = Field(
         default_factory=OperationalAlertingSettings
     )

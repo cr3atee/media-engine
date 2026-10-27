@@ -15,6 +15,7 @@ from app.repositories.canonical_offer_decisions import (
     CanonicalOfferDecisionRepository,
 )
 from app.repositories.canonical_products import CanonicalProductRepository
+from app.repositories.diagnostic_incidents import DiagnosticIncidentRepository
 from app.repositories.events import MarketEventRepository
 from app.repositories.generated_contents import GeneratedContentRepository
 from app.repositories.marketplace_integrations import MarketplaceIntegrationRepository
@@ -25,6 +26,7 @@ from app.repositories.memory import (
     MemoryAuthSessionRepository,
     MemoryCanonicalOfferDecisionRepository,
     MemoryCanonicalProductRepository,
+    MemoryDiagnosticIncidentRepository,
     MemoryGeneratedContentRepository,
     MemoryMarketEventRepository,
     MemoryMarketplaceIntegrationRepository,
@@ -48,6 +50,7 @@ from app.repositories.postgres import (
     PostgresAuthSessionRepository,
     PostgresCanonicalOfferDecisionRepository,
     PostgresCanonicalProductRepository,
+    PostgresDiagnosticIncidentRepository,
     PostgresGeneratedContentRepository,
     PostgresMarketEventRepository,
     PostgresMarketplaceIntegrationRepository,
@@ -114,6 +117,9 @@ class RepositoryProvider:
     password_reset_tokens: PasswordResetTokenRepository = field(
         default_factory=MemoryPasswordResetTokenRepository,
     )
+    diagnostic_incidents: DiagnosticIncidentRepository = field(
+        default_factory=MemoryDiagnosticIncidentRepository,
+    )
 
 
 def create_memory_provider() -> RepositoryProvider:
@@ -136,6 +142,7 @@ def create_memory_provider() -> RepositoryProvider:
         password_credentials=MemoryPasswordCredentialRepository(),
         auth_sessions=MemoryAuthSessionRepository(),
         password_reset_tokens=MemoryPasswordResetTokenRepository(),
+        diagnostic_incidents=MemoryDiagnosticIncidentRepository(),
     )
 
 
@@ -164,6 +171,7 @@ def create_postgres_provider(
         password_credentials=PostgresPasswordCredentialRepository(session),
         auth_sessions=PostgresAuthSessionRepository(session),
         password_reset_tokens=PostgresPasswordResetTokenRepository(session),
+        diagnostic_incidents=PostgresDiagnosticIncidentRepository(session),
     )
 
 

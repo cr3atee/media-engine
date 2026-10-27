@@ -14,6 +14,9 @@ from app.repositories.postgres.postgres_canonical_offer_decisions import (
 from app.repositories.postgres.postgres_canonical_products import (
     PostgresCanonicalProductRepository,
 )
+from app.repositories.postgres.postgres_diagnostic_incidents import (
+    PostgresDiagnosticIncidentRepository,
+)
 from app.repositories.postgres.postgres_events import PostgresMarketEventRepository
 from app.repositories.postgres.postgres_generated_contents import (
     PostgresGeneratedContentRepository,
@@ -43,6 +46,7 @@ __all__ = [
     "PostgresAuthSessionRepository",
     "PostgresCanonicalProductRepository",
     "PostgresCanonicalOfferDecisionRepository",
+    "PostgresDiagnosticIncidentRepository",
     "PostgresGeneratedContentRepository",
     "PostgresMarketEventRepository",
     "PostgresMarketplaceIntegrationRepository",

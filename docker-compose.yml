@@ -6,11 +6,13 @@ services:
     working_dir: /app
     volumes:
       - .:/app
+      - diagnostics_data:/var/lib/mediaengine/diagnostics
     environment:
       APP_ENV: ${APP_ENV:-local}
       APP_HOST: ${APP_HOST:-0.0.0.0}
       APP_PORT: ${APP_PORT:-8000}
       DATABASE_URL: ${DATABASE_URL:-postgresql+asyncpg://postgres:postgres@db:5432/mediaengine}
+      DIAGNOSTICS_FALLBACK_PATH: /var/lib/mediaengine/diagnostics/incidents.jsonl
       LOG_LEVEL: ${LOG_LEVEL:-INFO}
       SCHEDULER_TIMEZONE: ${SCHEDULER_TIMEZONE:-UTC}
     depends_on:
@@ -28,4 +30,5 @@ services:
       - postgres_data:/var/lib/postgresql/data
 
 volumes:
+  diagnostics_data:
   postgres_data:

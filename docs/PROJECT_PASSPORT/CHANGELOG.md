@@ -6,6 +6,16 @@ This document records notable Project Passport updates.
 
 ## Unreleased
 
+- Implemented Market Terminal diagnostics package 5A: real HTML 404 and safe
+  HTML 500 documents, sanitized incident contracts, memory/PostgreSQL
+  repositories, revision `0019_diagnostic_incidents`, independent recording,
+  30-day retention, rotating persistent-volume JSONL fallback, authenticated
+  allowlisted frontend reports, and a product-admin-only incident journal.
+  Isolated PostgreSQL 17 concurrency/fresh-session and repeat-run verification,
+  authorization, redaction, fallback rotation, Alembic downgrade/re-upgrade,
+  current/check and offline SQL pass. Full Pytest reports `605 passed, 60
+  skipped`; MyPy checks `479` files; focused Ruff and Ruff format pass.
+
 - Prepared the guarded EPIC 23 catalog launch batch from a complete live
   GGSEL, Playerok, and FunPay refresh. The adapters produced `1,498`
   snapshot-ready offers and `114,640` deterministic cross-marketplace pairs;

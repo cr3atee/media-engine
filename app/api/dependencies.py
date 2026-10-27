@@ -36,6 +36,7 @@ from app.services.canonical_offer_review_queue import (
     CanonicalOfferReviewQueueService,
 )
 from app.services.canonical_product_proposals import CanonicalProductProposalService
+from app.services.diagnostics import DiagnosticService
 from app.services.marketplace_integrations import MarketplaceIntegrationService
 from app.services.passwords import PasswordHasher
 from app.services.product_roles import ProductRoleService
@@ -312,6 +313,18 @@ async def get_authorization_service(request: Request) -> AuthorizationService:
 async def get_product_role_service(request: Request) -> ProductRoleService:
     """Compose product role commands with the existing transactional provider."""
     return ProductRoleService(_repository_scope_factory(request))
+
+
+async def get_diagnostic_service(request: Request) -> DiagnosticService:
+    """Return the application-level diagnostics boundary and shared rate limiter."""
+    service = getattr(request.app.state, "diagnostic_service", None)
+    if not isinstance(service, DiagnosticService):
+        raise ApiError(
+            503,
+            "diagnostics_unavailable",
+            "Diagnostic service is not configured.",
+        )
+    return service
 
 
 async def require_seller_principal(

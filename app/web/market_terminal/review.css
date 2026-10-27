@@ -1,5 +1,5 @@
 /* Working cabinet: canonical catalog shell with cabinet-only content layout. */
-.product-access { padding: 24px 0; border-bottom: 1px solid var(--line); scroll-margin-top: 20px; }
+.product-access, .diagnostic-journal { padding: 24px 0; border-bottom: 1px solid var(--line); scroll-margin-top: 20px; }
 .account-role { display: inline-block; color: var(--accent); font-size: 13px; margin-top: 8px; }
 .account-details { margin-top: 10px; color: var(--muted); font-size: 12px; }
 .account-details summary { cursor: pointer; min-height: 28px; }
@@ -23,11 +23,27 @@
 .access-history li small { display: block; color: var(--muted); margin-top: 8px; }
 #accessDialog form { display: grid; gap: 20px; }
 #accessConfirmation { white-space: pre-wrap; overflow-wrap: anywhere; }
+.diagnostic-journal .workspace-heading { margin-bottom: 12px; }
+.diagnostic-journal .workspace-heading h2 { font-size: clamp(23px, 2.5vw, 30px); }
+.diagnostics-filters { display: grid; grid-template-columns: repeat(3, minmax(150px, 1fr)) auto; gap: 16px; align-items: end; margin: 20px 0; }
+.diagnostics-filters label { display: grid; gap: 8px; font-size: 14px; }
+.diagnostic-journal .workspace-message { margin-block: 18px; }
+.diagnostic-journal .workspace-message:empty { display: none; }
+.diagnostics-list { border-top: 1px solid var(--line); }
+.diagnostic-row { display: grid; grid-template-columns: minmax(190px, .8fr) minmax(220px, 1.3fr) minmax(180px, .8fr); gap: 18px; padding: 20px 0; border-bottom: 1px solid var(--line); }
+.diagnostic-row h3 { font-size: 16px; overflow-wrap: anywhere; }
+.diagnostic-row p { margin-top: 6px; color: var(--muted); font-size: 13px; overflow-wrap: anywhere; }
+.diagnostic-row code { color: var(--text); font-size: 12px; overflow-wrap: anywhere; }
+.diagnostic-severity { color: var(--error); font-size: 12px; text-transform: uppercase; letter-spacing: .08em; }
+.diagnostic-severity.warning { color: var(--warning); }
+.diagnostic-severity.critical { color: var(--error); font-weight: 700; }
+.diagnostic-count { font-variant-numeric: tabular-nums; }
 @media (max-width: 760px) {
   .access-layout { grid-template-columns: 1fr; gap: 28px; }
   .access-history { border-left: 0; padding-left: 0; }
   .access-lookup { flex-direction: column; align-items: stretch; }
   .access-lookup label { max-width: none; }
+  .diagnostics-filters, .diagnostic-row { grid-template-columns: 1fr; }
 }
 .review-page { min-height: 100vh; }
 .review-shell { padding-top: 24px; }

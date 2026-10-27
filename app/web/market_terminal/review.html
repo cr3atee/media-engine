@@ -64,6 +64,7 @@
         <a id="reviewCandidatesLink" href="#reviewCandidates" hidden>Совпадения</a>
         <a id="productProposalsLink" href="#productProposals" hidden>Новые товары</a>
         <a id="productAccessLink" href="#productAccess" hidden>Доступ</a>
+        <a id="diagnosticsLink" href="#diagnosticJournal" hidden>Ошибки</a>
         <span
           class="cabinet-status"
           id="sessionStatus"
@@ -184,6 +185,27 @@
             <ol id="accessAudit"></ol>
           </section>
         </div>
+      </section>
+
+      <section id="diagnosticJournal" class="diagnostic-journal" aria-labelledby="diagnosticsTitle" hidden>
+        <header class="workspace-heading">
+          <div><p class="section-label">Администрирование</p><h2 id="diagnosticsTitle" tabindex="-1">Журнал ошибок</h2></div>
+          <button id="diagnosticsClose" type="button" class="ghost-button">Закрыть раздел</button>
+        </header>
+        <p class="form-hint">Без паролей, токенов, содержимого форм и адресных параметров. Повторы одной ошибки объединяются.</p>
+        <form id="diagnosticsFilters" class="diagnostics-filters">
+          <label for="diagnosticsSeverity">Важность<select id="diagnosticsSeverity"><option value="">Все</option><option value="critical">Критическая</option><option value="error">Ошибка</option><option value="warning">Предупреждение</option></select></label>
+          <label for="diagnosticsSource">Источник<select id="diagnosticsSource"><option value="">Все</option><option value="backend">Backend</option><option value="frontend">Интерфейс</option></select></label>
+          <label for="diagnosticsComponent">Компонент<input id="diagnosticsComponent" maxlength="64" autocomplete="off" placeholder="Например, api" /></label>
+          <button class="ghost-button" type="submit">Применить</button>
+        </form>
+        <p id="diagnosticsMessage" class="workspace-message" role="status" aria-live="polite"></p>
+        <div id="diagnosticsList" class="diagnostics-list" aria-live="polite"></div>
+        <nav class="queue-pagination" id="diagnosticsPagination" aria-label="Страницы журнала" hidden>
+          <button id="diagnosticsPrevious" class="ghost-button" type="button">Назад</button>
+          <span id="diagnosticsRange"></span>
+          <button id="diagnosticsNext" class="ghost-button" type="button">Дальше</button>
+        </nav>
       </section>
 
       <section

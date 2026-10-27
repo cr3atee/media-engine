@@ -657,6 +657,23 @@ migrations, seeds the batch idempotently, and retains authenticated operator
 decisions across application restarts. Durable source-page inspection and
 explicit operator decisions remain the next catalog-launch action.
 
+## Market Terminal Diagnostics
+
+Package 5A now provides real HTML `404` and safe terminal `500` documents while
+preserving JSON errors for `/api/...`. Sanitized backend and authenticated
+frontend incidents are deduplicated in memory or PostgreSQL revision
+`0019_diagnostic_incidents`; persistence uses a scope separate from failed
+business work, 30-day retention, and a bounded rotating JSONL fallback on a
+persistent Compose volume. The browser journal is server-authorized exclusively
+for the current product-level `admin` role. It does not trust tenant membership
+or a client role claim. Isolated PostgreSQL 17 verification covered concurrent
+upsert, indexes/constraints, repeatable execution on retained test data, and
+fresh-session persistence. Alembic downgrade/re-upgrade, current/check and
+offline SQL pass. Full verification reports `605 passed, 60 skipped`, MyPy
+reports `479` files without errors, and focused Ruff/format checks pass. Fallback re-ingest,
+read-audit records, unauthenticated catalog reporting, and cross-node rate-limit
+coordination remain explicit follow-up work.
+
 ## Architecture Review
 
 Current architecture separates:

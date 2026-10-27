@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="ru">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="color-scheme" content="dark" />
+    <title>Страница не найдена | Market Terminal</title>
+    <link rel="preload" href="/terminal/preview/onest.ttf" as="font" type="font/ttf" crossorigin />
+    <link rel="stylesheet" href="/terminal/preview/preview.css" />
+  </head>
+  <body>
+    <a class="skip" href="#main">Перейти к содержанию</a>
+    <div class="shell">
+      <header class="header">
+        <a class="brand" href="/terminal" aria-label="Market Terminal, каталог">
+          <svg viewBox="0 0 40 40" aria-hidden="true"><path d="M5 31V9l15 12L35 9v22M5 10l15 12v13" /></svg>
+          <span>market<span class="brand-second">terminal</span></span>
+        </a>
+        <form class="search" role="search" action="/terminal" method="get">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5" /><path d="m16 16 5 5" /></svg>
+          <label class="sr-only" for="notFoundSearch">Поиск товаров</label>
+          <input id="notFoundSearch" name="q" type="search" placeholder="Игра, подписка или сервис" maxlength="200" />
+          <button type="submit" aria-label="Найти товары"><span aria-hidden="true">↵</span></button>
+        </form>
+        <a class="profile" href="/terminal/review">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="3.5" /><path d="M5 21v-2a7 7 0 0 1 14 0v2" /></svg>
+          <span>Кабинет продавца</span>
+        </a>
+      </header>
+      <main id="main" tabindex="-1">
+        <section class="error-state" aria-labelledby="errorTitle">
+          <strong class="error-number" aria-hidden="true">404</strong>
+          <h1 id="errorTitle">Такой страницы нет</h1>
+          <p>Адрес мог измениться или ссылка устарела. Вернитесь в каталог и продолжите поиск.</p>
+          <div class="actions">
+            <a class="primary" href="/terminal">Открыть каталог</a>
+            <a class="secondary" href="/terminal/review">Перейти в кабинет</a>
+          </div>
+        </section>
+      </main>
+      <footer class="footer"><div class="footer-brand">Market Terminal <span>на базе MediaEngine</span></div><a href="/terminal">Каталог</a></footer>
+    </div>
+  </body>
+</html>

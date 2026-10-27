@@ -34,6 +34,7 @@ from app.api.routes.admin_publications import (
 )
 from app.api.routes.auth import router as auth_router
 from app.api.routes.browser_auth import router as browser_auth_router
+from app.api.routes.diagnostics import router as diagnostics_router
 from app.api.routes.health import router as health_router
 from app.api.routes.product_roles import router as product_roles_router
 from app.api.routes.public import router as public_router
@@ -45,7 +46,12 @@ from app.api.routes.seller_marketplace_integrations import (
 )
 from app.api.routes.seller_workflows import router as seller_workflows_router
 from app.api.routes.terminal import router as terminal_router
-from app.config.settings import AdminApiSettings, AuthSettings, settings
+from app.config.settings import (
+    AdminApiSettings,
+    AuthSettings,
+    DiagnosticSettings,
+    settings,
+)
 from app.core.logging import setup_logging
 from app.database.public_read_scope import create_postgres_public_read_repository_scope
 from app.repositories.public_queries.provider import PublicReadRepositoryScopeFactory
@@ -54,6 +60,7 @@ from app.repositories.queries.provider import (
     create_postgres_read_repository_scope,
 )
 from app.services.admin_mutations import AdminCommandError
+from app.services.diagnostics import DiagnosticService
 from app.services.repository_scope import RepositoryScopeFactory
 
 setup_logging()
@@ -65,6 +72,7 @@ def create_app(
     *,
     admin_api_settings: AdminApiSettings | None = None,
     auth_settings: AuthSettings | None = None,
+    diagnostic_settings: DiagnosticSettings | None = None,
     read_repository_scope_factory: ReadRepositoryScopeFactory | None = None,
     public_read_repository_scope_factory: (
         PublicReadRepositoryScopeFactory | None | object
@@ -95,6 +103,10 @@ def create_app(
 
         repository_scope_factory = create_postgres_repository_scope()
     application.state.repository_scope_factory = repository_scope_factory
+    application.state.diagnostic_service = DiagnosticService(
+        repository_scope_factory,
+        diagnostic_settings or settings.diagnostics,
+    )
     application.state.maximum_publication_attempts = settings.telegram.maximum_attempts
     application.add_middleware(
         RequestCorrelationMiddleware,
@@ -122,6 +134,7 @@ def create_app(
     application.include_router(auth_router)
     application.include_router(browser_auth_router)
     application.include_router(product_roles_router)
+    application.include_router(diagnostics_router)
     application.include_router(seller_workflows_router)
     application.include_router(seller_catalog_reviews_router)
     application.include_router(seller_marketplace_integrations_router)

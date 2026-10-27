@@ -229,6 +229,25 @@ def test_market_terminal_catalog_review_workspace_is_served() -> None:
         assert "/terminal/review.js" in response.text
 
 
+def test_terminal_missing_pages_are_html_but_api_and_assets_are_not() -> None:
+    client = _client()
+
+    page = client.get("/terminal/no/such/page")
+    asset = client.get("/terminal/no-such-script.js")
+    api = client.get("/api/v1/no-such-resource")
+
+    assert page.status_code == 404
+    assert page.headers["content-type"].startswith("text/html")
+    assert "Такой страницы нет" in page.text
+    assert 'href="/terminal"' in page.text
+    assert asset.status_code == 404
+    assert asset.headers["content-type"].startswith("text/plain")
+    assert "<!doctype html>" not in asset.text
+    assert api.status_code == 404
+    assert api.headers["content-type"].startswith("application/json")
+    assert api.json()["error"]["code"] == "not_found"
+
+
 def test_catalog_and_cabinet_share_the_canonical_application_shell() -> None:
     client = _client()
     catalog = client.get("/terminal").text
@@ -336,6 +355,28 @@ def test_product_access_panel_uses_existing_session_and_explicit_asset() -> None
     assert 'headers: { "Idempotency-Key": command.key }' in script.text
     assert "createProductAccess" in script.text
     assert "bootstrap" not in script.text
+
+
+def test_product_admin_diagnostics_ui_is_safe_and_explicit() -> None:
+    client = _client()
+    page = client.get("/terminal/review")
+    module = client.get("/terminal/diagnostics.js")
+    review_script = client.get("/terminal/review.js")
+
+    assert module.status_code == 200
+    assert module.headers["content-type"].startswith("application/javascript")
+    assert 'id="diagnosticsLink" href="#diagnosticJournal" hidden' in page.text
+    assert 'id="diagnosticJournal"' in page.text
+    assert "createDiagnosticJournal" in module.text
+    assert "installFrontendDiagnostics" in module.text
+    assert "innerHTML" not in module.text
+    assert "localStorage" not in module.text
+    assert "sessionStorage" not in module.text
+    assert "event.message" not in module.text
+    assert "event.error.stack" not in module.text
+    assert "error.status === 403" in module.text
+    assert 'from "/terminal/diagnostics.js"' in review_script.text
+    assert "diagnosticRequest: true" in review_script.text
 
 
 def test_review_uses_shared_presentation_and_explicit_pair_confirmation() -> None:

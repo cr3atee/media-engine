@@ -1,5 +1,6 @@
 import { brandMark, handleImageError } from "/terminal/preview/presentation.js";
 import { createProductAccess, productRoleLabel } from "/terminal/product-access.js";
+import { createDiagnosticJournal, installFrontendDiagnostics } from "/terminal/diagnostics.js";
 
 document.addEventListener("error", handleImageError, true);
 
@@ -119,10 +120,27 @@ class ApiRequestError extends Error {
   }
 }
 
+const diagnosticJournal = createDiagnosticJournal({
+  request: requestJson,
+  onSessionLost: () => clearSession("Сессия завершена. Войдите снова."),
+});
+
+const frontendDiagnostics = installFrontendDiagnostics({
+  isAuthenticated: () => Boolean(state.accessToken),
+  send: payload => requestJson(
+    "/diagnostics/frontend",
+    { method: "POST", body: JSON.stringify(payload) },
+    { diagnosticRequest: true },
+  ),
+});
+
 const productAccess = createProductAccess({
   request: requestJson,
   onSessionLost: () => clearSession("Сессия завершена. Войдите снова."),
-  onProfile: renderProductIdentity,
+  onProfile: user => {
+    renderProductIdentity(user);
+    diagnosticJournal.setProfile(user);
+  },
 });
 
 function renderProductIdentity(user) {
@@ -960,6 +978,9 @@ async function requestJson(path, options = {}, configuration = {}) {
       credentials: "same-origin",
     });
   } catch (error) {
+    if (!configuration.diagnosticRequest && authenticated && state.accessToken) {
+      frontendDiagnostics.reportRequestFailure();
+    }
     if (error instanceof DOMException && error.name === "AbortError") {
       throw new ApiRequestError("Время ожидания истекло. Повторите запрос.");
     }
@@ -993,7 +1014,15 @@ async function requestJson(path, options = {}, configuration = {}) {
   }
 
   const text = await response.text();
-  const body = parseJson(text, response.headers.get("content-type") || "");
+  let body;
+  try {
+    body = parseJson(text, response.headers.get("content-type") || "");
+  } catch (error) {
+    if (!configuration.diagnosticRequest && authenticated && state.accessToken) {
+      frontendDiagnostics.reportRequestFailure();
+    }
+    throw error;
+  }
   if (!response.ok) {
     throw new ApiRequestError(apiErrorMessage(body, response.status), response.status, body?.error?.code || "");
   }

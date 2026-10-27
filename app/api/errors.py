@@ -6,7 +6,7 @@ from typing import Any, cast
 import structlog
 from fastapi import Request
 from fastapi.exceptions import RequestValidationError
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, Response
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from app.services.admin_mutations import AdminCommandError
@@ -113,19 +113,41 @@ async def http_error_handler(
 async def unexpected_error_handler(
     request: Request,
     exc: Exception,
-) -> JSONResponse:
-    """Log an internal exception and return a credential-free response."""
-    logger.exception(
+) -> Response:
+    """Persist sanitized diagnostics and return a credential-free response."""
+    from app.services.diagnostics import DiagnosticService
+
+    service = getattr(request.app.state, "diagnostic_service", None)
+    incident = None
+    if isinstance(service, DiagnosticService):
+        route = getattr(request.scope.get("route"), "path", "__unmatched__")
+        incident = await service.record_backend(
+            request_id=get_request_id(request),
+            route=route,
+            method=request.method,
+            error=exc,
+        )
+    logger.error(
         "api_internal_error",
         request_id=get_request_id(request),
         exception_type=type(exc).__name__,
+        incident_id=str(incident.id) if incident is not None else "unavailable",
     )
+    if request.url.path.startswith("/terminal"):
+        from app.api.routes.terminal import terminal_error_response
+
+        return terminal_error_response(
+            request_id=get_request_id(request),
+            incident_id=str(incident.id) if incident is not None else "unavailable",
+        )
     return _response(
         request,
         status_code=500,
         code="internal_error",
         message="An internal error occurred.",
-        details={},
+        details={
+            "incident_id": str(incident.id) if incident is not None else "unavailable"
+        },
     )
 
 
