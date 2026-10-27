@@ -20,6 +20,8 @@ const replies = new Map();
 const errors = [];
 const requests = [];
 const mutations = [];
+const diagnosticReports = [];
+const diagnosticQueries = [];
 const actor = "11111111-1111-4111-8111-111111111111";
 const other = "22222222-2222-4222-8222-222222222222";
 let role = "admin";
@@ -37,6 +39,29 @@ let settingsTarget;
 let settingsSession;
 let originalZoom;
 const results = new Map();
+const diagnosticItems = Array.from({ length: 21 }, (_, index) => ({
+  id: `00000000-0000-4000-8000-${String(index + 1).padStart(12, "0")}`,
+  fingerprint: String(index + 1).padStart(64, "0"),
+  source: index === 20 ? "frontend" : "backend",
+  severity: index === 0 ? "critical" : "error",
+  code: index === 0 ? '<img src=x onerror="alert(1)">' : "internal_error",
+  component: index === 20 ? "network" : "api",
+  action: index === 20 ? "load" : "request",
+  route: index === 20 ? "/terminal/review" : "/api/v1/items/{item_id}",
+  method: index === 20 ? "CLIENT" : "GET",
+  status_code: index === 20 ? null : 500,
+  tenant_id: null,
+  user_id: actor,
+  error_type: index === 20 ? null : "RuntimeError",
+  environment: "browser-fixture",
+  release: "package-6",
+  first_request_id: `request-${index + 1}`,
+  last_request_id: `request-${index + 1}`,
+  stack_frames: [],
+  first_seen_at: "2026-10-27T08:00:00Z",
+  last_seen_at: `2026-10-27T08:${String(index).padStart(2, "0")}:00Z`,
+  occurrence_count: index + 1,
+}));
 
 function send(method, params = {}, sessionId) {
   return new Promise((resolve, reject) => {
@@ -66,6 +91,28 @@ async function intercept({ requestId, request }) {
   else if (path.endsWith("/me")) {
     data = { user: { id: actor, product_role: role, display_name: "Анна · администратор", email: "admin@example.test" }, memberships: [] };
     if (failIdentity) { code = 503; data = { error: { code: "unavailable" } }; }
+  } else if (path.endsWith("/diagnostics/frontend")) {
+    assert.equal(request.method, "POST");
+    const report = JSON.parse(request.postData);
+    assert.deepEqual(Object.keys(report).sort(), ["action", "component", "kind", "page", "request_id"]);
+    assert.equal(report.kind, "request_failure");
+    assert.equal(report.page, "review");
+    assert.equal(report.component, "network");
+    assert.equal(report.action, "load");
+    diagnosticReports.push(report);
+    code = 202;
+    data = { incident_id: "33333333-3333-4333-8333-333333333333" };
+  } else if (path.endsWith("/platform/diagnostics")) {
+    assert.equal(request.method, "GET");
+    diagnosticQueries.push(url.search);
+    const source = url.searchParams.get("source");
+    const component = url.searchParams.get("component");
+    const offset = Number(url.searchParams.get("offset") || 0);
+    const limit = Number(url.searchParams.get("limit") || 20);
+    const filtered = diagnosticItems.filter(item =>
+      (!source || item.source === source) && (!component || item.component === component)
+    );
+    data = { items: filtered.slice(offset, offset + limit), total: filtered.length, limit, offset };
   } else if (path.includes("/platform/users/")) {
     assert(Object.entries(request.headers).some(([key, value]) => key.toLowerCase() === "authorization" && value.startsWith("Bearer ")));
     if (expire) { expire = false; code = 401; }
@@ -173,12 +220,28 @@ try {
   await check("role controls hidden before login", 'document.querySelector("#productAccess").hidden && document.querySelector("#productAccessLink").hidden');
   for (const value of ["user", "partner", "moderator"]) {
     role = value; await login();
-    await check(`${value} gets identity without admin controls or a workspace`, `document.querySelector('#productAccessLink').hidden && document.querySelector('#reviewWorkspace').hidden && document.querySelector('#accountId').textContent.includes('${actor}')`);
+    await check(`${value} gets identity without admin controls or a workspace`, `document.querySelector('#productAccessLink').hidden && document.querySelector('#diagnosticsLink').hidden && document.querySelector('#reviewWorkspace').hidden && document.querySelector('#accountId').textContent.includes('${actor}')`);
     await click("#logoutButton"); await until('!document.querySelector("#loginButton").disabled');
   }
   role = "admin"; await login();
   await until('!document.querySelector("#productAccess").hidden');
-  await check("admin without memberships can manage roles", '!document.querySelector("#productAccessLink").hidden && document.querySelector("#reviewWorkspace").hidden');
+  await check("admin without memberships can manage roles", '!document.querySelector("#productAccessLink").hidden && !document.querySelector("#diagnosticsLink").hidden && document.querySelector("#reviewWorkspace").hidden');
+  await click("#diagnosticsLink");
+  await until('document.querySelectorAll(".diagnostic-row").length === 20');
+  await check("diagnostic journal opens with heading focus", '!document.querySelector("#diagnosticJournal").hidden && document.activeElement.id === "diagnosticsTitle"');
+  await check("diagnostic text is never interpreted as markup", '!document.querySelector("#diagnosticsList img") && document.querySelector(".diagnostic-row h3").textContent.includes("<img")');
+  await check("diagnostic pagination exposes the bounded range", 'document.querySelector("#diagnosticsRange").textContent === "1–20 из 21" && !document.querySelector("#diagnosticsPagination").hidden');
+  await screenshot("00-diagnostics-desktop");
+  await click("#diagnosticsNext");
+  await until('document.querySelector("#diagnosticsRange").textContent === "21–21 из 21"');
+  await check("diagnostic next page contains only the remaining incident", 'document.querySelectorAll(".diagnostic-row").length === 1 && document.querySelector(".diagnostic-row").textContent.includes("Интерфейс")');
+  await evaluate('document.querySelector("#diagnosticsSource").value="frontend";document.querySelector("#diagnosticsComponent").value="network";document.querySelector("#diagnosticsFilters").requestSubmit()');
+  await until('document.querySelector("#diagnosticsRange").textContent === "1–1 из 1"');
+  assert(new URLSearchParams(diagnosticQueries.at(-1)).get("source") === "frontend");
+  assert(new URLSearchParams(diagnosticQueries.at(-1)).get("component") === "network");
+  checks += 2;
+  await click("#diagnosticsClose");
+  await check("closing diagnostics restores navigation focus", 'document.querySelector("#diagnosticJournal").hidden && document.activeElement.id === "diagnosticsLink"');
   await evaluate('document.querySelector("#accessUserId").value="not-a-uuid"'); await click("#accessLoad");
   await check("invalid UUID rejected locally", 'document.querySelector("#accessMessage").textContent.includes("UUID")');
   await load();
@@ -218,6 +281,10 @@ try {
   await zoom(2);
   await check("native 200 percent zoom applied", 'Math.abs(devicePixelRatio - 2) < .1');
   await check("zoomed editor has no horizontal overflow", 'document.documentElement.scrollWidth <= innerWidth + 1');
+  await click("#diagnosticsLink");
+  await until('document.querySelectorAll(".diagnostic-row").length === 1');
+  await check("zoomed diagnostics preserve readable rows", 'document.documentElement.scrollWidth <= innerWidth + 1 && document.querySelector(".diagnostic-row").getBoundingClientRect().right <= innerWidth + 1');
+  await click("#diagnosticsClose");
   await change("moderator");
   await check("zoomed confirmation fits viewport", 'document.querySelector("#accessDialog").getBoundingClientRect().width < innerWidth');
   await screenshot("05-confirmation-zoom");
@@ -230,8 +297,18 @@ try {
   await change("moderator"); await screenshot("04-confirmation-mobile");
   await check("mobile dialog fits viewport", 'document.querySelector("#accessDialog").getBoundingClientRect().width < innerWidth');
   await key("Escape", "Escape", 27);
+  await click("#diagnosticsLink");
+  await until('document.querySelectorAll(".diagnostic-row").length === 1');
+  await check("mobile diagnostics have no horizontal overflow", 'document.documentElement.scrollWidth <= innerWidth + 1 && document.querySelector(".diagnostic-row").getBoundingClientRect().right <= innerWidth + 1');
+  await screenshot("04b-diagnostics-mobile");
+  await click("#diagnosticsClose");
   await send("Emulation.setEmulatedMedia", { features: [{ name: "prefers-reduced-motion", value: "reduce" }] });
   await check("reduced motion removes long transitions", 'parseFloat(getComputedStyle(document.querySelector("#accessReview")).transitionDuration) < .01');
+  await evaluate('window.__diagnosticScrollBehavior=null;window.__diagnosticOriginalScrollIntoView=Element.prototype.scrollIntoView;Element.prototype.scrollIntoView=function(options){window.__diagnosticScrollBehavior=options?.behavior||null};document.querySelector("#diagnosticsLink").click()');
+  await until('!document.querySelector("#diagnosticJournal").hidden');
+  await check("reduced motion avoids smooth diagnostic scrolling", 'window.__diagnosticScrollBehavior === "auto"');
+  await evaluate('Element.prototype.scrollIntoView=window.__diagnosticOriginalScrollIntoView;delete window.__diagnosticOriginalScrollIntoView');
+  await click("#diagnosticsClose");
   await send("Emulation.setDeviceMetricsOverride", { width: 1440, height: 1000, deviceScaleFactor: 1, mobile: false });
   for (const code of ["version_conflict", "last_product_admin", "idempotency_conflict"]) {
     failure = { status: 409, code }; await load(); await change("moderator"); await confirm();
@@ -270,6 +347,7 @@ try {
   await until('document.querySelector("#productAccessLink").hidden');
   await check("self-demotion immediately hides admin controls", 'document.querySelector("#productAccess").hidden && document.querySelector("#productIdentity").textContent.startsWith("Пользователь")');
   await check("credentials are never stored in browser storage", 'localStorage.length === 0 && sessionStorage.length === 0');
+  assert.equal(diagnosticReports.length, 1, "Malformed JSON should emit one bounded diagnostic report"); checks++;
   assert.equal(errors.length, 0, JSON.stringify(errors)); checks++;
   console.log(`${checks} browser checks passed. Isolated fixtures; no database writes. Screenshots: ${output}`);
 } finally {

@@ -674,6 +674,14 @@ reports `479` files without errors, and focused Ruff/format checks pass. Fallbac
 read-audit records, unauthenticated catalog reporting, and cross-node rate-limit
 coordination remain explicit follow-up work.
 
+Market Terminal package 6 technical acceptance now covers `213` repeatable
+browser checks across the working catalog, product view, cabinet, four product
+roles, diagnostics, HTML 404, mobile, native 200% zoom, keyboard navigation,
+reduced motion, rapid navigation, and a 50-card CPU-throttled run. Runtime/CSP
+errors and horizontal overflow were not observed. Brand-asset rights, external
+listing availability, physical devices, and assistive-technology testing remain
+release gates rather than completed checks.
+
 ## Architecture Review
 
 Current architecture separates:

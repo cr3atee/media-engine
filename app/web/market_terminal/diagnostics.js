@@ -1,6 +1,7 @@
 /** Safe browser reporting and product-admin incident journal. */
 const pageSize = 20;
 const reportCooldownMs = 30_000;
+const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
 
 export function installFrontendDiagnostics({ send, isAuthenticated }) {
   const reportedAt = new Map();
@@ -80,7 +81,10 @@ export function createDiagnosticJournal({ request, onSessionLost }) {
     if (profile?.product_role !== "admin") return;
     el.diagnosticJournal.hidden = false;
     el.diagnosticsTitle.focus();
-    el.diagnosticJournal.scrollIntoView({ block: "start", behavior: "smooth" });
+    el.diagnosticJournal.scrollIntoView({
+      block: "start",
+      behavior: reducedMotion.matches ? "auto" : "smooth",
+    });
     await load();
   }
 

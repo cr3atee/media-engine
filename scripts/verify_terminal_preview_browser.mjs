@@ -235,10 +235,46 @@ try {
   await check("reduced motion disables animations", 'document.getAnimations().length===0');
   await click("#closeDialog");
   await send("Emulation.setEmulatedMedia", { features: [{ name: "prefers-reduced-motion", value: "no-preference" }] });
+  await send("Page.addScriptToEvaluateOnNewDocument", { source: `
+    window.__package6LongTasks = [];
+    window.__package6LongTaskSupported = PerformanceObserver.supportedEntryTypes?.includes("longtask") ?? false;
+    if (window.__package6LongTaskSupported) {
+      new PerformanceObserver(list => {
+        for (const entry of list.getEntries()) window.__package6LongTasks.push(entry.duration);
+      }).observe({ entryTypes: ["longtask"] });
+    }
+  ` });
   await send("Emulation.setCPUThrottlingRate", { rate: 4 });
   await navigate("?screen=density");
   await check("50-card density only in labelled test mode", 'document.querySelectorAll(".product-card").length===50 && document.querySelector(".notice").textContent.includes("только в браузере")');
   await check("dense page fits", 'document.documentElement.scrollWidth<=innerWidth');
+  await evaluate('window.scrollTo(0, document.body.scrollHeight);window.scrollTo(0, 0);new Promise(resolve=>setTimeout(resolve,500))');
+  const densityPerformance = await evaluate(`(() => {
+    const tasks = window.__package6LongTasks || [];
+    const activeFiniteAnimations = document.getAnimations().filter(animation =>
+      animation.playState === "running" && animation.effect?.getComputedTiming().iterations !== Infinity
+    ).length;
+    const activeTransitionAll = [...document.querySelectorAll("*")].filter(element => {
+      const style = getComputedStyle(element);
+      return style.transitionProperty.split(",").some(property => property.trim() === "all") &&
+        style.transitionDuration.split(",").some(duration => parseFloat(duration) > 0);
+    }).length;
+    return {
+      supported: window.__package6LongTaskSupported,
+      count: tasks.length,
+      maximum: tasks.length ? Math.max(...tasks) : 0,
+      total: tasks.reduce((sum, duration) => sum + duration, 0),
+      activeFiniteAnimations,
+      activeTransitionAll,
+    };
+  })()`);
+  assert(densityPerformance.supported, "Long Task API must be available in acceptance browser");
+  assert(densityPerformance.maximum <= 250, JSON.stringify(densityPerformance));
+  assert(densityPerformance.total <= 750, JSON.stringify(densityPerformance));
+  assert.equal(densityPerformance.activeFiniteAnimations, 0, JSON.stringify(densityPerformance));
+  assert.equal(densityPerformance.activeTransitionAll, 0, JSON.stringify(densityPerformance));
+  checks += 5;
+  console.log(`PASS dense motion budget ${JSON.stringify(densityPerformance)}`);
   await evaluate(`document.querySelectorAll('.market-nav a')[1].click();document.querySelector('#searchInput').value='Minecraft';document.querySelector('#searchForm').requestSubmit()`);
   await ready();
   await check("rapid navigation retains latest intent", 'document.querySelector("#catalogTitle").textContent.includes("Minecraft") && !location.search.includes("marketplace")');

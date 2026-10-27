@@ -6,6 +6,14 @@ This document records notable Project Passport updates.
 
 ## Unreleased
 
+- Completed Market Terminal package 6 technical UI acceptance with `213`
+  repeatable browser checks across catalog, product, cabinet, product roles,
+  diagnostics, error states, keyboard, reduced motion, mobile and native 200%
+  zoom. A 50-card run under CPU 4× recorded a `162 ms` maximum long task and no
+  remaining finite animations or active `transition: all`. Brand-asset rights,
+  external listing availability, physical devices and assistive technology
+  remain explicit release gates.
+
 - Implemented Market Terminal diagnostics package 5A: real HTML 404 and safe
   HTML 500 documents, sanitized incident contracts, memory/PostgreSQL
   repositories, revision `0019_diagnostic_incidents`, independent recording,
