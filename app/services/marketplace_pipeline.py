@@ -23,6 +23,7 @@ from app.parsers.ggsel_extractor import GGSelExtractor
 from app.parsers.ggsel_fetcher import GGSelFetcher
 from app.parsers.models import ParsedOffer
 from app.parsers.normalizers import OfferNormalizer
+from app.repositories.offers import OfferObservationContext
 from app.repositories.provider import RepositoryProvider
 from app.services.content_generator import ContentGenerator
 from app.services.event_builder import EventBuilder
@@ -62,6 +63,7 @@ class TransactionalMarketplaceResult:
     """Domain data and counts produced inside one repository scope."""
 
     offers_persisted: int
+    offers_deactivated: int
     comparison_results: tuple[ComparisonResult, ...]
     snapshots_persisted: int
     price_changes: tuple[PriceChange, ...]
@@ -187,11 +189,34 @@ class MarketplacePipeline:
         self,
         prepared: PreparedMarketplaceRun,
         repository_provider: RepositoryProvider,
+        *,
+        observation_context: OfferObservationContext | None = None,
+        reconcile_missing_offers: bool = False,
     ) -> TransactionalMarketplaceResult:
         """Persist and process prepared offers within one repository scope."""
         for offer in prepared.offers:
-            await repository_provider.offers.save(offer.tenant_id, offer)
+            if observation_context is None:
+                await repository_provider.offers.save(offer.tenant_id, offer)
+            else:
+                await repository_provider.offers.save_observed(
+                    observation_context,
+                    offer,
+                )
         self._report(f"Persisted offers: {len(prepared.offers)}")
+
+        offers_deactivated = 0
+        if observation_context is not None and reconcile_missing_offers:
+            offers_deactivated = (
+                await repository_provider.offers.reconcile_observations(
+                    observation_context,
+                    {
+                        offer.external_id
+                        for offer in prepared.offers
+                        if offer.external_id is not None
+                    },
+                )
+            )
+            self._report(f"Deactivated missing offers: {offers_deactivated}")
 
         self._report("=== COMPARE OFFERS ===")
         comparison_results = await self.compare_repository_offers(
@@ -270,6 +295,7 @@ class MarketplacePipeline:
         )
         return TransactionalMarketplaceResult(
             offers_persisted=len(prepared.offers),
+            offers_deactivated=offers_deactivated,
             comparison_results=tuple(comparison_results),
             snapshots_persisted=snapshots_persisted,
             price_changes=tuple(price_changes),

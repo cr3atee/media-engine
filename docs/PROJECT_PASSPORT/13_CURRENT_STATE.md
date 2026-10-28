@@ -682,6 +682,23 @@ errors and horizontal overflow were not observed. Brand-asset rights, external
 listing availability, physical devices, and assistive-technology testing remain
 release gates rather than completed checks.
 
+## Offer Availability
+
+Revision `0020_offer_source_observations` adds tenant- and integration-scoped
+offer observations without changing `ParsedOffer`. Memory and PostgreSQL
+repositories now keep an offer public while any known source remains active,
+reactivate later sightings, reject stale state ordering, and retain legacy rows
+without inventing source ownership. Reconciliation shares the existing
+ingestion transaction and an empty result cannot mass-deactivate offers.
+
+Current runtime factories record observations but do not declare their result a
+complete source snapshot, so missing-offer deactivation remains off. This is
+required because the verified Playerok path currently reads only the first
+`20` results from a larger cursor-paginated response. Isolated PostgreSQL 17.10
+verification passed `16/16`; full Pytest is `613 passed, 60 skipped` and MyPy is
+clean across `502` files. The local six-offer review catalog has five live links
+and one confirmed stale legacy listing, FunPay `80145738` (HTTP 404).
+
 ## Architecture Review
 
 Current architecture separates:

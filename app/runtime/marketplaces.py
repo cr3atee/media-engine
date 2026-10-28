@@ -68,6 +68,7 @@ def create_marketplace_runner_factories(
             repository_scope_factory=repository_scope_factory,
             pipeline=pipeline,
             tenant_id=integration.tenant_id,
+            integration_id=integration.id,
         )
 
     def playerok_factory(
@@ -84,6 +85,7 @@ def create_marketplace_runner_factories(
             repository_scope_factory=repository_scope_factory,
             pipeline=pipeline,
             tenant_id=integration.tenant_id,
+            integration_id=integration.id,
         )
 
     def funpay_factory(
@@ -100,6 +102,7 @@ def create_marketplace_runner_factories(
             repository_scope_factory=repository_scope_factory,
             pipeline=pipeline,
             tenant_id=integration.tenant_id,
+            integration_id=integration.id,
         )
 
     return {

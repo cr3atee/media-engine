@@ -2,11 +2,13 @@ from __future__ import annotations
 
 from collections.abc import Awaitable, Callable, Sequence
 from dataclasses import dataclass, replace
+from datetime import UTC, datetime
 from uuid import UUID
 
 from app.domain.marketplace import Marketplace
 from app.domain.tenancy import LEGACY_TENANT_ID
 from app.parsers.models import ParsedOffer
+from app.repositories.offers import OfferObservationContext
 from app.services.marketplace_pipeline import MarketplacePipeline
 from app.services.repository_scope import RepositoryScopeFactory
 
@@ -34,6 +36,7 @@ class MarketplaceRunResult:
     content_items_generated: int
     persistence_committed: bool
     errors: tuple[str, ...]
+    offers_deactivated: int = 0
     tenant_id: UUID = LEGACY_TENANT_ID
 
 
@@ -48,6 +51,9 @@ class MarketplaceApplicationRunner:
         repository_scope_factory: RepositoryScopeFactory,
         pipeline: MarketplacePipeline,
         tenant_id: UUID = LEGACY_TENANT_ID,
+        integration_id: UUID | None = None,
+        source_snapshot_complete: bool = False,
+        clock: Callable[[], datetime] | None = None,
     ) -> None:
         """Initialize one marketplace runner at the composition boundary."""
         self._marketplace = marketplace
@@ -55,6 +61,9 @@ class MarketplaceApplicationRunner:
         self._repository_scope_factory = repository_scope_factory
         self._pipeline = pipeline
         self._tenant_id = tenant_id
+        self._integration_id = integration_id
+        self._source_snapshot_complete = source_snapshot_complete
+        self._clock = clock or _utc_now
 
     async def run(self, url: str) -> MarketplaceRunResult:
         """Execute one bounded marketplace run with explicit phase ownership."""
@@ -63,11 +72,23 @@ class MarketplaceApplicationRunner:
             for offer in await self._ingestion(url)
         )
         prepared = self._pipeline.prepare_offers(parsed_offers)
+        observation_context = (
+            OfferObservationContext(
+                tenant_id=self._tenant_id,
+                integration_id=self._integration_id,
+                marketplace=self._marketplace.value,
+                observed_at=self._clock(),
+            )
+            if self._integration_id is not None
+            else None
+        )
 
         async with self._repository_scope_factory() as repository_provider:
             transactional = await self._pipeline.process_with_repositories(
                 prepared,
                 repository_provider,
+                observation_context=observation_context,
+                reconcile_missing_offers=self._source_snapshot_complete,
             )
 
         return MarketplaceRunResult(
@@ -88,5 +109,10 @@ class MarketplaceApplicationRunner:
             content_items_generated=0,
             persistence_committed=True,
             errors=prepared.errors,
+            offers_deactivated=transactional.offers_deactivated,
             tenant_id=self._tenant_id,
         )
+
+
+def _utc_now() -> datetime:
+    return datetime.now(UTC)

@@ -276,6 +276,13 @@ This document captures architecture notes that are important for future reviews.
   is anchored to the last canonical product UUID in the deterministic sorted
   projection; do not replace it with browser offsets. Other public list DTOs
   remain first-page-only until each has a compatible stable identity.
+- Offer availability is source-scoped, not a boolean copied onto `ParsedOffer`.
+  Preserve the many-to-many observation boundary: one missing integration must
+  not hide an offer still seen elsewhere, and legacy rows without deterministic
+  ownership remain visible. Never enable missing-item reconciliation from a
+  successful first page alone; `source_snapshot_complete` must be backed by
+  verified pagination/completeness evidence. Empty responses are deliberately
+  non-destructive.
 
 ## Review Notes
 

@@ -11,6 +11,7 @@ from sqlalchemy import (
     Index,
     Numeric,
     String,
+    UniqueConstraint,
     Uuid,
     text,
 )
@@ -45,6 +46,11 @@ class Offer(Base):
             ("tenant_id", "canonical_product_id"),
             ("canonical_products.tenant_id", "canonical_products.id"),
             name="fk_offers_tenant_canonical_product",
+        ),
+        UniqueConstraint(
+            "tenant_id",
+            "id",
+            name="uq_offers_tenant_id_id",
         ),
     )
 

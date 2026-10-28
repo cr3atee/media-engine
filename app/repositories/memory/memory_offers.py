@@ -1,17 +1,28 @@
 from __future__ import annotations
 
-from collections.abc import Sequence
-from dataclasses import replace
+from collections.abc import Collection, Sequence
+from dataclasses import dataclass, replace
+from datetime import datetime
 from uuid import UUID
 
 from app.parsers.models import ParsedOffer
 from app.repositories.base import RepositoryIdentityConflictError
 from app.repositories.offers import (
+    OfferObservationContext,
     OfferRepository,
     resolve_offer_identity_args,
     resolve_offer_marketplace_args,
     resolve_offer_save_args,
 )
+
+
+@dataclass(slots=True, frozen=True)
+class _MemoryOfferObservation:
+    first_seen_at: datetime
+    last_seen_at: datetime
+    state_updated_at: datetime
+    is_active: bool
+    unavailable_since: datetime | None
 
 
 class MemoryOfferRepository(OfferRepository):
@@ -20,6 +31,10 @@ class MemoryOfferRepository(OfferRepository):
     def __init__(self) -> None:
         """Initialize empty in-memory offer storage."""
         self._offers: list[ParsedOffer] = []
+        self._observations: dict[
+            tuple[UUID, UUID, str, str],
+            _MemoryOfferObservation,
+        ] = {}
 
     async def save(
         self,
@@ -62,6 +77,77 @@ class MemoryOfferRepository(OfferRepository):
 
         self._offers.append(offer)
 
+    async def save_observed(
+        self,
+        context: OfferObservationContext,
+        offer: ParsedOffer,
+    ) -> None:
+        """Store an offer and update its source-scoped availability state."""
+        _validate_observation(context, offer)
+        await self.save(context.tenant_id, offer)
+        if offer.external_id is None:
+            return
+
+        key = (
+            context.tenant_id,
+            context.integration_id,
+            context.marketplace,
+            offer.external_id,
+        )
+        stored = self._observations.get(key)
+        if stored is None:
+            self._observations[key] = _MemoryOfferObservation(
+                first_seen_at=context.observed_at,
+                last_seen_at=context.observed_at,
+                state_updated_at=context.observed_at,
+                is_active=True,
+                unavailable_since=None,
+            )
+            return
+
+        is_newest_state = context.observed_at >= stored.state_updated_at
+        self._observations[key] = replace(
+            stored,
+            first_seen_at=min(stored.first_seen_at, context.observed_at),
+            last_seen_at=max(stored.last_seen_at, context.observed_at),
+            state_updated_at=(
+                context.observed_at if is_newest_state else stored.state_updated_at
+            ),
+            is_active=True if is_newest_state else stored.is_active,
+            unavailable_since=None if is_newest_state else stored.unavailable_since,
+        )
+
+    async def reconcile_observations(
+        self,
+        context: OfferObservationContext,
+        external_ids: Collection[str],
+    ) -> int:
+        """Deactivate missing observations without trusting an empty snapshot."""
+        observed_ids = frozenset(external_ids)
+        if not observed_ids:
+            return 0
+
+        deactivated = 0
+        for key, observation in tuple(self._observations.items()):
+            tenant_id, integration_id, marketplace, external_id = key
+            if (
+                tenant_id != context.tenant_id
+                or integration_id != context.integration_id
+                or marketplace != context.marketplace
+                or external_id in observed_ids
+                or not observation.is_active
+                or observation.state_updated_at >= context.observed_at
+            ):
+                continue
+            self._observations[key] = replace(
+                observation,
+                state_updated_at=context.observed_at,
+                is_active=False,
+                unavailable_since=context.observed_at,
+            )
+            deactivated += 1
+        return deactivated
+
     async def get_by_identity(
         self,
         tenant_id: UUID | str,
@@ -79,6 +165,7 @@ class MemoryOfferRepository(OfferRepository):
                 offer.tenant_id == tenant_id
                 and offer.marketplace == marketplace
                 and offer.external_id == external_id
+                and self._is_active(offer)
             ):
                 return offer
         return None
@@ -96,16 +183,37 @@ class MemoryOfferRepository(OfferRepository):
         return tuple(
             offer
             for offer in self._offers
-            if offer.tenant_id == tenant_id and offer.marketplace == marketplace
+            if (
+                offer.tenant_id == tenant_id
+                and offer.marketplace == marketplace
+                and self._is_active(offer)
+            )
         )
 
     async def list_by_tenant(self, tenant_id: UUID) -> Sequence[ParsedOffer]:
         """Return parsed offers for one tenant in insertion order."""
-        return tuple(offer for offer in self._offers if offer.tenant_id == tenant_id)
+        return tuple(
+            offer
+            for offer in self._offers
+            if offer.tenant_id == tenant_id and self._is_active(offer)
+        )
 
     async def list_all(self) -> Sequence[ParsedOffer]:
         """Return all parsed offers in insertion order."""
-        return tuple(self._offers)
+        return tuple(offer for offer in self._offers if self._is_active(offer))
+
+    def _is_active(self, offer: ParsedOffer) -> bool:
+        if offer.external_id is None:
+            return True
+        observations = (
+            observation
+            for key, observation in self._observations.items()
+            if key[0] == offer.tenant_id
+            and key[2] == offer.marketplace
+            and key[3] == offer.external_id
+        )
+        states = tuple(observations)
+        return not states or any(observation.is_active for observation in states)
 
 
 def _incoming_or_stored[T](incoming: T | None, stored: T | None) -> T | None:
@@ -115,4 +223,17 @@ def _incoming_or_stored[T](incoming: T | None, stored: T | None) -> T | None:
 def _validate_tenant(requested: UUID, actual: UUID) -> None:
     if requested != actual:
         msg = f"Offer tenant mismatch: requested {requested}, got {actual}."
+        raise RepositoryIdentityConflictError(msg)
+
+
+def _validate_observation(
+    context: OfferObservationContext,
+    offer: ParsedOffer,
+) -> None:
+    _validate_tenant(context.tenant_id, offer.tenant_id)
+    if context.marketplace != offer.marketplace:
+        msg = (
+            "Offer marketplace mismatch: "
+            f"observed {context.marketplace}, got {offer.marketplace}."
+        )
         raise RepositoryIdentityConflictError(msg)

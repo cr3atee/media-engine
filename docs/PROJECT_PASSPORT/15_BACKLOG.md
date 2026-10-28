@@ -7,6 +7,14 @@ candidate verification.
 
 ## Immediate
 
+- Complete cursor/page traversal and expose an explicit source-snapshot
+  completeness result before enabling missing-offer reconciliation in runtime
+  factories. The durable observation foundation exists, but a first page must
+  never be treated as a complete marketplace catalog.
+- Add an authorized immutable-audit operator command to retire or restore a
+  manually seeded offer while preserving snapshots, events, and review
+  evidence. Use it to resolve the confirmed FunPay `80145738` HTTP 404 in the
+  isolated review catalog; do not delete or silently rewrite the row in SQL.
 - Execute human decisions for the prepared five-offer EPIC 23 launch batch,
   then bootstrap a curated canonical catalog and confirmed same-product
   marketplace links. Current saved real payloads have no `AUTO_MATCH` or

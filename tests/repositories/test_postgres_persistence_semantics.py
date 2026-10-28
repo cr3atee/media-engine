@@ -5,8 +5,15 @@ from collections.abc import Callable, Coroutine
 from datetime import UTC, datetime
 from decimal import Decimal
 from typing import Any, cast
+from uuid import UUID
 
-from sqlalchemy import DateTime, ForeignKeyConstraint, Table, UniqueConstraint
+from sqlalchemy import (
+    CheckConstraint,
+    DateTime,
+    ForeignKeyConstraint,
+    Table,
+    UniqueConstraint,
+)
 from sqlalchemy.dialects.postgresql.base import PGDialect
 from sqlalchemy.engine import Dialect
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -16,8 +23,10 @@ from app.domain.price_snapshot import PriceSnapshot
 from app.models.canonical_offer_decision_record import CanonicalOfferDecisionRecord
 from app.models.canonical_product_record import CanonicalProductRecord
 from app.models.offer import Offer
+from app.models.offer_source_observation_record import OfferSourceObservationRecord
 from app.models.price_snapshot_record import PriceSnapshotRecord
 from app.parsers.models import ParsedOffer
+from app.repositories.offers import OfferObservationContext
 from app.repositories.postgres import (
     PostgresOfferRepository,
     PostgresPriceHistoryRepository,
@@ -50,6 +59,11 @@ class RecordingResult:
 
     def scalar_one_or_none(self) -> int | None:
         """Return the configured insert identifier or no row."""
+        return self._scalar
+
+    def scalar_one(self) -> int:
+        """Return the configured insert identifier."""
+        assert self._scalar is not None
         return self._scalar
 
 
@@ -139,6 +153,63 @@ def test_offer_metadata_defines_identity_and_canonical_integrity() -> None:
     assert tuple(column.name for column in tenant_identity.columns) == (
         "tenant_id",
         "id",
+    )
+
+
+def test_offer_observation_metadata_is_source_scoped_and_ordered() -> None:
+    offer_table = cast(Table, Offer.__table__)
+    offer_identity = next(
+        constraint
+        for constraint in offer_table.constraints
+        if constraint.name == "uq_offers_tenant_id_id"
+    )
+    assert isinstance(offer_identity, UniqueConstraint)
+    assert tuple(column.name for column in offer_identity.columns) == (
+        "tenant_id",
+        "id",
+    )
+
+    table = cast(Table, OfferSourceObservationRecord.__table__)
+    assert tuple(column.name for column in table.primary_key.columns) == (
+        "tenant_id",
+        "integration_id",
+        "offer_id",
+    )
+    foreign_keys = {
+        constraint.name: constraint
+        for constraint in table.constraints
+        if isinstance(constraint, ForeignKeyConstraint)
+    }
+    assert tuple(
+        element.target_fullname
+        for element in foreign_keys["fk_offer_source_observations_integration"].elements
+    ) == (
+        "marketplace_integrations.tenant_id",
+        "marketplace_integrations.id",
+    )
+    assert tuple(
+        element.target_fullname
+        for element in foreign_keys["fk_offer_source_observations_offer"].elements
+    ) == ("offers.tenant_id", "offers.id")
+    checks = {
+        constraint.name
+        for constraint in table.constraints
+        if isinstance(constraint, CheckConstraint)
+    }
+    assert checks == {
+        "ck_offer_source_observations_state",
+        "ck_offer_source_observations_time_order",
+    }
+    indexes = {str(index.name): index for index in table.indexes}
+    assert set(indexes) == {
+        "ix_offer_source_observations_active_offer",
+        "ix_offer_source_observations_integration_state",
+    }
+    assert (
+        indexes["ix_offer_source_observations_active_offer"].dialect_options[
+            "postgresql"
+        ]["where"]
+        is not None
     )
 
 
@@ -262,6 +333,27 @@ def test_offer_without_external_id_compiles_append_only_insert() -> None:
     run_async(repository.save(make_offer(external_id=None)))
 
     assert "ON CONFLICT" not in compile_postgres(session.statements[0])
+
+
+def test_observed_offer_compiles_offer_and_source_upserts() -> None:
+    session = RecordingSession()
+    repository = PostgresOfferRepository(cast(AsyncSession, session))
+    context = OfferObservationContext(
+        tenant_id=make_offer().tenant_id,
+        integration_id=UUID("10000000-0000-4000-8000-000000000104"),
+        marketplace="ggsel",
+        observed_at=datetime(2026, 10, 27, 10, 0, tzinfo=UTC),
+    )
+
+    run_async(repository.save_observed(context, make_offer()))
+
+    assert len(session.statements) == 2
+    offer_sql = compile_postgres(session.statements[0])
+    observation_sql = compile_postgres(session.statements[1])
+    assert "RETURNING offers.id" in offer_sql
+    assert "ON CONFLICT (tenant_id, integration_id, offer_id)" in observation_sql
+    assert "greatest(" in observation_sql
+    assert "least(" in observation_sql
 
 
 def test_snapshot_add_compiles_exact_conflict_suppression() -> None:

@@ -114,3 +114,15 @@ Launch-batch preparation and the durable local operator workspace are complete.
 Product identity approval is deliberately not complete: it requires a human
 operator to inspect current source pages and record decisions. Until then, the
 public catalog must not claim these offers are the same product.
+
+## Local Post-review Link Audit
+
+The isolated local review workspace later contained six linked offers across
+two canonical products. A direct availability audit on 2026-10-27 returned HTTP
+200 for both GGSEL links, both Playerok links, and FunPay `25007196`. FunPay
+`80145738` returned HTTP 404.
+
+The workspace has no persisted marketplace integration records, so the new
+source-observation migration cannot infer ownership for those manually seeded
+legacy rows. The stale link is not release-approved and must be retired through
+an authorized audited correction flow rather than direct SQL.

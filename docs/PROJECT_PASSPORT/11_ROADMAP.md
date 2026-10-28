@@ -361,6 +361,11 @@ This document tracks only work that is reflected by the current repository state
   `114,640` cross-marketplace pairs. The bounded operator batch exposes five
   honest `NO_MATCH` proposals with no automatic catalog mutation; exact product
   identity remains a human decision.
+- Market Terminal offer-availability foundation: revision
+  `0020_offer_source_observations` adds source-scoped durable observations,
+  all-source active visibility, reactivation, ordering protection, and atomic
+  rollback. Runtime missing-item reconciliation remains deliberately disabled
+  until collector pagination proves a complete source snapshot.
 
 ## Current Status
 
@@ -398,7 +403,9 @@ authenticated sources. The backend core is now a verified release candidate.
 The remaining work before public visual launch is execution of human-approved
 catalog onboarding through the now measurable operator workspace,
 target-environment monitoring/secret rollout, frontend hardening, and a product
-decision on category data exposure.
+decision on category data exposure. Collector completeness and an audited
+retirement path for stale manually seeded offers are also required before
+outbound listing availability can be treated as unattended-production ready.
 
 The complete operator-decision-to-public-read path is now integration-verified
 with isolated synthetic data. Production catalog readiness still depends on a

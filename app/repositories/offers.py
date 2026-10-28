@@ -1,12 +1,38 @@
 from __future__ import annotations
 
 from abc import abstractmethod
-from collections.abc import Sequence
+from collections.abc import Collection, Sequence
+from dataclasses import dataclass
+from datetime import datetime
 from uuid import UUID
 
+from app.domain.identity import normalize_utc
 from app.domain.tenancy import LEGACY_TENANT_ID
 from app.parsers.models import ParsedOffer
 from app.repositories.base import BaseRepository
+
+
+@dataclass(slots=True, frozen=True, kw_only=True)
+class OfferObservationContext:
+    """Identity and ordering boundary for one bounded source observation."""
+
+    tenant_id: UUID
+    integration_id: UUID
+    marketplace: str
+    observed_at: datetime
+
+    def __post_init__(self) -> None:
+        """Normalize source identity and require an aware observation time."""
+        marketplace = self.marketplace.strip().lower()
+        if not marketplace:
+            msg = "Observation marketplace must not be empty."
+            raise ValueError(msg)
+        object.__setattr__(self, "marketplace", marketplace)
+        object.__setattr__(
+            self,
+            "observed_at",
+            normalize_utc(self.observed_at, field_name="observed_at"),
+        )
 
 
 class OfferRepository(BaseRepository):
@@ -19,6 +45,31 @@ class OfferRepository(BaseRepository):
         offer: ParsedOffer | None = None,
     ) -> None:
         """Persist or update a parsed offer for one explicit tenant."""
+
+    async def save_observed(
+        self,
+        context: OfferObservationContext,
+        offer: ParsedOffer,
+    ) -> None:
+        """Persist an offer observed by one configured integration.
+
+        The compatibility implementation stores the offer without availability
+        metadata. Runtime repositories override this method.
+        """
+        await self.save(context.tenant_id, offer)
+
+    async def reconcile_observations(
+        self,
+        context: OfferObservationContext,
+        external_ids: Collection[str],
+    ) -> int:
+        """Deactivate source observations absent from a safe non-empty snapshot.
+
+        Compatibility repositories retain legacy behavior and report no
+        deactivations. Runtime repositories override this method.
+        """
+        del context, external_ids
+        return 0
 
     @abstractmethod
     async def get_by_identity(

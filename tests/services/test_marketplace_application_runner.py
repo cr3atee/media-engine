@@ -561,6 +561,151 @@ def test_memory_scope_reuses_state_without_sqlalchemy_transaction_objects() -> N
     assert len(run_async(provider.price_history.get_history("ggsel", "1001"))) == 2
 
 
+def test_integration_run_hides_only_offers_missing_from_nonempty_snapshot() -> None:
+    provider = create_memory_provider()
+    scope_factory = create_memory_repository_scope(provider)
+    pipeline = make_pipeline()
+    integration_id = UUID("22000000-0000-4000-8000-000000000501")
+    first_seen = datetime(2026, 10, 27, 10, 0, tzinfo=UTC)
+    first_runner = MarketplaceApplicationRunner(
+        marketplace=Marketplace.GGSEL,
+        ingestion=RecordingIngestion(
+            (make_offer(external_id="1001"), make_offer(external_id="1002"))
+        ),
+        repository_scope_factory=scope_factory,
+        pipeline=pipeline,
+        integration_id=integration_id,
+        source_snapshot_complete=True,
+        clock=lambda: first_seen,
+    )
+    second_runner = MarketplaceApplicationRunner(
+        marketplace=Marketplace.GGSEL,
+        ingestion=RecordingIngestion((make_offer(external_id="1001"),)),
+        repository_scope_factory=scope_factory,
+        pipeline=pipeline,
+        integration_id=integration_id,
+        source_snapshot_complete=True,
+        clock=lambda: first_seen + timedelta(minutes=5),
+    )
+
+    run_async(first_runner.run("demo://ggsel"))
+    result = run_async(second_runner.run("demo://ggsel"))
+
+    assert result.offers_deactivated == 1
+    assert [offer.external_id for offer in run_async(provider.offers.list_all())] == [
+        "1001"
+    ]
+
+
+def test_integration_run_does_not_mass_deactivate_on_empty_snapshot() -> None:
+    provider = create_memory_provider()
+    scope_factory = create_memory_repository_scope(provider)
+    pipeline = make_pipeline()
+    integration_id = UUID("22000000-0000-4000-8000-000000000502")
+    first_seen = datetime(2026, 10, 27, 10, 0, tzinfo=UTC)
+    first_runner = MarketplaceApplicationRunner(
+        marketplace=Marketplace.GGSEL,
+        ingestion=RecordingIngestion(
+            (make_offer(external_id="1001"), make_offer(external_id="1002"))
+        ),
+        repository_scope_factory=scope_factory,
+        pipeline=pipeline,
+        integration_id=integration_id,
+        source_snapshot_complete=True,
+        clock=lambda: first_seen,
+    )
+    empty_runner = MarketplaceApplicationRunner(
+        marketplace=Marketplace.GGSEL,
+        ingestion=RecordingIngestion(()),
+        repository_scope_factory=scope_factory,
+        pipeline=pipeline,
+        integration_id=integration_id,
+        source_snapshot_complete=True,
+        clock=lambda: first_seen + timedelta(minutes=5),
+    )
+
+    run_async(first_runner.run("demo://ggsel"))
+    result = run_async(empty_runner.run("demo://ggsel"))
+
+    assert result.offers_deactivated == 0
+    assert [offer.external_id for offer in run_async(provider.offers.list_all())] == [
+        "1001",
+        "1002",
+    ]
+
+
+def test_partial_integration_snapshot_never_deactivates_missing_offers() -> None:
+    provider = create_memory_provider()
+    scope_factory = create_memory_repository_scope(provider)
+    integration_id = UUID("22000000-0000-4000-8000-000000000504")
+    first_seen = datetime(2026, 10, 27, 10, 0, tzinfo=UTC)
+    complete_runner = MarketplaceApplicationRunner(
+        marketplace=Marketplace.GGSEL,
+        ingestion=RecordingIngestion(
+            (make_offer(external_id="1001"), make_offer(external_id="1002"))
+        ),
+        repository_scope_factory=scope_factory,
+        pipeline=make_pipeline(),
+        integration_id=integration_id,
+        source_snapshot_complete=True,
+        clock=lambda: first_seen,
+    )
+    partial_runner = MarketplaceApplicationRunner(
+        marketplace=Marketplace.GGSEL,
+        ingestion=RecordingIngestion((make_offer(external_id="1001"),)),
+        repository_scope_factory=scope_factory,
+        pipeline=make_pipeline(),
+        integration_id=integration_id,
+        clock=lambda: first_seen + timedelta(minutes=5),
+    )
+
+    run_async(complete_runner.run("demo://ggsel"))
+    result = run_async(partial_runner.run("demo://ggsel"))
+
+    assert result.offers_deactivated == 0
+    assert [offer.external_id for offer in run_async(provider.offers.list_all())] == [
+        "1001",
+        "1002",
+    ]
+
+
+def test_offer_reconciliation_rolls_back_with_later_processing_failure() -> None:
+    provider = create_memory_provider()
+    scope_factory = create_memory_repository_scope(provider)
+    integration_id = UUID("22000000-0000-4000-8000-000000000503")
+    first_seen = datetime(2026, 10, 27, 10, 0, tzinfo=UTC)
+    first_runner = MarketplaceApplicationRunner(
+        marketplace=Marketplace.GGSEL,
+        ingestion=RecordingIngestion(
+            (make_offer(external_id="1001"), make_offer(external_id="1002"))
+        ),
+        repository_scope_factory=scope_factory,
+        pipeline=make_pipeline(),
+        integration_id=integration_id,
+        source_snapshot_complete=True,
+        clock=lambda: first_seen,
+    )
+    run_async(first_runner.run("demo://ggsel"))
+    provider.price_history = FailingPriceHistoryRepository()
+    failing_runner = MarketplaceApplicationRunner(
+        marketplace=Marketplace.GGSEL,
+        ingestion=RecordingIngestion((make_offer(external_id="1001"),)),
+        repository_scope_factory=scope_factory,
+        pipeline=make_pipeline(),
+        integration_id=integration_id,
+        source_snapshot_complete=True,
+        clock=lambda: first_seen + timedelta(minutes=5),
+    )
+
+    with pytest.raises(RuntimeError, match="snapshot write failed"):
+        run_async(failing_runner.run("demo://ggsel"))
+
+    assert [offer.external_id for offer in run_async(provider.offers.list_all())] == [
+        "1001",
+        "1002",
+    ]
+
+
 def test_repeated_exact_snapshot_reports_one_persisted_record() -> None:
     provider = create_memory_provider()
     scope_factory = create_memory_repository_scope(provider)

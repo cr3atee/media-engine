@@ -17,6 +17,7 @@ from app.repositories.memory import (
     MemoryOfferRepository,
     MemoryPriceHistoryRepository,
 )
+from app.repositories.offers import OfferObservationContext
 
 TENANT_A_ID = UUID("10000000-0000-4000-8000-000000000001")
 TENANT_B_ID = UUID("10000000-0000-4000-8000-000000000002")
@@ -213,6 +214,111 @@ def test_offer_repository_keeps_instances_isolated() -> None:
 
     assert tuple(run_async(first_repository.list_all())) == (offer,)
     assert tuple(run_async(second_repository.list_all())) == ()
+
+
+def test_offer_observations_require_every_source_to_be_inactive() -> None:
+    repository = MemoryOfferRepository()
+    integration_a = UUID("10000000-0000-4000-8000-000000000101")
+    integration_b = UUID("10000000-0000-4000-8000-000000000102")
+    first_seen = datetime(2026, 10, 27, 10, 0, tzinfo=UTC)
+    missing_at = first_seen + timedelta(minutes=5)
+    first = make_offer(external_id="one")
+    shared = make_offer(external_id="shared")
+    source_a = _observation_context(integration_a, first_seen)
+    source_b = _observation_context(integration_b, first_seen)
+
+    run_async(repository.save_observed(source_a, first))
+    run_async(repository.save_observed(source_a, shared))
+    run_async(repository.save_observed(source_b, shared))
+
+    deactivated = run_async(
+        repository.reconcile_observations(
+            _observation_context(integration_a, missing_at),
+            {"one"},
+        )
+    )
+
+    assert deactivated == 1
+    assert tuple(run_async(repository.list_all())) == (first, shared)
+
+    deactivated = run_async(
+        repository.reconcile_observations(
+            _observation_context(integration_b, missing_at),
+            {"another-offer"},
+        )
+    )
+
+    assert deactivated == 1
+    assert tuple(run_async(repository.list_all())) == (first,)
+    assert run_async(repository.get_by_identity("ggsel", "shared")) is None
+
+
+def test_offer_observations_ignore_empty_and_out_of_order_snapshots() -> None:
+    repository = MemoryOfferRepository()
+    integration_id = UUID("10000000-0000-4000-8000-000000000103")
+    first_seen = datetime(2026, 10, 27, 10, 0, tzinfo=UTC)
+    reactivated_at = first_seen + timedelta(minutes=10)
+    offer = make_offer(external_id="stable")
+
+    run_async(
+        repository.save_observed(
+            _observation_context(integration_id, first_seen),
+            offer,
+        )
+    )
+    assert (
+        run_async(
+            repository.reconcile_observations(
+                _observation_context(
+                    integration_id,
+                    first_seen + timedelta(minutes=5),
+                ),
+                set(),
+            )
+        )
+        == 0
+    )
+    assert tuple(run_async(repository.list_all())) == (offer,)
+
+    run_async(
+        repository.reconcile_observations(
+            _observation_context(
+                integration_id,
+                first_seen + timedelta(minutes=6),
+            ),
+            {"different"},
+        )
+    )
+    assert tuple(run_async(repository.list_all())) == ()
+
+    run_async(
+        repository.save_observed(
+            _observation_context(integration_id, reactivated_at),
+            offer,
+        )
+    )
+    run_async(
+        repository.reconcile_observations(
+            _observation_context(
+                integration_id,
+                first_seen + timedelta(minutes=8),
+            ),
+            {"different"},
+        )
+    )
+    assert tuple(run_async(repository.list_all())) == (offer,)
+
+
+def _observation_context(
+    integration_id: UUID,
+    observed_at: datetime,
+) -> OfferObservationContext:
+    return OfferObservationContext(
+        tenant_id=LEGACY_TENANT_ID,
+        integration_id=integration_id,
+        marketplace="ggsel",
+        observed_at=observed_at,
+    )
 
 
 def test_canonical_product_repository_saves_retrieves_and_updates() -> None:

@@ -6,6 +6,18 @@ This document records notable Project Passport updates.
 
 ## Unreleased
 
+- Added source-scoped marketplace offer availability at revision
+  `0020_offer_source_observations`. Memory/PostgreSQL repositories now retain
+  per-integration observations, protect newer state from delayed runs, roll
+  reconciliation back with the ingestion transaction, reactivate returning
+  offers, and exclude all-source-inactive offers from public reads. Missing-item
+  reconciliation is completeness-gated and disabled for current partial
+  collectors. Isolated PostgreSQL 17.10 verification passed `16/16`; Alembic
+  lifecycle/offline SQL, full Pytest (`613 passed, 60 skipped`), MyPy (`502`
+  files), focused Ruff and format pass. A manual link audit found `5/6` current
+  local catalog URLs live; legacy FunPay `80145738` remains an explicit 404
+  requiring an audited operator correction.
+
 - Completed Market Terminal package 6 technical UI acceptance with `213`
   repeatable browser checks across catalog, product, cabinet, product roles,
   diagnostics, error states, keyboard, reduced motion, mobile and native 200%
