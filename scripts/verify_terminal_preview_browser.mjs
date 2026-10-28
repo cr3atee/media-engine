@@ -78,6 +78,31 @@ async function check(name, expression) {
   checks++;
   console.log(`PASS ${name}`);
 }
+
+function axRole(node) {
+  return node.role?.value ?? "";
+}
+
+function axName(node) {
+  return typeof node.name?.value === "string" ? node.name.value.trim() : "";
+}
+
+function hasAxNode(nodes, roles, namePattern = null) {
+  const expectedRoles = Array.isArray(roles) ? roles : [roles];
+  return nodes.some(node => expectedRoles.includes(axRole(node)) && (!namePattern || namePattern.test(axName(node))));
+}
+
+async function checkAccessibility(name, predicate) {
+  const { nodes } = await send("Accessibility.getFullAXTree");
+  const exposed = nodes.filter(node => !node.ignored);
+  const passed = predicate(exposed);
+  if (!passed) {
+    console.error("Accessibility tree:", exposed.slice(0, 80).map(node => ({ role: axRole(node), name: axName(node) })));
+  }
+  assert(passed, name);
+  checks++;
+  console.log(`PASS ${name}`);
+}
 async function screenshot(name, fromTop = true) {
   if (fromTop) await evaluate("window.scrollTo(0, 0)");
   await until('document.getAnimations().every(animation => animation.playState !== "running" || animation.effect?.getComputedTiming().iterations === Infinity)');
@@ -85,7 +110,21 @@ async function screenshot(name, fromTop = true) {
   await writeFile(join(output, `${name}.png`), Buffer.from(capture.data, "base64"));
 }
 async function size(width, height = 900) {
+  await send("Emulation.setTouchEmulationEnabled", { enabled: false });
   await send("Emulation.setDeviceMetricsOverride", { width, height, deviceScaleFactor: 1, mobile: false });
+}
+
+async function mobileSize(width, height, deviceScaleFactor = 3) {
+  await send("Emulation.setDeviceMetricsOverride", {
+    width,
+    height,
+    deviceScaleFactor,
+    mobile: true,
+    screenWidth: width,
+    screenHeight: height,
+    screenOrientation: { type: "portraitPrimary", angle: 0 },
+  });
+  await send("Emulation.setTouchEmulationEnabled", { enabled: true, maxTouchPoints: 5 });
 }
 
 async function press(key, code, windowsVirtualKeyCode, modifiers = 0) {
@@ -133,6 +172,7 @@ try {
   await send("Runtime.enable");
   await send("Log.enable");
   await send("Network.enable");
+  await send("Accessibility.enable");
   await send("Network.setCacheDisabled", { cacheDisabled: true });
   await size(1440);
   await navigate();
@@ -143,6 +183,12 @@ try {
   await check("desktop has no horizontal overflow", 'document.documentElement.scrollWidth <= innerWidth');
   await check("images loaded", '[...document.images].every(el=>el.complete && el.naturalWidth>0)');
   await check("official artwork is square and edition specific", `(() => { const expected = {'7c862a70-5619-5b6d-a2aa-798560d29f18':'minecraft-pc.jpg','9a520758-e499-5837-90bb-9e6b67d7a591':'minecraft-ios.jpg'}; return [...document.querySelectorAll('.product-card')].every(card=>{const img=card.querySelector('.product-art');const id=new URL(card.href).searchParams.get('product');return new URL(img.src).origin===location.origin && img.src.endsWith(expected[id]??'product-placeholder.svg') && img.naturalWidth===img.naturalHeight && getComputedStyle(img).objectFit==='contain' && img.alt.length>0;});})()`);
+  await checkAccessibility("catalog accessibility tree exposes landmarks and named search controls", nodes =>
+    hasAxNode(nodes, "main") &&
+    hasAxNode(nodes, "search") &&
+    hasAxNode(nodes, ["searchbox", "textbox"], /^Поиск товаров$/) &&
+    hasAxNode(nodes, "button", /^Найти товары$/) &&
+    hasAxNode(nodes, "link", /Minecraft/i));
   await check("service captions removed", '!["Цена и условия покупки уточняются", "Данные подключённого каталога", "Оригинальные предложения.", "Без выдуманных скидок."].some(text=>document.querySelector("main").textContent.includes(text))');
   await check("offer counts are compact numbers with accessible labels", '[...document.querySelectorAll(".product-card .offer-count")].every(el=>/^\\d+$/.test(el.innerText.trim()) && el.getAttribute("aria-label").includes("предложени"))');
   await check("card logos come from real product memberships", `(async()=>{const response=await fetch('/api/v1/public/products?limit=50');const data=await response.json();const names={ggsel:'GGSEL',playerok:'Playerok',funpay:'FunPay'};return [...document.querySelectorAll('.product-card')].every(card=>{const product=data.items.find(p=>p.id===new URL(card.href).searchParams.get('product'));const actual=[...card.querySelectorAll('.marketplace-logos .market-mark')].map(el=>el.getAttribute('aria-label'));return product.marketplaces.length>0 && JSON.stringify(actual)===JSON.stringify(product.marketplaces.map(code=>names[code]??code)) && card.querySelector('.offer-count').innerText.trim()===String(product.offer_count);});})()`);
@@ -154,6 +200,9 @@ try {
   await check("product opens in a distinct page", '!!document.querySelector("#productTitle") && !document.querySelector(".hero")');
   await check("marketplace offers visible", 'document.querySelectorAll(".offer-row").length > 0');
   await check("source links safe", '[...document.querySelectorAll(".offer-row a")].every(a=>a.protocol==="https:" && a.rel.includes("noopener"))');
+  await checkAccessibility("product accessibility tree exposes its heading and source actions", nodes =>
+    hasAxNode(nodes, "heading", /Minecraft/i) &&
+    hasAxNode(nodes, "link", /^На площадку/));
   await check("mixed currencies not presented as a lowest price", '!document.querySelector(".notice")?.textContent.includes("Цены в разных валютах") || !document.querySelector(".notice")?.textContent.includes("Лучшее предложение:")');
   await screenshot("02-product-desktop");
   await evaluate('document.querySelector(".product-cover").src="/terminal/preview/missing-artwork.jpg"');
@@ -193,17 +242,23 @@ try {
   await evaluate('document.querySelector("#previewRole").value="admin";document.querySelector("#previewRole").dispatchEvent(new Event("change",{bubbles:true}))');
   await check("role switch has preview disclaimer", 'document.querySelector("#dialogBody").textContent.includes("не меняет реальные права") && document.querySelector("#roleLabel").textContent==="Админ"');
   await click("#closeDialog");
-  await size(390, 844);
+  await mobileSize(390, 844);
   await navigate();
+  await check("mobile device emulation exposes touch and coarse pointer", 'navigator.maxTouchPoints===5 && matchMedia("(pointer: coarse)").matches');
   await check("mobile catalog fits", 'document.documentElement.scrollWidth<=innerWidth');
+  await checkAccessibility("mobile accessibility tree retains catalog landmarks", nodes =>
+    hasAxNode(nodes, "main") &&
+    hasAxNode(nodes, "search") &&
+    hasAxNode(nodes, ["searchbox", "textbox"], /^Поиск товаров$/) &&
+    hasAxNode(nodes, "link", /Minecraft/i));
   await check("mobile marketplace strip stays inside each card", '[...document.querySelectorAll(".product-card")].every(card=>card.querySelector(".offer-footprint").getBoundingClientRect().right<=card.getBoundingClientRect().right+1)');
   await check("platform badges leave the artwork title visible", '[...document.querySelectorAll(".card-image .art-label")].every(el=>el.getBoundingClientRect().top>el.parentElement.getBoundingClientRect().top+el.parentElement.offsetHeight/2 && el.offsetHeight<32)');
   await screenshot("04-catalog-mobile");
   await evaluate('document.querySelector("#catalog").scrollIntoView({block:"start"})');
   await screenshot("04b-catalog-mobile-offers", false);
-  await size(320, 740);
+  await mobileSize(320, 740);
   await check("small mobile offer rows fit", 'document.documentElement.scrollWidth<=innerWidth && [...document.querySelectorAll(".product-card .offer-count")].every(el=>el.getBoundingClientRect().right<=el.closest(".product-card").getBoundingClientRect().right+1)');
-  await size(390, 844);
+  await mobileSize(390, 844);
   await click(".product-card");
   await ready();
   await check("mobile product fits", 'document.documentElement.scrollWidth<=innerWidth');
@@ -212,8 +267,12 @@ try {
   await navigate("?screen=review");
   await check("mobile review fits", 'document.documentElement.scrollWidth<=innerWidth');
   await check("mobile queue is a compact native selector", 'document.querySelector("#reviewSelect").offsetWidth>0 && getComputedStyle(document.querySelector(".queue button")).display==="none"');
+  await checkAccessibility("review accessibility tree exposes the decision form", nodes =>
+    hasAxNode(nodes, "heading", /^Проверка объявления$/) &&
+    hasAxNode(nodes, "radio", /Связать с этим товаром/) &&
+    hasAxNode(nodes, "textbox", /На чём основано решение/));
   await screenshot("06-review-mobile");
-  await size(320, 740);
+  await mobileSize(320, 740);
   await check("small mobile review fits", 'document.documentElement.scrollWidth<=innerWidth');
   await size(720, 450);
   await navigate();
@@ -225,6 +284,10 @@ try {
   console.log("PASS actual HTML 404 HTTP status");
   await navigate("/not-found");
   await check("404 has recovery action", 'document.querySelector(".error-number").textContent==="404" && !!document.querySelector(".error-state a")');
+  await checkAccessibility("404 accessibility tree exposes recovery content", nodes =>
+    hasAxNode(nodes, "main") &&
+    hasAxNode(nodes, "heading", /здесь ничего нет/i) &&
+    hasAxNode(nodes, "link", /В каталог/));
   await screenshot("07-not-found-desktop");
   await navigate("?screen=error");
   await check("error demo does not claim logging", 'document.querySelector("main").textContent.includes("Отчёт об ошибке не отправлен")');

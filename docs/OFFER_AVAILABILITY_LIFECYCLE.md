@@ -83,6 +83,13 @@ ownership for them. FunPay `80145738` remains an explicit seed-catalog blocker.
 It must be corrected through an audited operator workflow, not direct SQL or a
 fabricated replacement URL.
 
+A repeat automated GET audit on 2026-10-28 returned HTTP 200 for both GGSEL
+offers and FunPay `25007196`, HTTP 404 again for FunPay `80145738`, and HTTP 403
+for both Playerok URLs from the non-browser client. The prior interactive audit
+had opened both Playerok pages successfully, so those protected URLs require a
+manual browser check immediately before release; they are not reclassified as
+missing from the automated 403 alone. No offer record was mutated by the audit.
+
 ## Remaining Work
 
 1. Make each collector return explicit pagination/completeness evidence.

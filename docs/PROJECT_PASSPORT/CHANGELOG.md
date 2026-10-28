@@ -6,6 +6,16 @@ This document records notable Project Passport updates.
 
 ## Unreleased
 
+- Completed the automatable Market Terminal release-gate pass: the browser
+  verifier now inspects the Chromium accessibility tree for catalog, product,
+  review, and 404 states and uses real mobile/touch emulation. The preview suite
+  passes `111` checks (`220` across all three browser suites), while branded
+  asset SHA-256 checks protect all five source-attributed visuals. Full Pytest
+  reports `618 passed, 60 skipped`; MyPy checks `502` files; focused Ruff and
+  format pass. Legal asset permission, physical-device/screen-reader review,
+  protected Playerok links, and stale FunPay `80145738` remain explicit manual
+  or external release gates.
+
 - Added source-scoped marketplace offer availability at revision
   `0020_offer_source_observations`. Memory/PostgreSQL repositories now retain
   per-integration observations, protect newer state from delayed runs, roll

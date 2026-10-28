@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import hashlib
+
 import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
@@ -80,6 +82,41 @@ def test_product_artwork_is_a_bounded_local_jpeg(
     assert response.status_code == 200
     assert response.content.startswith(b"\xff\xd8\xff")
     assert len(response.content) < 100_000
+
+
+@pytest.mark.parametrize(
+    ("asset", "sha256"),
+    [
+        (
+            "funpay.ico",
+            "4be0c08d3de3623101180a0fbd962b59b6e5bbcf33dbe08fec64589c6720b3ce",
+        ),
+        (
+            "playerok.svg",
+            "3de5c6bd5a90ee31e63e3be75ebb0b6f64d3484eb670f018317a14b6f22fedb5",
+        ),
+        (
+            "ggsel.ico",
+            "df3db4c0585d4c68313a9a735b68ef1125dbdca9f42cdb5ad658b6db96833cd3",
+        ),
+        (
+            "minecraft-pc.jpg",
+            "63ea1189c4e9990dac41db94147f225d6613ebb908e81fa80cab95b8742d4117",
+        ),
+        (
+            "minecraft-ios.jpg",
+            "3d51105eb4a01bafcaeaf9376400628bf7cd223af3e423b58b5bdbba1f1dcc81",
+        ),
+    ],
+)
+def test_branded_asset_matches_provenance_registry(
+    client: TestClient, asset: str, sha256: str
+) -> None:
+    """Detect unreviewed replacement of a source-attributed visual asset."""
+    response = client.get(f"/terminal/preview/{asset}")
+
+    assert response.status_code == 200
+    assert hashlib.sha256(response.content).hexdigest() == sha256
 
 
 @pytest.mark.parametrize("name", ["index.html", "OFL.txt", "secrets.env", "../.env"])
