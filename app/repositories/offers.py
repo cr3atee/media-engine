@@ -7,6 +7,11 @@ from datetime import datetime
 from uuid import UUID
 
 from app.domain.identity import normalize_utc
+from app.domain.offer_availability import (
+    OfferAvailabilityState,
+    OfferAvailabilityStatus,
+)
+from app.domain.processing import StateTransitionResult
 from app.domain.tenancy import LEGACY_TENANT_ID
 from app.parsers.models import ParsedOffer
 from app.repositories.base import BaseRepository
@@ -70,6 +75,27 @@ class OfferRepository(BaseRepository):
         """
         del context, external_ids
         return 0
+
+    @abstractmethod
+    async def get_availability_state(
+        self,
+        tenant_id: UUID,
+        marketplace: str,
+        external_id: str,
+    ) -> OfferAvailabilityState | None:
+        """Return manual lifecycle state even when the offer is retired."""
+
+    @abstractmethod
+    async def set_availability_status(
+        self,
+        tenant_id: UUID,
+        marketplace: str,
+        external_id: str,
+        status: OfferAvailabilityStatus,
+        changed_at: datetime,
+        expected_version: int,
+    ) -> StateTransitionResult:
+        """Apply one optimistic manual availability transition."""
 
     @abstractmethod
     async def get_by_identity(

@@ -2,9 +2,15 @@ from __future__ import annotations
 
 from collections.abc import Collection, Sequence
 from dataclasses import dataclass, replace
-from datetime import datetime
-from uuid import UUID
+from datetime import UTC, datetime
+from uuid import UUID, uuid5
 
+from app.domain.identity import normalize_utc
+from app.domain.offer_availability import (
+    OfferAvailabilityState,
+    OfferAvailabilityStatus,
+)
+from app.domain.processing import StateTransitionOutcome, StateTransitionResult
 from app.parsers.models import ParsedOffer
 from app.repositories.base import RepositoryIdentityConflictError
 from app.repositories.offers import (
@@ -35,6 +41,7 @@ class MemoryOfferRepository(OfferRepository):
             tuple[UUID, UUID, str, str],
             _MemoryOfferObservation,
         ] = {}
+        self._availability: dict[tuple[UUID, str, str], OfferAvailabilityState] = {}
 
     async def save(
         self,
@@ -73,9 +80,11 @@ class MemoryOfferRepository(OfferRepository):
                             stored_offer.canonical_product_id,
                         ),
                     )
+                    self._ensure_availability(offer)
                     return
 
         self._offers.append(offer)
+        self._ensure_availability(offer)
 
     async def save_observed(
         self,
@@ -148,6 +157,64 @@ class MemoryOfferRepository(OfferRepository):
             deactivated += 1
         return deactivated
 
+    async def get_availability_state(
+        self,
+        tenant_id: UUID,
+        marketplace: str,
+        external_id: str,
+    ) -> OfferAvailabilityState | None:
+        """Return one manual state without applying active-read filtering."""
+        return self._availability.get(
+            (tenant_id, marketplace.strip().lower(), external_id.strip())
+        )
+
+    async def set_availability_status(
+        self,
+        tenant_id: UUID,
+        marketplace: str,
+        external_id: str,
+        status: OfferAvailabilityStatus,
+        changed_at: datetime,
+        expected_version: int,
+    ) -> StateTransitionResult:
+        """Apply one optimistic manual availability transition in memory."""
+        key = (tenant_id, marketplace.strip().lower(), external_id.strip())
+        current = self._availability.get(key)
+        if current is None:
+            return StateTransitionResult(
+                entity_id=UUID(int=0),
+                outcome=StateTransitionOutcome.NOT_FOUND,
+            )
+        if current.version != expected_version:
+            return StateTransitionResult(
+                entity_id=current.offer_id,
+                outcome=StateTransitionOutcome.VERSION_CONFLICT,
+                version=current.version,
+            )
+        target = OfferAvailabilityStatus(status)
+        if current.status is target:
+            return StateTransitionResult(
+                entity_id=current.offer_id,
+                outcome=StateTransitionOutcome.INVALID_STATE,
+                version=current.version,
+            )
+        normalized_time = normalize_utc(changed_at, field_name="changed_at")
+        updated = replace(
+            current,
+            status=target,
+            version=current.version + 1,
+            updated_at=normalized_time,
+            retired_at=(
+                normalized_time if target is OfferAvailabilityStatus.RETIRED else None
+            ),
+        )
+        self._availability[key] = updated
+        return StateTransitionResult(
+            entity_id=current.offer_id,
+            outcome=StateTransitionOutcome.APPLIED,
+            version=updated.version,
+        )
+
     async def get_by_identity(
         self,
         tenant_id: UUID | str,
@@ -205,6 +272,14 @@ class MemoryOfferRepository(OfferRepository):
     def _is_active(self, offer: ParsedOffer) -> bool:
         if offer.external_id is None:
             return True
+        availability = self._availability.get(
+            (offer.tenant_id, offer.marketplace, offer.external_id)
+        )
+        if (
+            availability is not None
+            and availability.status is OfferAvailabilityStatus.RETIRED
+        ):
+            return False
         observations = (
             observation
             for key, observation in self._observations.items()
@@ -214,6 +289,23 @@ class MemoryOfferRepository(OfferRepository):
         )
         states = tuple(observations)
         return not states or any(observation.is_active for observation in states)
+
+    def _ensure_availability(self, offer: ParsedOffer) -> None:
+        if offer.external_id is None:
+            return
+        key = (offer.tenant_id, offer.marketplace, offer.external_id)
+        if key in self._availability:
+            return
+        identity = f"{offer.tenant_id}:{offer.marketplace}:{offer.external_id}"
+        self._availability[key] = OfferAvailabilityState(
+            offer_id=uuid5(UUID("d60f35ea-a816-41cf-9f68-550b98bcf038"), identity),
+            tenant_id=offer.tenant_id,
+            marketplace=offer.marketplace,
+            external_id=offer.external_id,
+            status=OfferAvailabilityStatus.ACTIVE,
+            version=1,
+            updated_at=datetime.now(UTC),
+        )
 
 
 def _incoming_or_stored[T](incoming: T | None, stored: T | None) -> T | None:

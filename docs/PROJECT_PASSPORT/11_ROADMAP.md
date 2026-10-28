@@ -366,6 +366,12 @@ This document tracks only work that is reflected by the current repository state
   all-source active visibility, reactivation, ordering protection, and atomic
   rollback. Runtime missing-item reconciliation remains deliberately disabled
   until collector pagination proves a complete source snapshot.
+- Market Terminal manual offer lifecycle: revision
+  `0021_offer_manual_availability` adds authorized, reasoned, versioned and
+  idempotent retire/restore commands with immutable audit. Retired offers leave
+  ordinary catalog/comparator reads without deleting their links or history.
+  The known FunPay `80145738` row still requires execution in its owning tenant
+  database rather than direct SQL.
 
 ## Current Status
 
@@ -404,9 +410,10 @@ connector are implemented. The backend core is now a verified release candidate.
 The remaining work before public visual launch is execution of human-approved
 catalog onboarding through the now measurable operator workspace,
 target-environment monitoring/secret rollout, frontend hardening, and a product
-decision on category data exposure. Collector completeness and an audited
-retirement path for stale manually seeded offers are also required before
-outbound listing availability can be treated as unattended-production ready.
+decision on category data exposure. Collector completeness and execution of the
+audited retirement for the known stale manually seeded offer are also required
+before outbound listing availability can be treated as unattended-production
+ready.
 
 The complete operator-decision-to-public-read path is now integration-verified
 with isolated synthetic data. Production catalog readiness still depends on a

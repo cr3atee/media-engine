@@ -122,7 +122,9 @@ two canonical products. A direct availability audit on 2026-10-27 returned HTTP
 200 for both GGSEL links, both Playerok links, and FunPay `25007196`. FunPay
 `80145738` returned HTTP 404.
 
-The workspace has no persisted marketplace integration records, so the new
+The workspace has no persisted marketplace integration records, so the
 source-observation migration cannot infer ownership for those manually seeded
-legacy rows. The stale link is not release-approved and must be retired through
-an authorized audited correction flow rather than direct SQL.
+legacy rows. Revision `0021_offer_manual_availability` now provides the required
+authorized, versioned, idempotent retire/restore command with atomic immutable
+audit. The stale link is still not release-approved until a reviewer executes
+that command against the owning tenant database; direct SQL remains forbidden.

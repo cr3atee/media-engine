@@ -11,6 +11,7 @@ from fastapi.testclient import TestClient
 from pydantic import SecretStr
 
 from app.config.settings import AdminApiSettings, AuthSettings
+from app.domain.admin_actions import AdminActionType, AdminResourceType
 from app.domain.auth import PasswordCredential
 from app.domain.tenancy import Membership, Tenant, TenantRole, User
 from app.main import create_app
@@ -573,6 +574,104 @@ def test_reject_filters_pair_and_maps_idempotency_conflict_safely() -> None:
     assert queue.json() == []
     assert stored is not None
     assert stored.canonical_product_id is None
+
+
+def test_offer_availability_api_is_scoped_audited_and_reversible() -> None:
+    provider = _seeded_provider()
+    client = _client(provider)
+    reviewer = _login_headers(client, "reviewer@example.com")
+    viewer = _login_headers(client, "viewer@example.com")
+    base = f"/api/v1/tenants/{TENANT_A_ID}/catalog/offers/ggsel/offer-1"
+
+    initial = client.get(f"{base}/availability", headers=reviewer)
+    forbidden = client.get(f"{base}/availability", headers=viewer)
+    foreign = client.get(
+        base.replace(str(TENANT_A_ID), str(TENANT_B_ID)) + "/availability",
+        headers=reviewer,
+    )
+
+    assert initial.status_code == 200
+    assert initial.json()["status"] == "active"
+    assert initial.json()["version"] == 1
+    assert forbidden.status_code == 403
+    assert forbidden.json()["error"]["code"] == "permission_denied"
+    assert foreign.status_code == 404
+    assert foreign.json()["error"]["code"] == "tenant_not_found"
+
+    retire_headers = {**reviewer, "Idempotency-Key": "retire-stale-offer"}
+    retire_payload = {
+        "expected_version": 1,
+        "reason": "Marketplace source now returns 404",
+    }
+    retired = client.post(
+        f"{base}/retire",
+        headers=retire_headers,
+        json=retire_payload,
+    )
+    replay = client.post(
+        f"{base}/retire",
+        headers=retire_headers,
+        json=retire_payload,
+    )
+
+    assert retired.status_code == 200
+    assert retired.json()["action"] == "retire_offer"
+    assert retired.json()["resource_type"] == "offer"
+    assert retired.json()["resulting_state"] == "retired"
+    assert retired.json()["resulting_version"] == 2
+    assert retired.json()["replayed"] is False
+    assert replay.status_code == 200
+    assert replay.json()["action_id"] == retired.json()["action_id"]
+    assert replay.json()["replayed"] is True
+    assert (
+        run_async(provider.offers.get_by_identity(TENANT_A_ID, "ggsel", "offer-1"))
+        is None
+    )
+
+    state = client.get(f"{base}/availability", headers=reviewer)
+    conflict = client.post(
+        f"{base}/restore",
+        headers=retire_headers,
+        json={
+            "expected_version": 2,
+            "reason": "Marketplace source is reachable again",
+        },
+    )
+    restored = client.post(
+        f"{base}/restore",
+        headers={**reviewer, "Idempotency-Key": "restore-offer"},
+        json={
+            "expected_version": 2,
+            "reason": "Marketplace source is reachable again",
+        },
+    )
+
+    assert state.status_code == 200
+    assert state.json()["status"] == "retired"
+    assert state.json()["version"] == 2
+    assert state.json()["retired_at"] is not None
+    assert conflict.status_code == 409
+    assert conflict.json()["error"]["code"] == "idempotency_conflict"
+    assert restored.status_code == 200
+    assert restored.json()["action"] == "restore_offer"
+    assert restored.json()["resulting_state"] == "active"
+    assert restored.json()["resulting_version"] == 3
+
+    visible = run_async(
+        provider.offers.get_by_identity(TENANT_A_ID, "ggsel", "offer-1")
+    )
+    assert visible is not None
+    resource_id = UUID(retired.json()["resource_id"])
+    actions = run_async(
+        provider.admin_actions.list_for_resource(
+            AdminResourceType.OFFER,
+            resource_id,
+        )
+    )
+    assert {action.action for action in actions} == {
+        AdminActionType.RETIRE_OFFER,
+        AdminActionType.RESTORE_OFFER,
+    }
 
 
 def _seeded_provider() -> RepositoryProvider:

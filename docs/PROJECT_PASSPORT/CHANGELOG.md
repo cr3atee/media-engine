@@ -6,6 +6,17 @@ This document records notable Project Passport updates.
 
 ## Unreleased
 
+- Added the audited manual marketplace-offer lifecycle at revision
+  `0021_offer_manual_availability`. Authorized catalog reviewers can retire and
+  restore stale offers with required evidence, optimistic versions and
+  idempotency keys; state and immutable audit commit atomically. Active reads
+  combine manual state with source observations, while retained offers keep
+  canonical links and history. Isolated PostgreSQL 17 verification passes
+  `30/30`; migration backfill, downgrade/re-upgrade, current/check and offline
+  SQL pass. Full Pytest reports `636 passed, 60 skipped`, MyPy checks `489`
+  files, and focused Ruff/format pass. The known FunPay `80145738` listing still
+  awaits command execution in its owning tenant database.
+
 - Added the read-only Playerok VDS connector foundation. Tenant-owned
   `env://` references now resolve to tenant/integration-scoped deployment
   secrets at execution time; PostgreSQL and API responses remain secret-free.

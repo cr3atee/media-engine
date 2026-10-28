@@ -126,8 +126,10 @@ Important gaps:
   but missing-offer reconciliation remains disabled until an adapter proves a
   complete paginated snapshot. Playerok currently verifies only its first page.
 - The isolated reviewed catalog has one confirmed stale outbound listing:
-  FunPay `80145738` returns HTTP 404. It needs an audited retirement command;
-  direct database deletion would bypass retained review evidence.
+  FunPay `80145738` returns HTTP 404. The audited retire/restore API now exists
+  at revision `0021`; an authenticated reviewer still needs to execute it in
+  the owning tenant database. Direct database deletion would bypass retained
+  review evidence.
 - Lolz appears in the product brief, but the current backend supports GGSEL,
   Playerok, and FunPay readiness. Lolz should be treated as a future marketplace
   adapter unless explicitly implemented later.
@@ -341,7 +343,8 @@ for those flows is explicitly completed.
 9. Replace frontend mock data incrementally with MediaEngine API responses.
    Done for the embedded shell.
 10. Complete collector pagination/completeness contracts, then enable guarded
-    missing-offer reconciliation and retire the known stale legacy listing.
+    missing-offer reconciliation. Independently execute the existing audited
+    retire command for the known stale legacy listing.
 
 ## Current Embedded Shell
 

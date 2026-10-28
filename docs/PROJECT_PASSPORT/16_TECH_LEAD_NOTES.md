@@ -286,6 +286,11 @@ This document captures architecture notes that are important for future reviews.
   successful first page alone; `source_snapshot_complete` must be backed by
   verified pagination/completeness evidence. Empty responses are deliberately
   non-destructive.
+- Manual offer retirement is an independent operator override, not inferred
+  source truth. Keep retire/restore reasoned, versioned, idempotent and atomic
+  with immutable audit; never let a later source upsert silently restore a
+  retired offer, and never delete the offer, canonical link or history merely
+  because an outbound URL is stale.
 
 ## Review Notes
 

@@ -5,10 +5,12 @@ from decimal import Decimal
 from uuid import UUID, uuid4
 
 from sqlalchemy import (
+    CheckConstraint,
     DateTime,
     ForeignKey,
     ForeignKeyConstraint,
     Index,
+    Integer,
     Numeric,
     String,
     UniqueConstraint,
@@ -41,6 +43,28 @@ class Offer(Base):
             "tenant_id",
             "canonical_product_id",
             postgresql_where=text("canonical_product_id IS NOT NULL"),
+        ),
+        Index(
+            "ix_offers_tenant_manual_active_created",
+            "tenant_id",
+            "created_at",
+            "id",
+            postgresql_where=text("manual_availability_status = 'active'"),
+        ),
+        CheckConstraint(
+            "manual_availability_status IN ('active', 'retired')",
+            name="ck_offers_manual_availability_status",
+        ),
+        CheckConstraint(
+            "manual_availability_version >= 1",
+            name="ck_offers_manual_availability_version",
+        ),
+        CheckConstraint(
+            "(manual_availability_status = 'active' "
+            "AND manually_retired_at IS NULL) OR "
+            "(manual_availability_status = 'retired' "
+            "AND manually_retired_at IS NOT NULL)",
+            name="ck_offers_manual_availability_state",
         ),
         ForeignKeyConstraint(
             ("tenant_id", "canonical_product_id"),
@@ -80,6 +104,27 @@ class Offer(Base):
             name="fk_offers_canonical_product_id_canonical_products",
             ondelete="SET NULL",
         ),
+        nullable=True,
+    )
+    manual_availability_status: Mapped[str] = mapped_column(
+        String(16),
+        nullable=False,
+        default="active",
+        server_default=text("'active'"),
+    )
+    manual_availability_version: Mapped[int] = mapped_column(
+        Integer,
+        nullable=False,
+        default=1,
+        server_default=text("1"),
+    )
+    manual_availability_updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        nullable=False,
+        default=lambda: datetime.now(UTC),
+    )
+    manually_retired_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True),
         nullable=True,
     )
     created_at: Mapped[datetime] = mapped_column(

@@ -5,13 +5,18 @@ from datetime import UTC, datetime
 from typing import Any, cast
 from uuid import UUID, uuid4
 
-from sqlalchemy import case, exists, func, or_, select, update
+from sqlalchemy import and_, case, exists, func, or_, select, update
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.dialects.postgresql.dml import Insert
 from sqlalchemy.engine import CursorResult
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.sql.elements import ColumnElement
 
+from app.domain.offer_availability import (
+    OfferAvailabilityState,
+    OfferAvailabilityStatus,
+)
+from app.domain.processing import StateTransitionOutcome, StateTransitionResult
 from app.models.offer import Offer
 from app.models.offer_source_observation_record import OfferSourceObservationRecord
 from app.parsers.models import ParsedOffer
@@ -137,6 +142,84 @@ class PostgresOfferRepository(OfferRepository):
             await self._session.execute(statement),
         )
         return int(result.rowcount or 0)
+
+    async def get_availability_state(
+        self,
+        tenant_id: UUID,
+        marketplace: str,
+        external_id: str,
+    ) -> OfferAvailabilityState | None:
+        """Return manual lifecycle state without active-read filtering."""
+        result = await self._session.execute(
+            select(Offer).where(
+                Offer.tenant_id == tenant_id,
+                Offer.marketplace == marketplace.strip().lower(),
+                Offer.external_id == external_id.strip(),
+            )
+        )
+        record = result.scalar_one_or_none()
+        return self._to_availability_state(record) if record is not None else None
+
+    async def set_availability_status(
+        self,
+        tenant_id: UUID,
+        marketplace: str,
+        external_id: str,
+        status: OfferAvailabilityStatus,
+        changed_at: datetime,
+        expected_version: int,
+    ) -> StateTransitionResult:
+        """Apply one optimistic manual availability transition."""
+        target = OfferAvailabilityStatus(status)
+        statement = (
+            update(Offer)
+            .where(
+                Offer.tenant_id == tenant_id,
+                Offer.marketplace == marketplace.strip().lower(),
+                Offer.external_id == external_id.strip(),
+                Offer.manual_availability_version == expected_version,
+                Offer.manual_availability_status != target.value,
+            )
+            .values(
+                manual_availability_status=target.value,
+                manual_availability_version=Offer.manual_availability_version + 1,
+                manual_availability_updated_at=changed_at,
+                manually_retired_at=(
+                    changed_at if target is OfferAvailabilityStatus.RETIRED else None
+                ),
+            )
+            .returning(Offer.id, Offer.manual_availability_version)
+        )
+        result = await self._session.execute(statement)
+        applied = result.one_or_none()
+        if applied is not None:
+            return StateTransitionResult(
+                entity_id=applied.id,
+                outcome=StateTransitionOutcome.APPLIED,
+                version=applied.manual_availability_version,
+            )
+
+        current = await self.get_availability_state(
+            tenant_id,
+            marketplace,
+            external_id,
+        )
+        if current is None:
+            return StateTransitionResult(
+                entity_id=UUID(int=0),
+                outcome=StateTransitionOutcome.NOT_FOUND,
+            )
+        if current.version != expected_version:
+            return StateTransitionResult(
+                entity_id=current.offer_id,
+                outcome=StateTransitionOutcome.VERSION_CONFLICT,
+                version=current.version,
+            )
+        return StateTransitionResult(
+            entity_id=current.offer_id,
+            outcome=StateTransitionOutcome.INVALID_STATE,
+            version=current.version,
+        )
 
     @staticmethod
     def _offer_upsert(tenant_id: UUID, offer: ParsedOffer) -> Insert:
@@ -273,7 +356,25 @@ class PostgresOfferRepository(OfferRepository):
             )
             .correlate(Offer)
         )
-        return or_(~any_observation, active_observation)
+        return and_(
+            Offer.manual_availability_status == OfferAvailabilityStatus.ACTIVE.value,
+            or_(~any_observation, active_observation),
+        )
+
+    @staticmethod
+    def _to_availability_state(offer: Offer) -> OfferAvailabilityState:
+        if offer.external_id is None:
+            raise RuntimeError("Offer availability identity is incomplete.")
+        return OfferAvailabilityState(
+            offer_id=offer.id,
+            tenant_id=offer.tenant_id,
+            marketplace=offer.marketplace,
+            external_id=offer.external_id,
+            status=OfferAvailabilityStatus(offer.manual_availability_status),
+            version=offer.manual_availability_version,
+            updated_at=offer.manual_availability_updated_at,
+            retired_at=offer.manually_retired_at,
+        )
 
     @staticmethod
     def _to_parsed_offer(offer: Offer) -> ParsedOffer:

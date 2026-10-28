@@ -701,6 +701,18 @@ verification passed `16/16`; full Pytest is `613 passed, 60 skipped` and MyPy is
 clean across `502` files. The local six-offer review catalog has five live links
 and one confirmed stale legacy listing, FunPay `80145738` (HTTP 404).
 
+Revision `0021_offer_manual_availability` now adds an independent audited manual
+lifecycle. Catalog reviewers can retire or restore one offer using a reason,
+expected version and idempotency key; the lifecycle transition and immutable
+admin action are atomic. Retired offers are hidden from ordinary repository and
+public reads while the offer, canonical link and downstream history remain
+stored. PostgreSQL 17 verification passes `30/30`, including tenant isolation,
+concurrent replay, rollback and fresh-engine persistence. Alembic backfill,
+downgrade/re-upgrade, current/check and offline SQL pass; full Pytest is `636
+passed, 60 skipped`, MyPy is clean across `489` files, and focused Ruff/format
+pass. FunPay `80145738` remains pending an authenticated execution of this
+command in the owning tenant database.
+
 ## Architecture Review
 
 Current architecture separates:

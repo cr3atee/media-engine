@@ -31,7 +31,12 @@ if str(ROOT) not in sys.path:
 from app.ai.provider import AIProvider
 from app.analytics.price_change import PriceChangeDetector
 from app.domain.marketplace import Marketplace
+from app.domain.offer_availability import (
+    OfferAvailabilityState,
+    OfferAvailabilityStatus,
+)
 from app.domain.price_snapshot import PriceSnapshot
+from app.domain.processing import StateTransitionResult
 from app.insights.scoring import EventScorer
 from app.models.canonical_product import CanonicalProduct
 from app.models.canonical_product_record import CanonicalProductRecord
@@ -193,6 +198,38 @@ class FailingOfferRepository(OfferRepository):
             tenant_id,
             marketplace,
             external_id,
+        )
+
+    async def get_availability_state(
+        self,
+        tenant_id: UUID,
+        marketplace: str,
+        external_id: str,
+    ) -> OfferAvailabilityState | None:
+        """Delegate manual availability lookup."""
+        return await self._delegate.get_availability_state(
+            tenant_id,
+            marketplace,
+            external_id,
+        )
+
+    async def set_availability_status(
+        self,
+        tenant_id: UUID,
+        marketplace: str,
+        external_id: str,
+        status: OfferAvailabilityStatus,
+        changed_at: datetime,
+        expected_version: int,
+    ) -> StateTransitionResult:
+        """Delegate optimistic manual availability updates."""
+        return await self._delegate.set_availability_status(
+            tenant_id,
+            marketplace,
+            external_id,
+            status,
+            changed_at,
+            expected_version,
         )
 
     async def list_by_marketplace(

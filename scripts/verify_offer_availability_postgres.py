@@ -1,4 +1,4 @@
-"""Verify source-scoped offer availability against isolated PostgreSQL."""
+"""Verify source- and operator-scoped offer availability in PostgreSQL."""
 
 # ruff: noqa: E402
 
@@ -7,7 +7,8 @@ from __future__ import annotations
 import asyncio
 import os
 import sys
-from collections.abc import Sequence
+from collections.abc import AsyncIterator, Sequence
+from contextlib import asynccontextmanager
 from datetime import UTC, datetime, timedelta
 from decimal import Decimal
 from pathlib import Path
@@ -31,19 +32,29 @@ if _CONFIGURED_DATABASE_URL:
     os.environ["DATABASE_URL"] = _CONFIGURED_DATABASE_URL
 
 from app.database.repository_scope import create_postgres_repository_scope
+from app.domain.admin_actions import AdminAction, AdminResourceType
 from app.domain.marketplace_integrations import (
     MarketplaceIntegration,
     MarketplaceIntegrationStatus,
 )
+from app.domain.offer_availability import OfferAvailabilityStatus
 from app.domain.tenancy import Tenant
 from app.models.offer_source_observation_record import OfferSourceObservationRecord
 from app.parsers.models import ParsedOffer
 from app.repositories.offers import OfferObservationContext
+from app.repositories.postgres import PostgresAdminActionRepository
+from app.repositories.provider import RepositoryProvider, create_postgres_provider
 from app.repositories.public_queries.models import PublicOfferQuery
 from app.repositories.public_queries.repository_backed import (
     RepositoryBackedPublicReadRepository,
 )
 from app.repositories.queries.models import PageRequest
+from app.services.admin_mutations import (
+    AdminCommandContext,
+    AdminCommandError,
+    AdminMutationService,
+    OfferAvailabilityCommand,
+)
 from app.services.repository_scope import RepositoryScopeFactory
 
 _DATABASE_PREFIX = "mediaengine_offer_availability_verify_"
@@ -51,7 +62,17 @@ _LOOPBACK_HOSTS = frozenset({"127.0.0.1", "::1", "localhost"})
 TENANT_ID = UUID("24000000-0000-4000-8000-000000000001")
 INTEGRATION_A_ID = UUID("24000000-0000-4000-8000-000000000101")
 INTEGRATION_B_ID = UUID("24000000-0000-4000-8000-000000000102")
+FOREIGN_TENANT_ID = UUID("24000000-0000-4000-8000-000000000002")
 NOW = datetime(2026, 10, 27, 10, 0, tzinfo=UTC)
+
+
+class FailingPostgresAdminActionRepository(PostgresAdminActionRepository):
+    """Fail audit insertion after an offer transition to prove rollback."""
+
+    async def append(self, action: AdminAction) -> AdminAction:
+        """Raise a controlled storage error."""
+        del action
+        raise RuntimeError("controlled offer audit failure")
 
 
 class Verification:
@@ -69,7 +90,7 @@ class Verification:
 
 
 async def main() -> None:
-    """Verify durable source observations against isolated PostgreSQL."""
+    """Verify durable source observations and manual lifecycle controls."""
     database_url = _safe_database_url()
     engine = create_async_engine(database_url, pool_pre_ping=True)
     sessions = async_sessionmaker(engine, expire_on_commit=False)
@@ -82,6 +103,11 @@ async def main() -> None:
         await _verify_empty_snapshot_guard(scope_factory, verification)
         await _verify_reactivation_and_ordering(scope_factory, verification)
         await _verify_rollback(scope_factory, verification)
+        await _verify_manual_lifecycle(
+            scope_factory,
+            sessions,
+            verification,
+        )
         await _verify_storage_shape(sessions, verification)
     finally:
         await engine.dispose()
@@ -231,6 +257,158 @@ async def _verify_storage_shape(
     verification.check(active == 3, "inactive source observation remains auditable")
 
 
+async def _verify_manual_lifecycle(
+    scope_factory: RepositoryScopeFactory,
+    sessions: async_sessionmaker[AsyncSession],
+    verification: Verification,
+) -> None:
+    service = _admin_service(scope_factory)
+    initial = await service.get_offer_availability(TENANT_ID, "ggsel", "shared")
+    verification.check(
+        initial is not None
+        and initial.status is OfferAvailabilityStatus.ACTIVE
+        and initial.version == 1,
+        "manual lifecycle starts active at version one",
+    )
+    assert initial is not None
+
+    command = OfferAvailabilityCommand(
+        tenant_id=TENANT_ID,
+        marketplace="ggsel",
+        external_id="shared",
+        expected_version=1,
+        reason="Verification source link is stale",
+    )
+    context = _admin_context("manual-retire")
+    retired = await service.retire_offer(command, context)
+    replay = await service.retire_offer(command, context)
+    verification.check(
+        retired.resulting_state == OfferAvailabilityStatus.RETIRED.value
+        and retired.resulting_version == 2,
+        "retire command advances the durable lifecycle",
+    )
+    verification.check(
+        replay.action_id == retired.action_id and replay.replayed,
+        "retire command is idempotent",
+    )
+    verification.check(
+        await _visible_ids(scope_factory) == ("first", "second"),
+        "manual retirement overrides active source observations",
+    )
+    async with scope_factory() as repositories:
+        await repositories.offers.save_observed(
+            _context(INTEGRATION_A_ID, NOW + timedelta(minutes=30)),
+            _offer("shared"),
+        )
+    verification.check(
+        await _visible_ids(scope_factory) == ("first", "second"),
+        "new source sightings do not override manual retirement",
+    )
+
+    async with scope_factory() as repositories:
+        durable = await repositories.offers.get_availability_state(
+            TENANT_ID,
+            "ggsel",
+            "shared",
+        )
+        actions = await repositories.admin_actions.list_for_resource(
+            AdminResourceType.OFFER,
+            initial.offer_id,
+        )
+    verification.check(
+        durable is not None
+        and durable.status is OfferAvailabilityStatus.RETIRED
+        and durable.version == 2,
+        "fresh session reads the retired lifecycle state",
+    )
+    verification.check(
+        len(actions) == 1 and actions[0].reason == command.reason,
+        "retirement has one immutable audit record",
+    )
+
+    try:
+        await service.restore_offer(
+            OfferAvailabilityCommand(
+                tenant_id=TENANT_ID,
+                marketplace="ggsel",
+                external_id="shared",
+                expected_version=2,
+                reason="Foreign tenant must not restore",
+            ),
+            _admin_context("foreign-restore", tenant_id=FOREIGN_TENANT_ID),
+        )
+    except AdminCommandError as exc:
+        verification.check(
+            exc.code == "resource_not_found",
+            "foreign tenant receives a non-disclosing not-found error",
+        )
+    else:
+        raise AssertionError("foreign tenant restore must fail")
+
+    restore = OfferAvailabilityCommand(
+        tenant_id=TENANT_ID,
+        marketplace="ggsel",
+        external_id="shared",
+        expected_version=2,
+        reason="Verification source link recovered",
+    )
+    restore_context = _admin_context("manual-restore")
+    first, second = await asyncio.gather(
+        service.restore_offer(restore, restore_context),
+        service.restore_offer(restore, restore_context),
+    )
+    verification.check(
+        first.action_id == second.action_id
+        and {first.replayed, second.replayed} == {False, True},
+        "concurrent duplicate restore creates one transition",
+    )
+    verification.check(
+        await _visible_ids(scope_factory) == ("first", "second", "shared"),
+        "restored offer returns to ordinary reads",
+    )
+
+    failing_service = _admin_service(_failing_scope_factory(sessions))
+    try:
+        await failing_service.retire_offer(
+            OfferAvailabilityCommand(
+                tenant_id=TENANT_ID,
+                marketplace="ggsel",
+                external_id="shared",
+                expected_version=3,
+                reason="Controlled rollback",
+            ),
+            _admin_context("manual-rollback"),
+        )
+    except RuntimeError as exc:
+        verification.check(
+            str(exc) == "controlled offer audit failure",
+            "controlled audit failure is surfaced",
+        )
+    else:
+        raise AssertionError("controlled audit failure must be raised")
+
+    async with scope_factory() as repositories:
+        rolled_back = await repositories.offers.get_availability_state(
+            TENANT_ID,
+            "ggsel",
+            "shared",
+        )
+        actions = await repositories.admin_actions.list_for_resource(
+            AdminResourceType.OFFER,
+            initial.offer_id,
+        )
+    verification.check(
+        rolled_back is not None
+        and rolled_back.status is OfferAvailabilityStatus.ACTIVE
+        and rolled_back.version == 3,
+        "failed audit atomically rolls back offer retirement",
+    )
+    verification.check(
+        len(actions) == 2,
+        "rollback leaves only accepted lifecycle audit records",
+    )
+
+
 async def _verify_fresh_engine(database_url: str, verification: Verification) -> None:
     engine = create_async_engine(database_url, pool_pre_ping=True)
     sessions = async_sessionmaker(engine, expire_on_commit=False)
@@ -252,6 +430,18 @@ async def _verify_fresh_engine(database_url: str, verification: Verification) ->
                 ),
             )
         verification.check(len(page.items) == 3, "public read excludes inactive offers")
+        async with scope_factory() as repositories:
+            state = await repositories.offers.get_availability_state(
+                TENANT_ID,
+                "ggsel",
+                "shared",
+            )
+        verification.check(
+            state is not None
+            and state.status is OfferAvailabilityStatus.ACTIVE
+            and state.version == 3,
+            "fresh engine retains manual lifecycle version and state",
+        )
     finally:
         await engine.dispose()
 
@@ -292,6 +482,40 @@ def _context(integration_id: UUID, observed_at: datetime) -> OfferObservationCon
         marketplace="ggsel",
         observed_at=observed_at,
     )
+
+
+def _admin_service(scope_factory: RepositoryScopeFactory) -> AdminMutationService:
+    return AdminMutationService(
+        scope_factory,
+        maximum_publication_attempts=5,
+        clock=lambda: NOW + timedelta(hours=1),
+    )
+
+
+def _admin_context(
+    idempotency_key: str,
+    *,
+    tenant_id: UUID = TENANT_ID,
+) -> AdminCommandContext:
+    return AdminCommandContext(
+        actor_id="offer-verifier",
+        tenant_id=tenant_id,
+        request_id=f"request-{idempotency_key}",
+        idempotency_key=idempotency_key,
+    )
+
+
+def _failing_scope_factory(
+    sessions: async_sessionmaker[AsyncSession],
+) -> RepositoryScopeFactory:
+    @asynccontextmanager
+    async def scope() -> AsyncIterator[RepositoryProvider]:
+        async with sessions() as session, session.begin():
+            provider = create_postgres_provider(session)
+            provider.admin_actions = FailingPostgresAdminActionRepository(session)
+            yield provider
+
+    return scope
 
 
 def _offer(external_id: str) -> ParsedOffer:

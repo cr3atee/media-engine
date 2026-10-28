@@ -22,6 +22,10 @@ from app.domain.lifecycle import (
     ContentReviewStatus,
     PublicationStatus,
 )
+from app.domain.offer_availability import (
+    OfferAvailabilityState,
+    OfferAvailabilityStatus,
+)
 from app.domain.processing import StateTransitionOutcome, StateTransitionResult
 from app.domain.publications import Publication
 from app.repositories.provider import RepositoryProvider
@@ -91,6 +95,17 @@ class ResolvePublicationCommand:
     resolution: AmbiguousPublicationResolution
     reason: str
     external_message_id: str | None = None
+
+
+@dataclass(slots=True, frozen=True, kw_only=True)
+class OfferAvailabilityCommand:
+    """Expected-version command for retiring or restoring one marketplace offer."""
+
+    tenant_id: UUID
+    marketplace: str
+    external_id: str
+    expected_version: int
+    reason: str
 
 
 @dataclass(slots=True, frozen=True, kw_only=True)
@@ -164,6 +179,46 @@ class AdminMutationService:
             action=AdminActionType.APPROVE_CONTENT,
             target=ContentReviewStatus.APPROVED,
             reason_required=False,
+        )
+
+    async def get_offer_availability(
+        self,
+        tenant_id: UUID,
+        marketplace: str,
+        external_id: str,
+    ) -> OfferAvailabilityState | None:
+        """Return manual lifecycle state, including retired offers."""
+        async with self._repository_scope_factory() as repositories:
+            return await repositories.offers.get_availability_state(
+                tenant_id,
+                marketplace,
+                external_id,
+            )
+
+    async def retire_offer(
+        self,
+        command: OfferAvailabilityCommand,
+        context: AdminCommandContext,
+    ) -> AdminMutationResult:
+        """Retire one stale offer while preserving its data and audit history."""
+        return await self._change_offer_availability(
+            command,
+            context,
+            target=OfferAvailabilityStatus.RETIRED,
+            action=AdminActionType.RETIRE_OFFER,
+        )
+
+    async def restore_offer(
+        self,
+        command: OfferAvailabilityCommand,
+        context: AdminCommandContext,
+    ) -> AdminMutationResult:
+        """Restore one previously retired offer through the same audit boundary."""
+        return await self._change_offer_availability(
+            command,
+            context,
+            target=OfferAvailabilityStatus.ACTIVE,
+            action=AdminActionType.RESTORE_OFFER,
         )
 
     async def reject(
@@ -387,6 +442,88 @@ class AdminMutationService:
                 context,
                 specification,
                 previous_state=content.review_status.value,
+                resulting_state=target.value,
+                transition=transition,
+                tenant_id=tenant_id,
+            )
+
+    async def _change_offer_availability(
+        self,
+        command: OfferAvailabilityCommand,
+        context: AdminCommandContext,
+        *,
+        target: OfferAvailabilityStatus,
+        action: AdminActionType,
+    ) -> AdminMutationResult:
+        reason = _require_reason(command.reason)
+        expected_version = _validate_expected_version(command.expected_version)
+        marketplace = _require_bounded_text(
+            command.marketplace,
+            field_name="marketplace",
+            maximum_length=64,
+        ).lower()
+        external_id = _require_bounded_text(
+            command.external_id,
+            field_name="external_id",
+            maximum_length=255,
+        )
+        async with self._repository_scope_factory() as repositories:
+            state = await repositories.offers.get_availability_state(
+                command.tenant_id,
+                marketplace,
+                external_id,
+            )
+            if state is None:
+                raise AdminCommandError(
+                    "resource_not_found",
+                    "Administrative target was not found.",
+                    resource_type=AdminResourceType.OFFER,
+                    resource_id=UUID(int=0),
+                )
+            specification = _CommandSpecification(
+                action=action,
+                resource_type=AdminResourceType.OFFER,
+                resource_id=state.offer_id,
+                expected_version=expected_version,
+                reason=reason,
+                metadata=(
+                    ("marketplace", marketplace),
+                    ("external_id", external_id),
+                ),
+            )
+            tenant_id = _resolve_command_tenant(
+                state.tenant_id,
+                context,
+                specification,
+            )
+            replay = await self._prepare(
+                repositories,
+                context,
+                specification,
+                tenant_id,
+            )
+            if replay is not None:
+                return replay
+            _guard_expected_version(state.version, specification)
+            if state.status is target:
+                raise _invalid_transition(
+                    specification,
+                    current_state=state.status.value,
+                    message="Offer already has the requested availability state.",
+                )
+            transition = await repositories.offers.set_availability_status(
+                tenant_id,
+                marketplace,
+                external_id,
+                target,
+                self._clock(),
+                expected_version,
+            )
+            return await self._record_transition(
+                repositories,
+                context,
+                specification,
+                previous_state=state.status.value,
                 resulting_state=target.value,
                 transition=transition,
                 tenant_id=tenant_id,

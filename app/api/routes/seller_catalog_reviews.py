@@ -6,6 +6,7 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, Query, Request
 
 from app.api.dependencies import (
+    get_admin_mutation_service,
     get_canonical_offer_review_queue_service,
     get_canonical_offer_review_service,
     get_canonical_product_proposal_service,
@@ -13,6 +14,7 @@ from app.api.dependencies import (
     require_tenant_permission,
 )
 from app.api.errors import ApiError, get_request_id
+from app.api.schemas.admin_mutations import AdminMutationResponse
 from app.api.schemas.canonical_offer_reviews import (
     CanonicalOfferReviewCandidateResponse,
     CanonicalOfferReviewResponse,
@@ -24,6 +26,8 @@ from app.api.schemas.canonical_offer_reviews import (
     ConfirmCanonicalOfferRequest,
     ConfirmCanonicalProductProposalRequest,
     MarketplaceCatalogOnboardingSummaryResponse,
+    OfferAvailabilityMutationRequest,
+    OfferAvailabilityResponse,
     RejectCanonicalOfferRequest,
     ResolveCanonicalProductProposalRequest,
 )
@@ -31,6 +35,12 @@ from app.domain.admin_actions import AdminActorType
 from app.domain.auth import Permission, TenantContext
 from app.domain.canonical_offer_decisions import CanonicalOfferDecisionType
 from app.matching.confidence import MatchDecision
+from app.services.admin_mutations import (
+    AdminCommandContext,
+    AdminMutationResult,
+    AdminMutationService,
+    OfferAvailabilityCommand,
+)
 from app.services.canonical_offer_linking import (
     CanonicalOfferLinkConflictError,
     CanonicalProductUnavailableError,
@@ -72,6 +82,90 @@ CatalogReviewTenant = Annotated[
     TenantContext,
     Depends(require_tenant_permission(Permission.CATALOG_REVIEW)),
 ]
+
+
+@router.get(
+    "/offers/{marketplace}/{external_id}/availability",
+    response_model=OfferAvailabilityResponse,
+)
+async def get_offer_availability(
+    marketplace: str,
+    external_id: str,
+    context: CatalogReviewTenant,
+    service: Annotated[AdminMutationService, Depends(get_admin_mutation_service)],
+) -> OfferAvailabilityResponse:
+    """Return lifecycle state even when an offer is retired from normal reads."""
+    state = await service.get_offer_availability(
+        context.tenant.id,
+        marketplace,
+        external_id,
+    )
+    if state is None:
+        raise ApiError(404, "offer_not_found", "Marketplace offer was not found.")
+    return OfferAvailabilityResponse(
+        offer_id=state.offer_id,
+        tenant_id=state.tenant_id,
+        marketplace=state.marketplace,
+        external_id=state.external_id,
+        status=state.status,
+        version=state.version,
+        updated_at=state.updated_at,
+        retired_at=state.retired_at,
+    )
+
+
+@router.post(
+    "/offers/{marketplace}/{external_id}/retire",
+    response_model=AdminMutationResponse,
+)
+async def retire_offer(
+    request: Request,
+    marketplace: str,
+    external_id: str,
+    payload: OfferAvailabilityMutationRequest,
+    context: CatalogReviewTenant,
+    idempotency_key: Annotated[str, Depends(require_idempotency_key)],
+    service: Annotated[AdminMutationService, Depends(get_admin_mutation_service)],
+) -> AdminMutationResponse:
+    """Retire one stale marketplace offer without deleting its history."""
+    result = await service.retire_offer(
+        OfferAvailabilityCommand(
+            tenant_id=context.tenant.id,
+            marketplace=marketplace,
+            external_id=external_id,
+            expected_version=payload.expected_version,
+            reason=payload.reason,
+        ),
+        _offer_admin_context(request, context, idempotency_key),
+    )
+    return _admin_mutation_response(result)
+
+
+@router.post(
+    "/offers/{marketplace}/{external_id}/restore",
+    response_model=AdminMutationResponse,
+)
+async def restore_offer(
+    request: Request,
+    marketplace: str,
+    external_id: str,
+    payload: OfferAvailabilityMutationRequest,
+    context: CatalogReviewTenant,
+    idempotency_key: Annotated[str, Depends(require_idempotency_key)],
+    service: Annotated[AdminMutationService, Depends(get_admin_mutation_service)],
+) -> AdminMutationResponse:
+    """Restore one retired marketplace offer through the audited boundary."""
+    result = await service.restore_offer(
+        OfferAvailabilityCommand(
+            tenant_id=context.tenant.id,
+            marketplace=marketplace,
+            external_id=external_id,
+            expected_version=payload.expected_version,
+            reason=payload.reason,
+        ),
+        _offer_admin_context(request, context, idempotency_key),
+    )
+    return _admin_mutation_response(result)
 
 
 @router.get(
@@ -386,6 +480,37 @@ async def _review(
             "Marketplace offer link conflicts with this review decision.",
         ) from exc
     return _review_response(result)
+
+
+def _offer_admin_context(
+    request: Request,
+    context: TenantContext,
+    idempotency_key: str,
+) -> AdminCommandContext:
+    return AdminCommandContext(
+        actor_id=str(context.principal.user_id),
+        actor_type=AdminActorType.USER,
+        tenant_id=context.tenant.id,
+        request_id=get_request_id(request),
+        idempotency_key=idempotency_key,
+    )
+
+
+def _admin_mutation_response(
+    result: AdminMutationResult,
+) -> AdminMutationResponse:
+    return AdminMutationResponse(
+        action_id=result.action_id,
+        action=result.action,
+        resource_type=result.resource_type,
+        resource_id=result.resource_id,
+        previous_state=result.previous_state,
+        resulting_state=result.resulting_state,
+        resulting_version=result.resulting_version,
+        request_id=result.request_id,
+        recorded_at=result.recorded_at,
+        replayed=result.replayed,
+    )
 
 
 def _candidate_response(

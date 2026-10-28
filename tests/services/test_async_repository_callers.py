@@ -16,7 +16,12 @@ from app.analytics.models import PriceChange
 from app.analytics.price_change import PriceChangeDetector
 from app.comparator.result import ComparisonStatus
 from app.domain.events import PriceDropEvent
+from app.domain.offer_availability import (
+    OfferAvailabilityState,
+    OfferAvailabilityStatus,
+)
 from app.domain.price_snapshot import PriceSnapshot
+from app.domain.processing import StateTransitionOutcome, StateTransitionResult
 from app.insights.scoring import EventScorer
 from app.models.canonical_product import CanonicalProduct
 from app.parsers.ggsel_extractor import GGSelExtractor
@@ -100,6 +105,32 @@ class RecordingOfferRepository(OfferRepository):
             ):
                 return offer
         return None
+
+    async def get_availability_state(
+        self,
+        tenant_id: UUID,
+        marketplace: str,
+        external_id: str,
+    ) -> OfferAvailabilityState | None:
+        """Return no lifecycle metadata from this narrow caller double."""
+        del tenant_id, marketplace, external_id
+        return None
+
+    async def set_availability_status(
+        self,
+        tenant_id: UUID,
+        marketplace: str,
+        external_id: str,
+        status: OfferAvailabilityStatus,
+        changed_at: datetime,
+        expected_version: int,
+    ) -> StateTransitionResult:
+        """Report a missing lifecycle target from this narrow caller double."""
+        del tenant_id, marketplace, external_id, status, changed_at, expected_version
+        return StateTransitionResult(
+            entity_id=UUID(int=0),
+            outcome=StateTransitionOutcome.NOT_FOUND,
+        )
 
     async def list_by_marketplace(
         self,

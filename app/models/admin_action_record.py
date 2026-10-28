@@ -52,11 +52,12 @@ class AdminActionRecord(Base):
             "'approve_content', 'reject_content', 'retry_publication', "
             "'cancel_publication', 'resolve_publication_delivered', "
             "'resolve_publication_not_delivered', "
-            "'resolve_publication_cancelled')",
+            "'resolve_publication_cancelled', 'retire_offer', "
+            "'restore_offer')",
             name="ck_admin_actions_action",
         ),
         CheckConstraint(
-            "resource_type IN ('content', 'publication')",
+            "resource_type IN ('content', 'publication', 'offer')",
             name="ck_admin_actions_resource_type",
         ),
         CheckConstraint(

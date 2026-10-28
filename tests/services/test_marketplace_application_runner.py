@@ -18,7 +18,12 @@ from app.database.repository_scope import create_postgres_repository_scope
 from app.domain.events import PriceDropEvent
 from app.domain.market_events import EventAddResult, MarketEventCandidate
 from app.domain.marketplace import Marketplace
+from app.domain.offer_availability import (
+    OfferAvailabilityState,
+    OfferAvailabilityStatus,
+)
 from app.domain.price_snapshot import PriceSnapshot
+from app.domain.processing import StateTransitionResult
 from app.insights.scoring import EventScorer
 from app.parsers.ggsel_extractor import GGSelExtractor
 from app.parsers.ggsel_fetcher import GGSelFetcher
@@ -209,6 +214,38 @@ class FailingOfferRepository(OfferRepository):
             tenant_id,
             marketplace,
             external_id,
+        )
+
+    async def get_availability_state(
+        self,
+        tenant_id: UUID,
+        marketplace: str,
+        external_id: str,
+    ) -> OfferAvailabilityState | None:
+        """Delegate lifecycle lookup."""
+        return await self._delegate.get_availability_state(
+            tenant_id,
+            marketplace,
+            external_id,
+        )
+
+    async def set_availability_status(
+        self,
+        tenant_id: UUID,
+        marketplace: str,
+        external_id: str,
+        status: OfferAvailabilityStatus,
+        changed_at: datetime,
+        expected_version: int,
+    ) -> StateTransitionResult:
+        """Delegate optimistic lifecycle transition."""
+        return await self._delegate.set_availability_status(
+            tenant_id,
+            marketplace,
+            external_id,
+            status,
+            changed_at,
+            expected_version,
         )
 
     async def list_by_marketplace(

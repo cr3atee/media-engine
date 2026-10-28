@@ -21,6 +21,8 @@ class AdminActionType(StrEnum):
     RESOLVE_PUBLICATION_DELIVERED = "resolve_publication_delivered"
     RESOLVE_PUBLICATION_NOT_DELIVERED = "resolve_publication_not_delivered"
     RESOLVE_PUBLICATION_CANCELLED = "resolve_publication_cancelled"
+    RETIRE_OFFER = "retire_offer"
+    RESTORE_OFFER = "restore_offer"
 
 
 class AdminResourceType(StrEnum):
@@ -28,6 +30,7 @@ class AdminResourceType(StrEnum):
 
     CONTENT = "content"
     PUBLICATION = "publication"
+    OFFER = "offer"
 
 
 class AdminActorType(StrEnum):

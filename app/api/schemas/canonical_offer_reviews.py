@@ -9,6 +9,7 @@ from pydantic import Field, field_validator
 from app.api.schemas.common import ApiModel
 from app.domain.admin_actions import AdminActorType
 from app.domain.canonical_offer_decisions import CanonicalOfferDecisionType
+from app.domain.offer_availability import OfferAvailabilityStatus
 from app.matching.confidence import MatchDecision
 
 
@@ -74,6 +75,28 @@ class ResolveCanonicalProductProposalRequest(ApiModel):
     _normalize_marketplace = field_validator("marketplace")(_nonempty_text)
     _normalize_external_id = field_validator("external_id")(_nonempty_text)
     _normalize_reason = field_validator("reason")(_nonempty_text)
+
+
+class OfferAvailabilityMutationRequest(ApiModel):
+    """Expected-version request for an audited offer availability change."""
+
+    expected_version: int = Field(ge=1)
+    reason: str = Field(min_length=1, max_length=2000)
+
+    _normalize_reason = field_validator("reason")(_nonempty_text)
+
+
+class OfferAvailabilityResponse(ApiModel):
+    """Versioned manual lifecycle state for one marketplace offer."""
+
+    offer_id: UUID
+    tenant_id: UUID
+    marketplace: str
+    external_id: str
+    status: OfferAvailabilityStatus
+    version: int = Field(ge=1)
+    updated_at: datetime
+    retired_at: datetime | None
 
 
 class CanonicalOfferReviewCandidateResponse(ApiModel):
