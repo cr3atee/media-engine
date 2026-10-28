@@ -17,6 +17,7 @@ dependencies = [
     "structlog>=25.4.0",
     "uvicorn[standard]>=0.35.0",
     "httpx>=0.28.1",
+    "funpayparsers==0.10.2",
 ]
 
 [dependency-groups]
