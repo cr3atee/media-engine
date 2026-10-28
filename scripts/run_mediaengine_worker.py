@@ -33,6 +33,9 @@ from app.runtime.worker import (
     register_enabled_marketplace_integrations_job,
     register_marketplace_polling_retention_job,
 )
+from app.services.marketplace_credentials import (
+    EnvironmentMarketplaceCredentialResolver,
+)
 from app.services.marketplace_integration_execution import (
     MarketplaceIntegrationExecutionBatch,
 )
@@ -132,6 +135,7 @@ async def main() -> int:
         runner_factories = create_marketplace_runner_factories(
             http_client=http_client,
             repository_scope_factory=components.repository_scope_factory,
+            credential_resolver=EnvironmentMarketplaceCredentialResolver(),
         )
         register_enabled_marketplace_integrations_job(
             process,

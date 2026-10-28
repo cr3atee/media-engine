@@ -56,6 +56,9 @@ services:
 
   worker:
     <<: *mediaengine-runtime
+    env_file:
+      - path: ${MARKETPLACE_SECRETS_ENV_FILE:-.marketplace-secrets.env}
+        required: false
     command:
       - /bin/sh
       - -ec

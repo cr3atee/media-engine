@@ -13,17 +13,15 @@ from app.parsers.funpay_normalizer import FunPayNormalizer
 from app.parsers.ggsel_extractor import GGSelExtractor
 from app.parsers.ggsel_fetcher import GGSelFetcher
 from app.parsers.normalizers import OfferNormalizer
-from app.parsers.playerok_extractor import PlayerokExtractor
-from app.parsers.playerok_fetcher import PlayerokFetcher
-from app.parsers.playerok_normalizer import PlayerokNormalizer
 from app.services.event_builder import EventBuilder
 from app.services.funpay_pipeline import FunPayPipeline
 from app.services.marketplace_application_runner import MarketplaceApplicationRunner
+from app.services.marketplace_credentials import MarketplaceCredentialResolver
 from app.services.marketplace_integration_execution import (
     MarketplaceIntegrationRunnerFactory,
 )
 from app.services.marketplace_pipeline import MarketplacePipeline, StageReporter
-from app.services.playerok_pipeline import PlayerokPipeline
+from app.services.playerok_connector import PlayerokConnector
 from app.services.repository_scope import RepositoryScopeFactory
 from app.services.snapshot_builder import SnapshotBuilder
 
@@ -50,6 +48,7 @@ def create_marketplace_runner_factories(
     *,
     http_client: HttpClient,
     repository_scope_factory: RepositoryScopeFactory,
+    credential_resolver: MarketplaceCredentialResolver | None = None,
     processing_pipeline: MarketplacePipeline | None = None,
     stage_reporter: StageReporter | None = None,
 ) -> Mapping[str, MarketplaceIntegrationRunnerFactory]:
@@ -74,14 +73,14 @@ def create_marketplace_runner_factories(
     def playerok_factory(
         integration: MarketplaceIntegration,
     ) -> MarketplaceApplicationRunner:
-        playerok_pipeline = PlayerokPipeline(
-            fetcher=PlayerokFetcher(http_client),
-            extractor=PlayerokExtractor(),
-            normalizer=PlayerokNormalizer(),
+        connector = PlayerokConnector(
+            http_client=http_client,
+            integration=integration,
+            credential_resolver=credential_resolver,
         )
         return MarketplaceApplicationRunner(
             marketplace=Marketplace.PLAYEROK,
-            ingestion=playerok_pipeline.run,
+            ingestion=connector.run,
             repository_scope_factory=repository_scope_factory,
             pipeline=pipeline,
             tenant_id=integration.tenant_id,

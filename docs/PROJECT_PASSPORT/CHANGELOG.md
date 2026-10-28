@@ -6,6 +6,20 @@ This document records notable Project Passport updates.
 
 ## Unreleased
 
+- Added the read-only Playerok VDS connector foundation. Tenant-owned
+  `env://` references now resolve to tenant/integration-scoped deployment
+  secrets at execution time; PostgreSQL and API responses remain secret-free.
+  Typed browser-session credentials preserve the exact User-Agent and cookies
+  without exposing values in repr or diagnostics. Playerok GraphQL retrieval
+  now performs bounded full cursor traversal and explicitly classifies expired,
+  blocked, rate-limited, transport, and invalid-response states. Offline tests
+  cover public fallback, session transport, redaction, two-page traversal,
+  cursor-loop rejection, and fail-closed configuration. Guarded target-VDS live
+  verification and the 48-72 hour soak remain external acceptance gates.
+  Focused Playerok tests pass `28/28`, deployment verification passes `25/25`,
+  full Pytest reports `632 passed, 60 skipped`, MyPy checks `487` files, and
+  focused Ruff/format checks pass.
+
 - Completed the automatable Market Terminal release-gate pass: the browser
   verifier now inspects the Chromium accessibility tree for catalog, product,
   review, and 404 states and uses real mobile/touch emulation. The preview suite

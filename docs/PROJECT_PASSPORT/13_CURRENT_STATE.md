@@ -580,8 +580,9 @@ authenticated-source rollout remain deployment work.
   safe success, failure, and skip evidence across restarts. Unattended polling
   now has a production Compose/runbook boundary with leased replicas, health
   checks, metrics collection, explicit retention, and graceful shutdown. It
-  passed the final operations verification. Deployment-managed collector/secret
-  infrastructure and credential retrieval for authenticated sources remain.
+  passed the final operations verification. The Playerok worker now resolves
+  tenant-scoped external environment secrets, while target deployment of those
+  secrets and collector infrastructure remains.
 - Public Market Terminal integration still needs a frontend location decision
   for public launch and a product decision on category exposure. An embedded
   dependency-free `/terminal` shell now consumes `/api/v1/public` routes for
@@ -639,8 +640,9 @@ authenticated-source rollout remain deployment work.
   confirmation, live flags, and PostgreSQL verification database were not
   supplied.
 - No production AI provider is wired into the marketplace pipeline.
-- Live marketplace credential storage and execution-time credential retrieval are
-  not implemented yet.
+- Raw marketplace credentials are not stored in PostgreSQL. Playerok
+  execution-time retrieval is implemented through tenant/integration-scoped
+  `env://` deployment references; guarded target-VDS live acceptance remains.
 - Password hashing currently uses a standard-library PBKDF2 boundary so Task 2
   could remain dependency-neutral; production hardening should revisit Argon2id
   if adding a dependency is approved.
@@ -722,12 +724,15 @@ tenant ownership, Task 2 adds seller authentication/authorization, Task 3 scopes
 existing workflows through `TenantContext`, and Task 4 verifies the complete
 tenant isolation loop against PostgreSQL. EPIC 17 Task 1 adds the tenant-owned
 marketplace integration persistence foundation. EPIC 17 Task 2 adds the
-credential metadata and redaction boundary without live credential use. EPIC 17
+credential metadata and redaction boundary. The Playerok worker now consumes
+tenant/integration-scoped external deployment secrets without persisting raw
+credential material. EPIC 17
 Task 3 adds tenant-scoped seller integration routes with permission checks and
 redacted credential responses. EPIC 17 Task 4 adds Scheduler-facing integration
 selection without moving marketplace business logic into Scheduler. EPIC 17 is
-functionally complete; live marketplace credential storage and execution-time
-credential retrieval require a new explicitly approved EPIC. EPIC 18 continues
+functionally complete; Playerok execution-time credential retrieval is now
+implemented behind the existing opaque-reference boundary, while guarded live
+target-VDS acceptance remains outstanding. EPIC 18 continues
 marketplace data reliability closure: GGSEL, Playerok, and FunPay are verified
 from real saved/live payloads as snapshot-ready, and a strict saved-payload
 drift guard is present. Runtime bootstrap/process helpers and the worker command

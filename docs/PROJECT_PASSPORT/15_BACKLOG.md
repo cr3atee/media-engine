@@ -7,10 +7,11 @@ candidate verification.
 
 ## Immediate
 
-- Complete cursor/page traversal and expose an explicit source-snapshot
-  completeness result before enabling missing-offer reconciliation in runtime
-  factories. The durable observation foundation exists, but a first page must
-  never be treated as a complete marketplace catalog.
+- Complete remaining source-specific page traversal and expose an explicit
+  source-snapshot completeness result before enabling missing-offer
+  reconciliation in runtime factories. Playerok now follows all bounded
+  GraphQL cursors and fails on truncation; source-scope completeness is still
+  not asserted. A partial collector must never be treated as a complete catalog.
 - Add an authorized immutable-audit operator command to retire or restore a
   manually seeded offer while preserving snapshots, events, and review
   evidence. Use it to resolve the confirmed FunPay `80145738` HTTP 404 in the
@@ -47,10 +48,11 @@ candidate verification.
 - Add PostgreSQL-specific public query adapters only if direct SQL read
   optimization is explicitly approved after the repository-backed adapter is
   exercised.
-- Define the next EPIC before implementing live marketplace credential storage
-  or execution-time credential retrieval.
-- Keep tenant-owned marketplace integrations redacted and metadata-only until a
-  secret-storage design is explicitly approved.
+- Run the guarded Playerok session verifier from the target VDS with an
+  authorized account, stable outbound IP, same-session User-Agent/cookies, and
+  tenant-scoped deployment secret. Complete a 48-72 hour low-frequency soak;
+  do not treat offline connector verification as proof that Playerok will allow
+  a particular VDS.
 - If explicitly approved credentials and a test chat are available, run exactly
   one guarded live Telegram test-chat verification.
 

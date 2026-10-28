@@ -398,8 +398,9 @@ comparisons, and price history. The first embedded `/terminal` visual shell is
 available for API contract validation. Guarded public-source polling, durable
 per-integration history, production deployment configuration, and the final
 PostgreSQL operations gate are verified. Unattended target deployment still
-requires collector/secret infrastructure and credential retrieval for
-authenticated sources. The backend core is now a verified release candidate.
+requires collector infrastructure, managed secret injection, and guarded live
+acceptance for authenticated sources. The Playerok runtime resolver and session
+connector are implemented. The backend core is now a verified release candidate.
 The remaining work before public visual launch is execution of human-approved
 catalog onboarding through the now measurable operator workspace,
 target-environment monitoring/secret rollout, frontend hardening, and a product
@@ -422,7 +423,8 @@ decisions remain the next catalog-launch action.
   acknowledgement remains an external collector responsibility.
 - Optional guarded live Telegram test-chat message.
 - Production AI provider integration in the pipeline.
-- Live marketplace credential storage and credential retrieval for execution.
+- Managed target-environment secret rollout and guarded Playerok session
+  verification; raw credential storage in PostgreSQL is intentionally absent.
 - Production-hardened public Market Terminal frontend.
 
 ## Recommended Next EPIC

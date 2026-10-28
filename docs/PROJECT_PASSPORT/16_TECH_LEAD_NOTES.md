@@ -141,9 +141,12 @@ This document captures architecture notes that are important for future reviews.
   integration persistence/credential boundary `18/18`, seller integration API
   `16/16`, Scheduler integration selection `10/10`, full Pytest, MyPy, Ruff,
   Ruff format, and Alembic lifecycle.
-- Live marketplace credential material remains out of scope. Do not add
-  plaintext credential columns or execution-time credential retrieval without an
-  explicit secret-storage design.
+- Playerok execution-time credentials use an explicit external-secret boundary:
+  PostgreSQL retains only `env://` metadata, while the worker resolves a
+  tenant/integration-scoped environment secret immediately before transport.
+  Do not add plaintext credential columns, expose references through seller
+  APIs, or log resolved values. A managed secret backend may replace the
+  resolver without changing marketplace/domain contracts.
 - GGSEL saved-response extraction now reaches snapshot-ready `ParsedOffer`
   objects. FunPay has also passed captured real-listing proof with one
   snapshot-ready `ParsedOffer`. Playerok has live GraphQL `items` proof and
