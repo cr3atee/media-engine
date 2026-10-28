@@ -299,6 +299,7 @@ try {
   await press("Enter", "Enter", 13);
   await ready();
   await check("keyboard search announces new content through focus", 'document.activeElement.id==="main" && document.querySelector("#catalogTitle").textContent.includes("Minecraft")');
+  await check("keyboard search does not frame the entire results region", 'getComputedStyle(document.activeElement).outlineStyle==="none"');
   await tabTo(".product-card");
   await check("keyboard product link has visible focus", 'document.activeElement.matches(":focus-visible") && parseFloat(getComputedStyle(document.activeElement).outlineWidth)>=2');
   await screenshot("09-keyboard-card-focus", false);

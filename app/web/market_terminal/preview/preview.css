@@ -40,6 +40,7 @@ img, svg { display: block; }
 button svg, a svg, .search svg { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
 button:disabled { opacity: .55; cursor: not-allowed; }
 :focus-visible { outline: 3px solid var(--accent); outline-offset: 4px; }
+main:focus-visible { outline: none; }
 h1, h2, h3, p { margin: 0; }
 h1 { font-size: clamp(28px, 3vw, 40px); line-height: 1.18; letter-spacing: -.04em; font-weight: 650; }
 h2 { font-size: 26px; letter-spacing: -.025em; font-weight: 600; }
