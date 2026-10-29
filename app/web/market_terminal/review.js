@@ -1,6 +1,7 @@
 import { brandMark, handleImageError } from "/terminal/preview/presentation.js";
 import { createProductAccess, productRoleLabel } from "/terminal/product-access.js";
 import { createDiagnosticJournal, installFrontendDiagnostics } from "/terminal/diagnostics.js";
+import { createOfferLifecycle } from "/terminal/offer-lifecycle.js";
 
 document.addEventListener("error", handleImageError, true);
 
@@ -141,6 +142,12 @@ const productAccess = createProductAccess({
     renderProductIdentity(user);
     diagnosticJournal.setProfile(user);
   },
+});
+
+const offerLifecycle = createOfferLifecycle({
+  request: requestJson,
+  onAccessLoss: error => handleAccessLoss(error),
+  onChanged: () => loadQueues(),
 });
 
 function renderProductIdentity(user) {
@@ -354,6 +361,7 @@ async function selectTenant(tenantId) {
 
     state.activeTenantId = context.tenant_id;
     state.activeTenant = context;
+    offerLifecycle.setContext(context);
     showReviewNavigation(true);
     elements.permissionSummary.textContent = "Проверка каталога разрешена";
     elements.reviewWorkspace.hidden = false;
@@ -1073,6 +1081,7 @@ function clearSession(message) {
 
 /** Drop protected data immediately, including any open confirmation dialog. */
 function invalidateWorkspace() {
+  offerLifecycle.reset();
   showReviewNavigation(false);
   state.workspaceEpoch += 1;
   state.queueEpoch += 1;
@@ -1354,6 +1363,9 @@ function apiErrorMessage(body, status) {
     canonical_review_target_not_found: "Товар или объявление больше недоступны.",
     canonical_offer_decision_conflict: "Эта пара уже проверена.",
     canonical_offer_link_conflict: "Объявление уже связано с другим товаром.",
+    offer_not_found: "Объявление не найдено в выбранном рабочем пространстве.",
+    optimistic_concurrency_conflict: "Состояние объявления уже изменилось.",
+    invalid_transition: "Это изменение больше недоступно для текущего состояния.",
   };
   if (typeof code === "string" && knownMessages[code]) {
     return knownMessages[code];

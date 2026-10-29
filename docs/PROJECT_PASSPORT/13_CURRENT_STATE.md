@@ -713,6 +713,13 @@ passed, 60 skipped`, MyPy is clean across `489` files, and focused Ruff/format
 pass. FunPay `80145738` remains pending an authenticated execution of this
 command in the owning tenant database.
 
+The working Market Terminal cabinet now exposes this lifecycle through a
+tenant-scoped operator panel rather than requiring a hand-built API call.
+Marketplace and external ID lookup, current state/version, mandatory reason,
+explicit confirmation and safe idempotent retry are implemented. Browser
+verification passes `72` fixture-only checks; full Pytest is `637 passed, 60
+skipped`, and no claim is made that the pending FunPay row was mutated.
+
 ## Architecture Review
 
 Current architecture separates:

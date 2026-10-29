@@ -21,7 +21,11 @@ let checks = 0;
 const pending = new Map();
 const errors = [];
 const mutations = [];
+const offerLifecycleMutations = [];
 let mutationStatus = 409;
+let offerLifecycleStatus = 503;
+let offerStatus = "active";
+let offerVersion = 1;
 let loginStatus = 401;
 let empty = false;
 let forbidden = false;
@@ -85,6 +89,56 @@ async function intercept({ requestId, request }) {
   } else if (path.endsWith("/auth/browser/logout")) {
     browserSession = false;
     body = {};
+  } else if (path.endsWith("/catalog/offers/funpay/fixture-stale/availability") && request.method === "GET") {
+    body = {
+      offer_id: "44444444-4444-4444-8444-444444444444",
+      tenant_id: path.split("/")[4],
+      marketplace: "funpay",
+      external_id: "fixture-stale",
+      status: offerStatus,
+      version: offerVersion,
+      updated_at: "2026-10-29T08:00:00Z",
+      retired_at: offerStatus === "retired" ? "2026-10-29T08:00:00Z" : null,
+    };
+  } else if (path.endsWith("/catalog/offers/funpay/fixture-stale/retire") && request.method === "POST") {
+    offerLifecycleMutations.push(request);
+    assert.equal(JSON.parse(request.postData).expected_version, offerVersion);
+    responseCode = offerLifecycleStatus;
+    if (responseCode === 200) {
+      offerStatus = "retired";
+      offerVersion += 1;
+      body = {
+        action_id: "55555555-5555-4555-8555-555555555555",
+        action: "offer_retire",
+        resource_type: "marketplace_offer",
+        resource_id: "44444444-4444-4444-8444-444444444444",
+        previous_state: "active",
+        resulting_state: offerStatus,
+        resulting_version: offerVersion,
+        request_id: "fixture-request",
+        recorded_at: "2026-10-29T08:00:00Z",
+        replayed: false,
+      };
+    } else {
+      body = { error: { code: "service_unavailable" } };
+    }
+  } else if (path.endsWith("/catalog/offers/funpay/fixture-stale/restore") && request.method === "POST") {
+    offerLifecycleMutations.push(request);
+    assert.equal(JSON.parse(request.postData).expected_version, offerVersion);
+    offerStatus = "active";
+    offerVersion += 1;
+    body = {
+      action_id: "66666666-6666-4666-8666-666666666666",
+      action: "offer_restore",
+      resource_type: "marketplace_offer",
+      resource_id: "44444444-4444-4444-8444-444444444444",
+      previous_state: "retired",
+      resulting_state: offerStatus,
+      resulting_version: offerVersion,
+      request_id: "fixture-restore-request",
+      recorded_at: "2026-10-29T08:05:00Z",
+      replayed: false,
+    };
   } else if (path.includes("/catalog/") && request.method === "POST") {
     mutations.push(request);
     responseCode = mutationStatus;
@@ -222,6 +276,39 @@ try {
   await check("real UI handles fixture tenant permissions", '!document.querySelector("#reviewWorkspace").hidden && document.querySelector("#tenantRole").textContent === "Владелец"');
   await until('[...document.images].every(img=>img.complete)');
   await check("all marketplace logos loaded", '[...document.images].every(img=>img.complete && img.naturalWidth>0)');
+  await click("#offerLifecycleLink");
+  await check("offer lifecycle opens inside the active tenant", '!document.querySelector("#offerLifecycle").hidden && document.querySelector("#offerLifecycleTitle") === document.activeElement');
+  await evaluate('document.querySelector("#offerExternalId").value="fixture-stale"; document.querySelector("#offerExternalId").dispatchEvent(new Event("input"))');
+  await click("#offerLifecycleLoad");
+  await until('!document.querySelector("#offerLifecycleDetails").hidden && document.querySelector("#offerLifecycle").getAttribute("aria-busy") === "false"');
+  await check("current offer state and version are explicit", 'document.querySelector("#offerLifecycleState").textContent === "Активно" && document.querySelector("#offerLifecycleVersion").textContent === "1"');
+  await evaluate('document.querySelector("#offerLifecycleReason").value="Ссылка площадки возвращает 404"');
+  await click("#offerLifecycleAction");
+  await until('document.querySelector("#offerLifecycleDialog").open');
+  await check("retire confirmation preserves history and names reason", 'document.querySelector("#offerLifecycleConfirmation").textContent.includes("История, связь с товаром и цены сохранятся") && document.querySelector("#offerLifecycleConfirmation").textContent.includes("возвращает 404")');
+  await check("lifecycle cancel gets initial focus", 'document.activeElement.value === "cancel"');
+  await click("#offerLifecycleConfirm");
+  await until('!document.querySelector("#offerLifecycleRetry").hidden && document.querySelector("#offerLifecycle").getAttribute("aria-busy") === "false"');
+  await check("ambiguous retire exposes an explicit safe retry", 'document.querySelector("#offerLifecycleMessage").textContent.includes("тот же ключ защитит от дубля") && document.querySelector("#offerLifecycleState").textContent === "Активно"');
+  const offerRetryKey = Object.entries(offerLifecycleMutations[0].headers).find(([name]) => name.toLowerCase() === "idempotency-key")[1];
+  offerLifecycleStatus = 200;
+  await click("#offerLifecycleRetry");
+  await until('!document.querySelector("#offerLifecycleDialog").open && document.querySelector("#offerLifecycleState").textContent === "Скрыто вручную" && document.querySelector("#offerLifecycle").getAttribute("aria-busy") === "false"');
+  assert.equal(offerLifecycleMutations.length, 2, "One failed request and one explicit retry expected"); checks++;
+  assert.equal(JSON.parse(offerLifecycleMutations[1].postData).reason, "Ссылка площадки возвращает 404"); checks++;
+  assert.equal(Object.entries(offerLifecycleMutations[1].headers).find(([name]) => name.toLowerCase() === "idempotency-key")[1], offerRetryKey); checks++;
+  await check("retired state keeps identity and advances version", 'document.querySelector("#offerLifecycleIdentity").textContent.includes("fixture-stale") && document.querySelector("#offerLifecycleVersion").textContent === "2"');
+  await screenshot("02-offer-lifecycle");
+  await evaluate('document.querySelector("#offerLifecycleReason").value="Объявление снова подтверждено площадкой"');
+  await click("#offerLifecycleAction");
+  await until('document.querySelector("#offerLifecycleDialog").open');
+  await check("restore has a distinct explicit confirmation", 'document.querySelector("#offerLifecycleDialogTitle").textContent === "Вернуть объявление?" && document.querySelector("#offerLifecycleConfirmation").textContent.includes("снова подтверждено")');
+  await click("#offerLifecycleConfirm");
+  await until('!document.querySelector("#offerLifecycleDialog").open && document.querySelector("#offerLifecycleState").textContent === "Активно" && document.querySelector("#offerLifecycleVersion").textContent === "3"');
+  assert.equal(offerLifecycleMutations.length, 3, "Retire retry and one restore expected"); checks++;
+  assert.notEqual(Object.entries(offerLifecycleMutations[2].headers).find(([name]) => name.toLowerCase() === "idempotency-key")[1], offerRetryKey); checks++;
+  await check("restored state advances the optimistic version", 'document.querySelector("#offerLifecycleAction").textContent === "Скрыть объявление" && document.querySelector("#offerLifecycleState").dataset.state === "active"');
+  await click("#offerLifecycleClose");
   await check("source and exact target separated", `document.querySelector('${source} .review-source').textContent.includes('цифровой ключ') && document.querySelector('${source} .candidate-link').textContent.includes('${canonical}')`);
   await check("external source is on source side only", `!!document.querySelector('${source} .review-source a') && !document.querySelector('${source} .candidate-link a')`);
   await check("unsafe source omitted and no target disabled", '!document.querySelector("[data-external-id=fixture-missing] a") && document.querySelector("[data-external-id=fixture-missing] .resolve").disabled');

@@ -1,6 +1,6 @@
 # Marketplace Offer Availability Lifecycle
 
-Date: 2026-10-27.
+Date: 2026-10-29.
 
 ## Status
 
@@ -59,6 +59,19 @@ source.
 - Retirement preserves the offer, canonical link, snapshots, events, and audit
   history; it only removes the offer from ordinary active reads.
 
+## Operator UI
+
+The authenticated Market Terminal cabinet now exposes a tenant-scoped
+`Управление объявлением` section. A catalog reviewer selects the marketplace,
+enters the stable external ID, reads the current state and optimistic version,
+provides a required reason, and confirms either retirement or restoration.
+
+The browser never deletes an offer and does not persist protected lifecycle
+state in web storage. A network or server failure retains the same idempotency
+key for an explicit retry; a definitive client error clears stale details. A
+tenant switch, permission loss, account disablement, or logout immediately
+purges the panel state and any open confirmation.
+
 ## Verification
 
 Isolated PostgreSQL `17` verification passed `30/30` checks for two-source
@@ -69,8 +82,16 @@ rollback, fresh-engine persistence, and public-read filtering.
 
 Alembic clean upgrade through `0020`, legacy-row backfill into `0021`, `current`,
 `check`, downgrade to `0020`, re-upgrade to head, and offline SQL generation
-pass. Full project verification reports `636 passed, 60 skipped`; MyPy reports
+pass. Full project verification reports `637 passed, 60 skipped`; MyPy reports
 `489` source files without errors; focused Ruff and Ruff format pass.
+
+The real cabinet browser verifier passes `72` checks with isolated API fixtures,
+including the active-to-retired operator flow, required evidence, confirmation
+focus, a 503 followed by an explicit retry with the same idempotency key,
+retired-to-active restoration with a new command key, responsive widths, native
+200% zoom and reduced motion. It performs no database mutation and therefore
+does not claim that a known stale production or local tenant row has been
+retired.
 
 ## Current Catalog Link Audit
 
@@ -108,9 +129,9 @@ missing from the automated 403 alone. No offer record was mutated by the audit.
    first `20` items while the response can report a larger total.
 3. Enable `source_snapshot_complete` only for adapters whose complete-source
    behavior is verified.
-4. Execute the authorized retire command for FunPay `80145738` in the owning
-   tenant database and retain its reason and immutable action ID as release
-   evidence.
+4. Use the authenticated cabinet lifecycle panel to retire FunPay `80145738` in
+   the owning tenant database and retain its reason and immutable action ID as
+   release evidence.
 5. Re-run the outbound-link audit immediately before public release.
 
 Until those items are complete, offer availability is persistence-ready but is

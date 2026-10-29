@@ -357,6 +357,34 @@ def test_product_access_panel_uses_existing_session_and_explicit_asset() -> None
     assert "bootstrap" not in script.text
 
 
+def test_offer_lifecycle_panel_uses_audited_tenant_scoped_api() -> None:
+    """The cabinet exposes retire/restore without browser-side persistence."""
+    client = _client()
+    page = client.get("/terminal/review")
+    module = client.get("/terminal/offer-lifecycle.js")
+    review_script = client.get("/terminal/review.js")
+
+    assert module.status_code == 200
+    assert module.headers["content-type"].startswith("application/javascript")
+    assert module.headers["x-content-type-options"] == "nosniff"
+    assert 'id="offerLifecycleLink" href="#offerLifecycle" hidden' in page.text
+    assert 'id="offerLifecycleDialog"' in page.text
+    assert 'id="offerLifecycleReason"' in page.text
+    assert 'maxlength="2000"' in page.text
+    assert "createOfferLifecycle" in module.text
+    assert "/availability" in module.text
+    assert 'target.status === "retired" ? "restore" : "retire"' in module.text
+    assert 'headers: { "Idempotency-Key": command.key }' in module.text
+    assert "expected_version: target.version" in module.text
+    assert "onAccessLoss(error)" in module.text
+    assert "localStorage" not in module.text
+    assert "sessionStorage" not in module.text
+    assert "innerHTML" not in module.text
+    assert 'from "/terminal/offer-lifecycle.js"' in review_script.text
+    assert "offerLifecycle.setContext(context);" in review_script.text
+    assert "offerLifecycle.reset();" in review_script.text
+
+
 def test_product_admin_diagnostics_ui_is_safe_and_explicit() -> None:
     client = _client()
     page = client.get("/terminal/review")

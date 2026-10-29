@@ -1,6 +1,6 @@
 # Working review cabinet verification
 
-Updated: 2026-10-27. Scope: `/terminal/review`, its shared application shell,
+Updated: 2026-10-29. Scope: `/terminal/review`, its shared application shell,
 browser session continuity, presentation and confirmation interactions. The
 repository model, authorization policy and database schema were not changed.
 
@@ -33,6 +33,11 @@ repository model, authorization policy and database schema were not changed.
 - UI defect fixed: a failed create request used to re-enable a disabled link
   button even when no canonical target existed. Busy-state restoration now
   preserves each control's prior disabled state.
+- Tenant-scoped offer lifecycle controls now let an authorized catalog reviewer
+  inspect, retire, or restore one marketplace offer by stable external ID. The
+  flow requires a reason, repeats the retained-history consequence before
+  confirmation, uses optimistic versioning and preserves one idempotency key
+  across an ambiguous retry. Tenant/session invalidation clears the panel.
 
 ## Verification boundary
 
@@ -61,11 +66,14 @@ service and browser cookie jar, and does not intercept authentication requests.
 
 ### Results
 
-- Review browser: **59 checks passed**. Login errors, permissions, filtering,
+- Review browser: **72 checks passed**. Login errors, permissions, filtering,
   exact target, escaped titles, safe source links, action-dependent facts,
   cancel without submission, keyboard dialog, 409 conflict, 503 retry with
   identical idempotency key, changed ambiguous payload refusal, refresh,
-  no-target disabled state, completed queue and logout covered.
+  no-target disabled state, completed queue and logout covered. The new checks
+  also cover lifecycle lookup, current version, required reason, confirmation,
+  a failed retire request, explicit retry with the same idempotency key,
+  retained-history copy, resulting state and restoration with a new command key.
 - Desktop, 800/390/320 px, native 200% browser zoom and reduced motion passed.
   No runtime/CSP errors. Desktop, mobile and zoom screenshots visually inspected.
 - Product-access browser: **39 checks passed** after the shared-header change.
@@ -74,9 +82,9 @@ service and browser cookie jar, and does not intercept authentication requests.
   round-trip, reload, browser Back, rotation, logout and non-restoration after
   logout.
 - Existing preview + working public catalog: **99 checks passed**, GET only.
-- Full Pytest: **596 passed, 59 skipped**. Existing optional integration skips
+- Full Pytest: **637 passed, 60 skipped**. Existing optional integration skips
   remain; this run does not establish that those skipped checks passed.
-- Full MyPy with `--explicit-package-bases app scripts tests`: **468 files passed**.
+- Full MyPy with `--explicit-package-bases app scripts tests`: **489 files passed**.
 - Ruff and Ruff format check: all changed Python files passed. Ruff does not
   validate JavaScript/CSS; browser checks and Node syntax checks cover JS.
 - Existing Starlette/httpx TestClient deprecation warning remains unchanged.
@@ -97,6 +105,9 @@ Existing owner/admin/reviewer/viewer memberships retain their existing meaning.
 Public asset licensing/release review and final integrated acceptance remain.
 The real queue is already completed, so this pass intentionally did not perform
 new real catalog mutations; browser mutation coverage is fixture-based.
+The known stale FunPay `80145738` row remains pending an authenticated lifecycle
+action in its owning tenant database; the new browser panel makes that operation
+available but does not silently execute it.
 
 ## Access-revocation follow-up
 

@@ -6,6 +6,15 @@ This document records notable Project Passport updates.
 
 ## Unreleased
 
+- Connected the audited marketplace-offer lifecycle to the authenticated Market
+  Terminal cabinet. Reviewers can look up one tenant-owned offer by marketplace
+  and external ID, inspect its state/version, provide mandatory evidence and
+  confirm retirement or restoration without deleting links or history. The UI
+  clears on tenant/session loss and retains one idempotency key only for an
+  ambiguous retry. The isolated browser verifier passes `72` checks; full
+  Pytest reports `637 passed, 60 skipped`, MyPy checks `489` files, and focused
+  Ruff/format pass. The real FunPay `80145738` action remains pending.
+
 - Added the audited manual marketplace-offer lifecycle at revision
   `0021_offer_manual_availability`. Authorized catalog reviewers can retire and
   restore stale offers with required evidence, optimistic versions and

@@ -63,6 +63,7 @@
         <a href="/terminal/review" aria-current="page">Личный кабинет</a>
         <a id="reviewCandidatesLink" href="#reviewCandidates" hidden>Совпадения</a>
         <a id="productProposalsLink" href="#productProposals" hidden>Новые товары</a>
+        <a id="offerLifecycleLink" href="#offerLifecycle" hidden>Объявления</a>
         <a id="productAccessLink" href="#productAccess" hidden>Доступ</a>
         <a id="diagnosticsLink" href="#diagnosticJournal" hidden>Ошибки</a>
         <span
@@ -184,6 +185,73 @@
             <p class="form-hint">Последние 100 изменений. Сохранённые записи нельзя редактировать.</p>
             <ol id="accessAudit"></ol>
           </section>
+        </div>
+      </section>
+
+      <section id="offerLifecycle" class="offer-lifecycle" aria-labelledby="offerLifecycleTitle" hidden>
+        <header class="workspace-heading">
+          <div>
+            <p class="section-label">Каталог</p>
+            <h2 id="offerLifecycleTitle" tabindex="-1">Управление объявлением</h2>
+          </div>
+          <button id="offerLifecycleClose" type="button" class="ghost-button">Закрыть раздел</button>
+        </header>
+        <p class="form-hint">
+          Ручное скрытие убирает объявление из каталога и сравнений, но сохраняет исходные данные,
+          историю цен и связь с товаром.
+        </p>
+        <form id="offerLifecycleLookup" class="offer-lifecycle-lookup">
+          <label for="offerMarketplace">
+            Площадка
+            <select id="offerMarketplace" name="marketplace">
+              <option value="funpay">FunPay</option>
+              <option value="playerok">Playerok</option>
+              <option value="ggsel">GGSEL</option>
+            </select>
+          </label>
+          <label for="offerExternalId">
+            ID объявления
+            <input
+              id="offerExternalId"
+              name="external_id"
+              required
+              maxlength="255"
+              autocomplete="off"
+              spellcheck="false"
+              placeholder="ID на площадке"
+            />
+          </label>
+          <button id="offerLifecycleLoad" class="ghost-button" type="submit">Проверить объявление</button>
+        </form>
+        <p id="offerLifecycleMessage" class="workspace-message" role="status" aria-live="polite"></p>
+        <div id="offerLifecycleDetails" class="offer-lifecycle-details" hidden>
+          <section class="offer-lifecycle-summary" aria-labelledby="offerLifecycleIdentity">
+            <p class="section-label">Выбранное объявление</p>
+            <h3 id="offerLifecycleIdentity"></h3>
+            <dl class="offer-lifecycle-facts">
+              <div><dt>Состояние</dt><dd id="offerLifecycleState"></dd></div>
+              <div><dt>Версия</dt><dd id="offerLifecycleVersion"></dd></div>
+              <div><dt>Обновлено</dt><dd id="offerLifecycleUpdated"></dd></div>
+            </dl>
+          </section>
+          <form id="offerLifecycleActionForm" class="offer-lifecycle-editor">
+            <label for="offerLifecycleReason">
+              Причина изменения
+              <textarea
+                id="offerLifecycleReason"
+                class="review-reason"
+                required
+                maxlength="2000"
+                rows="4"
+                placeholder="Например: ссылка площадки возвращает 404 или продавец снял объявление."
+              ></textarea>
+            </label>
+            <p class="form-hint">Причина сохранится в неизменяемом журнале действий.</p>
+            <div class="review-actions">
+              <button id="offerLifecycleRetry" class="ghost-button" type="button" hidden>Повторить запрос</button>
+              <button id="offerLifecycleAction" class="danger-button" type="submit">Скрыть объявление</button>
+            </div>
+          </form>
         </div>
       </section>
 
@@ -421,6 +489,17 @@
         <div class="review-actions">
           <button class="ghost-button" value="cancel" autofocus>Вернуться</button>
           <button class="primary-button" value="confirm">Сохранить роль</button>
+        </div>
+      </form>
+    </dialog>
+    <dialog id="offerLifecycleDialog" aria-labelledby="offerLifecycleDialogTitle" aria-describedby="offerLifecycleConfirmation">
+      <form method="dialog">
+        <h2 id="offerLifecycleDialogTitle">Изменить доступность?</h2>
+        <p id="offerLifecycleConfirmation" class="confirmation-facts"></p>
+        <p class="form-hint">Действие сохранится в журнале. Исходное объявление и его история не удаляются.</p>
+        <div class="review-actions">
+          <button class="ghost-button" value="cancel" autofocus>Вернуться</button>
+          <button class="danger-button" id="offerLifecycleConfirm" value="confirm">Подтвердить</button>
         </div>
       </form>
     </dialog>
