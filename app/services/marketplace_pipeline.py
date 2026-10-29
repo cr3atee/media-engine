@@ -27,6 +27,7 @@ from app.repositories.offers import OfferObservationContext
 from app.repositories.provider import RepositoryProvider
 from app.services.content_generator import ContentGenerator
 from app.services.event_builder import EventBuilder
+from app.services.marketplace_ingestion import MarketplaceIngestionResult
 from app.services.price_drop_market_event_builder import (
     PriceDropMarketEventBuilder,
 )
@@ -136,21 +137,35 @@ class MarketplacePipeline:
 
     async def fetch_and_normalize(self, url: str) -> list[ParsedOffer]:
         """Fetch, extract, and normalize GGSEL offers before persistence."""
+        result = await self.fetch_and_normalize_with_evidence(url)
+        return list(result.offers)
+
+    async def fetch_and_normalize_with_evidence(
+        self,
+        url: str,
+    ) -> MarketplaceIngestionResult:
+        """Fetch GGSEL offers with per-response completeness evidence."""
         self._report("=== FETCH HTML ===")
         html = await self._fetcher.fetch_html(url)
         self._report(f"Fetched HTML: {len(html)} characters")
 
         self._report("=== EXTRACT RAW OFFERS ===")
-        raw_offers = self._extractor.extract(html)
+        extraction = self._extractor.extract_with_evidence(html)
+        raw_offers = extraction.items
         self._report(f"Extracted raw offers: {len(raw_offers)}")
-        if not raw_offers:
-            self._report("No raw offers found.")
-            return []
 
         self._report("=== NORMALIZE OFFERS ===")
-        parsed_offers = [self._normalizer.normalize(offer) for offer in raw_offers]
+        parsed_offers = tuple(self._normalizer.normalize(offer) for offer in raw_offers)
         self._report(f"Normalized offers: {len(parsed_offers)}")
-        return parsed_offers
+        self._report(
+            "Source snapshot: "
+            f"complete={extraction.evidence.complete}; "
+            f"reason={extraction.evidence.reason}"
+        )
+        return MarketplaceIngestionResult(
+            offers=parsed_offers,
+            evidence=extraction.evidence,
+        )
 
     def prepare_offers(
         self,

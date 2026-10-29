@@ -8,11 +8,16 @@ from uuid import UUID
 from app.domain.marketplace import Marketplace
 from app.domain.tenancy import LEGACY_TENANT_ID
 from app.parsers.models import ParsedOffer
+from app.parsers.source_snapshot import SourceSnapshotEvidence
 from app.repositories.offers import OfferObservationContext
+from app.services.marketplace_ingestion import MarketplaceIngestionResult
 from app.services.marketplace_pipeline import MarketplacePipeline
 from app.services.repository_scope import RepositoryScopeFactory
 
-type OfferIngestion = Callable[[str], Awaitable[Sequence[ParsedOffer]]]
+type OfferIngestion = Callable[
+    [str],
+    Awaitable[Sequence[ParsedOffer] | MarketplaceIngestionResult],
+]
 
 
 @dataclass(slots=True, frozen=True)
@@ -38,6 +43,10 @@ class MarketplaceRunResult:
     errors: tuple[str, ...]
     offers_deactivated: int = 0
     tenant_id: UUID = LEGACY_TENANT_ID
+    source_items: int = 0
+    source_items_expected: int | None = None
+    source_snapshot_complete: bool = False
+    source_snapshot_reason: str = "Source completeness evidence was not provided."
 
 
 class MarketplaceApplicationRunner:
@@ -67,9 +76,24 @@ class MarketplaceApplicationRunner:
 
     async def run(self, url: str) -> MarketplaceRunResult:
         """Execute one bounded marketplace run with explicit phase ownership."""
+        ingestion = await self._ingestion(url)
+        if isinstance(ingestion, MarketplaceIngestionResult):
+            source_offers = ingestion.offers
+            source_evidence = ingestion.evidence
+        else:
+            source_offers = tuple(ingestion)
+            source_evidence = SourceSnapshotEvidence(
+                source_items=len(source_offers),
+                parsed_items=len(source_offers),
+                complete=self._source_snapshot_complete,
+                reason=(
+                    "Legacy ingestion was explicitly marked complete."
+                    if self._source_snapshot_complete
+                    else "Legacy ingestion did not provide completeness evidence."
+                ),
+            )
         parsed_offers = tuple(
-            replace(offer, tenant_id=self._tenant_id)
-            for offer in await self._ingestion(url)
+            replace(offer, tenant_id=self._tenant_id) for offer in source_offers
         )
         prepared = self._pipeline.prepare_offers(parsed_offers)
         observation_context = (
@@ -88,7 +112,7 @@ class MarketplaceApplicationRunner:
                 prepared,
                 repository_provider,
                 observation_context=observation_context,
-                reconcile_missing_offers=self._source_snapshot_complete,
+                reconcile_missing_offers=source_evidence.complete,
             )
 
         return MarketplaceRunResult(
@@ -111,6 +135,10 @@ class MarketplaceApplicationRunner:
             errors=prepared.errors,
             offers_deactivated=transactional.offers_deactivated,
             tenant_id=self._tenant_id,
+            source_items=source_evidence.source_items,
+            source_items_expected=source_evidence.expected_items,
+            source_snapshot_complete=source_evidence.complete,
+            source_snapshot_reason=source_evidence.reason,
         )
 
 

@@ -283,9 +283,11 @@ This document captures architecture notes that are important for future reviews.
   Preserve the many-to-many observation boundary: one missing integration must
   not hide an offer still seen elsewhere, and legacy rows without deterministic
   ownership remain visible. Never enable missing-item reconciliation from a
-  successful first page alone; `source_snapshot_complete` must be backed by
-  verified pagination/completeness evidence. Empty responses are deliberately
-  non-destructive.
+  successful first page alone. Prefer per-run `MarketplaceIngestionResult`
+  evidence over the compatibility flag: explicit incomplete evidence must win.
+  The current FunPay structural contract is complete; GGSEL and Playerok remain
+  partial in the 2026-10-29 live category check. Empty responses are
+  deliberately non-destructive.
 - Manual offer retirement is an independent operator override, not inferred
   source truth. Keep retire/restore reasoned, versioned, idempotent and atomic
   with immutable audit; never let a later source upsert silently restore a

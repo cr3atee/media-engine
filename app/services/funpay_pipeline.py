@@ -4,6 +4,7 @@ from app.parsers.funpay_extractor import FunPayExtractor
 from app.parsers.funpay_fetcher import FunPayFetcher
 from app.parsers.funpay_normalizer import FunPayNormalizer
 from app.parsers.models import ParsedOffer
+from app.services.marketplace_ingestion import MarketplaceIngestionResult
 
 
 class FunPayPipeline:
@@ -23,6 +24,18 @@ class FunPayPipeline:
 
     async def run(self, url: str = FunPayFetcher.DEFAULT_URL) -> list[ParsedOffer]:
         """Fetch and transform FunPay data into normalized parsed offers."""
+        result = await self.ingest(url)
+        return list(result.offers)
+
+    async def ingest(
+        self,
+        url: str = FunPayFetcher.DEFAULT_URL,
+    ) -> MarketplaceIngestionResult:
+        """Return normalized offers and structural completeness evidence."""
         raw_response = await self._fetcher.fetch(url)
-        extracted_offers = self._extractor.extract(raw_response)
-        return self._normalizer.normalize(extracted_offers)
+        extraction = self._extractor.extract_with_evidence(raw_response)
+        normalized = tuple(self._normalizer.normalize(list(extraction.items)))
+        return MarketplaceIngestionResult(
+            offers=normalized,
+            evidence=extraction.evidence,
+        )

@@ -26,6 +26,7 @@ from app.parsers.normalizers import OfferNormalizer  # noqa: E402
 from app.parsers.playerok_extractor import PlayerokExtractor  # noqa: E402
 from app.parsers.playerok_fetcher import PlayerokFetcher  # noqa: E402
 from app.parsers.playerok_normalizer import PlayerokNormalizer  # noqa: E402
+from app.parsers.source_snapshot import SourceSnapshotEvidence  # noqa: E402
 from scripts.analyze_cross_marketplace_matching import (  # noqa: E402
     analyze_cross_marketplace_matching,
 )
@@ -45,6 +46,9 @@ class MarketplaceCategoryBatch:
     source_total: int
     offers: tuple[ParsedOffer, ...]
     snapshot_ready_offers: tuple[ParsedOffer, ...]
+    source_items_seen: int | None = None
+    source_snapshot_complete: bool = False
+    source_snapshot_reason: str = "Source completeness evidence was not collected."
 
 
 type MarketplaceCategoryFetcher = Callable[
@@ -89,11 +93,19 @@ async def main() -> int:
             )
             continue
         batch = result.batch
-        print(
-            f"{batch.marketplace}: source={batch.source_total}, "
-            f"parsed={len(batch.offers)}, "
-            f"snapshot-ready={len(batch.snapshot_ready_offers)}"
+        source_items_seen = (
+            batch.source_items_seen
+            if batch.source_items_seen is not None
+            else len(batch.offers)
         )
+        print(
+            f"{batch.marketplace}: source-seen={source_items_seen}, "
+            f"source-total={batch.source_total}, "
+            f"parsed={len(batch.offers)}, "
+            f"snapshot-ready={len(batch.snapshot_ready_offers)}, "
+            f"complete={batch.source_snapshot_complete}"
+        )
+        print(f"  completeness: {batch.source_snapshot_reason}")
 
     if len(batches) < 2:
         print("At least two successful marketplace sources are required.")
@@ -166,7 +178,17 @@ async def main() -> int:
             "so this run is not full three-source evidence."
         )
         return 1
-    print("Status: complete three-source evidence.")
+    incomplete_snapshots = tuple(
+        batch.marketplace for batch in batches if not batch.source_snapshot_complete
+    )
+    if incomplete_snapshots:
+        print(
+            "Status: all three sources fetched; missing-offer reconciliation "
+            "remains disabled for partial sources: "
+            f"{', '.join(incomplete_snapshots)}."
+        )
+    else:
+        print("Status: complete three-source snapshot evidence.")
     return 0
 
 
@@ -232,10 +254,12 @@ def _safe_error_summary(error: Exception) -> str:
 async def _fetch_ggsel(http_client: HttpClient) -> MarketplaceCategoryBatch:
     fetcher = GGSelFetcher(http_client)
     html = await fetcher.fetch_html(GGSEL_CATEGORY_URL)
-    raw_offers = GGSelExtractor().extract(html)
+    extraction = GGSelExtractor().extract_with_evidence(html)
+    raw_offers = extraction.items
     normalizer = OfferNormalizer(marketplace="ggsel")
     offers = tuple(normalizer.normalize(offer) for offer in raw_offers)
-    return _batch("ggsel", len(raw_offers), offers)
+    source_total = extraction.evidence.expected_items or len(raw_offers)
+    return _batch("ggsel", source_total, offers, extraction.evidence)
 
 
 async def _fetch_playerok(http_client: HttpClient) -> MarketplaceCategoryBatch:
@@ -248,21 +272,45 @@ async def _fetch_playerok(http_client: HttpClient) -> MarketplaceCategoryBatch:
     source_total = _playerok_source_total(raw_response)
     extracted = PlayerokExtractor().extract(raw_response)
     offers = tuple(PlayerokNormalizer().normalize(extracted))
-    return _batch("playerok", source_total, offers)
+    return _batch(
+        "playerok",
+        source_total,
+        offers,
+        SourceSnapshotEvidence(
+            source_items=len(extracted),
+            parsed_items=len(offers),
+            expected_items=source_total,
+            complete=source_total == len(extracted) == len(offers),
+            reason=(
+                "Playerok declared total and extracted item count match."
+                if source_total == len(extracted) == len(offers)
+                else (
+                    f"Playerok returned {len(extracted)} of {source_total} "
+                    "declared items."
+                )
+            ),
+        ),
+    )
 
 
 async def _fetch_funpay(http_client: HttpClient) -> MarketplaceCategoryBatch:
     fetcher = FunPayFetcher(http_client)
     html = await fetcher.fetch(FUNPAY_CATEGORY_URL)
-    extracted = FunPayExtractor().extract(html)
-    offers = tuple(FunPayNormalizer().normalize(extracted))
-    return _batch("funpay", len(extracted), offers)
+    extraction = FunPayExtractor().extract_with_evidence(html)
+    offers = tuple(FunPayNormalizer().normalize(list(extraction.items)))
+    return _batch(
+        "funpay",
+        extraction.evidence.source_items,
+        offers,
+        extraction.evidence,
+    )
 
 
 def _batch(
     marketplace: str,
     source_total: int,
     offers: tuple[ParsedOffer, ...],
+    evidence: SourceSnapshotEvidence | None = None,
 ) -> MarketplaceCategoryBatch:
     return MarketplaceCategoryBatch(
         marketplace=marketplace,
@@ -270,6 +318,15 @@ def _batch(
         offers=offers,
         snapshot_ready_offers=tuple(
             offer for offer in offers if _is_snapshot_ready(offer)
+        ),
+        source_items_seen=(
+            evidence.source_items if evidence is not None else len(offers)
+        ),
+        source_snapshot_complete=(evidence.complete if evidence is not None else False),
+        source_snapshot_reason=(
+            evidence.reason
+            if evidence is not None
+            else "Source completeness evidence was not collected."
         ),
     )
 

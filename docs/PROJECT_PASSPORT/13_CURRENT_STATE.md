@@ -693,13 +693,15 @@ reactivate later sightings, reject stale state ordering, and retain legacy rows
 without inventing source ownership. Reconciliation shares the existing
 ingestion transaction and an empty result cannot mass-deactivate offers.
 
-Current runtime factories record observations but do not declare their result a
-complete source snapshot, so missing-offer deactivation remains off. This is
-required because the verified Playerok path currently reads only the first
-`20` results from a larger cursor-paginated response. Isolated PostgreSQL 17.10
-verification passed `16/16`; full Pytest is `613 passed, 60 skipped` and MyPy is
-clean across `502` files. The local six-offer review catalog has five live links
-and one confirmed stale legacy listing, FunPay `80145738` (HTTP 404).
+Runtime ingestion now carries per-run source completeness evidence for GGSEL
+and FunPay. Explicit incomplete evidence overrides the compatibility flag and
+prevents missing-offer reconciliation. The 2026-10-29 live check reports GGSEL
+`60/110` and Playerok `20/194`, both partial, while FunPay passes structural
+coverage at `1406/1406`. FunPay can therefore reconcile missing observations
+inside one integration; GGSEL and Playerok remain fail-closed. The local
+six-offer review catalog still has one confirmed stale legacy listing, FunPay
+`80145738` (HTTP 404), pending an authenticated manual lifecycle command in its
+owning tenant database.
 
 Revision `0021_offer_manual_availability` now adds an independent audited manual
 lifecycle. Catalog reviewers can retire or restore one offer using a reason,
@@ -719,6 +721,11 @@ Marketplace and external ID lookup, current state/version, mandatory reason,
 explicit confirmation and safe idempotent retry are implemented. Browser
 verification passes `72` fixture-only checks; full Pytest is `637 passed, 60
 skipped`, and no claim is made that the pending FunPay row was mutated.
+
+Per-run marketplace source evidence adds eight focused regression checks; the
+current full project result is `645 passed, 60 skipped`, with MyPy clean across
+`491` source files and focused Ruff/format clean. The live evidence command
+fetched all three marketplaces without mutating catalog or availability state.
 
 ## Architecture Review
 

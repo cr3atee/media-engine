@@ -29,6 +29,7 @@ from app.parsers.ggsel_extractor import GGSelExtractor
 from app.parsers.ggsel_fetcher import GGSelFetcher
 from app.parsers.models import ParsedOffer
 from app.parsers.normalizers import OfferNormalizer
+from app.parsers.source_snapshot import SourceSnapshotEvidence
 from app.repositories.memory import MemoryMarketEventRepository, MemoryOfferRepository
 from app.repositories.offers import OfferRepository
 from app.repositories.postgres import (
@@ -46,6 +47,7 @@ from app.services.marketplace_application_runner import (
     MarketplaceApplicationRunner,
     MarketplaceRunResult,
 )
+from app.services.marketplace_ingestion import MarketplaceIngestionResult
 from app.services.marketplace_pipeline import MarketplacePipeline
 from app.services.price_drop_market_event_builder import PriceDropMarketEventBuilder
 from app.services.repository_scope import create_memory_repository_scope
@@ -133,6 +135,25 @@ class RecordingIngestion:
         if self._timeline is not None:
             self._timeline.append("ingestion")
         return self._offers
+
+
+class RecordingEvidenceIngestion:
+    """Return normalized offers with explicit per-run source evidence."""
+
+    def __init__(
+        self,
+        offers: Sequence[ParsedOffer],
+        evidence: SourceSnapshotEvidence,
+    ) -> None:
+        self._result = MarketplaceIngestionResult(
+            offers=tuple(offers),
+            evidence=evidence,
+        )
+
+    async def __call__(self, url: str) -> MarketplaceIngestionResult:
+        """Return one deterministic evidence-bearing ingestion result."""
+        del url
+        return self._result
 
 
 class RecordingSnapshotBuilder(SnapshotBuilder):
@@ -700,6 +721,103 @@ def test_partial_integration_snapshot_never_deactivates_missing_offers() -> None
     result = run_async(partial_runner.run("demo://ggsel"))
 
     assert result.offers_deactivated == 0
+    assert [offer.external_id for offer in run_async(provider.offers.list_all())] == [
+        "1001",
+        "1002",
+    ]
+
+
+def test_explicit_complete_evidence_drives_offer_reconciliation() -> None:
+    """Per-run complete evidence enables missing-offer deactivation."""
+    provider = create_memory_provider()
+    scope_factory = create_memory_repository_scope(provider)
+    integration_id = UUID("22000000-0000-4000-8000-000000000505")
+    first_seen = datetime(2026, 10, 27, 10, 0, tzinfo=UTC)
+    first_runner = MarketplaceApplicationRunner(
+        marketplace=Marketplace.GGSEL,
+        ingestion=RecordingEvidenceIngestion(
+            (make_offer(external_id="1001"), make_offer(external_id="1002")),
+            SourceSnapshotEvidence(
+                source_items=2,
+                parsed_items=2,
+                complete=True,
+                reason="Complete test source.",
+            ),
+        ),
+        repository_scope_factory=scope_factory,
+        pipeline=make_pipeline(),
+        integration_id=integration_id,
+        clock=lambda: first_seen,
+    )
+    second_runner = MarketplaceApplicationRunner(
+        marketplace=Marketplace.GGSEL,
+        ingestion=RecordingEvidenceIngestion(
+            (make_offer(external_id="1001"),),
+            SourceSnapshotEvidence(
+                source_items=1,
+                parsed_items=1,
+                complete=True,
+                reason="Complete test source.",
+            ),
+        ),
+        repository_scope_factory=scope_factory,
+        pipeline=make_pipeline(),
+        integration_id=integration_id,
+        clock=lambda: first_seen + timedelta(minutes=5),
+    )
+
+    run_async(first_runner.run("demo://ggsel"))
+    result = run_async(second_runner.run("demo://ggsel"))
+
+    assert result.offers_deactivated == 1
+    assert result.source_items == 1
+    assert result.source_snapshot_complete is True
+    assert result.source_snapshot_reason == "Complete test source."
+
+
+def test_explicit_incomplete_evidence_overrides_legacy_complete_flag() -> None:
+    """Collector evidence fails closed even if the legacy flag is true."""
+    provider = create_memory_provider()
+    scope_factory = create_memory_repository_scope(provider)
+    integration_id = UUID("22000000-0000-4000-8000-000000000506")
+    first_seen = datetime(2026, 10, 27, 10, 0, tzinfo=UTC)
+    complete_runner = MarketplaceApplicationRunner(
+        marketplace=Marketplace.GGSEL,
+        ingestion=RecordingIngestion(
+            (make_offer(external_id="1001"), make_offer(external_id="1002"))
+        ),
+        repository_scope_factory=scope_factory,
+        pipeline=make_pipeline(),
+        integration_id=integration_id,
+        source_snapshot_complete=True,
+        clock=lambda: first_seen,
+    )
+    partial_runner = MarketplaceApplicationRunner(
+        marketplace=Marketplace.GGSEL,
+        ingestion=RecordingEvidenceIngestion(
+            (make_offer(external_id="1001"),),
+            SourceSnapshotEvidence(
+                source_items=1,
+                parsed_items=1,
+                expected_items=2,
+                complete=False,
+                reason="Only the first page was returned.",
+            ),
+        ),
+        repository_scope_factory=scope_factory,
+        pipeline=make_pipeline(),
+        integration_id=integration_id,
+        source_snapshot_complete=True,
+        clock=lambda: first_seen + timedelta(minutes=5),
+    )
+
+    run_async(complete_runner.run("demo://ggsel"))
+    result = run_async(partial_runner.run("demo://ggsel"))
+
+    assert result.offers_deactivated == 0
+    assert result.source_items_expected == 2
+    assert result.source_snapshot_complete is False
+    assert result.source_snapshot_reason == "Only the first page was returned."
     assert [offer.external_id for offer in run_async(provider.offers.list_all())] == [
         "1001",
         "1002",

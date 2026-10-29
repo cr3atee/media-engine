@@ -72,3 +72,81 @@ def test_ggsel_extractor_ignores_incomplete_payloads() -> None:
     """
 
     assert GGSelExtractor().extract(html) == []
+
+
+def test_ggsel_extractor_marks_partial_declared_listing_incomplete() -> None:
+    """A first page smaller than GGSEL's declared total is not reconcilable."""
+    html = """
+    <html><body><script>
+      self.__next_f.push([{
+        "items": [{
+          "id_goods": 1,
+          "name": "Minecraft Premium",
+          "url": "minecraft-premium-1",
+          "seller_name": "Seller",
+          "id_section": 2,
+          "price_wmr": "790"
+        }],
+        "total": 2
+      }])
+    </script></body></html>
+    """
+
+    extraction = GGSelExtractor().extract_with_evidence(html)
+
+    assert len(extraction.items) == 1
+    assert extraction.evidence.source_items == 1
+    assert extraction.evidence.parsed_items == 1
+    assert extraction.evidence.expected_items == 2
+    assert extraction.evidence.complete is False
+    assert extraction.evidence.reason == "GGSEL embedded 1 of 2 declared products."
+
+
+def test_ggsel_extractor_marks_fully_covered_listing_complete() -> None:
+    """Matching identities and source total prove a bounded GGSEL snapshot."""
+    html = """
+    <html><body><script>
+      self.__next_f.push([{
+        "items": [{
+          "id_goods": 1,
+          "name": "Minecraft Premium",
+          "url": "minecraft-premium-1",
+          "seller_name": "Seller",
+          "id_section": 2,
+          "price_wmr": "790"
+        }],
+        "total": 1
+      }])
+    </script></body></html>
+    """
+
+    extraction = GGSelExtractor().extract_with_evidence(html)
+
+    assert extraction.evidence.complete is True
+    assert extraction.evidence.expected_items == 1
+
+
+def test_ggsel_extractor_rejects_show_more_even_when_total_matches() -> None:
+    """An explicit pagination control always keeps reconciliation disabled."""
+    html = """
+    <html><body><script>
+      self.__next_f.push([{
+        "items": [{
+          "id_goods": 1,
+          "name": "Minecraft Premium",
+          "url": "minecraft-premium-1",
+          "seller_name": "Seller",
+          "id_section": 2,
+          "price_wmr": "790"
+        }],
+        "total": 1
+      }])
+    </script><button data-test="showMore">More</button></body></html>
+    """
+
+    extraction = GGSelExtractor().extract_with_evidence(html)
+
+    assert extraction.evidence.complete is False
+    assert extraction.evidence.reason == (
+        "GGSEL response exposes a show-more pagination control."
+    )

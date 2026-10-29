@@ -364,8 +364,10 @@ This document tracks only work that is reflected by the current repository state
 - Market Terminal offer-availability foundation: revision
   `0020_offer_source_observations` adds source-scoped durable observations,
   all-source active visibility, reactivation, ordering protection, and atomic
-  rollback. Runtime missing-item reconciliation remains deliberately disabled
-  until collector pagination proves a complete source snapshot.
+  rollback. Per-run evidence now enables reconciliation only for a structurally
+  complete FunPay showcase. Live GGSEL `60/110` and Playerok `20/194` evidence
+  remains partial, so those adapters stay fail-closed until their full-source
+  contracts are verified.
 - Market Terminal manual offer lifecycle: revision
   `0021_offer_manual_availability` adds authorized, reasoned, versioned and
   idempotent retire/restore commands with immutable audit. Retired offers leave

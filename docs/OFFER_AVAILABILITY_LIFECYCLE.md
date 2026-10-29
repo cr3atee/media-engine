@@ -10,10 +10,19 @@ adds an independent operator-controlled `active`/`retired` lifecycle with
 optimistic versions and immutable admin audit records. Public repository reads
 require both manual availability and at least one active known source.
 
-Automatic missing-offer reconciliation is intentionally disabled for current
-runtime factories. It may be enabled for an integration only when its ingestion
-result proves that the observed snapshot is complete. A successful HTTP request
-or a non-empty first page is not proof of completeness.
+Automatic missing-offer reconciliation is now controlled by evidence from each
+individual ingestion result. GGSEL and FunPay extractors report source count,
+parsed count, an optional declared total, a completeness decision, and its
+reason. A successful HTTP request or a non-empty first page is never treated as
+proof of completeness.
+
+The 2026-10-29 live category check reports GGSEL `60/110` and Playerok `20/194`,
+so both are partial and cannot deactivate missing offers. FunPay reports
+`1406/1406`; its closed document contains exactly one unpaginated showcase and
+every unique source offer identity is represented by an extracted offer. The
+FunPay runtime therefore enables integration-scoped reconciliation for that
+response. Playerok runtime remains fail-closed until its already bounded cursor
+traversal returns the same explicit evidence contract.
 
 ## Problem
 
@@ -47,8 +56,9 @@ source.
 - Reconciliation and downstream snapshot/event processing share one repository
   transaction and roll back together.
 - An empty result never mass-deactivates offers.
-- Missing identities are reconciled only when the runner explicitly declares a
-  complete source snapshot.
+- Missing identities are reconciled only when the ingestion result carries
+  explicit complete-source evidence. An explicit incomplete result overrides
+  the legacy runner flag.
 - Public products, offers, comparisons, and review queues consume active offers
   through the existing repository contract; no UI-specific filtering was added.
 - An authorized catalog reviewer may retire or restore an offer through the
@@ -82,8 +92,9 @@ rollback, fresh-engine persistence, and public-read filtering.
 
 Alembic clean upgrade through `0020`, legacy-row backfill into `0021`, `current`,
 `check`, downgrade to `0020`, re-upgrade to head, and offline SQL generation
-pass. Full project verification reports `637 passed, 60 skipped`; MyPy reports
-`489` source files without errors; focused Ruff and Ruff format pass.
+pass. After source-evidence integration, full project verification reports `645
+passed, 60 skipped`; MyPy reports `491` source files without errors; focused
+Ruff and Ruff format pass.
 
 The real cabinet browser verifier passes `72` checks with isolated API fixtures,
 including the active-to-retired operator flow, required evidence, confirmation
@@ -124,15 +135,19 @@ missing from the automated 403 alone. No offer record was mutated by the audit.
 
 ## Remaining Work
 
-1. Make each collector return explicit pagination/completeness evidence.
-2. Traverse Playerok cursor pagination; the current verified path reads the
-   first `20` items while the response can report a larger total.
-3. Enable `source_snapshot_complete` only for adapters whose complete-source
-   behavior is verified.
+1. Traverse all GGSEL category pages through a verified public contract; the
+   current HTML embeds only the first `60` of `110` products.
+2. Add the explicit evidence result to Playerok runtime ingestion and verify
+   that the merged bounded cursor result matches `totalCount` before enabling
+   reconciliation.
+3. Keep the FunPay structural contract under saved-response and live drift
+   verification; any pagination, truncated document, malformed identity, or
+   parser/source mismatch must fail closed.
 4. Use the authenticated cabinet lifecycle panel to retire FunPay `80145738` in
    the owning tenant database and retain its reason and immutable action ID as
    release evidence.
 5. Re-run the outbound-link audit immediately before public release.
 
-Until those items are complete, offer availability is persistence-ready but is
-not a passed unattended-production release gate.
+FunPay source reconciliation is runtime-ready under the verified contract.
+Cross-marketplace offer availability remains an incomplete unattended-production
+release gate until GGSEL and Playerok provide equivalent evidence.

@@ -115,3 +115,65 @@ def test_funpay_extractor_uses_buyer_visible_price_precision() -> None:
     offers = FunPayExtractor().extract(html)
 
     assert offers[0].price == Decimal("329.94")
+
+
+def test_funpay_extractor_proves_closed_unpaginated_showcase_complete() -> None:
+    """A structurally closed showcase with full ID coverage is reconcilable."""
+    html = """
+    <html><body>
+      <div class="tc showcase-table">
+        <a href="/lots/offer?id=1" class="tc-item" data-offer="1">
+          <div class="tc-desc-text">Minecraft Premium</div>
+          <div class="tc-price" data-s="790"><div>790 ₽</div></div>
+        </a>
+      </div>
+    </body></html>
+    """
+
+    extraction = FunPayExtractor().extract_with_evidence(html)
+
+    assert len(extraction.items) == 1
+    assert extraction.evidence.source_items == 1
+    assert extraction.evidence.parsed_items == 1
+    assert extraction.evidence.complete is True
+
+
+def test_funpay_extractor_rejects_paginated_showcase() -> None:
+    """Visible pagination prevents a listing from driving deactivation."""
+    html = """
+    <html><body>
+      <div class="tc showcase-table">
+        <a href="/lots/offer?id=1" class="tc-item" data-offer="1">
+          <div class="tc-desc-text">Minecraft Premium</div>
+          <div class="tc-price" data-s="790"><div>790 ₽</div></div>
+        </a>
+      </div>
+      <nav class="pagination"><a rel="next" href="?page=2">Next</a></nav>
+    </body></html>
+    """
+
+    extraction = FunPayExtractor().extract_with_evidence(html)
+
+    assert extraction.evidence.complete is False
+    assert extraction.evidence.reason == (
+        "FunPay response exposes a pagination control."
+    )
+
+
+def test_funpay_extractor_rejects_unclosed_listing_document() -> None:
+    """A truncated response remains safe from missing-offer reconciliation."""
+    html = """
+    <html><body><div class="tc showcase-table">
+      <a href="/lots/offer?id=1" class="tc-item" data-offer="1">
+        <div class="tc-desc-text">Minecraft Premium</div>
+        <div class="tc-price" data-s="790"><div>790 ₽</div></div>
+      </a>
+    </div>
+    """
+
+    extraction = FunPayExtractor().extract_with_evidence(html)
+
+    assert extraction.evidence.complete is False
+    assert extraction.evidence.reason == (
+        "FunPay response is not a closed HTML document."
+    )

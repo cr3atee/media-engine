@@ -63,7 +63,7 @@ def create_marketplace_runner_factories(
     ) -> MarketplaceApplicationRunner:
         return MarketplaceApplicationRunner(
             marketplace=Marketplace.GGSEL,
-            ingestion=pipeline.fetch_and_normalize,
+            ingestion=pipeline.fetch_and_normalize_with_evidence,
             repository_scope_factory=repository_scope_factory,
             pipeline=pipeline,
             tenant_id=integration.tenant_id,
@@ -97,7 +97,7 @@ def create_marketplace_runner_factories(
         )
         return MarketplaceApplicationRunner(
             marketplace=Marketplace.FUNPAY,
-            ingestion=funpay_pipeline.run,
+            ingestion=funpay_pipeline.ingest,
             repository_scope_factory=repository_scope_factory,
             pipeline=pipeline,
             tenant_id=integration.tenant_id,

@@ -7,15 +7,15 @@ candidate verification.
 
 ## Immediate
 
-- Complete remaining source-specific page traversal and expose an explicit
-  source-snapshot completeness result before enabling missing-offer
-  reconciliation in runtime factories. Playerok now follows all bounded
-  GraphQL cursors and fails on truncation; source-scope completeness is still
-  not asserted. A partial collector must never be treated as a complete catalog.
-- Add an authorized immutable-audit operator command to retire or restore a
-  manually seeded offer while preserving snapshots, events, and review
-  evidence. Use it to resolve the confirmed FunPay `80145738` HTTP 404 in the
-  isolated review catalog; do not delete or silently rewrite the row in SQL.
+- Complete GGSEL page traversal and add explicit completeness evidence to the
+  Playerok runtime result. Per-run evidence is now wired for GGSEL and FunPay:
+  the 2026-10-29 live check correctly keeps GGSEL `60/110` and Playerok `20/194`
+  partial while accepting the structurally complete FunPay `1406/1406`
+  showcase. A partial collector must never be treated as a complete catalog.
+- Use the implemented authorized immutable-audit lifecycle command and cabinet
+  panel to retire the confirmed FunPay `80145738` HTTP 404 in its owning tenant
+  database. Preserve snapshots, events and review evidence; do not delete or
+  silently rewrite the row in SQL.
 - Execute human decisions for the prepared five-offer EPIC 23 launch batch,
   then bootstrap a curated canonical catalog and confirmed same-product
   marketplace links. Current saved real payloads have no `AUTO_MATCH` or

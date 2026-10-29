@@ -6,6 +6,15 @@ This document records notable Project Passport updates.
 
 ## Unreleased
 
+- Added per-run marketplace source completeness evidence and fail-closed
+  reconciliation orchestration. GGSEL and FunPay now report source coverage,
+  optional declared totals, decisions, and reasons; explicit incomplete
+  evidence overrides the compatibility flag. The 2026-10-29 live check records
+  GGSEL `60/110`, Playerok `20/194`, and structurally complete FunPay
+  `1406/1406`, so only FunPay enables missing-offer reconciliation. Full Pytest
+  reports `645 passed, 60 skipped`; MyPy checks `491` files; focused Ruff and
+  format pass.
+
 - Connected the audited marketplace-offer lifecycle to the authenticated Market
   Terminal cabinet. Reviewers can look up one tenant-owned offer by marketplace
   and external ID, inspect its state/version, provide mandatory evidence and

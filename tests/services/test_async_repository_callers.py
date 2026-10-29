@@ -31,6 +31,7 @@ from app.parsers.normalizers import OfferNormalizer
 from app.parsers.playerok_extractor import PlayerokExtractor
 from app.parsers.playerok_fetcher import PlayerokFetcher
 from app.parsers.playerok_normalizer import PlayerokNormalizer
+from app.parsers.source_snapshot import SourceExtraction, SourceSnapshotEvidence
 from app.repositories.canonical_products import CanonicalProductRepository
 from app.repositories.memory import (
     MemoryGeneratedContentRepository,
@@ -266,7 +267,15 @@ class StaticGGSelExtractor:
 
     def extract(self, html: str) -> list[RawMarketplaceOffer]:
         """Return one raw marketplace offer."""
-        return [
+        return list(self.extract_with_evidence(html).items)
+
+    def extract_with_evidence(
+        self,
+        html: str,
+    ) -> SourceExtraction[RawMarketplaceOffer]:
+        """Return one offer with explicit complete test-source evidence."""
+        del html
+        offers = (
             RawMarketplaceOffer(
                 id_goods=1001,
                 name="Minecraft Premium",
@@ -276,7 +285,17 @@ class StaticGGSelExtractor:
                 price=790.0,
                 currency="RUB",
             ),
-        ]
+        )
+        return SourceExtraction(
+            items=offers,
+            evidence=SourceSnapshotEvidence(
+                source_items=1,
+                parsed_items=1,
+                expected_items=1,
+                complete=True,
+                reason="Static test source is complete.",
+            ),
+        )
 
 
 class SequencedSnapshotBuilder(SnapshotBuilder):
