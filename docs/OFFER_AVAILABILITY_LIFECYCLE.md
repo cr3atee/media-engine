@@ -122,11 +122,11 @@ The six outbound links in the isolated local review catalog were checked on
 
 This local review database contains six manually seeded offers and no
 `marketplace_integrations`, so revision `0020` cannot safely invent observation
-ownership for them. FunPay `80145738` remains an explicit seed-catalog blocker.
-The required authorized API workflow now exists, but that specific row has not
-been claimed as corrected: an authenticated reviewer must execute the retire
-command against the owning tenant database. Direct SQL and fabricated
-replacement URLs remain forbidden.
+ownership for them. On 2026-10-29, an authenticated reviewer retired FunPay
+`80145738` through the revision `0021` API with required evidence, expected
+version, and idempotency key. The replay returned the same action, ordinary
+reads now hide the link, and the offer, canonical decision, and history remain
+stored. No direct SQL or fabricated replacement URL was used.
 
 A repeat automated GET audit on 2026-10-28 returned HTTP 200 for both GGSEL
 offers and FunPay `25007196`, HTTP 404 again for FunPay `80145738`, and HTTP 403
@@ -134,6 +134,14 @@ for both Playerok URLs from the non-browser client. The prior interactive audit
 had opened both Playerok pages successfully, so those protected URLs require a
 manual browser check immediately before release; they are not reclassified as
 missing from the automated 403 alone. No offer record was mutated by the audit.
+
+The 2026-10-29 post-review audit returned HTTP 200 for FunPay `25007196`, HTTP
+404 for the already identified FunPay `80145738`, HTTP 401 for both GGSEL URLs,
+and HTTP 403 for both Playerok URLs. Only the repeated unambiguous 404 was used
+for retirement. The protected GGSEL and Playerok responses remain manual
+browser checks rather than false missing-offer evidence. Read-only PostgreSQL
+verification then passed `45/45` across decision integrity, active visibility,
+public comparison truth, retired-link exclusion, and fresh-engine persistence.
 
 ## Remaining Work
 
@@ -143,10 +151,9 @@ missing from the automated 403 alone. No offer record was mutated by the audit.
 2. Keep the GGSEL pagination and FunPay structural contracts under
    saved-response and live drift verification; any pagination, truncated
    document, malformed identity, or parser/source mismatch must fail closed.
-3. Use the authenticated cabinet lifecycle panel to retire FunPay `80145738` in
-   the owning tenant database and retain its reason and immutable action ID as
-   release evidence.
-4. Re-run the outbound-link audit immediately before public release.
+3. Re-run the outbound-link audit immediately before public release and repeat
+   the authorized retirement only if the same stale row exists in the target
+   deployment.
 
 GGSEL and FunPay source reconciliation are runtime-ready under their verified
 contracts. Cross-marketplace offer availability remains an incomplete

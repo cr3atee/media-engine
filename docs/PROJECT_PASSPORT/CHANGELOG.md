@@ -6,6 +6,15 @@ This document records notable Project Passport updates.
 
 ## Unreleased
 
+- Completed the durable EPIC 23 post-review gate for the isolated catalog
+  workspace. An authenticated, versioned, idempotent command retired the
+  repeated FunPay `80145738` HTTP 404 while preserving its offer, canonical
+  decision, and history. The new read-only verifier passes `45/45` across two
+  canonical products, six immutable decisions, five active links, one retired
+  link, exact public projection, currency-safe comparison, and fresh-engine
+  persistence. Protected GGSEL `401` and Playerok `403` responses were not
+  misclassified as missing listings; no production mutation is claimed.
+
 - Completed full-source marketplace traversal evidence. GGSEL now uses the
   current public `/buybox/goods` contract with bounded page traversal, stable
   totals, unique identities, and fail-closed drift checks; live verification
@@ -32,7 +41,8 @@ This document records notable Project Passport updates.
   clears on tenant/session loss and retains one idempotency key only for an
   ambiguous retry. The isolated browser verifier passes `72` checks; full
   Pytest reports `637 passed, 60 skipped`, MyPy checks `489` files, and focused
-  Ruff/format pass. The real FunPay `80145738` action remains pending.
+  Ruff/format pass. At this milestone, the real FunPay `80145738` action was
+  still pending; the latest entry records its later completion.
 
 - Added the audited manual marketplace-offer lifecycle at revision
   `0021_offer_manual_availability`. Authorized catalog reviewers can retire and
@@ -42,8 +52,8 @@ This document records notable Project Passport updates.
   canonical links and history. Isolated PostgreSQL 17 verification passes
   `30/30`; migration backfill, downgrade/re-upgrade, current/check and offline
   SQL pass. Full Pytest reports `636 passed, 60 skipped`, MyPy checks `489`
-  files, and focused Ruff/format pass. The known FunPay `80145738` listing still
-  awaits command execution in its owning tenant database.
+  files, and focused Ruff/format pass. At this milestone, the known FunPay
+  `80145738` listing still awaited command execution.
 
 - Added the read-only Playerok VDS connector foundation. Tenant-owned
   `env://` references now resolve to tenant/integration-scoped deployment
@@ -65,9 +75,9 @@ This document records notable Project Passport updates.
   passes `111` checks (`220` across all three browser suites), while branded
   asset SHA-256 checks protect all five source-attributed visuals. Full Pytest
   reports `618 passed, 60 skipped`; MyPy checks `502` files; focused Ruff and
-  format pass. Legal asset permission, physical-device/screen-reader review,
-  protected Playerok links, and stale FunPay `80145738` remain explicit manual
-  or external release gates.
+  format pass. At this milestone, legal asset permission,
+  physical-device/screen-reader review, protected Playerok links, and stale
+  FunPay `80145738` remained explicit manual or external release gates.
 
 - Added source-scoped marketplace offer availability at revision
   `0020_offer_source_observations`. Memory/PostgreSQL repositories now retain
@@ -78,8 +88,8 @@ This document records notable Project Passport updates.
   collectors. Isolated PostgreSQL 17.10 verification passed `16/16`; Alembic
   lifecycle/offline SQL, full Pytest (`613 passed, 60 skipped`), MyPy (`502`
   files), focused Ruff and format pass. A manual link audit found `5/6` current
-  local catalog URLs live; legacy FunPay `80145738` remains an explicit 404
-  requiring an audited operator correction.
+  local catalog URLs live; legacy FunPay `80145738` was an explicit 404
+  requiring an audited operator correction at that milestone.
 
 - Completed Market Terminal package 6 technical UI acceptance with `213`
   repeatable browser checks across catalog, product, cabinet, product roles,

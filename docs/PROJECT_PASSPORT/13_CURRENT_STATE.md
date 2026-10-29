@@ -656,8 +656,10 @@ The bounded review check exposes five deduplicated proposals and creates no
 catalog mutation. Current Playerok cape-bundle evidence must not be linked to
 base-game offers. A loopback-only PostgreSQL runner now applies the existing
 migrations, seeds the batch idempotently, and retains authenticated operator
-decisions across application restarts. Durable source-page inspection and
-explicit operator decisions remain the next catalog-launch action.
+decisions across application restarts. The retained isolated workspace now
+contains two canonical products, six immutable decisions, five active links,
+and one retired confirmed link. Read-only post-review verification passes
+`45/45`, including public comparison truth and fresh-engine persistence.
 
 ## Market Terminal Diagnostics
 
@@ -702,9 +704,10 @@ final-page state, `totalCount`, parser coverage, and unique identities, but the
 current unauthenticated live request was blocked by access protection. GGSEL and
 FunPay can therefore reconcile complete integration runs; Playerok remains
 fail-closed pending guarded authorized-session verification on the target VDS.
-The local six-offer review catalog still has one confirmed stale legacy listing,
-FunPay `80145738` (HTTP 404), pending an authenticated manual lifecycle command
-in its owning tenant database.
+The local six-offer review catalog had one confirmed stale legacy listing,
+FunPay `80145738` (HTTP 404). An authenticated reviewer retired it through the
+manual lifecycle API in the isolated review database; the idempotent replay and
+immutable audit action were retained without deleting history.
 
 Revision `0021_offer_manual_availability` now adds an independent audited manual
 lifecycle. Catalog reviewers can retire or restore one offer using a reason,
@@ -715,15 +718,16 @@ stored. PostgreSQL 17 verification passes `30/30`, including tenant isolation,
 concurrent replay, rollback and fresh-engine persistence. Alembic backfill,
 downgrade/re-upgrade, current/check and offline SQL pass; full Pytest is `636
 passed, 60 skipped`, MyPy is clean across `489` files, and focused Ruff/format
-pass. FunPay `80145738` remains pending an authenticated execution of this
-command in the owning tenant database.
+pass. FunPay `80145738` is now absent from ordinary and public reads in the
+isolated review database; this does not claim a production mutation.
 
 The working Market Terminal cabinet now exposes this lifecycle through a
 tenant-scoped operator panel rather than requiring a hand-built API call.
 Marketplace and external ID lookup, current state/version, mandatory reason,
 explicit confirmation and safe idempotent retry are implemented. Browser
 verification passes `72` fixture-only checks; full Pytest is `637 passed, 60
-skipped`, and no claim is made that the pending FunPay row was mutated.
+skipped`. The separate durable post-review verifier confirms the real isolated
+workspace state without mutating it.
 
 Complete-source pagination and evidence add fifteen focused regression checks;
 the current full project result is `660 passed, 60 skipped`, with MyPy clean

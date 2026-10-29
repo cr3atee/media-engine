@@ -103,5 +103,15 @@ from category alignment, seller identity, or title similarity alone.
 
 ## Current Decision State
 
-No candidate in this document is approved. No canonical product, offer link,
-alias, or immutable review decision was created from this report.
+The source-evidence report itself still grants no automatic approval. A human
+reviewer subsequently used the isolated PostgreSQL review workspace to record
+six immutable confirmed decisions across two canonical products. Five links
+remain active; FunPay `80145738` was retired after a repeated HTTP 404 without
+deleting its decision or history.
+
+The read-only post-review verifier passes `45/45`: decisions reference retained
+products, active links have confirmed evidence, retired links are absent from
+ordinary and public reads, mixed currencies produce `currency_mismatch`, and a
+fresh engine reproduces the same reviewed catalog. These decisions apply only
+to that bounded isolated workspace. They do not auto-approve the remaining
+saved or live marketplace offers and are not evidence of a production rollout.

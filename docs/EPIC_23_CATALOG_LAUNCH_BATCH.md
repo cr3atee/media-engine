@@ -107,24 +107,36 @@ tenant boundary.
 - `python scripts/run_catalog_review_postgres.py --aligned-live-data --check`:
   passed twice against isolated PostgreSQL 17 at migration `0017`; both runs
   retained exactly five offers and five proposals with zero links or decisions.
+- `python scripts/verify_epic23_post_review.py`: passed `45/45` read-only checks
+  against the retained isolated PostgreSQL 17 review database at revision
+  `0021`. Two canonical products, six immutable decisions, five active links,
+  and one retired confirmed link survived a fresh engine. Public products,
+  offers, and comparisons used exactly the active reviewed set.
 
 ## Status
 
-Launch-batch preparation and the durable local operator workspace are complete.
-Product identity approval is deliberately not complete: it requires a human
-operator to inspect current source pages and record decisions. Until then, the
-public catalog must not claim these offers are the same product.
+Launch-batch preparation and one bounded human review are complete in the
+isolated local workspace. The retained result contains two canonical products,
+six immutable decisions, and five currently active offer links. This is valid
+integration evidence for the decision-to-public-read path; it is not a claim
+that the same catalog has been deployed to production or that unresolved offers
+outside this bounded batch have been approved.
 
 ## Local Post-review Link Audit
 
-The isolated local review workspace later contained six linked offers across
-two canonical products. A direct availability audit on 2026-10-27 returned HTTP
+The isolated local review workspace contained six confirmed links across two
+canonical products. A direct availability audit on 2026-10-27 returned HTTP
 200 for both GGSEL links, both Playerok links, and FunPay `25007196`. FunPay
 `80145738` returned HTTP 404.
 
 The workspace has no persisted marketplace integration records, so the
 source-observation migration cannot infer ownership for those manually seeded
-legacy rows. Revision `0021_offer_manual_availability` now provides the required
-authorized, versioned, idempotent retire/restore command with atomic immutable
-audit. The stale link is still not release-approved until a reviewer executes
-that command against the owning tenant database; direct SQL remains forbidden.
+legacy rows. On 2026-10-29, an authenticated reviewer retired FunPay
+`80145738` through the authorized, versioned, idempotent API command. The replay
+returned the same result, immutable action
+`04dcb553-f35a-48b6-9310-0a42786de930` was retained, and ordinary repository
+and public reads excluded the link without deleting its offer, decision, or
+history. Automated repeat checks returned `401` for GGSEL and `403` for
+Playerok; these protected responses were not misclassified as missing offers.
+The same action must be repeated only if this stale row exists in a future
+target deployment; direct SQL and fabricated replacement URLs remain forbidden.

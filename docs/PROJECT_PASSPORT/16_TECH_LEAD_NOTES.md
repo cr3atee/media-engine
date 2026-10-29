@@ -296,6 +296,11 @@ This document captures architecture notes that are important for future reviews.
   with immutable audit; never let a later source upsert silently restore a
   retired offer, and never delete the offer, canonical link or history merely
   because an outbound URL is stale.
+- Treat a retained review workspace as evidence, not deployment. The EPIC 23
+  database proves six immutable decisions, five active links, one audited
+  retirement, exact public-read projection, and fresh-engine persistence; it
+  does not authorize copying unresolved offers or bypassing target-environment
+  source checks.
 
 ## Review Notes
 

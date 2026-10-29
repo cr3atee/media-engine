@@ -373,8 +373,9 @@ This document tracks only work that is reflected by the current repository state
   `0021_offer_manual_availability` adds authorized, reasoned, versioned and
   idempotent retire/restore commands with immutable audit. Retired offers leave
   ordinary catalog/comparator reads without deleting their links or history.
-  The known FunPay `80145738` row still requires execution in its owning tenant
-  database rather than direct SQL.
+  The known FunPay `80145738` row was retired through this API in the isolated
+  review workspace; the idempotent replay and immutable action were retained.
+  This is local release evidence, not a production mutation.
 
 ## Current Status
 
@@ -410,22 +411,23 @@ PostgreSQL operations gate are verified. Unattended target deployment still
 requires collector infrastructure, managed secret injection, and guarded live
 acceptance for authenticated sources. The Playerok runtime resolver and session
 connector are implemented. The backend core is now a verified release candidate.
-The remaining work before public visual launch is execution of human-approved
-catalog onboarding through the now measurable operator workspace,
+The remaining work before public visual launch is promotion of the bounded
+human-reviewed catalog into the intended target environment,
 target-environment monitoring/secret rollout, frontend hardening, and a product
-decision on category data exposure. Guarded Playerok completeness evidence and
-execution of the audited retirement for the known stale manually seeded offer
-are also required before outbound listing availability can be treated as
+decision on category data exposure. Guarded Playerok completeness evidence is
+also required before outbound listing availability can be treated as
 unattended-production ready.
 
 The complete operator-decision-to-public-read path is now integration-verified
-with isolated synthetic data. Production catalog readiness still depends on a
-bounded human-reviewed batch from the saved marketplace evidence.
+with isolated saved marketplace evidence. The retained workspace contains two
+canonical products, six immutable decisions, five active links, and one retired
+link; read-only verification passes `45/45` through a fresh engine. Production
+catalog readiness still depends on controlled target-environment promotion.
 
-EPIC 23 has prepared that bounded batch from a successful 2026-10-22 live
-three-source refresh. The loopback check exposes five deduplicated proposals and
-makes no catalog mutation. Durable source-page inspection and explicit operator
-decisions remain the next catalog-launch action.
+EPIC 23 prepared that bounded batch from a successful 2026-10-22 live
+three-source refresh and a human reviewer completed the retained local decision
+set. The next catalog-launch action is controlled promotion with a fresh source
+and link audit, not automatic approval of the unresolved catalog.
 
 ## Not Present Yet
 

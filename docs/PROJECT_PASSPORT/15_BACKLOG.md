@@ -7,13 +7,12 @@ candidate verification.
 
 ## Immediate
 
-- Use the implemented authorized immutable-audit lifecycle command and cabinet
-  panel to retire the confirmed FunPay `80145738` HTTP 404 in its owning tenant
-  database. Preserve snapshots, events and review evidence; do not delete or
-  silently rewrite the row in SQL.
-- Execute human decisions for the prepared five-offer EPIC 23 launch batch,
-  then bootstrap a curated canonical catalog and confirmed same-product
-  marketplace links. Current saved real payloads have no `AUTO_MATCH` or
+- Promote the bounded human-reviewed EPIC 23 catalog from the isolated review
+  workspace into the intended target environment only after a fresh source and
+  outbound-link audit. The retained local evidence contains two canonical
+  products, six immutable decisions, five active links, and one retired link;
+  it must not auto-approve the unresolved catalog. Current saved real payloads
+  have no `AUTO_MATCH` or
   `REVIEW` result across `1,280` cross-marketplace title pairs, so weakening
   matching thresholds or inventing preview links is not acceptable. Equivalent
   Minecraft key categories are live-verified for all three sources, but all
@@ -31,10 +30,10 @@ candidate verification.
   products or links, and PostgreSQL verification proves replay-safe persistence
   and restart recovery. Current evidence is recorded in
   `docs/CATALOG_REVIEW_EVIDENCE.md`; the exact five-offer batch is recorded in
-  `docs/EPIC_23_CATALOG_LAUNCH_BATCH.md`. All candidates remain unapproved.
-  The isolated PostgreSQL runner retains those decisions across application
-  restarts. Execute explicit operator decisions next and do not infer
-  completion from a queue page limit.
+  `docs/EPIC_23_CATALOG_LAUNCH_BATCH.md`. The isolated PostgreSQL runner retains
+  the bounded human decisions across application restarts, and the read-only
+  verifier passes `45/45`. Offers outside that decision set remain unapproved;
+  do not infer completion from a queue page limit.
 - Decide whether the embedded Market Terminal shell remains inside this
   repository or moves to a separate frontend project before public launch.
 - Decide whether public category browse must require parser/category retention
