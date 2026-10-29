@@ -127,6 +127,24 @@ def test_public_connector_does_not_require_or_send_credentials() -> None:
     assert "Cookie" not in client.headers
 
 
+def test_connector_exposes_complete_source_evidence() -> None:
+    """Runtime ingestion retains final-cursor evidence from Playerok."""
+    connector = PlayerokConnector(
+        http_client=cast(HttpClient, _RecordingHttpClient()),
+        integration=make_integration(
+            auth_type=MarketplaceAuthType.NONE,
+            credential=None,
+        ),
+        credential_resolver=None,
+    )
+
+    result = run_async(connector.ingest("https://playerok.com/graphql"))
+
+    assert len(result.offers) == 1
+    assert result.evidence.complete is True
+    assert result.evidence.expected_items == 1
+
+
 def test_authenticated_connector_fails_closed_without_resolver() -> None:
     connector = PlayerokConnector(
         http_client=cast(HttpClient, _RecordingHttpClient()),
@@ -195,6 +213,7 @@ class _RecordingHttpClient:
                             }
                         ],
                         "pageInfo": {"hasNextPage": False, "endCursor": None},
+                        "totalCount": 1,
                     }
                 }
             },

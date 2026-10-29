@@ -11,6 +11,7 @@ from app.parsers.playerok_extractor import PlayerokExtractor
 from app.parsers.playerok_fetcher import PlayerokFetcher
 from app.parsers.playerok_normalizer import PlayerokNormalizer
 from app.services.marketplace_credentials import MarketplaceCredentialResolver
+from app.services.marketplace_ingestion import MarketplaceIngestionResult
 from app.services.playerok_pipeline import PlayerokPipeline
 
 
@@ -35,13 +36,18 @@ class PlayerokConnector:
 
     async def run(self, url: str) -> list[ParsedOffer]:
         """Resolve an optional session and run the existing Playerok pipeline."""
+        result = await self.ingest(url)
+        return list(result.offers)
+
+    async def ingest(self, url: str) -> MarketplaceIngestionResult:
+        """Run Playerok ingestion and retain source completeness evidence."""
         session = await self._session_credentials()
         pipeline = PlayerokPipeline(
             fetcher=PlayerokFetcher(self._http_client, session=session),
             extractor=PlayerokExtractor(),
             normalizer=PlayerokNormalizer(),
         )
-        return await pipeline.run(url)
+        return await pipeline.ingest(url)
 
     async def _session_credentials(self) -> PlayerokSessionCredentials | None:
         if self._integration.auth_type is MarketplaceAuthType.NONE:

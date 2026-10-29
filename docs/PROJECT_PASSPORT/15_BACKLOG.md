@@ -7,11 +7,6 @@ candidate verification.
 
 ## Immediate
 
-- Complete GGSEL page traversal and add explicit completeness evidence to the
-  Playerok runtime result. Per-run evidence is now wired for GGSEL and FunPay:
-  the 2026-10-29 live check correctly keeps GGSEL `60/110` and Playerok `20/194`
-  partial while accepting the structurally complete FunPay `1406/1406`
-  showcase. A partial collector must never be treated as a complete catalog.
 - Use the implemented authorized immutable-audit lifecycle command and cabinet
   panel to retire the confirmed FunPay `80145738` HTTP 404 in its owning tenant
   database. Preserve snapshots, events and review evidence; do not delete or
@@ -50,9 +45,11 @@ candidate verification.
   exercised.
 - Run the guarded Playerok session verifier from the target VDS with an
   authorized account, stable outbound IP, same-session User-Agent/cookies, and
-  tenant-scoped deployment secret. Complete a 48-72 hour low-frequency soak;
-  do not treat offline connector verification as proof that Playerok will allow
-  a particular VDS.
+  tenant-scoped deployment secret. Prove final-cursor coverage against
+  `totalCount`, then complete a 48-72 hour low-frequency soak; do not treat
+  offline connector verification as proof that Playerok will allow a
+  particular VDS. The current unauthenticated live attempt is explicitly
+  access-protection blocked.
 - If explicitly approved credentials and a test chat are available, run exactly
   one guarded live Telegram test-chat verification.
 
@@ -72,11 +69,12 @@ candidate verification.
 
 ## Known Marketplace Gap
 
-- GGSEL, Playerok, and FunPay are ready from captured-response proof, strict
-  saved-payload verification, and guarded live polling verification. Production
-  scheduling has explicit deployment policy and a passed PostgreSQL operations
-  gate; it still needs target collector rollout and authenticated-source
-  credentials.
+- GGSEL and FunPay have current complete-source live proof (`110/110` and
+  `1442/1442`). Playerok has captured-response proof and a complete-evidence
+  runtime contract, but still requires guarded authorized-session proof on the
+  target VDS. Production scheduling has explicit deployment policy and a passed
+  PostgreSQL operations gate; it still needs target collector rollout and
+  authenticated-source credentials.
 - Real source extraction readiness does not imply same-product comparison
   readiness. The current saved payloads contain `81` snapshot-ready offers but
   no deterministic cross-marketplace match under the existing confidence rules.

@@ -693,15 +693,18 @@ reactivate later sightings, reject stale state ordering, and retain legacy rows
 without inventing source ownership. Reconciliation shares the existing
 ingestion transaction and an empty result cannot mass-deactivate offers.
 
-Runtime ingestion now carries per-run source completeness evidence for GGSEL
-and FunPay. Explicit incomplete evidence overrides the compatibility flag and
-prevents missing-offer reconciliation. The 2026-10-29 live check reports GGSEL
-`60/110` and Playerok `20/194`, both partial, while FunPay passes structural
-coverage at `1406/1406`. FunPay can therefore reconcile missing observations
-inside one integration; GGSEL and Playerok remain fail-closed. The local
-six-offer review catalog still has one confirmed stale legacy listing, FunPay
-`80145738` (HTTP 404), pending an authenticated manual lifecycle command in its
-owning tenant database.
+Runtime ingestion now carries per-run source completeness evidence for GGSEL,
+Playerok, and FunPay. Explicit incomplete evidence overrides the compatibility
+flag and prevents missing-offer reconciliation. The 2026-10-29 live check
+verifies GGSEL `110/110` through two public API pages and FunPay `1442/1442`
+through its closed showcase. Playerok now verifies merged bounded cursors,
+final-page state, `totalCount`, parser coverage, and unique identities, but the
+current unauthenticated live request was blocked by access protection. GGSEL and
+FunPay can therefore reconcile complete integration runs; Playerok remains
+fail-closed pending guarded authorized-session verification on the target VDS.
+The local six-offer review catalog still has one confirmed stale legacy listing,
+FunPay `80145738` (HTTP 404), pending an authenticated manual lifecycle command
+in its owning tenant database.
 
 Revision `0021_offer_manual_availability` now adds an independent audited manual
 lifecycle. Catalog reviewers can retire or restore one offer using a reason,
@@ -722,10 +725,12 @@ explicit confirmation and safe idempotent retry are implemented. Browser
 verification passes `72` fixture-only checks; full Pytest is `637 passed, 60
 skipped`, and no claim is made that the pending FunPay row was mutated.
 
-Per-run marketplace source evidence adds eight focused regression checks; the
-current full project result is `645 passed, 60 skipped`, with MyPy clean across
-`491` source files and focused Ruff/format clean. The live evidence command
-fetched all three marketplaces without mutating catalog or availability state.
+Complete-source pagination and evidence add fifteen focused regression checks;
+the current full project result is `660 passed, 60 skipped`, with MyPy clean
+across `492` source files and focused Ruff/format clean. The live evidence
+command verified GGSEL and FunPay without mutating catalog or availability
+state; Playerok returned an explicit access-protection failure rather than a
+fabricated or partial success.
 
 ## Architecture Review
 

@@ -6,6 +6,16 @@ This document records notable Project Passport updates.
 
 ## Unreleased
 
+- Completed full-source marketplace traversal evidence. GGSEL now uses the
+  current public `/buybox/goods` contract with bounded page traversal, stable
+  totals, unique identities, and fail-closed drift checks; live verification
+  passes `110/110`. Playerok now propagates final-cursor, `totalCount`, parser
+  coverage, and identity evidence through its pipeline and runtime connector;
+  the current unauthenticated live attempt is explicitly access-protection
+  blocked. FunPay remains complete and live verification reports `1442/1442`.
+  Full Pytest reports `660 passed, 60 skipped`; MyPy checks `492` files; focused
+  Ruff and Ruff format pass.
+
 - Added per-run marketplace source completeness evidence and fail-closed
   reconciliation orchestration. GGSEL and FunPay now report source coverage,
   optional declared totals, decisions, and reasons; explicit incomplete

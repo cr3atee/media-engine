@@ -7,6 +7,7 @@ from app.parsers.models import ParsedOffer
 from app.parsers.playerok_extractor import PlayerokExtractor
 from app.parsers.playerok_fetcher import PlayerokFetcher
 from app.parsers.playerok_normalizer import PlayerokNormalizer
+from app.services.marketplace_ingestion import MarketplaceIngestionResult
 from app.services.marketplace_pipeline import MarketplacePipeline
 
 
@@ -32,9 +33,21 @@ class PlayerokPipeline:
         url: str = PlayerokFetcher.DEFAULT_URL,
     ) -> list[ParsedOffer]:
         """Fetch and transform Playerok data into normalized parsed offers."""
+        result = await self.ingest(url)
+        return list(result.offers)
+
+    async def ingest(
+        self,
+        url: str = PlayerokFetcher.DEFAULT_URL,
+    ) -> MarketplaceIngestionResult:
+        """Return normalized offers with source completeness evidence."""
         raw_response = await self._fetcher.fetch(url)
-        extracted_offers = self._extractor.extract(raw_response)
-        return self._normalizer.normalize(extracted_offers)
+        extraction = self._extractor.extract_with_evidence(raw_response)
+        normalized = tuple(self._normalizer.normalize(list(extraction.items)))
+        return MarketplaceIngestionResult(
+            offers=normalized,
+            evidence=extraction.evidence,
+        )
 
     async def run_comparison(
         self,

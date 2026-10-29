@@ -80,7 +80,7 @@ def create_marketplace_runner_factories(
         )
         return MarketplaceApplicationRunner(
             marketplace=Marketplace.PLAYEROK,
-            ingestion=connector.run,
+            ingestion=connector.ingest,
             repository_scope_factory=repository_scope_factory,
             pipeline=pipeline,
             tenant_id=integration.tenant_id,

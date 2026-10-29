@@ -3,13 +3,11 @@
 from __future__ import annotations
 
 import asyncio
-import json
 import re
 import sys
 from collections.abc import Awaitable, Callable
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 if str(PROJECT_ROOT) not in sys.path:
@@ -253,8 +251,8 @@ def _safe_error_summary(error: Exception) -> str:
 
 async def _fetch_ggsel(http_client: HttpClient) -> MarketplaceCategoryBatch:
     fetcher = GGSelFetcher(http_client)
-    html = await fetcher.fetch_html(GGSEL_CATEGORY_URL)
-    extraction = GGSelExtractor().extract_with_evidence(html)
+    source = await fetcher.fetch_complete_category(GGSEL_CATEGORY_URL)
+    extraction = GGSelExtractor().extract_source_items(source)
     raw_offers = extraction.items
     normalizer = OfferNormalizer(marketplace="ggsel")
     offers = tuple(normalizer.normalize(offer) for offer in raw_offers)
@@ -264,32 +262,19 @@ async def _fetch_ggsel(http_client: HttpClient) -> MarketplaceCategoryBatch:
 
 async def _fetch_playerok(http_client: HttpClient) -> MarketplaceCategoryBatch:
     fetcher = PlayerokFetcher(http_client)
-    raw_response = await fetcher.fetch_items(
+    raw_response = await fetcher.fetch_all_items(
         first=PLAYEROK_PAGE_SIZE,
         game_id=PLAYEROK_GAME_ID,
         game_category_id=PLAYEROK_CATEGORY_ID,
     )
-    source_total = _playerok_source_total(raw_response)
-    extracted = PlayerokExtractor().extract(raw_response)
-    offers = tuple(PlayerokNormalizer().normalize(extracted))
+    extraction = PlayerokExtractor().extract_with_evidence(raw_response)
+    offers = tuple(PlayerokNormalizer().normalize(list(extraction.items)))
+    source_total = extraction.evidence.expected_items or len(extraction.items)
     return _batch(
         "playerok",
         source_total,
         offers,
-        SourceSnapshotEvidence(
-            source_items=len(extracted),
-            parsed_items=len(offers),
-            expected_items=source_total,
-            complete=source_total == len(extracted) == len(offers),
-            reason=(
-                "Playerok declared total and extracted item count match."
-                if source_total == len(extracted) == len(offers)
-                else (
-                    f"Playerok returned {len(extracted)} of {source_total} "
-                    "declared items."
-                )
-            ),
-        ),
+        extraction.evidence,
     )
 
 
@@ -339,18 +324,6 @@ def _is_snapshot_ready(offer: ParsedOffer) -> bool:
         and offer.price is not None
         and offer.currency is not None
     )
-
-
-def _playerok_source_total(raw_response: str) -> int:
-    payload: object = json.loads(raw_response)
-    if not isinstance(payload, dict):
-        raise ValueError("Playerok response is not a JSON object")
-    data: Any = payload.get("data")
-    items: Any = data.get("items") if isinstance(data, dict) else None
-    total: Any = items.get("totalCount") if isinstance(items, dict) else None
-    if not isinstance(total, int):
-        raise ValueError("Playerok response has no data.items.totalCount")
-    return total
 
 
 def _configure_stdout() -> None:

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from app.parsers.ggsel_extractor import GGSelExtractor
+from app.parsers.source_snapshot import SourceExtraction, SourceSnapshotEvidence
 
 
 def test_ggsel_extractor_reads_embedded_product_payload() -> None:
@@ -150,3 +151,64 @@ def test_ggsel_extractor_rejects_show_more_even_when_total_matches() -> None:
     assert extraction.evidence.reason == (
         "GGSEL response exposes a show-more pagination control."
     )
+
+
+def test_ggsel_extractor_preserves_paginated_source_evidence() -> None:
+    """Typed products remain complete when every API identity is extracted."""
+    raw_items = (
+        {
+            "id_goods": 1,
+            "name": "Minecraft Premium",
+            "url": "minecraft-premium-1",
+            "seller_name": "Seller",
+            "id_section": 2,
+            "price_wmr": "790",
+        },
+    )
+    source = SourceExtraction(
+        items=raw_items,
+        evidence=SourceSnapshotEvidence(
+            source_items=1,
+            parsed_items=1,
+            expected_items=1,
+            complete=True,
+            reason="Transport covered the declared total.",
+        ),
+    )
+
+    extraction = GGSelExtractor().extract_source_items(source)
+
+    assert len(extraction.items) == 1
+    assert extraction.items[0].id_goods == 1
+    assert extraction.evidence.complete is True
+
+
+def test_ggsel_extractor_marks_unmapped_api_item_incomplete() -> None:
+    """Transport coverage cannot hide a product that mapping rejected."""
+    raw_items = (
+        {
+            "id_goods": 1,
+            "name": "Minecraft Premium",
+            "url": "minecraft-premium-1",
+            "seller_name": "Seller",
+            "id_section": 2,
+            "price_wmr": "790",
+        },
+        {"id_goods": 2, "name": "Incomplete"},
+    )
+    source = SourceExtraction(
+        items=raw_items,
+        evidence=SourceSnapshotEvidence(
+            source_items=2,
+            parsed_items=2,
+            expected_items=2,
+            complete=True,
+            reason="Transport covered the declared total.",
+        ),
+    )
+
+    extraction = GGSelExtractor().extract_source_items(source)
+
+    assert len(extraction.items) == 1
+    assert extraction.evidence.complete is False
+    assert extraction.evidence.source_items == 2

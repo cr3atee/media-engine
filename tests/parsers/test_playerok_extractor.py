@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import json
 from decimal import Decimal
 from typing import cast
 
@@ -175,6 +176,101 @@ def test_playerok_normalizer_defaults_missing_currency_to_rub() -> None:
 
     assert len(normalized) == 1
     assert normalized[0].currency == "RUB"
+
+
+def test_playerok_extractor_proves_complete_merged_graphql_listing() -> None:
+    """A final cursor and exact total make merged GraphQL data reconcilable."""
+    raw_response = _graphql_listing(
+        [
+            _graphql_edge("offer-1"),
+            _graphql_edge("offer-2"),
+        ],
+        total=2,
+        has_next_page=False,
+    )
+
+    extraction = PlayerokExtractor().extract_with_evidence(raw_response)
+
+    assert len(extraction.items) == 2
+    assert extraction.evidence.source_items == 2
+    assert extraction.evidence.expected_items == 2
+    assert extraction.evidence.complete is True
+
+
+def test_playerok_extractor_keeps_nonfinal_cursor_incomplete() -> None:
+    """A declared next page prevents missing-offer reconciliation."""
+    raw_response = _graphql_listing(
+        [_graphql_edge("offer-1")],
+        total=2,
+        has_next_page=True,
+    )
+
+    extraction = PlayerokExtractor().extract_with_evidence(raw_response)
+
+    assert extraction.evidence.complete is False
+    assert extraction.evidence.reason == (
+        "Playerok GraphQL listing has additional cursor pages."
+    )
+
+
+def test_playerok_extractor_rejects_duplicate_graphql_identities() -> None:
+    """Duplicate nodes keep a merged Playerok response fail-closed."""
+    raw_response = _graphql_listing(
+        [_graphql_edge("offer-1"), _graphql_edge("offer-1")],
+        total=2,
+        has_next_page=False,
+    )
+
+    extraction = PlayerokExtractor().extract_with_evidence(raw_response)
+
+    assert extraction.evidence.complete is False
+    assert "duplicate" in extraction.evidence.reason
+
+
+def test_playerok_extractor_reports_incomplete_edge_coverage() -> None:
+    """Malformed GraphQL edges remain visible in source coverage counts."""
+    raw_response = _graphql_listing(
+        [_graphql_edge("offer-1"), {"node": {"id": "offer-2"}}],
+        total=2,
+        has_next_page=False,
+    )
+
+    extraction = PlayerokExtractor().extract_with_evidence(raw_response)
+
+    assert len(extraction.items) == 1
+    assert extraction.evidence.source_items == 2
+    assert extraction.evidence.parsed_items == 1
+    assert extraction.evidence.complete is False
+
+
+def _graphql_edge(item_id: str) -> dict[str, object]:
+    return {
+        "node": {
+            "id": item_id,
+            "slug": item_id,
+            "name": f"Offer {item_id}",
+            "price": 790,
+        }
+    }
+
+
+def _graphql_listing(
+    edges: list[dict[str, object]],
+    *,
+    total: int,
+    has_next_page: bool,
+) -> str:
+    return json.dumps(
+        {
+            "data": {
+                "items": {
+                    "edges": edges,
+                    "pageInfo": {"hasNextPage": has_next_page},
+                    "totalCount": total,
+                }
+            }
+        }
+    )
 
 
 def test_playerok_fetcher_uses_graphql_items_by_default() -> None:

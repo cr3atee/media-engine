@@ -285,9 +285,12 @@ This document captures architecture notes that are important for future reviews.
   ownership remain visible. Never enable missing-item reconciliation from a
   successful first page alone. Prefer per-run `MarketplaceIngestionResult`
   evidence over the compatibility flag: explicit incomplete evidence must win.
-  The current FunPay structural contract is complete; GGSEL and Playerok remain
-  partial in the 2026-10-29 live category check. Empty responses are
-  deliberately non-destructive.
+  Current live evidence proves complete GGSEL `110/110` pagination and FunPay
+  `1442/1442` structural coverage. Playerok validates final cursor,
+  `totalCount`, parser coverage, and unique identities in runtime, but its
+  unauthenticated live request is currently access-protection blocked; keep it
+  fail-closed until a guarded target-VDS session run succeeds. Empty responses
+  are deliberately non-destructive.
 - Manual offer retirement is an independent operator override, not inferred
   source truth. Keep retire/restore reasoned, versioned, idempotent and atomic
   with immutable audit; never let a later source upsert silently restore a

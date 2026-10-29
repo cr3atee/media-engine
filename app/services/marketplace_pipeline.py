@@ -151,6 +151,14 @@ class MarketplacePipeline:
 
         self._report("=== EXTRACT RAW OFFERS ===")
         extraction = self._extractor.extract_with_evidence(html)
+        expected_items = extraction.evidence.expected_items
+        if expected_items is not None and expected_items > len(extraction.items):
+            self._report(
+                "GGSEL embedded listing is partial; traversing category pages."
+            )
+            source = await self._fetcher.fetch_complete_category(url)
+            extraction = self._extractor.extract_source_items(source)
+            self._report(f"Fetched GGSEL pages: {self._fetcher.pages_fetched}")
         raw_offers = extraction.items
         self._report(f"Extracted raw offers: {len(raw_offers)}")
 

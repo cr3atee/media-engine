@@ -51,6 +51,57 @@ class GGSelExtractor:
             evidence=self._build_evidence(html, products, listing_metadata),
         )
 
+    def extract_source_items(
+        self,
+        source: SourceExtraction[dict[str, object]],
+    ) -> SourceExtraction[RawMarketplaceOffer]:
+        """Convert paginated API items and retain strict coverage evidence."""
+        products: list[RawMarketplaceOffer] = []
+        seen_ids: set[str] = set()
+        source_ids: list[str] = []
+
+        for item in source.items:
+            item_id = self._as_int(item.get("id_goods"))
+            if item_id is not None:
+                source_ids.append(str(item_id))
+            if not self._is_product(item):
+                continue
+            product = self._build_product(item)
+            if product is None or str(product.id_goods) in seen_ids:
+                continue
+            products.append(product)
+            seen_ids.add(str(product.id_goods))
+
+        identities_match = (
+            len(source_ids) == len(source.items)
+            and len(set(source_ids)) == len(source_ids)
+            and set(source_ids) == seen_ids
+        )
+        complete = (
+            source.evidence.complete
+            and identities_match
+            and len(products) == source.evidence.source_items
+        )
+        if not source.evidence.complete:
+            reason = source.evidence.reason
+        elif not complete:
+            reason = (
+                "GGSEL paginated source identities do not match extracted products."
+            )
+        else:
+            reason = "GGSEL paginated source identities and extracted products match."
+
+        return SourceExtraction(
+            items=tuple(products),
+            evidence=SourceSnapshotEvidence(
+                source_items=source.evidence.source_items,
+                parsed_items=len(products),
+                expected_items=source.evidence.expected_items,
+                complete=complete,
+                reason=reason,
+            ),
+        )
+
     def _build_evidence(
         self,
         html: str,

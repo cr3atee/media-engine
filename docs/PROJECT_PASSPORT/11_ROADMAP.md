@@ -364,10 +364,11 @@ This document tracks only work that is reflected by the current repository state
 - Market Terminal offer-availability foundation: revision
   `0020_offer_source_observations` adds source-scoped durable observations,
   all-source active visibility, reactivation, ordering protection, and atomic
-  rollback. Per-run evidence now enables reconciliation only for a structurally
-  complete FunPay showcase. Live GGSEL `60/110` and Playerok `20/194` evidence
-  remains partial, so those adapters stay fail-closed until their full-source
-  contracts are verified.
+  rollback. Per-run evidence now verifies complete live GGSEL `110/110`
+  pagination and a complete FunPay `1442/1442` showcase. Playerok runtime now
+  validates final-cursor coverage against `totalCount`, but the current
+  unauthenticated live run is access-protection blocked and remains fail-closed
+  pending guarded target-VDS session verification.
 - Market Terminal manual offer lifecycle: revision
   `0021_offer_manual_availability` adds authorized, reasoned, versioned and
   idempotent retire/restore commands with immutable audit. Retired offers leave
@@ -412,10 +413,10 @@ connector are implemented. The backend core is now a verified release candidate.
 The remaining work before public visual launch is execution of human-approved
 catalog onboarding through the now measurable operator workspace,
 target-environment monitoring/secret rollout, frontend hardening, and a product
-decision on category data exposure. Collector completeness and execution of the
-audited retirement for the known stale manually seeded offer are also required
-before outbound listing availability can be treated as unattended-production
-ready.
+decision on category data exposure. Guarded Playerok completeness evidence and
+execution of the audited retirement for the known stale manually seeded offer
+are also required before outbound listing availability can be treated as
+unattended-production ready.
 
 The complete operator-decision-to-public-read path is now integration-verified
 with isolated synthetic data. Production catalog readiness still depends on a
