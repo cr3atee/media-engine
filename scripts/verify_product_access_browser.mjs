@@ -217,6 +217,9 @@ try {
   await send("Page.navigate", { url: `${base}/terminal/review` });
   await until('Boolean(document.querySelector("#loginButton"))');
   await until('document.readyState === "complete"');
+  await until('document.documentElement.classList.contains("terminal-ready")');
+  await until('getComputedStyle(document.querySelector(".terminal-transition")).visibility === "hidden"');
+  await check("page transition clears before interaction", '!document.documentElement.classList.contains("terminal-loading")');
   await check("role controls hidden before login", 'document.querySelector("#productAccess").hidden && document.querySelector("#productAccessLink").hidden');
   for (const value of ["user", "partner", "moderator"]) {
     role = value; await login();
@@ -349,6 +352,11 @@ try {
   await check("credentials are never stored in browser storage", 'localStorage.length === 0 && sessionStorage.length === 0');
   assert.equal(diagnosticReports.length, 1, "Malformed JSON should emit one bounded diagnostic report"); checks++;
   assert.equal(errors.length, 0, JSON.stringify(errors)); checks++;
+  await send("Emulation.setEmulatedMedia", { features: [{ name: "prefers-reduced-motion", value: "no-preference" }] });
+  await check(
+    "internal navigation starts the opaque page transition",
+    '(() => { const link = document.querySelector(\'a.brand[href="/terminal"]\'); link.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true, button: 0 })); return document.documentElement.classList.contains("terminal-leaving") && getComputedStyle(document.querySelector(".terminal-transition")).visibility === "visible"; })()',
+  );
   console.log(`${checks} browser checks passed. Isolated fixtures; no database writes. Screenshots: ${output}`);
 } finally {
   if (settingsSession && originalZoom !== undefined) await zoom(originalZoom);

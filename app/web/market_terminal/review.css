@@ -1,5 +1,5 @@
 /* Working cabinet: canonical catalog shell with cabinet-only content layout. */
-.product-access, .offer-lifecycle, .diagnostic-journal { padding: 24px 0; border-bottom: 1px solid var(--line); scroll-margin-top: 20px; }
+.product-access, .offer-lifecycle, .diagnostic-journal { width: min(100%, 1120px); padding: 28px 0 44px; scroll-margin-top: 20px; }
 .account-role { display: inline-block; color: var(--accent); font-size: 13px; margin-top: 8px; }
 .account-details { margin-top: 10px; color: var(--muted); font-size: 12px; }
 .account-details summary { cursor: pointer; min-height: 28px; }
@@ -101,7 +101,7 @@
 .form-message, .workspace-message { color: var(--muted); font-size: 14px; overflow-wrap: anywhere; }
 .form-message:empty, .card-message:empty { display: none; }
 .error, .card-message { color: var(--error); }
-.session-card { display: grid; grid-template-columns: minmax(0, 1fr) minmax(200px, 1fr) auto; align-items: center; gap: 12px 28px; padding: 20px 0; border-bottom: 1px solid var(--line); }
+.session-card { display: grid; grid-template-columns: minmax(0, 1fr) minmax(200px, 1fr) auto; align-items: center; gap: 12px 28px; padding: 20px 0 28px; }
 .session-identity h2 { font-size: 20px; overflow-wrap: anywhere; }
 .session-meta { grid-column: 1 / 3; display: flex; gap: 14px; flex-wrap: wrap; color: var(--muted); font-size: 13px; }
 .session-actions { grid-column: 3; grid-row: 1 / 3; display: flex; gap: 10px; }

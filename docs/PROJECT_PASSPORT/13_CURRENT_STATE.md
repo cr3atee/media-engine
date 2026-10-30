@@ -736,6 +736,15 @@ command verified GGSEL and FunPay without mutating catalog or availability
 state; Playerok returned an explicit access-protection failure rather than a
 fabricated or partial success.
 
+The Market Terminal catalog and seller cabinet now share a guarded page
+transition: unfinished first paint is covered by an opaque application surface,
+internal document navigation uses the same centered animated mark, and reduced
+motion/no-JavaScript/BFCache paths remain usable. Cabinet-only demo copy, the
+internal footer, the UUID instruction and redundant full-width dividers were
+removed. Current browser verification passes `72/72` review checks and `52/52`
+access, diagnostics and transition checks; full Pytest is `668 passed, 60
+skipped`, and MyPy is clean across `494` source files.
+
 ## Architecture Review
 
 Current architecture separates:

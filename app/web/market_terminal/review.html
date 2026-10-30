@@ -14,8 +14,9 @@
     />
     <link rel="stylesheet" href="/terminal/preview/preview.css" />
     <link rel="stylesheet" href="/terminal/review.css" />
+    <script src="/terminal/page-transition.js"></script>
   </head>
-  <body class="review-page">
+  <body class="review-page" data-transition-ready="app">
     <a class="skip-link" href="#reviewWorkspace">Перейти к проверке каталога</a>
     <div class="shell review-shell">
       <header class="header">
@@ -118,7 +119,7 @@
             />
           </label>
           <button class="primary-button" id="loginButton" type="submit" disabled>
-            Войти в рабочее место
+            Войти
           </button>
           <p
             class="form-message"
@@ -137,7 +138,7 @@
             <details class="account-details"><summary>Данные аккаунта</summary><span>ID</span><code id="accountId"></code></details>
           </div>
           <label class="tenant-control" for="tenantSelect">
-            <span>Рабочее пространство</span>
+            <span>Организация</span>
             <select id="tenantSelect"></select>
           </label>
           <div class="session-meta">
@@ -160,12 +161,11 @@
           <div><p class="section-label">Администрирование</p><h2 id="accessTitle" tabindex="-1">Управление доступом</h2></div>
           <button id="accessClose" type="button" class="ghost-button">Закрыть раздел</button>
         </header>
-        <p class="form-hint">Роль в приложении не заменяет права в рабочих пространствах.</p>
+        <p class="form-hint">Выберите аккаунт и назначьте ему роль в приложении.</p>
         <form id="accessLookup" class="access-lookup">
-          <label for="accessUserId">ID аккаунта<input id="accessUserId" name="user_id" required autocomplete="off" spellcheck="false" placeholder="UUID аккаунта" aria-describedby="accessLookupHint" /></label>
+          <label for="accessUserId">ID аккаунта<input id="accessUserId" name="user_id" required autocomplete="off" spellcheck="false" placeholder="UUID аккаунта" /></label>
           <button id="accessLoad" class="ghost-button" type="submit">Найти аккаунт</button>
         </form>
-        <p id="accessLookupHint" class="form-hint">ID находится в разделе «Данные аккаунта» в личном кабинете пользователя.</p>
         <p id="accessMessage" class="workspace-message" role="status" aria-live="polite"></p>
         <div id="accessDetails" class="access-layout" hidden>
           <form id="accessForm" class="access-editor">
@@ -288,7 +288,7 @@
             <h1>Решения по каталогу</h1>
           </div>
           <div class="workspace-context">
-            <span>Рабочее пространство</span>
+            <span>Организация</span>
             <strong id="tenantLabel">—</strong>
           </div>
         </header>
@@ -457,13 +457,6 @@
         </div>
       </section>
       </main>
-      <footer class="footer">
-        <span class="footer-brand">
-          Market Terminal <span>на базе MediaEngine</span>
-        </span>
-        <span>Рабочее место продавца</span>
-        <a href="/terminal">Каталог</a>
-      </footer>
     </div>
 
     <dialog id="decisionDialog" aria-labelledby="decisionDialogTitle" aria-describedby="decisionDialogHint">

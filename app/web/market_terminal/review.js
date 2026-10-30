@@ -230,7 +230,7 @@ elements.proposalList.addEventListener("change", handleDecisionChoice);
 elements.proposalList.addEventListener("input", handleDecisionReasonInput);
 
 renderEmptyQueues();
-void restoreSession();
+void restoreSession().finally(() => window.terminalPageReady?.());
 
 window.addEventListener("pageshow", event => {
   if (event.persisted) void restoreSession();
@@ -317,7 +317,7 @@ async function loadIdentity() {
   elements.tenantSelect.closest("label").hidden = state.memberships.length === 0;
   elements.reloadButton.textContent = state.memberships.length ? "Обновить очереди" : "Обновить доступ";
   if (state.memberships.length === 0) {
-    elements.permissionSummary.textContent = "Нет подключённых рабочих пространств";
+    elements.permissionSummary.textContent = "Нет доступных организаций";
     setSessionStatus("Вход выполнен");
     if (profile.user.product_role === "admin") await productAccess.open();
     return;
@@ -353,7 +353,7 @@ async function selectTenant(tenantId) {
     elements.tenantLabel.textContent = context.tenant_name;
 
     if (!context.permissions.includes("catalog_review")) {
-      elements.permissionSummary.textContent = "В этом пространстве вам недоступна проверка каталога.";
+      elements.permissionSummary.textContent = "В этой организации вам недоступна проверка каталога.";
       elements.reviewWorkspace.hidden = true;
       setSessionStatus("Недостаточно прав", true);
       return;
@@ -1354,7 +1354,7 @@ function apiErrorMessage(body, status) {
     authentication_unavailable: "Вход временно недоступен.",
     token_revoked: "Сессия завершена. Войдите снова.",
     account_disabled: "Доступ к аккаунту отключён.",
-    tenant_not_found: "Рабочее пространство недоступно.",
+    tenant_not_found: "Организация недоступна.",
     permission_denied: "Недостаточно прав для этого действия.",
     idempotency_conflict: "Запрос изменился. Обновите очередь и повторите решение.",
     canonical_product_proposal_not_found: "Предложение больше недоступно.",
@@ -1363,7 +1363,7 @@ function apiErrorMessage(body, status) {
     canonical_review_target_not_found: "Товар или объявление больше недоступны.",
     canonical_offer_decision_conflict: "Эта пара уже проверена.",
     canonical_offer_link_conflict: "Объявление уже связано с другим товаром.",
-    offer_not_found: "Объявление не найдено в выбранном рабочем пространстве.",
+    offer_not_found: "Объявление не найдено в выбранной организации.",
     optimistic_concurrency_conflict: "Состояние объявления уже изменилось.",
     invalid_transition: "Это изменение больше недоступно для текущего состояния.",
   };

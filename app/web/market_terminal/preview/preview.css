@@ -30,6 +30,49 @@
 
 * { box-sizing: border-box; }
 body { margin: 0; min-width: 320px; }
+.terminal-js.terminal-loading body > :not(.terminal-transition) { visibility: hidden; }
+.terminal-transition {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: grid;
+  place-items: center;
+  background: var(--canvas);
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transition: opacity 180ms var(--ease), visibility 0s linear 180ms;
+}
+.terminal-loading .terminal-transition,
+.terminal-leaving .terminal-transition {
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
+  transition-delay: 0s;
+}
+.terminal-transition-mark {
+  width: 72px;
+  height: 72px;
+  color: var(--accent);
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2.25;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  animation: terminal-mark-breathe 900ms var(--ease) infinite;
+}
+.terminal-transition-mark path {
+  stroke-dasharray: 112;
+  animation: terminal-mark-trace 900ms var(--ease) infinite;
+}
+@keyframes terminal-mark-breathe {
+  0%, 100% { opacity: .72; transform: translateY(2px) scale(.96); }
+  50% { opacity: 1; transform: translateY(-2px) scale(1); }
+}
+@keyframes terminal-mark-trace {
+  0% { stroke-dashoffset: 112; }
+  60%, 100% { stroke-dashoffset: 0; }
+}
 button, input, select, textarea { font: inherit; }
 button, a, input, select, textarea { -webkit-tap-highlight-color: transparent; }
 button, a, select { touch-action: manipulation; }
@@ -309,6 +352,9 @@ dialog::backdrop { background: #07090fbb; }
   dialog { padding: 20px; }
 }
 @media (prefers-reduced-motion: reduce) {
+  .terminal-transition,
+  .terminal-transition-mark,
+  .terminal-transition-mark path { animation: none; transition-duration: 1ms; }
   *, *::before, *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; }
   .product-card:hover, .primary:active, .secondary:active { transform: none; }
 }

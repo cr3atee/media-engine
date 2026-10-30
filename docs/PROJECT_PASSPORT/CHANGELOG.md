@@ -6,6 +6,15 @@ This document records notable Project Passport updates.
 
 ## Unreleased
 
+- Polished the shared Market Terminal shell without changing product behavior:
+  removed cabinet-only demo copy, the internal footer, the UUID instruction and
+  redundant full-width dividers. Added an opaque first-paint and internal-page
+  transition with a centered animated mark, no-JavaScript fallback, BFCache
+  recovery and reduced-motion behavior. Browser verification passes `72/72`
+  review checks and `52/52` access/diagnostic/transition checks; full Pytest is
+  `668 passed, 60 skipped`, MyPy checks `494` files, and focused Ruff, format and
+  JavaScript syntax checks pass.
+
 - Completed the durable EPIC 23 post-review gate for the isolated catalog
   workspace. An authenticated, versioned, idempotent command retired the
   repeated FunPay `80145738` HTTP 404 while preserving its offer, canonical

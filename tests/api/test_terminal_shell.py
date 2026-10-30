@@ -35,7 +35,9 @@ def test_market_terminal_shell_is_served() -> None:
             "camera=(), geolocation=(), microphone=()"
         )
         assert '<html lang="ru">' in response.text
-        assert '<body class="terminal-page">' in response.text
+        assert (
+            '<body class="terminal-page" data-transition-ready="app">' in response.text
+        )
         assert "Market Terminal" in response.text
         assert "Ваш следующий мир." in response.text
         assert "Сравните предложения площадок" in response.text
@@ -46,6 +48,7 @@ def test_market_terminal_shell_is_served() -> None:
         assert "Find the best marketplace price" not in response.text
         assert "/terminal/catalog.css" in response.text
         assert "/terminal/preview/preview.css" in response.text
+        assert "/terminal/page-transition.js" in response.text
         assert "/terminal/app.js" in response.text
         assert 'id="productCount"' in response.text
         assert 'id="catalogPagination"' in response.text
@@ -83,6 +86,7 @@ def test_market_terminal_static_assets_are_served() -> None:
 
     styles = client.get("/terminal/styles.css")
     script = client.get("/terminal/app.js")
+    transition = client.get("/terminal/page-transition.js")
 
     assert styles.status_code == 200
     assert styles.headers["content-type"].startswith("text/css")
@@ -95,6 +99,12 @@ def test_market_terminal_static_assets_are_served() -> None:
     assert script.status_code == 200
     assert script.headers["content-type"].startswith("application/javascript")
     assert script.headers["x-content-type-options"] == "nosniff"
+    assert transition.status_code == 200
+    assert transition.headers["content-type"].startswith("application/javascript")
+    assert transition.headers["x-content-type-options"] == "nosniff"
+    assert 'root.classList.add("terminal-js", "terminal-loading")' in transition.text
+    assert "terminalPageReady" in transition.text
+    assert "prefers-reduced-motion: reduce" in transition.text
     assert 'const api = "/api/v1/public";' in script.text
     assert "const requestTimeoutMs = 15_000;" in script.text
     assert "function updateSummary()" in script.text
@@ -225,6 +235,7 @@ def test_market_terminal_catalog_review_workspace_is_served() -> None:
         assert 'id="productProposals"' in response.text
         assert 'aria-busy="false"' in response.text
         assert "/terminal/preview/preview.css" in response.text
+        assert "/terminal/page-transition.js" in response.text
         assert "/terminal/review.css" in response.text
         assert "/terminal/review.js" in response.text
 
@@ -260,13 +271,17 @@ def test_catalog_and_cabinet_share_the_canonical_application_shell() -> None:
         'placeholder="Игра, подписка или сервис"',
         'class="profile"',
         "<span>Кабинет продавца</span>",
-        'class="footer"',
-        "Market Terminal <span>на базе MediaEngine</span>",
     )
 
     for fragment in shared_fragments:
         assert fragment in catalog
         assert fragment in cabinet
+
+    assert "на базе MediaEngine" not in catalog
+    assert "на базе MediaEngine" not in cabinet
+    assert "Рабочее место продавца" not in cabinet
+    assert "ID находится в разделе" not in cabinet
+    assert 'class="footer"' not in cabinet
 
     review_styles = client.get("/terminal/review.css").text
     assert ".topbar" not in review_styles

@@ -147,7 +147,7 @@ window.addEventListener("popstate", async (event) => {
 });
 
 restoreLocationState();
-void loadDashboard();
+void loadDashboard().finally(() => window.terminalPageReady?.());
 
 async function loadDashboard() {
   if (!priceRangeIsValid()) {

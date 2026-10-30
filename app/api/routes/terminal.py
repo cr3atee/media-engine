@@ -117,6 +117,16 @@ async def market_terminal_script() -> Response:
     )
 
 
+@router.get("/terminal/page-transition.js", include_in_schema=False)
+async def market_terminal_page_transition_script() -> Response:
+    """Serve the shared first-paint and page-navigation transition."""
+    return Response(
+        _read_asset("page-transition.js"),
+        media_type="application/javascript",
+        headers=_ASSET_HEADERS,
+    )
+
+
 @router.get("/terminal/catalog.css", include_in_schema=False)
 async def market_terminal_catalog_styles() -> Response:
     """Serve public catalog layout without changing the review workspace styles."""

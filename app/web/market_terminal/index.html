@@ -8,9 +8,10 @@
   <link rel="preload" href="/terminal/preview/onest.ttf" as="font" type="font/ttf" crossorigin>
   <link rel="stylesheet" href="/terminal/preview/preview.css">
   <link rel="stylesheet" href="/terminal/catalog.css">
+  <script src="/terminal/page-transition.js"></script>
   <script type="module" src="/terminal/app.js"></script>
 </head>
-<body class="terminal-page">
+<body class="terminal-page" data-transition-ready="app">
   <a class="skip" href="#main">Перейти к содержимому</a>
   <div class="shell">
     <header class="header">
@@ -72,7 +73,7 @@
         <section class="detail-section" aria-labelledby="historyTitle"><h2 id="historyTitle">История цены</h2><div id="historyCard" role="region" aria-labelledby="historyTitle" aria-live="polite"></div></section>
       </section>
     </main>
-    <footer class="footer"><span class="footer-brand">Market Terminal <span>на базе MediaEngine</span></span><span id="apiStatus" role="status" aria-live="polite" aria-atomic="true">Подключение</span><a href="/terminal/review">Кабинет продавца</a></footer>
+    <footer class="footer"><span class="footer-brand">Market Terminal</span><span id="apiStatus" role="status" aria-live="polite" aria-atomic="true">Подключение</span><a href="/terminal/review">Кабинет продавца</a></footer>
   </div>
   <noscript><p class="noscript">Для поиска и просмотра каталога включите JavaScript.</p></noscript>
 </body>
