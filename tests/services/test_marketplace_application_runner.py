@@ -3,7 +3,7 @@ from __future__ import annotations
 import asyncio
 from collections.abc import AsyncIterator, Coroutine, Sequence
 from contextlib import AbstractAsyncContextManager, asynccontextmanager
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from datetime import UTC, datetime, timedelta
 from decimal import Decimal
 from typing import Any, cast
@@ -14,10 +14,15 @@ from sqlalchemy.ext.asyncio import async_sessionmaker
 
 from app.analytics.models import PriceChange
 from app.analytics.price_change import PriceChangeDetector
+from app.catalog.hierarchy import CatalogHub, CatalogSection, CatalogSourceRule
 from app.database.repository_scope import create_postgres_repository_scope
 from app.domain.events import PriceDropEvent
 from app.domain.market_events import EventAddResult, MarketEventCandidate
 from app.domain.marketplace import Marketplace
+from app.domain.marketplace_integrations import (
+    MarketplaceIntegration,
+    MarketplaceIntegrationStatus,
+)
 from app.domain.offer_availability import (
     OfferAvailabilityState,
     OfferAvailabilityStatus,
@@ -41,6 +46,7 @@ from app.repositories.postgres import (
 from app.repositories.price_history import PriceHistoryRepository
 from app.repositories.provider import RepositoryProvider, create_memory_provider
 from app.scheduler.jobs import GGSELJob, JobExecutionState
+from app.services.catalog_classification import CatalogClassificationService
 from app.services.content_generator import ContentGenerator
 from app.services.event_builder import EventBuilder
 from app.services.marketplace_application_runner import (
@@ -495,6 +501,93 @@ def test_runner_propagates_tenant_context_to_ingested_work() -> None:
     assert event.tenant_id == tenant_id
     assert event.previous_snapshot.tenant_id == tenant_id
     assert event.current_snapshot.tenant_id == tenant_id
+
+
+def test_runner_persists_verified_catalog_classification_without_guessing() -> None:
+    tenant_id = UUID("22000000-0000-4000-8000-000000000402")
+    integration_id = UUID("22000000-0000-4000-8000-000000000403")
+    rule_id = UUID("22000000-0000-4000-8000-000000000404")
+    provider = create_memory_provider()
+    run_async(
+        provider.marketplace_integrations.save(
+            MarketplaceIntegration(
+                id=integration_id,
+                tenant_id=tenant_id,
+                marketplace="ggsel",
+                display_name="GGSEL Minecraft",
+                enabled=True,
+                status=MarketplaceIntegrationStatus.ACTIVE,
+                source_url="https://ggsel.net/catalog/minecraft",
+                created_at=datetime(2026, 10, 30, 12, 0, tzinfo=UTC),
+                updated_at=datetime(2026, 10, 30, 12, 0, tzinfo=UTC),
+            )
+        )
+    )
+    run_async(
+        provider.catalog_source_rules.save(
+            CatalogSourceRule(
+                id=rule_id,
+                tenant_id=tenant_id,
+                integration_id=integration_id,
+                marketplace="ggsel",
+                source_category_id="minecraft-keys",
+                source_category_name="Minecraft keys",
+                hub_code="minecraft",
+                section_code="keys",
+                created_at=datetime(2026, 10, 30, 12, 0, tzinfo=UTC),
+                updated_at=datetime(2026, 10, 30, 12, 0, tzinfo=UTC),
+            )
+        )
+    )
+    classification = CatalogClassificationService(
+        create_memory_repository_scope(provider),
+        (
+            CatalogHub(
+                code="minecraft",
+                name="Minecraft",
+                sections=(CatalogSection(code="keys", name="Keys"),),
+            ),
+        ),
+    )
+    known = replace(
+        make_offer(external_id="known"),
+        source_category_id="minecraft-keys",
+        source_category_name="Minecraft keys",
+    )
+    unknown = replace(
+        make_offer(external_id="unknown"),
+        title="Minecraft key account",
+        source_category_id="unverified-category",
+    )
+    scope = RecordingScopeFactory(provider)
+    runner = MarketplaceApplicationRunner(
+        marketplace=Marketplace.GGSEL,
+        ingestion=RecordingIngestion((known, unknown)),
+        repository_scope_factory=scope,
+        pipeline=make_pipeline(),
+        tenant_id=tenant_id,
+        integration_id=integration_id,
+        catalog_classification=classification,
+    )
+
+    result = run_async(runner.run("demo://ggsel"))
+
+    stored_known = run_async(
+        provider.offers.get_by_identity(tenant_id, "ggsel", "known")
+    )
+    stored_unknown = run_async(
+        provider.offers.get_by_identity(tenant_id, "ggsel", "unknown")
+    )
+    assert result.offers_persisted == 2
+    assert scope.state == ScopeState(entered=1, committed=1, rolled_back=0)
+    assert stored_known is not None
+    assert stored_known.catalog_hub_code == "minecraft"
+    assert stored_known.catalog_section_code == "keys"
+    assert stored_known.catalog_source_rule_id == rule_id
+    assert stored_unknown is not None
+    assert stored_unknown.catalog_hub_code is None
+    assert stored_unknown.catalog_section_code is None
+    assert stored_unknown.catalog_source_rule_id is None
 
 
 def test_offer_repository_failure_rolls_back_and_skips_post_commit() -> None:

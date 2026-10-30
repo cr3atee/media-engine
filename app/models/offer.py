@@ -58,6 +58,13 @@ class Offer(Base):
             "source_category_id",
             postgresql_where=text("source_category_id IS NOT NULL"),
         ),
+        Index(
+            "ix_offers_tenant_catalog_classification",
+            "tenant_id",
+            "catalog_hub_code",
+            "catalog_section_code",
+            postgresql_where=text("catalog_hub_code IS NOT NULL"),
+        ),
         CheckConstraint(
             "manual_availability_status IN ('active', 'retired')",
             name="ck_offers_manual_availability_status",
@@ -73,10 +80,25 @@ class Offer(Base):
             "AND manually_retired_at IS NOT NULL)",
             name="ck_offers_manual_availability_state",
         ),
+        CheckConstraint(
+            "(catalog_hub_code IS NULL "
+            "AND catalog_section_code IS NULL "
+            "AND catalog_source_rule_id IS NULL) OR "
+            "(catalog_hub_code IS NOT NULL "
+            "AND catalog_section_code IS NOT NULL "
+            "AND catalog_source_rule_id IS NOT NULL)",
+            name="ck_offers_catalog_classification_complete",
+        ),
         ForeignKeyConstraint(
             ("tenant_id", "canonical_product_id"),
             ("canonical_products.tenant_id", "canonical_products.id"),
             name="fk_offers_tenant_canonical_product",
+        ),
+        ForeignKeyConstraint(
+            ("tenant_id", "catalog_source_rule_id"),
+            ("catalog_source_rules.tenant_id", "catalog_source_rules.id"),
+            name="fk_offers_tenant_catalog_source_rule",
+            ondelete="RESTRICT",
         ),
         UniqueConstraint(
             "tenant_id",
@@ -110,6 +132,18 @@ class Offer(Base):
     )
     source_category_name: Mapped[str | None] = mapped_column(
         String(500),
+        nullable=True,
+    )
+    catalog_hub_code: Mapped[str | None] = mapped_column(
+        String(64),
+        nullable=True,
+    )
+    catalog_section_code: Mapped[str | None] = mapped_column(
+        String(64),
+        nullable=True,
+    )
+    catalog_source_rule_id: Mapped[UUID | None] = mapped_column(
+        Uuid,
         nullable=True,
     )
     canonical_product_id: Mapped[UUID | None] = mapped_column(

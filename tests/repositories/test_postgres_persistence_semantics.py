@@ -22,6 +22,7 @@ from sqlalchemy.sql import ClauseElement
 from app.domain.price_snapshot import PriceSnapshot
 from app.models.canonical_offer_decision_record import CanonicalOfferDecisionRecord
 from app.models.canonical_product_record import CanonicalProductRecord
+from app.models.catalog_source_rule_record import CatalogSourceRuleRecord
 from app.models.offer import Offer
 from app.models.offer_source_observation_record import OfferSourceObservationRecord
 from app.models.price_snapshot_record import PriceSnapshotRecord
@@ -87,6 +88,9 @@ def make_offer(*, external_id: str | None = "offer-1") -> ParsedOffer:
         seller_name="Seller",
         source_category_id="section-1",
         source_category_name="Digital keys",
+        catalog_hub_code="minecraft",
+        catalog_section_code="keys",
+        catalog_source_rule_id=UUID("10000000-0000-4000-8000-000000000501"),
     )
 
 
@@ -222,6 +226,57 @@ def test_offer_observation_metadata_is_source_scoped_and_ordered() -> None:
     )
 
 
+def test_offer_catalog_classification_metadata_is_tenant_safe() -> None:
+    """Classification fields form one complete tenant-owned source-rule link."""
+    table = cast(Table, Offer.__table__)
+    checks = {
+        constraint.name
+        for constraint in table.constraints
+        if isinstance(constraint, CheckConstraint)
+    }
+    assert "ck_offers_catalog_classification_complete" in checks
+
+    foreign_key = next(
+        constraint
+        for constraint in table.constraints
+        if constraint.name == "fk_offers_tenant_catalog_source_rule"
+    )
+    assert isinstance(foreign_key, ForeignKeyConstraint)
+    assert tuple(column.name for column in foreign_key.columns) == (
+        "tenant_id",
+        "catalog_source_rule_id",
+    )
+    assert tuple(element.target_fullname for element in foreign_key.elements) == (
+        "catalog_source_rules.tenant_id",
+        "catalog_source_rules.id",
+    )
+    assert foreign_key.ondelete == "RESTRICT"
+
+    index = next(
+        index
+        for index in table.indexes
+        if index.name == "ix_offers_tenant_catalog_classification"
+    )
+    assert tuple(column.name for column in index.columns) == (
+        "tenant_id",
+        "catalog_hub_code",
+        "catalog_section_code",
+    )
+    assert index.dialect_options["postgresql"]["where"] is not None
+
+    rule_table = cast(Table, CatalogSourceRuleRecord.__table__)
+    tenant_rule_identity = next(
+        constraint
+        for constraint in rule_table.constraints
+        if constraint.name == "uq_catalog_source_rules_tenant_id_id"
+    )
+    assert isinstance(tenant_rule_identity, UniqueConstraint)
+    assert tuple(column.name for column in tenant_rule_identity.columns) == (
+        "tenant_id",
+        "id",
+    )
+
+
 def test_snapshot_metadata_defines_exact_identity_and_history_index() -> None:
     table = cast(Table, PriceSnapshotRecord.__table__)
     exact_identity = next(
@@ -334,6 +389,9 @@ def test_offer_save_compiles_partial_identity_upsert() -> None:
     assert "price = coalesce(excluded.price, offers.price)" in sql
     assert "source_category_id = coalesce(" in sql
     assert "source_category_name = coalesce(" in sql
+    assert "catalog_hub_code = coalesce(" in sql
+    assert "catalog_section_code = coalesce(" in sql
+    assert "catalog_source_rule_id = coalesce(" in sql
     assert "canonical_product_id = coalesce(" in sql
 
 

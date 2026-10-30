@@ -137,12 +137,11 @@ def test_catalog_source_rule_metadata_has_required_integrity_constraints() -> No
         for constraint in table.constraints
         if isinstance(constraint, CheckConstraint)
     }
-    unique = next(
-        constraint
+    unique = {
+        constraint.name: constraint
         for constraint in table.constraints
         if isinstance(constraint, UniqueConstraint)
-        and constraint.name == "uq_catalog_source_rules_source_identity"
-    )
+    }
 
     assert {
         "ck_catalog_source_rules_marketplace_nonempty",
@@ -153,12 +152,18 @@ def test_catalog_source_rule_metadata_has_required_integrity_constraints() -> No
         "ck_catalog_source_rules_timestamp_order",
         "ck_catalog_source_rules_version",
     } <= checks
-    assert tuple(column.name for column in unique.columns) == (
+    assert tuple(
+        column.name
+        for column in unique["uq_catalog_source_rules_source_identity"].columns
+    ) == (
         "tenant_id",
         "integration_id",
         "marketplace",
         "source_category_id",
     )
+    assert tuple(
+        column.name for column in unique["uq_catalog_source_rules_tenant_id_id"].columns
+    ) == ("tenant_id", "id")
     assert {index.name for index in table.indexes} == {
         "ix_catalog_source_rules_tenant_hub_section",
         "ix_catalog_source_rules_tenant_integration",

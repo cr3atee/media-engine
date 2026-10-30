@@ -64,6 +64,11 @@ class CatalogSourceRuleRecord(Base):
             "source_category_id",
             name="uq_catalog_source_rules_source_identity",
         ),
+        UniqueConstraint(
+            "tenant_id",
+            "id",
+            name="uq_catalog_source_rules_tenant_id_id",
+        ),
         Index(
             "ix_catalog_source_rules_tenant_hub_section",
             "tenant_id",

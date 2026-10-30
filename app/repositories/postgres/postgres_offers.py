@@ -236,6 +236,9 @@ class PostgresOfferRepository(OfferRepository):
             seller_name=offer.seller_name,
             source_category_id=offer.source_category_id,
             source_category_name=offer.source_category_name,
+            catalog_hub_code=offer.catalog_hub_code,
+            catalog_section_code=offer.catalog_section_code,
+            catalog_source_rule_id=offer.catalog_source_rule_id,
             canonical_product_id=offer.canonical_product_id,
             created_at=datetime.now(UTC),
         )
@@ -262,6 +265,18 @@ class PostgresOfferRepository(OfferRepository):
                     "source_category_name": func.coalesce(
                         excluded.source_category_name,
                         Offer.source_category_name,
+                    ),
+                    "catalog_hub_code": func.coalesce(
+                        excluded.catalog_hub_code,
+                        Offer.catalog_hub_code,
+                    ),
+                    "catalog_section_code": func.coalesce(
+                        excluded.catalog_section_code,
+                        Offer.catalog_section_code,
+                    ),
+                    "catalog_source_rule_id": func.coalesce(
+                        excluded.catalog_source_rule_id,
+                        Offer.catalog_source_rule_id,
                     ),
                     "canonical_product_id": func.coalesce(
                         excluded.canonical_product_id,
@@ -400,6 +415,9 @@ class PostgresOfferRepository(OfferRepository):
             seller_name=offer.seller_name,
             source_category_id=offer.source_category_id,
             source_category_name=offer.source_category_name,
+            catalog_hub_code=offer.catalog_hub_code,
+            catalog_section_code=offer.catalog_section_code,
+            catalog_source_rule_id=offer.catalog_source_rule_id,
             canonical_product_id=offer.canonical_product_id,
         )
 

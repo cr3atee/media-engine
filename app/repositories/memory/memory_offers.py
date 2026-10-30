@@ -83,6 +83,18 @@ class MemoryOfferRepository(OfferRepository):
                             offer.source_category_name,
                             stored_offer.source_category_name,
                         ),
+                        catalog_hub_code=_incoming_or_stored(
+                            offer.catalog_hub_code,
+                            stored_offer.catalog_hub_code,
+                        ),
+                        catalog_section_code=_incoming_or_stored(
+                            offer.catalog_section_code,
+                            stored_offer.catalog_section_code,
+                        ),
+                        catalog_source_rule_id=_incoming_or_stored(
+                            offer.catalog_source_rule_id,
+                            stored_offer.catalog_source_rule_id,
+                        ),
                         canonical_product_id=_incoming_or_stored(
                             offer.canonical_product_id,
                             stored_offer.canonical_product_id,
