@@ -144,20 +144,16 @@ If neither absolute URL nor slug exists, set `ParsedOffer.url` to `None`.
 
 ### Category
 
-Current status: cannot be mapped to `ParsedOffer`.
+Current status: mapped as source evidence without assigning a canonical
+category.
 
-Reason:
+- `category.id` -> `ParsedOffer.source_category_id`;
+- `category.name` -> `ParsedOffer.source_category_name`.
 
-- `ParsedOffer` has no `category` field.
-
-Potential Playerok fields:
-
-- `category.id`;
-- `category.name`;
-- `game.id`;
-- `game.name`.
-
-These values may be useful for filtering and diagnostics, but they should stay outside `ParsedOffer` until a universal category contract is introduced.
+`game.id` and `game.name` are not substituted for a missing category. Source
+category values are persisted and shown to an authorized catalog reviewer, but
+they do not change matching, create a canonical product, or automatically map
+an offer into one of the five public categories.
 
 ### Currency
 
@@ -220,7 +216,6 @@ GraphQL item-list response:
 The following fields are outside the current `ParsedOffer` contract even if Playerok provides them:
 
 - `description`;
-- `category`;
 - `image`;
 - `availability`;
 - seller rating;

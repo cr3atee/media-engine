@@ -75,6 +75,14 @@ class MemoryOfferRepository(OfferRepository):
                             offer.seller_name,
                             stored_offer.seller_name,
                         ),
+                        source_category_id=_incoming_or_stored(
+                            offer.source_category_id,
+                            stored_offer.source_category_id,
+                        ),
+                        source_category_name=_incoming_or_stored(
+                            offer.source_category_name,
+                            stored_offer.source_category_name,
+                        ),
                         canonical_product_id=_incoming_or_stored(
                             offer.canonical_product_id,
                             stored_offer.canonical_product_id,

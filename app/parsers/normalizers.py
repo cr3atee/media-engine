@@ -61,6 +61,11 @@ class OfferNormalizer:
             currency=currency or currency_from_price,
             seller_id=self._first_extra_str(raw_offer, self._SELLER_ID_KEYS),
             seller_name=self._clean_text(raw_offer.seller_name),
+            source_category_id=str(raw_offer.id_section),
+            source_category_name=self._first_extra_str(
+                raw_offer,
+                ("section_name", "category_name"),
+            ),
         )
 
     def _first_extra_str(

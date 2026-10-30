@@ -110,6 +110,8 @@ class CanonicalOfferReviewCandidateResponse(ApiModel):
     offer_url: str | None
     offer_price: Decimal | None
     currency: str | None
+    source_category_id: str | None
+    source_category_name: str | None
     canonical_product_id: UUID
     canonical_product_name: str
     canonical_product_category: str | None
@@ -127,6 +129,8 @@ class CanonicalProductProposalResponse(ApiModel):
     offer_url: str | None
     offer_price: Decimal | None
     currency: str | None
+    source_category_id: str | None
+    source_category_name: str | None
     proposed_name: str
     proposed_aliases: tuple[str, ...]
     nearest_canonical_product_id: UUID | None

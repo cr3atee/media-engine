@@ -36,9 +36,6 @@ candidate verification.
   do not infer completion from a queue page limit.
 - Decide whether the embedded Market Terminal shell remains inside this
   repository or moves to a separate frontend project before public launch.
-- Decide whether public category browse must require parser/category retention
-  before launch; saved marketplace payloads currently do not populate category
-  DTOs.
 - Add PostgreSQL-specific public query adapters only if direct SQL read
   optimization is explicitly approved after the repository-backed adapter is
   exercised.

@@ -54,6 +54,8 @@ def make_offer(
     title: str | None = "Minecraft Premium",
     price: Decimal | None = Decimal("790.00"),
     currency: str | None = "RUB",
+    source_category_id: str | None = "section-1",
+    source_category_name: str | None = "Digital keys",
     canonical_product_id: UUID | None = None,
 ) -> ParsedOffer:
     """Create a parsed offer for repository tests."""
@@ -66,6 +68,8 @@ def make_offer(
         currency=currency,
         seller_id=f"{marketplace}-seller",
         seller_name=f"{marketplace} Seller",
+        source_category_id=source_category_id,
+        source_category_name=source_category_name,
         canonical_product_id=canonical_product_id,
         tenant_id=tenant_id or LEGACY_TENANT_ID,
     )
@@ -135,6 +139,8 @@ def test_offer_repository_preserves_meaningful_optional_values() -> None:
         currency=None,
         seller_id=None,
         seller_name=None,
+        source_category_id=None,
+        source_category_name=None,
         canonical_product_id=None,
     )
 

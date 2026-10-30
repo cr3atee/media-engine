@@ -26,4 +26,6 @@ class PlayerokNormalizer:
             currency=normalize_currency(offer.currency) or self.DEFAULT_CURRENCY,
             seller_id=normalize_text(offer.seller_id),
             seller_name=normalize_text(offer.seller_name),
+            source_category_id=normalize_text(offer.source_category_id),
+            source_category_name=normalize_text(offer.source_category_name),
         )

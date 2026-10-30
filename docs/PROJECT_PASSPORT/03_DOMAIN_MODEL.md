@@ -51,6 +51,10 @@ Fields:
 - `currency`: price currency, when available.
 - `seller_id`: optional source seller identifier.
 - `seller_name`: optional source seller display name.
+- `source_category_id`: optional marketplace category identifier preserved
+  without interpreting it as a canonical product category.
+- `source_category_name`: optional marketplace category label preserved exactly
+  for operator evidence and diagnostics.
 - `canonical_product_id`: optional explicit link to a same-tenant
   `CanonicalProduct`; when present and resolvable, comparator grouping treats it
   as authoritative instead of re-guessing identity from the title.
@@ -207,7 +211,8 @@ aliases are empty, and reading it does not create a `CanonicalProduct` or link
 an offer. When explicitly confirmed, its stable UUID becomes the new
 `CanonicalProduct.id`; creation, source-offer linking, and immutable confirmed
 decision evidence share one transaction. The accepted product still has no
-inferred category or aliases.
+inferred aliases; its category is selected explicitly from the bounded public
+taxonomy by the authorized reviewer.
 
 An authorized reviewer may instead resolve the proposal to its current nearest
 existing `CanonicalProduct`. This requires explicit evidence, recomputes the

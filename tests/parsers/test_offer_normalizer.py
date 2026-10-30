@@ -46,6 +46,8 @@ def test_normalizer_keeps_snapshot_required_fields() -> None:
     assert parsed.currency == "RUB"
     assert parsed.seller_id == "456"
     assert parsed.seller_name == "Seller"
+    assert parsed.source_category_id == "789"
+    assert parsed.source_category_name is None
 
 
 def _raw_offer(url: str) -> RawMarketplaceOffer:

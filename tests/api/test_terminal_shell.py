@@ -338,6 +338,8 @@ def test_market_terminal_catalog_review_assets_are_served() -> None:
     assert '"create-product": {' in script.text
     assert '"resolve-existing": {' in script.text
     assert "function handleDecisionChoice(event)" in script.text
+    assert "function sourceCategoryLabel(offer)" in script.text
+    assert 'factHtml("Категория площадки", sourceCategoryLabel' in script.text
     assert "reason.required = guidance.required;" in script.text
     assert "Сверьте издание, платформу, способ получения и регион" in script.text
     assert "`/catalog/reviews/${endpoint}`" in script.text

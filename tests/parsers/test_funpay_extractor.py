@@ -39,6 +39,8 @@ def test_funpay_extractor_reads_offer_anchor() -> None:
     assert offers[0].currency == "RUB"
     assert offers[0].seller_id == "42"
     assert offers[0].seller_name == "BestSeller"
+    assert offers[0].source_category_id is None
+    assert offers[0].source_category_name is None
 
 
 def test_funpay_extractor_deduplicates_offers_by_external_id() -> None:

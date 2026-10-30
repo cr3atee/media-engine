@@ -413,10 +413,10 @@ acceptance for authenticated sources. The Playerok runtime resolver and session
 connector are implemented. The backend core is now a verified release candidate.
 The remaining work before public visual launch is promotion of the bounded
 human-reviewed catalog into the intended target environment,
-target-environment monitoring/secret rollout, frontend hardening, and a product
-decision on category data exposure. Guarded Playerok completeness evidence is
-also required before outbound listing availability can be treated as
-unattended-production ready.
+target-environment monitoring/secret rollout, and frontend hardening. The
+five-category public taxonomy and exact source-category evidence boundary are
+implemented. Guarded Playerok completeness evidence is still required before
+outbound listing availability can be treated as unattended-production ready.
 
 The complete operator-decision-to-public-read path is now integration-verified
 with isolated saved marketplace evidence. The retained workspace contains two

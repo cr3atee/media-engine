@@ -51,6 +51,13 @@ class Offer(Base):
             "id",
             postgresql_where=text("manual_availability_status = 'active'"),
         ),
+        Index(
+            "ix_offers_tenant_marketplace_source_category",
+            "tenant_id",
+            "marketplace",
+            "source_category_id",
+            postgresql_where=text("source_category_id IS NOT NULL"),
+        ),
         CheckConstraint(
             "manual_availability_status IN ('active', 'retired')",
             name="ck_offers_manual_availability_status",
@@ -97,6 +104,14 @@ class Offer(Base):
     currency: Mapped[str | None] = mapped_column(String(16), nullable=True)
     seller_id: Mapped[str | None] = mapped_column(String(255), nullable=True)
     seller_name: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    source_category_id: Mapped[str | None] = mapped_column(
+        String(255),
+        nullable=True,
+    )
+    source_category_name: Mapped[str | None] = mapped_column(
+        String(500),
+        nullable=True,
+    )
     canonical_product_id: Mapped[UUID | None] = mapped_column(
         Uuid,
         ForeignKey(

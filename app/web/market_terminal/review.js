@@ -633,6 +633,7 @@ function candidateCard(candidate) {
     <div class="review-facts">
       ${factHtml("Цена", money(candidate.offer_price, candidate.currency))}
       ${factHtml("ID объявления", candidate.external_id)}
+      ${factHtml("Категория площадки", sourceCategoryLabel(candidate))}
       ${factHtml("Решение", decisionLabel(candidate.match_decision))}
     </div>
     ${externalLinkHtml(candidate.offer_url)}
@@ -722,6 +723,7 @@ function proposalCard(proposal) {
     <div class="review-facts">
       ${factHtml("Цена", money(proposal.offer_price, proposal.currency))}
       ${factHtml("ID объявления", proposal.external_id)}
+      ${factHtml("Категория площадки", sourceCategoryLabel(proposal))}
       ${factHtml("Решение", decisionLabel(proposal.match_decision))}
     </div>
     ${externalLinkHtml(proposal.offer_url)}
@@ -1314,6 +1316,15 @@ function money(value, currency) {
   } catch {
     return `${amount.toLocaleString("ru-RU")} ${currency}`;
   }
+}
+
+function sourceCategoryLabel(offer) {
+  const name = String(offer.source_category_name || "").trim();
+  const id = String(offer.source_category_id || "").trim();
+  if (name && id) return `${name} · ID ${id}`;
+  if (name) return name;
+  if (id) return `ID ${id}`;
+  return "Не указана площадкой";
 }
 
 function formatSimilarity(value) {

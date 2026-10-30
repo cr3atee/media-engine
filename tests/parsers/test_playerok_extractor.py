@@ -24,7 +24,8 @@ def test_playerok_extractor_reads_json_offer_payload() -> None:
           "slug": "minecraft-premium",
           "name": " Minecraft Premium ",
           "price": {"amount": "790.50", "currency": "rub"},
-          "seller": {"id": 123, "username": "BestSeller"}
+          "seller": {"id": 123, "username": "BestSeller"},
+          "category": {"id": "keys", "name": " Digital keys "}
         }
       ]
     }
@@ -41,6 +42,8 @@ def test_playerok_extractor_reads_json_offer_payload() -> None:
     assert offers[0].currency == "RUB"
     assert offers[0].seller_id == "123"
     assert offers[0].seller_name == "BestSeller"
+    assert offers[0].source_category_id == "keys"
+    assert offers[0].source_category_name == "Digital keys"
 
 
 def test_playerok_extractor_reads_next_data_payload() -> None:
@@ -134,7 +137,8 @@ def test_playerok_normalizer_preserves_snapshot_ready_fields() -> None:
           "name": " Minecraft   Premium ",
           "price": "790",
           "currency": "rub",
-          "owner": {"id": 456, "username": " Seller "}
+          "owner": {"id": 456, "username": " Seller "},
+          "category": {"id": 77, "name": " Digital   keys "}
         }
       ]
     }
@@ -152,6 +156,8 @@ def test_playerok_normalizer_preserves_snapshot_ready_fields() -> None:
     assert normalized[0].currency == "RUB"
     assert normalized[0].seller_id == "456"
     assert normalized[0].seller_name == "Seller"
+    assert normalized[0].source_category_id == "77"
+    assert normalized[0].source_category_name == "Digital keys"
 
 
 def test_playerok_normalizer_defaults_missing_currency_to_rub() -> None:

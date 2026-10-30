@@ -192,6 +192,8 @@ class PlayerokExtractor:
             currency=self._currency(item),
             seller_id=self._seller_id(item),
             seller_name=self._seller_name(item),
+            source_category_id=self._source_category_id(item),
+            source_category_name=self._source_category_name(item),
             canonical_product_id=None,
         )
 
@@ -243,6 +245,17 @@ class PlayerokExtractor:
             return None
 
         name = self._as_str(seller.get("username")) or self._as_str(seller.get("name"))
+        return name.strip() if name is not None else None
+
+    def _source_category_id(self, item: JsonObject) -> str | None:
+        category = self._nested_object(item, "category")
+        return self._as_str(category.get("id")) if category is not None else None
+
+    def _source_category_name(self, item: JsonObject) -> str | None:
+        category = self._nested_object(item, "category")
+        if category is None:
+            return None
+        name = self._as_str(category.get("name"))
         return name.strip() if name is not None else None
 
     def _nested_object(self, item: JsonObject, *keys: str) -> JsonObject | None:

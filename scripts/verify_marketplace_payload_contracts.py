@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import sys
-from collections.abc import Sequence
+from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -9,8 +9,10 @@ PROJECT_ROOT = Path(__file__).resolve().parents[1]
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
+from app.parsers.models import ParsedOffer  # noqa: E402
 from scripts.verify_marketplace_data_readiness import (  # noqa: E402
     MarketplaceReadiness,
+    load_saved_marketplace_offers,
     verify_funpay,
     verify_ggsel,
     verify_playerok,
@@ -33,6 +35,11 @@ DEFAULT_EXPECTATIONS = (
     MarketplacePayloadExpectation(marketplace="playerok"),
     MarketplacePayloadExpectation(marketplace="funpay"),
 )
+
+SOURCE_CATEGORY_REQUIREMENTS = {
+    "ggsel": (True, False),
+    "playerok": (True, True),
+}
 
 
 def collect_readiness() -> tuple[MarketplaceReadiness, ...]:
@@ -86,11 +93,36 @@ def validate_readiness(
     return tuple(violations)
 
 
+def validate_source_categories(
+    offers_by_marketplace: Mapping[str, Sequence[ParsedOffer]],
+) -> tuple[str, ...]:
+    """Return violations for source category evidence promised by adapters."""
+    violations: list[str] = []
+    for marketplace, (require_id, require_name) in SOURCE_CATEGORY_REQUIREMENTS.items():
+        offers = offers_by_marketplace.get(marketplace, ())
+        if not offers:
+            violations.append(f"{marketplace}: no offers for source category check")
+            continue
+        if require_id and any(offer.source_category_id is None for offer in offers):
+            violations.append(
+                f"{marketplace}: source category ID coverage is incomplete"
+            )
+        if require_name and any(offer.source_category_name is None for offer in offers):
+            violations.append(
+                f"{marketplace}: source category name coverage is incomplete"
+            )
+    return tuple(violations)
+
+
 def main() -> int:
     """Run the strict marketplace payload drift guard."""
     _configure_stdout()
     results = collect_readiness()
-    violations = validate_readiness(results)
+    offers_by_marketplace = load_saved_marketplace_offers()
+    violations = (
+        *validate_readiness(results),
+        *validate_source_categories(offers_by_marketplace),
+    )
 
     print("=== MARKETPLACE PAYLOAD CONTRACTS ===")
     for result in results:
@@ -100,6 +132,14 @@ def main() -> int:
             f"raw={result.raw_items}, "
             f"parsed={result.parsed_offers}, "
             f"snapshot_ready={result.snapshot_ready_offers}"
+        )
+    print()
+    for marketplace, offers in offers_by_marketplace.items():
+        category_ids = sum(offer.source_category_id is not None for offer in offers)
+        category_names = sum(offer.source_category_name is not None for offer in offers)
+        print(
+            f"{marketplace}: source_category_id={category_ids}/{len(offers)}, "
+            f"source_category_name={category_names}/{len(offers)}"
         )
 
     if violations:

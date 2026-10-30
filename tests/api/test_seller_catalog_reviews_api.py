@@ -227,6 +227,8 @@ def test_review_queue_requires_catalog_permission_and_scopes_tenant() -> None:
             "offer_url": "https://ggsel.net/catalog/product/offer-1",
             "offer_price": "790.00",
             "currency": "RUB",
+            "source_category_id": "28831",
+            "source_category_name": "Digital keys",
             "canonical_product_id": str(PRODUCT_ID),
             "canonical_product_name": "Minecraft Java Bedrock Windows",
             "canonical_product_category": "Games",
@@ -266,6 +268,8 @@ def test_product_proposals_are_stable_and_permission_scoped() -> None:
     assert proposal["marketplace"] == "playerok"
     assert proposal["external_id"] == "offer-proposal"
     assert proposal["offer_title"] == "Stardew Valley Complete"
+    assert proposal["source_category_id"] == "game-keys"
+    assert proposal["source_category_name"] == "Game keys"
     assert proposal["proposed_name"] == "Stardew Valley Complete"
     assert proposal["proposed_aliases"] == []
     assert proposal["nearest_canonical_product_id"] == str(PRODUCT_ID)
@@ -758,6 +762,8 @@ async def _seed(provider: RepositoryProvider) -> None:
             url="https://ggsel.net/catalog/product/offer-1",
             price=Decimal("790.00"),
             currency="RUB",
+            source_category_id="28831",
+            source_category_name="Digital keys",
         ),
     )
     await provider.offers.save(
@@ -770,6 +776,8 @@ async def _seed(provider: RepositoryProvider) -> None:
             url="https://playerok.com/products/offer-proposal",
             price=Decimal("499.00"),
             currency="RUB",
+            source_category_id="game-keys",
+            source_category_name="Game keys",
         ),
     )
 

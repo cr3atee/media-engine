@@ -85,6 +85,8 @@ def make_offer(*, external_id: str | None = "offer-1") -> ParsedOffer:
         currency="RUB",
         seller_id="seller-1",
         seller_name="Seller",
+        source_category_id="section-1",
+        source_category_name="Digital keys",
     )
 
 
@@ -94,6 +96,7 @@ def test_offer_metadata_defines_identity_and_canonical_integrity() -> None:
     identity = indexes["uq_offers_marketplace_external_id_not_null"]
     canonical = indexes["ix_offers_canonical_product_id"]
     tenant_canonical = indexes["ix_offers_tenant_canonical_product"]
+    source_category = indexes["ix_offers_tenant_marketplace_source_category"]
 
     assert identity.unique is True
     assert tuple(column.name for column in identity.columns) == (
@@ -110,6 +113,12 @@ def test_offer_metadata_defines_identity_and_canonical_integrity() -> None:
         "canonical_product_id",
     )
     assert tenant_canonical.dialect_options["postgresql"]["where"] is not None
+    assert tuple(column.name for column in source_category.columns) == (
+        "tenant_id",
+        "marketplace",
+        "source_category_id",
+    )
+    assert source_category.dialect_options["postgresql"]["where"] is not None
 
     foreign_key = next(
         foreign_key
@@ -323,6 +332,8 @@ def test_offer_save_compiles_partial_identity_upsert() -> None:
     assert "DO UPDATE SET" in sql
     assert "title = coalesce(excluded.title, offers.title)" in sql
     assert "price = coalesce(excluded.price, offers.price)" in sql
+    assert "source_category_id = coalesce(" in sql
+    assert "source_category_name = coalesce(" in sql
     assert "canonical_product_id = coalesce(" in sql
 
 

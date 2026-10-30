@@ -6,6 +6,18 @@ This document records notable Project Passport updates.
 
 ## Unreleased
 
+- Preserved exact marketplace source category evidence without turning it into
+  an automatic canonical classification. GGSEL now carries `id_section` through
+  `ParsedOffer` and persistence (`60/60` saved offers); Playerok carries
+  `category.id/name` (`20/20`); the supported FunPay preview contract truthfully
+  reports no category. Revision `0022_offer_source_categories` adds nullable
+  fields and a tenant/marketplace partial index. The seller workspace displays
+  the source evidence before a reviewer selects one of five public categories.
+  Isolated PostgreSQL 17 upgrade, check, downgrade/re-upgrade, fresh-session,
+  upsert preservation and rollback pass; browser verification passes `76`, full
+  Pytest reports `680 passed, 61 skipped`, MyPy checks `497` files, and focused
+  Ruff/format plus JavaScript syntax checks pass.
+
 - Established a stable five-category MVP catalog taxonomy for games/items,
   keys/gifts, accounts, subscriptions, and balance top-ups. Public reads now
   expose all five categories including zero-count entries and normalize known

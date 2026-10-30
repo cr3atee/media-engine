@@ -544,8 +544,9 @@ authenticated-source rollout remain deployment work.
 - Playerok has live GraphQL item-list proof and produces real snapshot-ready
   parsed offers. The GraphQL response itself contains no `currency` field, so
   the `RUB` fallback must remain documented and covered by drift monitoring.
-  Optional verified game/category filters now support targeted source batches,
-  but `ParsedOffer` still does not retain category metadata.
+  Optional verified game/category filters support targeted source batches.
+  `ParsedOffer` now retains exact source category ID/name evidence without
+  treating it as a canonical category.
 - Saved-payload drift monitoring, production runtime configuration, and the
   combined PostgreSQL operations gate are complete; external collector and
   secret infrastructure remain before unattended target deployment is approved.
@@ -758,6 +759,18 @@ Full Pytest reports `678 passed, 60 skipped`, and MyPy is clean across `496`
 source files. The PostgreSQL proposal verifier was updated for the category
 contract but was not rerun locally because the Docker daemon was unavailable;
 this change introduces no database migration.
+
+Marketplace source categories now cross the parser and repository boundary as
+nullable evidence. GGSEL saved data provides section IDs for `60/60` offers;
+Playerok provides category IDs and names for `20/20`; the supported FunPay
+preview contract provides neither for its saved offer. Revision
+`0022_offer_source_categories` persists the fields and adds a tenant/marketplace
+lookup index. The review workspace displays exact source evidence while keeping
+the five-category canonical choice explicit and human-controlled. Isolated
+PostgreSQL 17 verification passed clean upgrade, `current`, `check`,
+downgrade/re-upgrade, fresh-session persistence, partial-upsert preservation,
+and rollback. Browser verification passes `76` checks; full Pytest reports
+`680 passed, 61 skipped`, and MyPy is clean across `497` source files.
 
 ## Architecture Review
 

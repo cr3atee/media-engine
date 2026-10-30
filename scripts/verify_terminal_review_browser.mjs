@@ -44,10 +44,10 @@ const tenant = "11111111-1111-4111-8111-111111111111";
 const secondTenant = "33333333-3333-4333-8333-333333333333";
 const canonical = "22222222-2222-4222-8222-222222222222";
 const title = "Minecraft Java & Bedrock Edition · PC · ключ Microsoft · GLOBAL";
-const candidate = { marketplace: "funpay", external_id: "fixture-review", canonical_product_id: canonical, canonical_product_name: title, canonical_product_category: "Игры", offer_title: `${title} <тест>`, offer_price: "990.00", currency: "RUB", similarity: .9, match_decision: "review", offer_url: "https://example.com/offer" };
+const candidate = { marketplace: "funpay", external_id: "fixture-review", canonical_product_id: canonical, canonical_product_name: title, canonical_product_category: "Игры", offer_title: `${title} <тест>`, offer_price: "990.00", currency: "RUB", source_category_id: null, source_category_name: null, similarity: .9, match_decision: "review", offer_url: "https://example.com/offer" };
 const proposals = [
-  { proposal_id: "fixture-proposal", marketplace: "ggsel", external_id: "fixture-new", proposed_name: "Minecraft Java & Bedrock Edition, цифровой ключ для компьютера", nearest_canonical_product_id: canonical, nearest_canonical_product_name: title, nearest_similarity: .7, offer_price: "790.00", currency: "RUB", match_decision: "no_match", offer_url: "https://example.com/offer" },
-  { proposal_id: "fixture-missing", marketplace: "playerok", external_id: "fixture-missing", proposed_name: "Minecraft для iOS", nearest_canonical_product_id: null, nearest_canonical_product_name: null, nearest_similarity: 0, offer_price: null, currency: null, match_decision: "no_match", offer_url: "javascript:alert(1)" },
+  { proposal_id: "fixture-proposal", marketplace: "ggsel", external_id: "fixture-new", proposed_name: "Minecraft Java & Bedrock Edition, цифровой ключ для компьютера", nearest_canonical_product_id: canonical, nearest_canonical_product_name: title, nearest_similarity: .7, offer_price: "790.00", currency: "RUB", source_category_id: "28831", source_category_name: "Ключи для игр", match_decision: "no_match", offer_url: "https://example.com/offer" },
+  { proposal_id: "fixture-missing", marketplace: "playerok", external_id: "fixture-missing", proposed_name: "Minecraft для iOS", nearest_canonical_product_id: null, nearest_canonical_product_name: null, nearest_similarity: 0, offer_price: null, currency: null, source_category_id: null, source_category_name: null, match_decision: "no_match", offer_url: "javascript:alert(1)" },
 ];
 const summary = { total_offers: 3, linked_offers: 0, review_candidates: 1, product_proposals: 2, canonical_products: 1, terminal_decisions: 0, unqueued_offers: 0, unresolved_offers: 3, marketplaces: ["funpay", "ggsel", "playerok"].map(marketplace => ({ marketplace, linked_offers: 0, total_offers: 1, review_candidates: marketplace === "funpay" ? 1 : 0, product_proposals: marketplace === "funpay" ? 0 : 1, unqueued_offers: 0 })) };
 
@@ -314,6 +314,7 @@ try {
   await check("restored state advances the optimistic version", 'document.querySelector("#offerLifecycleAction").textContent === "Скрыть объявление" && document.querySelector("#offerLifecycleState").dataset.state === "active"');
   await click("#offerLifecycleClose");
   await check("source and exact target separated", `document.querySelector('${source} .review-source').textContent.includes('цифровой ключ') && document.querySelector('${source} .candidate-link').textContent.includes('${canonical}')`);
+  await check("source category evidence is visible", `document.querySelector('${source} .review-source').textContent.includes('Ключи для игр · ID 28831') && document.querySelector('${candidateSource} .review-source').textContent.includes('Не указана площадкой')`);
   await check("external source is on source side only", `!!document.querySelector('${source} .review-source a') && !document.querySelector('${source} .candidate-link a')`);
   await check("unsafe source omitted and no target disabled", '!document.querySelector("[data-external-id=fixture-missing] a") && document.querySelector("[data-external-id=fixture-missing] .resolve").disabled');
   await check("titles escaped not interpreted", 'document.querySelector("[data-external-id=fixture-review] h3").textContent.includes("<тест>") && !document.querySelector("тест")');

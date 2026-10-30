@@ -35,5 +35,7 @@ class ParsedOffer:
     currency: str | None
     seller_id: str | None = None
     seller_name: str | None = None
+    source_category_id: str | None = None
+    source_category_name: str | None = None
     canonical_product_id: UUID | None = None
     tenant_id: UUID = LEGACY_TENANT_ID

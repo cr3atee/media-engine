@@ -757,3 +757,25 @@ verifiers passed `12/12`, `25/25`, and `25/25`; focused operations tests passed
 `41/41`; full Pytest passed `523` tests with `58` expected skips; MyPy checked
 `449` source files; and focused Ruff plus Ruff format checks passed. The
 temporary container and volume were removed after verification.
+
+## Marketplace Source Categories
+
+Revision `0022_offer_source_categories` was verified against a temporary
+`postgres:17` container and the isolated loopback database
+`mediaengine_source_category_test` on port `55432`. No project or production
+database was used.
+
+A clean upgrade created nullable `source_category_id` (`VARCHAR(255)`) and
+`source_category_name` (`VARCHAR(500)`) columns plus the partial
+`ix_offers_tenant_marketplace_source_category` index. `alembic current` reported
+head and `alembic check` reported no pending operations. Downgrade to
+`0021_offer_manual_availability` removed both columns; upgrade back to head
+restored the exact schema. Offline `upgrade head --sql` contains the revision,
+columns and index.
+
+The focused PostgreSQL contract test passed before and after the migration
+round trip. It verifies fresh-session persistence, preservation of known source
+category evidence when a later upsert omits it, and rollback without a retained
+row. Full Pytest reports `680 passed, 61 skipped`; MyPy checks `497` files; Ruff,
+Ruff format and JavaScript syntax checks pass. The temporary container and
+volume were removed after verification.

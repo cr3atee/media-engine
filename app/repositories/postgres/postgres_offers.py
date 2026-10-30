@@ -234,6 +234,8 @@ class PostgresOfferRepository(OfferRepository):
             currency=offer.currency,
             seller_id=offer.seller_id,
             seller_name=offer.seller_name,
+            source_category_id=offer.source_category_id,
+            source_category_name=offer.source_category_name,
             canonical_product_id=offer.canonical_product_id,
             created_at=datetime.now(UTC),
         )
@@ -252,6 +254,14 @@ class PostgresOfferRepository(OfferRepository):
                     "seller_name": func.coalesce(
                         excluded.seller_name,
                         Offer.seller_name,
+                    ),
+                    "source_category_id": func.coalesce(
+                        excluded.source_category_id,
+                        Offer.source_category_id,
+                    ),
+                    "source_category_name": func.coalesce(
+                        excluded.source_category_name,
+                        Offer.source_category_name,
                     ),
                     "canonical_product_id": func.coalesce(
                         excluded.canonical_product_id,
@@ -388,6 +398,8 @@ class PostgresOfferRepository(OfferRepository):
             currency=offer.currency,
             seller_id=offer.seller_id,
             seller_name=offer.seller_name,
+            source_category_id=offer.source_category_id,
+            source_category_name=offer.source_category_name,
             canonical_product_id=offer.canonical_product_id,
         )
 
