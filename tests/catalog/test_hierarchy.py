@@ -1,11 +1,15 @@
 from __future__ import annotations
 
+from datetime import UTC, datetime, timedelta
+from uuid import UUID
+
 import pytest
 
 from app.catalog.hierarchy import (
     CatalogClassifier,
     CatalogHub,
     CatalogSection,
+    CatalogSourceRule,
     SourceCategoryMapping,
 )
 
@@ -72,6 +76,88 @@ def test_classifier_keeps_same_source_id_scoped_to_marketplace() -> None:
     assert classifier.classify("playerok", "accounts") != classifier.classify(
         "ggsel", "accounts"
     )
+
+
+def test_integration_mapping_overrides_generic_marketplace_mapping() -> None:
+    hub = _fortnite()
+    integration_id = UUID(int=500)
+    classifier = CatalogClassifier(
+        hubs=(hub,),
+        mappings=(
+            SourceCategoryMapping(
+                "playerok",
+                "products",
+                "fortnite",
+                "accounts",
+            ),
+            SourceCategoryMapping(
+                "playerok",
+                "products",
+                "fortnite",
+                "v-bucks",
+                integration_id=integration_id,
+            ),
+        ),
+    )
+
+    generic = classifier.classify("playerok", "products")
+    scoped = classifier.classify(
+        "playerok",
+        "products",
+        integration_id=integration_id,
+    )
+
+    assert generic is not None
+    assert generic.section.code == "accounts"
+    assert scoped is not None
+    assert scoped.section.code == "v-bucks"
+
+
+def test_catalog_source_rule_normalizes_evidence_and_builds_scoped_mapping() -> None:
+    created_at = datetime(2026, 10, 30, 10, 0, tzinfo=UTC)
+    rule = CatalogSourceRule(
+        id=UUID(int=1),
+        tenant_id=UUID(int=2),
+        integration_id=UUID(int=3),
+        marketplace=" Playerok ",
+        source_category_id=" fortnite-vbucks ",
+        source_category_name="  Fortnite   V-Bucks ",
+        hub_code="FORTNITE",
+        section_code="V-BUCKS",
+        created_at=created_at,
+        updated_at=created_at + timedelta(minutes=1),
+    )
+
+    assert rule.marketplace == "playerok"
+    assert rule.source_category_id == "fortnite-vbucks"
+    assert rule.source_category_name == "Fortnite V-Bucks"
+    assert rule.hub_code == "fortnite"
+    assert rule.section_code == "v-bucks"
+    assert rule.mapping().integration_id == rule.integration_id
+
+
+def test_catalog_source_rule_rejects_invalid_lifecycle_state() -> None:
+    now = datetime(2026, 10, 30, 10, 0, tzinfo=UTC)
+
+    def source_rule(*, updated_at: datetime, version: int = 1) -> CatalogSourceRule:
+        return CatalogSourceRule(
+            id=UUID(int=1),
+            tenant_id=UUID(int=2),
+            integration_id=UUID(int=3),
+            marketplace="playerok",
+            source_category_id="fortnite-vbucks",
+            hub_code="fortnite",
+            section_code="v-bucks",
+            created_at=now,
+            updated_at=updated_at,
+            version=version,
+        )
+
+    with pytest.raises(ValueError, match="must not predate"):
+        source_rule(updated_at=now - timedelta(seconds=1))
+
+    with pytest.raises(ValueError, match="version must be positive"):
+        source_rule(updated_at=now, version=0)
 
 
 def test_classifier_rejects_unknown_mapping_targets() -> None:

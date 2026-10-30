@@ -3,8 +3,11 @@ from __future__ import annotations
 import re
 from collections.abc import Sequence
 from dataclasses import dataclass
+from datetime import datetime
+from uuid import UUID
 
 from app.catalog.categories import CatalogCategoryCode
+from app.domain.identity import normalize_utc
 
 _CODE_PATTERN = re.compile(r"^[a-z0-9]+(?:-[a-z0-9]+)*$")
 
@@ -57,6 +60,7 @@ class SourceCategoryMapping:
     source_category_id: str
     hub_code: str
     section_code: str
+    integration_id: UUID | None = None
 
     def __post_init__(self) -> None:
         """Normalize the source identity and target catalog codes."""
@@ -90,6 +94,62 @@ class CatalogClassification:
     section: CatalogSection
 
 
+@dataclass(slots=True, frozen=True, kw_only=True)
+class CatalogSourceRule:
+    """Tenant-owned durable classification rule for one integration category."""
+
+    id: UUID
+    tenant_id: UUID
+    integration_id: UUID
+    marketplace: str
+    source_category_id: str
+    hub_code: str
+    section_code: str
+    created_at: datetime
+    updated_at: datetime
+    source_category_name: str | None = None
+    version: int = 1
+
+    def __post_init__(self) -> None:
+        """Normalize source evidence, catalog codes, timestamps, and version."""
+        marketplace = _require_text(self.marketplace, "marketplace").casefold()
+        source_category_id = _require_text(
+            self.source_category_id,
+            "source category ID",
+        )
+        source_category_name = _optional_text(self.source_category_name)
+        created_at = normalize_utc(self.created_at, field_name="created_at")
+        updated_at = normalize_utc(self.updated_at, field_name="updated_at")
+        if updated_at < created_at:
+            msg = "Catalog source rule update time must not predate creation time."
+            raise ValueError(msg)
+        if self.version < 1:
+            msg = "Catalog source rule version must be positive."
+            raise ValueError(msg)
+
+        object.__setattr__(self, "marketplace", marketplace)
+        object.__setattr__(self, "source_category_id", source_category_id)
+        object.__setattr__(self, "source_category_name", source_category_name)
+        object.__setattr__(self, "hub_code", _require_code(self.hub_code, "hub code"))
+        object.__setattr__(
+            self,
+            "section_code",
+            _require_code(self.section_code, "section code"),
+        )
+        object.__setattr__(self, "created_at", created_at)
+        object.__setattr__(self, "updated_at", updated_at)
+
+    def mapping(self) -> SourceCategoryMapping:
+        """Return the runtime mapping represented by this persisted rule."""
+        return SourceCategoryMapping(
+            marketplace=self.marketplace,
+            source_category_id=self.source_category_id,
+            hub_code=self.hub_code,
+            section_code=self.section_code,
+            integration_id=self.integration_id,
+        )
+
+
 class CatalogClassifier:
     """Classify source categories using only explicit, verified mappings."""
 
@@ -112,28 +172,44 @@ class CatalogClassifier:
         self,
         marketplace: str,
         source_category_id: str | None,
+        *,
+        integration_id: UUID | None = None,
     ) -> CatalogClassification | None:
-        """Return an exact classification or None without guessing from titles."""
+        """Return an exact scoped classification without guessing from titles."""
         if source_category_id is None or not source_category_id.strip():
             return None
         normalized_marketplace = marketplace.strip().casefold()
         if not normalized_marketplace:
             return None
-        return self._classifications.get(
-            (normalized_marketplace, source_category_id.strip())
-        )
+        source_id = source_category_id.strip()
+        if integration_id is not None:
+            scoped = self._classifications.get(
+                (integration_id, normalized_marketplace, source_id)
+            )
+            if scoped is not None:
+                return scoped
+        return self._classifications.get((None, normalized_marketplace, source_id))
 
     def _index_mappings(
         self,
         mappings: Sequence[SourceCategoryMapping],
-    ) -> dict[tuple[str, str], CatalogClassification]:
-        indexed: dict[tuple[str, str], CatalogClassification] = {}
+    ) -> dict[tuple[UUID | None, str, str], CatalogClassification]:
+        indexed: dict[tuple[UUID | None, str, str], CatalogClassification] = {}
         for mapping in mappings:
-            source_key = (mapping.marketplace, mapping.source_category_id)
+            source_key = (
+                mapping.integration_id,
+                mapping.marketplace,
+                mapping.source_category_id,
+            )
             if source_key in indexed:
+                scope = (
+                    str(mapping.integration_id)
+                    if mapping.integration_id is not None
+                    else "all integrations"
+                )
                 msg = (
                     "Duplicate marketplace source-category mapping: "
-                    f"{mapping.marketplace}:{mapping.source_category_id}."
+                    f"{scope}:{mapping.marketplace}:{mapping.source_category_id}."
                 )
                 raise ValueError(msg)
 
@@ -176,3 +252,10 @@ def _require_text(value: str, field_name: str) -> str:
         msg = f"{field_name.capitalize()} must not be empty."
         raise ValueError(msg)
     return normalized
+
+
+def _optional_text(value: str | None) -> str | None:
+    if value is None:
+        return None
+    normalized = " ".join(value.strip().split())
+    return normalized or None
