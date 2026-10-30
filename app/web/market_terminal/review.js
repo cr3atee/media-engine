@@ -9,6 +9,13 @@ const api = "/api/v1";
 const requestTimeoutMs = 15_000;
 const candidatePageSize = 6;
 const proposalPageSize = 9;
+const catalogCategories = Object.freeze([
+  { code: "games", name: "Игры и предметы" },
+  { code: "keys", name: "Ключи и подарки" },
+  { code: "accounts", name: "Аккаунты" },
+  { code: "subscriptions", name: "Подписки" },
+  { code: "topups", name: "Пополнение баланса" },
+]);
 const decisionGuidance = Object.freeze({
   "confirm-candidate": {
     label: "Комментарий к проверке",
@@ -551,7 +558,7 @@ function queueFiltersActive() {
   return Boolean(state.queueQuery || state.queueMarketplace);
 }
 
-function decisionFormHtml(options) {
+function decisionFormHtml(options, { includeCategory = false } = {}) {
   const formId = `catalog-decision-${++decisionFormSequence}`;
   const choices = options.map((option) => `
     <label class="decision-option${option.disabled ? " is-disabled" : ""}">
@@ -568,11 +575,22 @@ function decisionFormHtml(options) {
       </span>
     </label>
   `).join("");
+  const categoryField = includeCategory ? `
+    <label class="decision-category" data-category-field hidden>
+      <span>Категория нового товара</span>
+      <select class="review-category" disabled required aria-describedby="${formId}-category-error">
+        <option value="">Выберите категорию</option>
+        ${catalogCategories.map((category) => `<option value="${category.code}">${category.name}</option>`).join("")}
+      </select>
+      <small id="${formId}-category-error" class="category-error" role="alert" hidden></small>
+    </label>
+  ` : "";
   return `
     <fieldset class="decision-choice">
       <legend>Как поступить?</legend>
       <div class="decision-options">${choices}</div>
     </fieldset>
+    ${categoryField}
     <label class="reason-label" for="${formId}-reason">
       <span class="reason-heading">
         <span data-reason-label>Комментарий к решению</span>
@@ -728,7 +746,7 @@ function proposalCard(proposal) {
               : "Подходящий товар не найден; доступно только создание нового.",
             disabled: !nearestId,
           },
-        ])}
+        ], { includeCategory: true })}
       </div>
     </details>
     <p class="card-message" role="status" aria-live="polite"></p>
@@ -737,6 +755,11 @@ function proposalCard(proposal) {
 }
 
 function handleDecisionChoice(event) {
+  if (event.target instanceof HTMLSelectElement && event.target.matches(".review-category")) {
+    const card = event.target.closest(".review-card");
+    if (card) setCategoryError(card, "");
+    return;
+  }
   if (!(event.target instanceof HTMLInputElement) || !event.target.matches(".decision-choice-input")) {
     return;
   }
@@ -754,6 +777,16 @@ function handleDecisionChoice(event) {
   reason.required = guidance.required;
   reason.setAttribute("aria-required", String(guidance.required));
   reason.placeholder = guidance.placeholder;
+  const categoryField = card.querySelector("[data-category-field]");
+  const categorySelect = card.querySelector(".review-category");
+  const creatingProduct = event.target.value === "create-product";
+  if (categoryField && categorySelect) {
+    categoryField.hidden = !creatingProduct;
+    categorySelect.disabled = !creatingProduct;
+    categorySelect.required = creatingProduct;
+    if (!creatingProduct) categorySelect.value = "";
+    setCategoryError(card, "");
+  }
   card.querySelector("[data-submit-decision]").disabled = false;
   card.querySelector("[data-submit-decision]").textContent = guidance.submitLabel;
   setReasonError(card, "");
@@ -778,6 +811,25 @@ function setReasonError(card, message) {
   error.hidden = !message;
   if (message) reason.setAttribute("aria-invalid", "true");
   else reason.removeAttribute("aria-invalid");
+}
+
+function setCategoryError(card, message) {
+  const category = card.querySelector(".review-category");
+  const error = card.querySelector(".category-error");
+  if (!category || !error) return;
+  error.textContent = message;
+  error.hidden = !message;
+  if (message) category.setAttribute("aria-invalid", "true");
+  else category.removeAttribute("aria-invalid");
+}
+
+function validateProductCategory(card, action) {
+  if (action !== "create-product") return true;
+  const category = card.querySelector(".review-category");
+  if (category?.value) return true;
+  setCategoryError(card, "Выберите одну из пяти категорий.");
+  category?.focus();
+  return false;
 }
 
 function validateDecisionReason(card, action, reason) {
@@ -832,8 +884,13 @@ async function handleProposalAction(event) {
   }
   const action = selectedDecision(card);
   const reason = card.querySelector(".review-reason").value.trim();
-  if (!action || !validateDecisionReason(card, action, reason)) return;
-  if (!await confirmDecision(card, action, reason)) return;
+  if (
+    !action
+    || !validateDecisionReason(card, action, reason)
+    || !validateProductCategory(card, action)
+  ) return;
+  const category = card.querySelector(".review-category")?.value || "";
+  if (!await confirmDecision(card, action, reason, category)) return;
   const base = `/catalog/product-proposals/${encodeURIComponent(card.dataset.proposalId)}`;
   const payload = {
     marketplace: card.dataset.marketplace,
@@ -842,6 +899,9 @@ async function handleProposalAction(event) {
   };
   let endpoint = `${base}/confirm`;
   let successMessage = "Канонический товар создан и связан.";
+  if (action === "create-product") {
+    payload.category = category;
+  }
   if (action === "resolve-existing") {
     endpoint = `${base}/resolve-existing`;
     payload.canonical_product_id = card.dataset.canonicalProductId;
@@ -878,7 +938,7 @@ function setCardMessage(card, message) {
 }
 
 /** Confirm the exact pair, without sending or changing any request payload. */
-async function confirmDecision(card, action, reason) {
+async function confirmDecision(card, action, reason, category = "") {
   const dialog = document.querySelector("#decisionDialog");
   if (dialog.open) return false;
   const tenantId = state.activeTenantId;
@@ -896,7 +956,10 @@ async function confirmDecision(card, action, reason) {
   document.querySelector("#decisionSourceId").textContent = `${card.dataset.marketplace} · ID ${card.dataset.externalId}`;
   document.querySelector("#decisionTargetLabel").textContent = creating ? "Новый товар" : "Товар каталога";
   document.querySelector("#decisionTarget").textContent = creating ? card.dataset.offerTitle : card.dataset.canonicalProductName;
-  document.querySelector("#decisionTargetId").textContent = creating ? "Будет создан после подтверждения" : `ID ${card.dataset.canonicalProductId}`;
+  const categoryName = catalogCategories.find((item) => item.code === category)?.name;
+  document.querySelector("#decisionTargetId").textContent = creating
+    ? `Категория: ${categoryName || "не выбрана"}`
+    : `ID ${card.dataset.canonicalProductId}`;
   document.querySelector("#decisionFacts").textContent = reason ? `Ваши факты: ${reason}` : "Комментарий не добавлен.";
   document.querySelector("#decisionConfirm").textContent = creating ? "Создать товар" : rejecting ? "Отклонить пару" : "Подтвердить связь";
   dialog.returnValue = "cancel";

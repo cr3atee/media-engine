@@ -42,6 +42,49 @@ def test_product_marketplace_identities_are_sorted_unique_and_product_scoped() -
     asyncio.run(_assert_marketplace_identities())
 
 
+def test_public_categories_use_fixed_taxonomy_and_legacy_values() -> None:
+    asyncio.run(_assert_fixed_category_taxonomy())
+
+
+async def _assert_fixed_category_taxonomy() -> None:
+    provider = create_memory_provider()
+    product = CanonicalProduct(
+        id=UUID(int=101),
+        name="Minecraft",
+        category="Games",
+        aliases=(),
+    )
+    await provider.canonical_products.save(product)
+    await provider.offers.save(
+        ParsedOffer(
+            marketplace="ggsel",
+            external_id="category-offer",
+            title="Minecraft key",
+            url="https://example.com/category-offer",
+            price=Decimal("500"),
+            currency="RUB",
+            canonical_product_id=product.id,
+        )
+    )
+    repository = RepositoryBackedPublicReadRepository(provider)
+
+    categories = await repository.list_categories(
+        PublicCategoryQuery(),
+        _page(sort="name", direction="asc"),
+    )
+    products = await repository.list_products(
+        PublicProductQuery(category="Игры и предметы"),
+        _page(sort="name", direction="asc"),
+    )
+
+    counts = {item.code: item.product_count for item in categories.items}
+    assert set(counts) == {"games", "keys", "accounts", "subscriptions", "topups"}
+    assert counts["games"] == 1
+    assert sum(counts.values()) == 1
+    assert len(products.items) == 1
+    assert products.items[0].category == "Игры и предметы"
+
+
 async def _assert_marketplace_identities() -> None:
     provider = create_memory_provider()
     product = CanonicalProduct(

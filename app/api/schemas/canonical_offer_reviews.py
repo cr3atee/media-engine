@@ -7,6 +7,7 @@ from uuid import UUID
 from pydantic import Field, field_validator
 
 from app.api.schemas.common import ApiModel
+from app.catalog.categories import CatalogCategoryCode
 from app.domain.admin_actions import AdminActorType
 from app.domain.canonical_offer_decisions import CanonicalOfferDecisionType
 from app.domain.offer_availability import OfferAvailabilityStatus
@@ -57,6 +58,7 @@ class ConfirmCanonicalProductProposalRequest(ApiModel):
 
     marketplace: str = Field(min_length=1, max_length=64)
     external_id: str = Field(min_length=1, max_length=255)
+    category: CatalogCategoryCode
     reason: str | None = Field(default=None, max_length=2000)
 
     _normalize_marketplace = field_validator("marketplace")(_nonempty_text)

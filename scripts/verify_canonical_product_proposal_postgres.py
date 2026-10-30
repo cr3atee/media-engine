@@ -212,6 +212,7 @@ async def _verify_api(
     command_payload = {
         "marketplace": "ggsel",
         "external_id": "offer-api",
+        "category": "games",
         "reason": "Verified source product",
     }
     headers = {**reviewer, "Idempotency-Key": "proposal-api-confirm"}
@@ -251,6 +252,7 @@ async def _verify_api(
         json={
             "marketplace": "ggsel",
             "external_id": "offer-rollback",
+            "category": "games",
         },
     )
     auto_offer = _offer("offer-auto", "Minecraft Java Bedrock Windows")
@@ -258,7 +260,11 @@ async def _verify_api(
     auto_match = await client.post(
         f"{proposals_url}/{auto_id}/confirm",
         headers={**reviewer, "Idempotency-Key": "proposal-auto-match"},
-        json={"marketplace": "ggsel", "external_id": "offer-auto"},
+        json={
+            "marketplace": "ggsel",
+            "external_id": "offer-auto",
+            "category": "games",
+        },
     )
     verifier.check(
         "stale and non-no-match proposals fail without mutation",
@@ -407,6 +413,7 @@ async def _verify_concurrency(
         proposal_id=proposal_id,
         marketplace="ggsel",
         external_id="offer-concurrent",
+        category="games",
     )
     results = await asyncio.gather(
         CanonicalProductProposalService(scope_factory).confirm(
@@ -473,6 +480,7 @@ async def _verify_rollback(
                 proposal_id=proposal_id,
                 marketplace="ggsel",
                 external_id="offer-rollback",
+                category="games",
             ),
             _context("rollback"),
         )
@@ -574,6 +582,7 @@ async def _verify_cross_command_concurrency(
                 proposal_id=proposal_id,
                 marketplace="ggsel",
                 external_id="offer-cross-command",
+                category="games",
             ),
             _context("cross-proposal"),
         ),
@@ -657,6 +666,7 @@ async def _verify_tenant_isolation(
                 proposal_id=foreign_identity,
                 marketplace="ggsel",
                 external_id="offer-api",
+                category="games",
             ),
             _context("tenant-isolation"),
         )

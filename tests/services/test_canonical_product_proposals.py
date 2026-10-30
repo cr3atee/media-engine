@@ -4,11 +4,12 @@ import asyncio
 from collections.abc import Coroutine
 from datetime import UTC, datetime
 from decimal import Decimal
-from typing import Any
+from typing import Any, cast
 from uuid import UUID
 
 import pytest
 
+from app.catalog.categories import CatalogCategoryCode
 from app.domain.admin_actions import AdminActorType
 from app.domain.canonical_offer_decisions import CanonicalOfferDecision
 from app.models.canonical_product import CanonicalProduct
@@ -26,6 +27,7 @@ from app.services.canonical_offer_review_queue import (
     canonical_product_proposal_id,
 )
 from app.services.canonical_product_proposals import (
+    CanonicalProductCategoryUnavailableError,
     CanonicalProductProposalConfirmationResult,
     CanonicalProductProposalEvidenceRequiredError,
     CanonicalProductProposalResolutionResult,
@@ -92,7 +94,7 @@ def test_confirmation_creates_links_audits_and_replays_atomically() -> None:
 
         assert confirmed.product.id == command.proposal_id
         assert confirmed.product.name == "Stardew Valley Complete"
-        assert confirmed.product.category is None
+        assert confirmed.product.category == "Игры и предметы"
         assert confirmed.product.aliases == ()
         assert confirmed.offer.canonical_product_id == command.proposal_id
         assert confirmed.decision.id == DECISION_ID
@@ -120,6 +122,11 @@ def test_confirmation_rejects_idempotency_fingerprint_reuse() -> None:
         with pytest.raises(CanonicalOfferReviewIdempotencyConflictError):
             await service.confirm(
                 _command(offer, reason="Different semantics"),
+                context,
+            )
+        with pytest.raises(CanonicalOfferReviewIdempotencyConflictError):
+            await service.confirm(
+                _command(offer, category="keys"),
                 context,
             )
 
@@ -156,6 +163,7 @@ def test_confirmation_requires_current_no_match_proposal() -> None:
                     proposal_id=UUID("3c000000-0000-4000-8000-000000009999"),
                     marketplace="ggsel",
                     external_id="proposal-offer",
+                    category="games",
                 ),
                 _context("wrong-proposal"),
             )
@@ -181,6 +189,24 @@ def test_confirmation_requires_current_no_match_proposal() -> None:
     run_async(scenario())
 
 
+def test_confirmation_rejects_category_outside_taxonomy() -> None:
+    async def scenario() -> None:
+        provider = create_memory_provider()
+        offer = _offer()
+        await provider.offers.save(TENANT_A_ID, offer)
+
+        with pytest.raises(CanonicalProductCategoryUnavailableError):
+            await _service(create_memory_repository_scope(provider)).confirm(
+                _command(
+                    offer,
+                    category=cast(CatalogCategoryCode, "unknown"),
+                ),
+                _context("invalid-category"),
+            )
+
+    run_async(scenario())
+
+
 def test_confirmation_is_tenant_isolated() -> None:
     async def scenario() -> None:
         provider = create_memory_provider()
@@ -192,6 +218,7 @@ def test_confirmation_is_tenant_isolated() -> None:
             proposal_id=canonical_product_proposal_id(TENANT_B_ID, offer),
             marketplace="ggsel",
             external_id="proposal-offer",
+            category="games",
         )
 
         with pytest.raises(MarketplaceOfferUnavailableError):
@@ -441,6 +468,7 @@ def _offer(*, title: str = "Stardew Valley Complete") -> ParsedOffer:
 def _command(
     offer: ParsedOffer,
     *,
+    category: CatalogCategoryCode = "games",
     reason: str | None = "Verified source product",
 ) -> ConfirmCanonicalProductProposalCommand:
     return ConfirmCanonicalProductProposalCommand(
@@ -448,6 +476,7 @@ def _command(
         proposal_id=canonical_product_proposal_id(TENANT_A_ID, offer),
         marketplace="ggsel",
         external_id="proposal-offer",
+        category=category,
         reason=reason,
     )
 

@@ -6,6 +6,18 @@ This document records notable Project Passport updates.
 
 ## Unreleased
 
+- Established a stable five-category MVP catalog taxonomy for games/items,
+  keys/gifts, accounts, subscriptions, and balance top-ups. Public reads now
+  expose all five categories including zero-count entries and normalize known
+  legacy values. Canonical-product creation requires an explicit category; the
+  choice is part of idempotency and is stored without a schema change. Saved
+  preview data is classified only from explicit title evidence, so uncertain
+  offers remain unclassified. Public readiness passes `47` checks, the seller
+  browser verifier passes `75`, full Pytest reports `678 passed, 60 skipped`,
+  MyPy checks `496` files, and focused Ruff, format, and JavaScript syntax checks
+  are clean. The PostgreSQL proposal verifier was updated but not rerun because
+  the local Docker daemon was unavailable; no migration is required.
+
 - Polished the shared Market Terminal shell without changing product behavior:
   removed cabinet-only demo copy, the internal footer, the UUID instruction and
   redundant full-width dividers. Added an opaque first-paint and internal-page

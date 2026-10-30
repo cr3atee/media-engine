@@ -8,6 +8,11 @@ from decimal import Decimal
 from typing import cast
 from uuid import UUID
 
+from app.catalog.categories import (
+    MVP_CATALOG_CATEGORIES,
+    CatalogCategory,
+    resolve_catalog_category,
+)
 from app.comparator.difference import PriceDifferenceService
 from app.comparator.models import MarketplaceOffer, ProductComparisonInput
 from app.comparator.result import ComparisonResultBuilder
@@ -239,19 +244,21 @@ class RepositoryBackedPublicReadRepository(
     ) -> ReadPage[CategoryRead]:
         """Return categories derived from tenant-visible canonical products."""
         products = await self._products(query.tenant_id)
-        counts: dict[str, tuple[str, int]] = {}
+        counts = {category.code: 0 for category in MVP_CATALOG_CATEGORIES}
         for product in products:
-            category = product.category.strip() if product.category else None
-            if not category:
+            category = resolve_catalog_category(product.category)
+            if category is None:
                 continue
-            code = _category_code(category)
-            _, count = counts.get(code, (category, 0))
-            counts[code] = (category, count + 1)
+            counts[category.code] += 1
 
         categories = [
-            CategoryRead(code=code, name=name, product_count=count)
-            for code, (name, count) in counts.items()
-            if _category_matches(name, query)
+            CategoryRead(
+                code=category.code,
+                name=category.name,
+                product_count=counts[category.code],
+            )
+            for category in MVP_CATALOG_CATEGORIES
+            if _category_matches(category, query)
         ]
         categories.sort(
             key=(
@@ -416,10 +423,11 @@ def _cursor_timestamp(value: datetime | None) -> datetime:
 
 def _product_summary(context: _ProductContext) -> ProductSummaryRead:
     marketplaces = tuple(sorted({offer.marketplace for offer in context.offers}))
+    category = resolve_catalog_category(context.product.category)
     return ProductSummaryRead(
         id=context.product.id,
         name=context.product.name,
-        category=context.product.category,
+        category=category.name if category is not None else None,
         best_offer=context.best_offer,
         offer_count=len(context.offers),
         marketplace_count=len(marketplaces),
@@ -464,10 +472,11 @@ def _best_offer(
 
 def _product_detail(context: _ProductContext) -> ProductDetailRead:
     marketplaces = tuple(sorted({offer.marketplace for offer in context.offers}))
+    category = resolve_catalog_category(context.product.category)
     return ProductDetailRead(
         id=context.product.id,
         name=context.product.name,
-        category=context.product.category,
+        category=category.name if category is not None else None,
         aliases=context.product.aliases,
         best_offer=context.best_offer,
         offer_count=len(context.offers),
@@ -484,8 +493,11 @@ def _product_matches(context: _ProductContext, query: PublicProductQuery) -> boo
         haystack = (product.name, *(product.aliases or ()))
         if not any(needle in value.casefold() for value in haystack):
             return False
-    if query.category is not None and product.category != query.category:
-        return False
+    if query.category is not None:
+        requested_category = resolve_catalog_category(query.category)
+        product_category = resolve_catalog_category(product.category)
+        if requested_category is None or requested_category != product_category:
+            return False
     if query.marketplace is not None and not any(
         offer.marketplace == query.marketplace for offer in context.offers
     ):
@@ -548,14 +560,13 @@ def _price_change_event_matches(
     return event.scoring_status is ScoringStatus.SUCCEEDED
 
 
-def _category_matches(name: str, query: PublicCategoryQuery) -> bool:
+def _category_matches(
+    category: CatalogCategory,
+    query: PublicCategoryQuery,
+) -> bool:
     if query.search is None:
         return True
-    return query.search.casefold() in name.casefold()
-
-
-def _category_code(name: str) -> str:
-    return "-".join(name.strip().casefold().split())
+    return category.contains(query.search)
 
 
 def _sort_product_contexts(

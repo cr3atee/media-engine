@@ -745,6 +745,20 @@ removed. Current browser verification passes `72/72` review checks and `52/52`
 access, diagnostics and transition checks; full Pytest is `668 passed, 60
 skipped`, and MyPy is clean across `494` source files.
 
+The catalog now has one bounded five-category MVP taxonomy: games and items,
+keys and gifts, accounts, subscriptions, and balance top-ups. Public category
+reads return all five stable codes even when a category has no products and
+normalize recognized legacy category values. New canonical products require an
+explicit reviewer-selected category; the choice participates in idempotency and
+is persisted through the existing canonical-product field. Saved-data preview
+classification uses explicit title evidence only and leaves uncertain products
+unclassified. Memory-backed readiness passes `47` checks and the seller review
+browser flow passes `75` checks, including the five-option category decision.
+Full Pytest reports `678 passed, 60 skipped`, and MyPy is clean across `496`
+source files. The PostgreSQL proposal verifier was updated for the category
+contract but was not rerun locally because the Docker daemon was unavailable;
+this change introduces no database migration.
+
 ## Architecture Review
 
 Current architecture separates:

@@ -289,6 +289,7 @@ def test_product_proposal_confirmation_is_atomic_audited_and_idempotent() -> Non
     payload = {
         "marketplace": "playerok",
         "external_id": "offer-proposal",
+        "category": "games",
         "reason": "Verified source product",
     }
     public_before = client.get("/api/v1/public/products?q=Stardew")
@@ -310,6 +311,16 @@ def test_product_proposal_confirmation_is_atomic_audited_and_idempotent() -> Non
         confirm_url,
         headers=headers,
         json={**payload, "reason": "Different semantics"},
+    )
+    category_conflict = client.post(
+        confirm_url,
+        headers=headers,
+        json={**payload, "category": "keys"},
+    )
+    invalid_category = client.post(
+        confirm_url,
+        headers={**reviewer, "Idempotency-Key": "invalid-category"},
+        json={**payload, "category": "other"},
     )
     empty_queue = client.get(proposals_url, headers=reviewer)
     onboarding = client.get(
@@ -356,7 +367,7 @@ def test_product_proposal_confirmation_is_atomic_audited_and_idempotent() -> Non
     assert result["proposal_id"] == proposal["proposal_id"]
     assert result["canonical_product_id"] == proposal["proposal_id"]
     assert result["canonical_product_name"] == "Stardew Valley Complete"
-    assert result["canonical_product_category"] is None
+    assert result["canonical_product_category"] == "Игры и предметы"
     assert result["canonical_product_aliases"] == []
     assert result["decision"] == "confirmed"
     assert result["replayed"] is False
@@ -366,6 +377,9 @@ def test_product_proposal_confirmation_is_atomic_audited_and_idempotent() -> Non
     assert conflict.status_code == 409
     assert conflict.json()["error"]["code"] == "idempotency_conflict"
     assert "fingerprint" not in conflict.text.lower()
+    assert category_conflict.status_code == 409
+    assert category_conflict.json()["error"]["code"] == "idempotency_conflict"
+    assert invalid_category.status_code == 422
     assert empty_queue.status_code == 200
     assert empty_queue.json() == []
     assert onboarding.status_code == 200
@@ -378,7 +392,7 @@ def test_product_proposal_confirmation_is_atomic_audited_and_idempotent() -> Non
         {
             "id": public_product_id,
             "name": "Stardew Valley Complete",
-            "category": None,
+            "category": "Игры и предметы",
             "best_offer": {
                 "marketplace": "playerok",
                 "external_id": "offer-proposal",

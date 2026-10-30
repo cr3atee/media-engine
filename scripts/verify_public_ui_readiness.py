@@ -21,6 +21,7 @@ if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
 from app.config.settings import AdminApiSettings
+from app.catalog.categories import MVP_CATALOG_CATEGORIES, infer_catalog_category
 from app.main import create_app
 from app.models.canonical_product import CanonicalProduct
 from app.parsers.models import ParsedOffer
@@ -177,11 +178,15 @@ def main() -> int:
             "marketplace payloads contain current offers, not historical previous "
             "snapshots or durable scored events."
         )
-    if not categories.json()["items"]:
-        notes.append(
-            "Category DTOs were route-verified as empty because the current "
-            "ParsedOffer contract does not retain marketplace category fields."
+    category_items = categories.json()["items"]
+    category_codes = {item["code"] for item in category_items}
+    expected_category_codes = {category.code for category in MVP_CATALOG_CATEGORIES}
+    if category_codes != expected_category_codes:
+        violations.append(
+            "categories: expected the complete five-category MVP taxonomy"
         )
+    else:
+        check_count += 1
 
     print()
     print(f"Seeded public products: {len(seeded_products)}")
@@ -215,17 +220,35 @@ def main() -> int:
 def _verify_terminal_shell(client: TestClient, violations: list[str]) -> int:
     """Verify that the embedded shell is wired to every public read surface."""
     document = client.get("/terminal")
-    styles = client.get("/terminal/styles.css")
+    preview_styles = client.get("/terminal/preview/preview.css")
+    catalog_styles = client.get("/terminal/catalog.css")
     script = client.get("/terminal/app.js")
     checks = 0
     checks += _expect_status(document.status_code, 200, "terminal", violations)
-    checks += _expect_status(styles.status_code, 200, "terminal styles", violations)
+    checks += _expect_status(
+        preview_styles.status_code,
+        200,
+        "terminal preview styles",
+        violations,
+    )
+    checks += _expect_status(
+        catalog_styles.status_code,
+        200,
+        "terminal catalog styles",
+        violations,
+    )
     checks += _expect_status(script.status_code, 200, "terminal script", violations)
 
     checks += _expect_contains(
         document.text,
-        "/terminal/styles.css",
-        "terminal stylesheet reference",
+        "/terminal/preview/preview.css",
+        "terminal preview stylesheet reference",
+        violations,
+    )
+    checks += _expect_contains(
+        document.text,
+        "/terminal/catalog.css",
+        "terminal catalog stylesheet reference",
         violations,
     )
     checks += _expect_contains(
@@ -332,10 +355,15 @@ def build_seeded_products(
         if offer.url is None:
             notes.append(f"{result.marketplace}: saved offer has no public URL.")
 
+        category = infer_catalog_category(title)
+        if category is None:
+            notes.append(
+                f"{result.marketplace}: saved title has no explicit category evidence."
+            )
         product = CanonicalProduct(
             id=uuid5(_PRODUCT_NAMESPACE, f"{offer.marketplace}:{offer.external_id}"),
             name=title,
-            category=None,
+            category=category.name if category is not None else None,
             aliases=(),
             tenant_id=offer.tenant_id,
         )

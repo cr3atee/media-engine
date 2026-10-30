@@ -5,6 +5,7 @@ from dataclasses import dataclass
 from datetime import UTC, datetime
 from uuid import UUID, uuid4
 
+from app.catalog.categories import CatalogCategoryCode, resolve_catalog_category
 from app.domain.canonical_offer_decisions import (
     CanonicalOfferDecision,
     CanonicalOfferDecisionType,
@@ -42,6 +43,7 @@ class ConfirmCanonicalProductProposalCommand:
     proposal_id: UUID
     marketplace: str
     external_id: str
+    category: CatalogCategoryCode
     reason: str | None = None
 
 
@@ -95,6 +97,10 @@ class CanonicalProductProposalEvidenceRequiredError(CanonicalProductProposalErro
     """Raised when an explicit existing-product resolution lacks evidence."""
 
 
+class CanonicalProductCategoryUnavailableError(CanonicalProductProposalError):
+    """Raised when a product proposal uses a category outside the MVP taxonomy."""
+
+
 class CanonicalProductProposalService:
     """Apply explicit source-backed proposal decisions transactionally."""
 
@@ -119,6 +125,11 @@ class CanonicalProductProposalService:
         """Create, link, and audit one still-current no-match proposal."""
         marketplace = command.marketplace.strip().lower()
         external_id = command.external_id.strip()
+        category = resolve_catalog_category(command.category)
+        if category is None:
+            raise CanonicalProductCategoryUnavailableError(
+                "Canonical product category is outside the configured taxonomy."
+            )
         fingerprint = build_canonical_offer_decision_fingerprint(
             tenant_id=command.tenant_id,
             marketplace=marketplace,
@@ -128,6 +139,7 @@ class CanonicalProductProposalService:
             actor_id=context.actor_id,
             actor_type=context.actor_type,
             reason=command.reason,
+            qualifiers={"category": category.code},
         )
         async with self._repository_scope_factory() as repositories:
             decisions = repositories.canonical_offer_decisions
@@ -193,7 +205,7 @@ class CanonicalProductProposalService:
                 id=command.proposal_id,
                 tenant_id=command.tenant_id,
                 name=proposal.proposed_name,
-                category=None,
+                category=category.name,
                 aliases=(),
             )
             await repositories.canonical_products.save(product)
@@ -431,6 +443,8 @@ async def _load_replay(
         product is None
         or offer is None
         or offer.canonical_product_id != product.id
+        or resolve_catalog_category(product.category)
+        != resolve_catalog_category(command.category)
         or decision.decision is not CanonicalOfferDecisionType.CONFIRMED
         or decision.canonical_product_id != command.proposal_id
     ):

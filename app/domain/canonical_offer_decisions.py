@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+from collections.abc import Mapping
 from dataclasses import dataclass
 from datetime import datetime
 from enum import StrEnum
@@ -86,9 +87,10 @@ def build_canonical_offer_decision_fingerprint(
     actor_id: str,
     actor_type: AdminActorType,
     reason: str | None,
+    qualifiers: Mapping[str, str] | None = None,
 ) -> str:
     """Hash normalized review semantics independently from transport details."""
-    payload = {
+    payload: dict[str, object] = {
         "actor_id": _require_text(
             actor_id,
             field_name="actor_id",
@@ -110,6 +112,19 @@ def build_canonical_offer_decision_fingerprint(
         "reason": normalize_optional_reason(reason),
         "tenant_id": str(tenant_id),
     }
+    if qualifiers:
+        payload["qualifiers"] = {
+            _require_text(
+                key,
+                field_name="qualifier key",
+                maximum_length=64,
+            ): _require_text(
+                value,
+                field_name=f"qualifier {key}",
+                maximum_length=255,
+            )
+            for key, value in sorted(qualifiers.items())
+        }
     serialized = json.dumps(
         payload,
         ensure_ascii=True,

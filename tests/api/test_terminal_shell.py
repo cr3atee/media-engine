@@ -437,7 +437,11 @@ def test_review_uses_shared_presentation_and_explicit_pair_confirmation() -> Non
     assert 'src="/terminal/review.js" type="module"' in page
     assert 'from "/terminal/preview/presentation.js"' in script
     assert "window.confirm" not in script
-    assert "async function confirmDecision(card, action, reason)" in script
+    assert (
+        'async function confirmDecision(card, action, reason, category = "")' in script
+    )
+    assert 'code: "games", name: "Игры и предметы"' in script
+    assert "Выберите одну из пяти категорий." in script
     assert "tenantId === state.activeTenantId" in script
     assert "sessionEpoch === state.sessionEpoch" in script
     assert "setCardMessage(card, errorMessage(error))" in script

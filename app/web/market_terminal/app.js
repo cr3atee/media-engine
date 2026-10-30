@@ -327,7 +327,7 @@ function isCurrentCatalogRequest(requestVersion) {
 async function loadCategories() {
   const requestVersion = beginCategoryRequest();
   try {
-    const payload = await getJson("/categories?limit=10");
+    const payload = await getJson("/categories?limit=5");
     if (!isCurrentCategoryRequest(requestVersion)) {
       return;
     }

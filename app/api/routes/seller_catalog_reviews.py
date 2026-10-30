@@ -63,6 +63,7 @@ from app.services.canonical_offer_review_queue import (
     CatalogOnboardingWorkspace,
 )
 from app.services.canonical_product_proposals import (
+    CanonicalProductCategoryUnavailableError,
     CanonicalProductProposalConfirmationResult,
     CanonicalProductProposalConflictError,
     CanonicalProductProposalEvidenceRequiredError,
@@ -258,6 +259,7 @@ async def confirm_canonical_product_proposal(
                 proposal_id=proposal_id,
                 marketplace=payload.marketplace,
                 external_id=payload.external_id,
+                category=payload.category,
                 reason=payload.reason,
             ),
             CanonicalOfferReviewContext(
@@ -278,6 +280,12 @@ async def confirm_canonical_product_proposal(
             409,
             "canonical_product_proposal_stale",
             "Canonical product proposal is no longer current.",
+        ) from exc
+    except CanonicalProductCategoryUnavailableError as exc:
+        raise ApiError(
+            422,
+            "canonical_product_category_invalid",
+            "Canonical product category is outside the configured taxonomy.",
         ) from exc
     except CanonicalOfferReviewIdempotencyConflictError as exc:
         raise ApiError(

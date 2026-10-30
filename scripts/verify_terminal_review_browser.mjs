@@ -229,8 +229,12 @@ async function chooseDecision(card, action) {
   }
   await click(`${card} input[value="${action}"]`);
 }
+async function chooseCategory(card, category = "games") {
+  await evaluate(`document.querySelector('${card} .review-category').value=${JSON.stringify(category)};document.querySelector('${card} .review-category').dispatchEvent(new Event("change", {bubbles:true}))`);
+}
 async function openDecision(card, action) {
   await chooseDecision(card, action);
+  if (action === "create-product") await chooseCategory(card);
   await click(`${card} [data-submit-decision]`);
   await until('document.querySelector("#decisionDialog").open');
 }
@@ -397,13 +401,18 @@ try {
   assert.equal(refreshCount, 1); checks++;
   await click('[data-external-id="fixture-missing"] summary');
   await chooseDecision(missingSource, "create-product");
+  await check("new product requires one of five categories", `!document.querySelector('${missingSource} .decision-category').hidden && document.querySelector('${missingSource} .review-category').required && document.querySelectorAll('${missingSource} .review-category option').length === 6`);
   await check("new product choice makes comment optional", `!document.querySelector('${missingSource} textarea').required && document.querySelector('${missingSource} [data-reason-label]').textContent.includes('созданию')`);
   await click(`${missingSource} [data-submit-decision]`);
+  await check("missing category is rejected before confirmation", `!document.querySelector("dialog").open && document.querySelector('${missingSource} .category-error').textContent.includes('пяти категорий') && document.activeElement.matches('${missingSource} .review-category')`);
+  await chooseCategory(missingSource);
+  await click(`${missingSource} [data-submit-decision]`);
   await until('document.querySelector("dialog").open');
-  await check("create is optional facts and names new product", 'document.querySelector("#decisionTargetLabel").textContent === "Новый товар" && document.querySelector("#decisionFacts").textContent.includes("не добавлен")');
+  await check("create names product and selected category", 'document.querySelector("#decisionTargetLabel").textContent === "Новый товар" && document.querySelector("#decisionTargetId").textContent.includes("Игры и предметы") && document.querySelector("#decisionFacts").textContent.includes("не добавлен")');
   mutationStatus = 503;
   await submit();
   await until('document.querySelector("[data-external-id=fixture-missing] .card-message").textContent.length > 0');
+  assert.equal(JSON.parse(mutations.at(-1).postData).category, "games"); checks++;
   await check("failure does not enable unavailable target", 'document.querySelector("[data-external-id=fixture-missing] .resolve").disabled');
   mutationStatus = 200;
   await openDecision(missingSource, "create-product");

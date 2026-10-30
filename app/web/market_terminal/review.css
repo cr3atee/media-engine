@@ -85,7 +85,7 @@
 .login-card { width: min(100%, 480px); padding: 32px; background: var(--surface); border: 1px solid var(--line); border-radius: 20px; display: grid; gap: 20px; }
 .login-card h2 { font-size: 24px; }
 .form-hint { color: var(--muted); font-size: 14px; line-height: 1.6; margin-top: 8px; }
-.login-card label, .tenant-control, .queue-toolbar label, .reason-label { display: grid; gap: 8px; font-size: 14px; font-weight: 500; }
+.login-card label, .tenant-control, .queue-toolbar label, .reason-label, .decision-category { display: grid; gap: 8px; font-size: 14px; font-weight: 500; }
 .review-page input, .review-page select, .review-reason { width: 100%; min-width: 0; min-height: 46px; border: 1px solid var(--line); border-radius: 10px; background: var(--canvas); color: var(--text); padding: 12px; }
 .review-page input::placeholder, .review-reason::placeholder { color: var(--muted); opacity: 1; }
 .review-page input:focus, .review-page select:focus, .review-reason:focus { border-color: var(--accent); }
@@ -179,6 +179,8 @@
 .reason-heading > small { flex: 0 0 auto; color: var(--muted); }
 .reason-heading > small.is-required { color: var(--warning); }
 .reason-label > small { color: var(--muted); font-weight: 400; }
+.decision-category { max-width: 420px; }
+.category-error { color: var(--error); font-weight: 400; }
 .review-reason { min-height: 96px; resize: vertical; }
 .review-reason:disabled { cursor: not-allowed; opacity: .55; }
 .review-reason[aria-invalid="true"] { border-color: var(--error); }
