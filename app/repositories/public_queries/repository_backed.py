@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from collections.abc import AsyncIterator, Sequence
 from contextlib import asynccontextmanager
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from decimal import Decimal
 from typing import cast
@@ -23,6 +23,7 @@ from app.models.canonical_product import CanonicalProduct
 from app.parsers.models import ParsedOffer
 from app.repositories.provider import RepositoryProvider
 from app.repositories.public_queries.contracts import (
+    PublicCatalogHubQueryRepository,
     PublicCategoryQueryRepository,
     PublicComparisonQueryRepository,
     PublicOfferQueryRepository,
@@ -31,6 +32,8 @@ from app.repositories.public_queries.contracts import (
     PublicProductQueryRepository,
 )
 from app.repositories.public_queries.models import (
+    CatalogHubRead,
+    CatalogSectionRead,
     CategoryRead,
     OfferSummaryRead,
     PriceChangeRead,
@@ -39,6 +42,7 @@ from app.repositories.public_queries.models import (
     ProductComparisonRead,
     ProductDetailRead,
     ProductSummaryRead,
+    PublicCatalogHubQuery,
     PublicCategoryQuery,
     PublicOfferQuery,
     PublicPriceChangeQuery,
@@ -62,6 +66,28 @@ class _ProductContext:
     offers: tuple[ParsedOffer, ...]
     best_offer: OfferSummaryRead | None
     updated_at: datetime | None
+    classification: _ResolvedCatalogClassification | None
+
+
+@dataclass(slots=True, frozen=True)
+class _ResolvedCatalogClassification:
+    hub_code: str
+    section_code: str
+
+
+@dataclass(slots=True)
+class _CatalogSectionAccumulator:
+    product_ids: set[UUID] = field(default_factory=set)
+    offer_count: int = 0
+    marketplaces: set[str] = field(default_factory=set)
+
+
+@dataclass(slots=True)
+class _CatalogHubAccumulator:
+    product_ids: set[UUID] = field(default_factory=set)
+    offer_count: int = 0
+    marketplaces: set[str] = field(default_factory=set)
+    sections: dict[str, _CatalogSectionAccumulator] = field(default_factory=dict)
 
 
 class RepositoryBackedPublicReadRepository(
@@ -71,6 +97,7 @@ class RepositoryBackedPublicReadRepository(
     PublicPriceHistoryQueryRepository,
     PublicPriceChangeQueryRepository,
     PublicCategoryQueryRepository,
+    PublicCatalogHubQueryRepository,
 ):
     """Public read adapter over the existing repository provider."""
 
@@ -270,6 +297,71 @@ class RepositoryBackedPublicReadRepository(
         )
         return _read_page(categories, page)
 
+    async def list_catalog_hubs(
+        self,
+        query: PublicCatalogHubQuery,
+        page: PageRequest,
+    ) -> ReadPage[CatalogHubRead]:
+        """Return hubs derived only from consistently classified public products."""
+        products = await self._products(query.tenant_id)
+        offers = await self._offers(query.tenant_id)
+        offers_by_product: dict[UUID, list[ParsedOffer]] = {}
+        for offer in offers:
+            if offer.canonical_product_id is None:
+                continue
+            offers_by_product.setdefault(offer.canonical_product_id, []).append(offer)
+
+        hubs: dict[str, _CatalogHubAccumulator] = {}
+        for product in products:
+            product_offers = tuple(offers_by_product.get(product.id, ()))
+            classification = _resolve_catalog_classification(product_offers)
+            if classification is None:
+                continue
+            visible_offers = tuple(
+                offer
+                for offer in product_offers
+                if query.marketplace is None
+                or offer.marketplace == query.marketplace.strip().casefold()
+            )
+            if not visible_offers:
+                continue
+
+            hub = hubs.setdefault(
+                classification.hub_code,
+                _CatalogHubAccumulator(),
+            )
+            section = hub.sections.setdefault(
+                classification.section_code,
+                _CatalogSectionAccumulator(),
+            )
+            marketplaces = {offer.marketplace for offer in visible_offers}
+            hub.product_ids.add(product.id)
+            hub.offer_count += len(visible_offers)
+            hub.marketplaces.update(marketplaces)
+            section.product_ids.add(product.id)
+            section.offer_count += len(visible_offers)
+            section.marketplaces.update(marketplaces)
+
+        projections = [
+            CatalogHubRead(
+                code=hub_code,
+                product_count=len(hub.product_ids),
+                offer_count=hub.offer_count,
+                marketplaces=tuple(sorted(hub.marketplaces)),
+                sections=tuple(
+                    CatalogSectionRead(
+                        code=section_code,
+                        product_count=len(section.product_ids),
+                        offer_count=section.offer_count,
+                        marketplaces=tuple(sorted(section.marketplaces)),
+                    )
+                    for section_code, section in sorted(hub.sections.items())
+                ),
+            )
+            for hub_code, hub in hubs.items()
+        ]
+        return _read_page(_sort_catalog_hubs(projections, page), page)
+
     async def _products(
         self,
         tenant_id: UUID | None,
@@ -306,6 +398,7 @@ class RepositoryBackedPublicReadRepository(
             offers=offers,
             best_offer=_best_offer(offers, self._selector),
             updated_at=await self._updated_at(offers),
+            classification=_resolve_catalog_classification(offers),
         )
 
     async def _updated_at(
@@ -351,6 +444,7 @@ def create_repository_backed_public_read_provider(
         price_history=repository,
         price_changes=repository,
         categories=repository,
+        catalog_hubs=repository,
     )
 
 
@@ -433,6 +527,16 @@ def _product_summary(context: _ProductContext) -> ProductSummaryRead:
         marketplace_count=len(marketplaces),
         updated_at=context.updated_at,
         marketplaces=marketplaces,
+        catalog_hub_code=(
+            context.classification.hub_code
+            if context.classification is not None
+            else None
+        ),
+        catalog_section_code=(
+            context.classification.section_code
+            if context.classification is not None
+            else None
+        ),
     )
 
 
@@ -483,6 +587,16 @@ def _product_detail(context: _ProductContext) -> ProductDetailRead:
         marketplace_count=len(marketplaces),
         updated_at=context.updated_at,
         marketplaces=marketplaces,
+        catalog_hub_code=(
+            context.classification.hub_code
+            if context.classification is not None
+            else None
+        ),
+        catalog_section_code=(
+            context.classification.section_code
+            if context.classification is not None
+            else None
+        ),
     )
 
 
@@ -497,6 +611,18 @@ def _product_matches(context: _ProductContext, query: PublicProductQuery) -> boo
         requested_category = resolve_catalog_category(query.category)
         product_category = resolve_catalog_category(product.category)
         if requested_category is None or requested_category != product_category:
+            return False
+    if query.hub is not None:
+        if (
+            context.classification is None
+            or context.classification.hub_code != query.hub.strip().casefold()
+        ):
+            return False
+    if query.section is not None:
+        if (
+            context.classification is None
+            or context.classification.section_code != query.section.strip().casefold()
+        ):
             return False
     if query.marketplace is not None and not any(
         offer.marketplace == query.marketplace for offer in context.offers
@@ -615,6 +741,55 @@ def _sort_product_contexts(
             context.product.name.casefold(),
             context.product.id.hex,
         ),
+        reverse=page.direction == "desc",
+    )
+
+
+def _resolve_catalog_classification(
+    offers: Sequence[ParsedOffer],
+) -> _ResolvedCatalogClassification | None:
+    classifications: set[tuple[str, str]] = set()
+    for offer in offers:
+        fields = (
+            offer.catalog_hub_code,
+            offer.catalog_section_code,
+            offer.catalog_source_rule_id,
+        )
+        if all(value is None for value in fields):
+            continue
+        if any(value is None for value in fields):
+            return None
+        assert offer.catalog_hub_code is not None
+        assert offer.catalog_section_code is not None
+        classifications.add((offer.catalog_hub_code, offer.catalog_section_code))
+    if len(classifications) != 1:
+        return None
+    hub_code, section_code = classifications.pop()
+    return _ResolvedCatalogClassification(
+        hub_code=hub_code,
+        section_code=section_code,
+    )
+
+
+def _sort_catalog_hubs(
+    hubs: list[CatalogHubRead],
+    page: PageRequest,
+) -> list[CatalogHubRead]:
+    if page.sort == "offer_count":
+        return sorted(
+            hubs,
+            key=lambda hub: (hub.offer_count, hub.product_count, hub.code),
+            reverse=page.direction == "desc",
+        )
+    if page.sort == "product_count":
+        return sorted(
+            hubs,
+            key=lambda hub: (hub.product_count, hub.offer_count, hub.code),
+            reverse=page.direction == "desc",
+        )
+    return sorted(
+        hubs,
+        key=lambda hub: hub.code,
         reverse=page.direction == "desc",
     )
 

@@ -12,6 +12,7 @@ from pydantic import SecretStr
 from app.config.settings import AdminApiSettings
 from app.main import create_app
 from app.repositories.public_queries.contracts import (
+    PublicCatalogHubQueryRepository,
     PublicCategoryQueryRepository,
     PublicComparisonQueryRepository,
     PublicOfferQueryRepository,
@@ -20,6 +21,8 @@ from app.repositories.public_queries.contracts import (
     PublicProductQueryRepository,
 )
 from app.repositories.public_queries.models import (
+    CatalogHubRead,
+    CatalogSectionRead,
     CategoryRead,
     OfferSummaryRead,
     PriceChangeRead,
@@ -28,6 +31,7 @@ from app.repositories.public_queries.models import (
     ProductComparisonRead,
     ProductDetailRead,
     ProductSummaryRead,
+    PublicCatalogHubQuery,
     PublicCategoryQuery,
     PublicOfferQuery,
     PublicPriceChangeQuery,
@@ -64,6 +68,8 @@ def _product_summary() -> ProductSummaryRead:
         marketplace_count=2,
         marketplaces=("ggsel", "playerok"),
         updated_at=NOW,
+        catalog_hub_code="minecraft",
+        catalog_section_code="keys",
     )
 
 
@@ -78,6 +84,8 @@ def _product_detail() -> ProductDetailRead:
         marketplace_count=2,
         marketplaces=("ggsel", "playerok"),
         updated_at=NOW,
+        catalog_hub_code="minecraft",
+        catalog_section_code="keys",
     )
 
 
@@ -88,6 +96,7 @@ class PublicReadFixtureRepository(
     PublicPriceHistoryQueryRepository,
     PublicPriceChangeQueryRepository,
     PublicCategoryQueryRepository,
+    PublicCatalogHubQueryRepository,
 ):
     """Deterministic public read repository used by route tests."""
 
@@ -98,6 +107,7 @@ class PublicReadFixtureRepository(
         self.history_query: PublicPriceHistoryQuery | None = None
         self.price_change_query: PublicPriceChangeQuery | None = None
         self.category_query: PublicCategoryQuery | None = None
+        self.catalog_hub_query: PublicCatalogHubQuery | None = None
         self.product_page: PageRequest | None = None
         self.emit_product_cursor = False
 
@@ -227,6 +237,34 @@ class PublicReadFixtureRepository(
             next_cursor=None,
         )
 
+    async def list_catalog_hubs(
+        self,
+        query: PublicCatalogHubQuery,
+        page: PageRequest,
+    ) -> ReadPage[CatalogHubRead]:
+        """Return one verified game hub projection."""
+        del page
+        self.catalog_hub_query = query
+        return ReadPage(
+            items=(
+                CatalogHubRead(
+                    code="minecraft",
+                    product_count=1,
+                    offer_count=2,
+                    marketplaces=("ggsel", "playerok"),
+                    sections=(
+                        CatalogSectionRead(
+                            code="keys",
+                            product_count=1,
+                            offer_count=2,
+                            marketplaces=("ggsel", "playerok"),
+                        ),
+                    ),
+                ),
+            ),
+            next_cursor=None,
+        )
+
 
 def _client() -> tuple[TestClient, PublicReadFixtureRepository]:
     repository = PublicReadFixtureRepository()
@@ -240,6 +278,7 @@ def _client() -> tuple[TestClient, PublicReadFixtureRepository]:
             price_history=repository,
             price_changes=repository,
             categories=repository,
+            catalog_hubs=repository,
         )
 
     app = create_app(
@@ -259,8 +298,57 @@ def test_product_responses_include_marketplace_identities() -> None:
     detail = client.get(f"/api/v1/public/products/{UUID(int=1)}").json()
 
     assert catalog["items"][0]["marketplaces"] == ["ggsel", "playerok"]
+    assert catalog["items"][0]["catalog_hub_code"] == "minecraft"
+    assert catalog["items"][0]["catalog_section_code"] == "keys"
     assert detail["marketplaces"] == ["ggsel", "playerok"]
     assert detail["marketplace_count"] == len(detail["marketplaces"])
+
+
+def test_public_catalog_hubs_expose_verified_counts_and_marketplaces() -> None:
+    client, repository = _client()
+
+    response = client.get(
+        "/api/v1/public/catalog-hubs",
+        params={"marketplace": "ggsel", "sort": "offer_count"},
+    )
+
+    assert response.status_code == 200
+    hub = response.json()["items"][0]
+    assert hub == {
+        "code": "minecraft",
+        "product_count": 1,
+        "offer_count": 2,
+        "marketplaces": ["ggsel", "playerok"],
+        "sections": [
+            {
+                "code": "keys",
+                "product_count": 1,
+                "offer_count": 2,
+                "marketplaces": ["ggsel", "playerok"],
+            }
+        ],
+    }
+    assert repository.catalog_hub_query == PublicCatalogHubQuery(marketplace="ggsel")
+
+
+def test_public_products_accept_verified_hub_and_section_filters() -> None:
+    client, repository = _client()
+
+    response = client.get(
+        "/api/v1/public/products",
+        params={"hub": "minecraft", "section": "keys"},
+    )
+
+    assert response.status_code == 200
+    assert repository.product_query is not None
+    assert repository.product_query.hub == "minecraft"
+    assert repository.product_query.section == "keys"
+
+    invalid = client.get(
+        "/api/v1/public/products",
+        params={"section": "keys"},
+    )
+    assert invalid.status_code == 422
 
 
 def test_public_products_are_available_without_admin_authentication() -> None:

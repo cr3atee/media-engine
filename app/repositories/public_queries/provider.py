@@ -5,6 +5,7 @@ from dataclasses import dataclass
 from typing import Protocol
 
 from app.repositories.public_queries.contracts import (
+    PublicCatalogHubQueryRepository,
     PublicCategoryQueryRepository,
     PublicComparisonQueryRepository,
     PublicOfferQueryRepository,
@@ -24,6 +25,7 @@ class PublicReadRepositoryProvider:
     price_history: PublicPriceHistoryQueryRepository
     price_changes: PublicPriceChangeQueryRepository
     categories: PublicCategoryQueryRepository
+    catalog_hubs: PublicCatalogHubQueryRepository
 
 
 class PublicReadRepositoryScopeFactory(Protocol):

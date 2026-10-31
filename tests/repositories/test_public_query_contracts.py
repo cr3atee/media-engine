@@ -10,6 +10,8 @@ from uuid import UUID
 import pytest
 
 from app.repositories.public_queries import (
+    CatalogHubRead,
+    CatalogSectionRead,
     CategoryRead,
     OfferSummaryRead,
     PriceChangeRead,
@@ -18,6 +20,8 @@ from app.repositories.public_queries import (
     ProductComparisonRead,
     ProductDetailRead,
     ProductSummaryRead,
+    PublicCatalogHubQuery,
+    PublicCatalogHubQueryRepository,
     PublicCategoryQuery,
     PublicCategoryQueryRepository,
     PublicComparisonQueryRepository,
@@ -70,6 +74,8 @@ def test_public_query_objects_cover_consumer_filters() -> None:
         tenant_id=UUID(int=10),
         search="minecraft",
         category="games",
+        hub="minecraft",
+        section="keys",
         marketplace="ggsel",
         min_price=Decimal("100"),
         max_price=Decimal("900"),
@@ -84,12 +90,15 @@ def test_public_query_objects_cover_consumer_filters() -> None:
         changed_to=datetime(2026, 9, 12, 12, 0, tzinfo=UTC),
     )
     category_query = PublicCategoryQuery(search="game")
+    hub_query = PublicCatalogHubQuery(marketplace="ggsel")
 
     assert product_query.search == "minecraft"
+    assert product_query.hub == "minecraft"
     assert offer_query.marketplace == "playerok"
     assert history_query.product_id == UUID(int=1)
     assert change_query.changed_to == datetime(2026, 9, 12, 12, 0, tzinfo=UTC)
     assert category_query.search == "game"
+    assert hub_query.marketplace == "ggsel"
 
 
 def test_public_read_projections_cover_market_terminal_views() -> None:
@@ -136,12 +145,27 @@ def test_public_read_projections_cover_market_terminal_views() -> None:
         url=offer.url,
     )
     category = CategoryRead(code="games", name="Games", product_count=1)
+    hub = CatalogHubRead(
+        code="minecraft",
+        product_count=1,
+        offer_count=2,
+        marketplaces=("ggsel", "playerok"),
+        sections=(
+            CatalogSectionRead(
+                code="keys",
+                product_count=1,
+                offer_count=2,
+                marketplaces=("ggsel", "playerok"),
+            ),
+        ),
+    )
 
     assert comparison.product is product
     assert comparison.best_offer is offer
     assert history_point.price == Decimal("790.00")
     assert price_change.discount_percent == Decimal("20.20")
     assert category.product_count == 1
+    assert hub.sections[0].code == "keys"
 
 
 def test_public_repository_contracts_define_expected_methods() -> None:
@@ -152,6 +176,7 @@ def test_public_repository_contracts_define_expected_methods() -> None:
         PublicPriceHistoryQueryRepository: {"list_price_history"},
         PublicPriceChangeQueryRepository: {"list_price_changes"},
         PublicCategoryQueryRepository: {"list_categories"},
+        PublicCatalogHubQueryRepository: {"list_catalog_hubs"},
     }
 
     for repository, methods in expected.items():

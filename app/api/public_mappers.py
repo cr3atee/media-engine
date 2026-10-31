@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 from app.api.schemas.public import (
+    PublicCatalogHub,
+    PublicCatalogSection,
     PublicCategory,
     PublicComparisonResult,
     PublicOfferSummary,
@@ -12,6 +14,8 @@ from app.api.schemas.public import (
 )
 from app.comparator.result import ComparisonStatus
 from app.repositories.public_queries.models import (
+    CatalogHubRead,
+    CatalogSectionRead,
     CategoryRead,
     OfferSummaryRead,
     PriceChangeRead,
@@ -52,6 +56,8 @@ def public_product_card(product: ProductSummaryRead) -> PublicProductCard:
         marketplace_count=product.marketplace_count,
         marketplaces=list(product.marketplaces),
         updated_at=product.updated_at,
+        catalog_hub_code=product.catalog_hub_code,
+        catalog_section_code=product.catalog_section_code,
     )
 
 
@@ -71,6 +77,8 @@ def public_product_detail(product: ProductDetailRead) -> PublicProductDetail:
         marketplace_count=product.marketplace_count,
         marketplaces=list(product.marketplaces),
         updated_at=product.updated_at,
+        catalog_hub_code=product.catalog_hub_code,
+        catalog_section_code=product.catalog_section_code,
     )
 
 
@@ -142,4 +150,25 @@ def public_category(category: CategoryRead) -> PublicCategory:
         code=category.code,
         name=category.name,
         product_count=category.product_count,
+    )
+
+
+def public_catalog_section(section: CatalogSectionRead) -> PublicCatalogSection:
+    """Map one verified catalog subsection to its response DTO."""
+    return PublicCatalogSection(
+        code=section.code,
+        product_count=section.product_count,
+        offer_count=section.offer_count,
+        marketplaces=list(section.marketplaces),
+    )
+
+
+def public_catalog_hub(hub: CatalogHubRead) -> PublicCatalogHub:
+    """Map one verified catalog hub to its response DTO."""
+    return PublicCatalogHub(
+        code=hub.code,
+        product_count=hub.product_count,
+        offer_count=hub.offer_count,
+        marketplaces=list(hub.marketplaces),
+        sections=[public_catalog_section(section) for section in hub.sections],
     )

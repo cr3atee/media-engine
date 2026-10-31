@@ -4,6 +4,7 @@ from abc import ABC, abstractmethod
 from uuid import UUID
 
 from app.repositories.public_queries.models import (
+    CatalogHubRead,
     CategoryRead,
     OfferSummaryRead,
     PriceChangeRead,
@@ -11,6 +12,7 @@ from app.repositories.public_queries.models import (
     ProductComparisonRead,
     ProductDetailRead,
     ProductSummaryRead,
+    PublicCatalogHubQuery,
     PublicCategoryQuery,
     PublicOfferQuery,
     PublicPriceChangeQuery,
@@ -98,3 +100,15 @@ class PublicCategoryQueryRepository(ABC):
         page: PageRequest,
     ) -> ReadPage[CategoryRead]:
         """Return public categories available for browsing and filters."""
+
+
+class PublicCatalogHubQueryRepository(ABC):
+    """Database-independent read contract for verified catalog hubs."""
+
+    @abstractmethod
+    async def list_catalog_hubs(
+        self,
+        query: PublicCatalogHubQuery,
+        page: PageRequest,
+    ) -> ReadPage[CatalogHubRead]:
+        """Return game and service hubs backed by classified public offers."""
