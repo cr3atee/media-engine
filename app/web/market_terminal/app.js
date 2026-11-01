@@ -1,4 +1,14 @@
-import { brands, brandMark, handleImageError, infoFor, offerFootprint, productImage, money as offerMoney } from "/terminal/preview/presentation.js";
+import {
+  brands,
+  brandMark,
+  catalogHubInfo,
+  catalogSectionName,
+  handleImageError,
+  infoFor,
+  offerFootprint,
+  productImage,
+  money as offerMoney,
+} from "/terminal/preview/presentation.js";
 
 const api = "/api/v1/public";
 const requestTimeoutMs = 15_000;
@@ -33,6 +43,12 @@ const elements = {
   filters: document.querySelector("#catalogFilters"),
   filtersButton: document.querySelector("#filtersButton"),
   marketplaceNav: document.querySelector("#marketplaceNav"),
+  catalogHubsSection: document.querySelector("#catalogHubsSection"),
+  catalogHubList: document.querySelector("#catalogHubList"),
+  clearCatalogHub: document.querySelector("#clearCatalogHub"),
+  catalogSectionPanel: document.querySelector("#catalogSectionPanel"),
+  catalogSectionContext: document.querySelector("#catalogSectionContext"),
+  catalogSectionList: document.querySelector("#catalogSectionList"),
   back: document.querySelector("#backToCatalog"),
 };
 const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
@@ -41,6 +57,7 @@ let locationSearch = window.location.search;
 
 document.addEventListener("error", handleImageError, true);
 elements.filtersButton.addEventListener("click", () => setFiltersOpen(elements.filters.hidden));
+elements.clearCatalogHub.addEventListener("click", () => selectCatalogHub(null));
 document.querySelector("#retryDetails").addEventListener("click", () => void selectProduct(state.selectedProductId, false));
 elements.back.addEventListener("click", event => {
   if (event.button || event.ctrlKey || event.metaKey || event.shiftKey || event.altKey) return;
@@ -95,16 +112,20 @@ function renderMarketplaceNav() {
 const state = {
   products: [],
   categories: [],
+  catalogHubs: [],
   priceChanges: [],
   selectedProductId: null,
   selectedCategoryCode: "",
   selectedCategoryName: "",
+  selectedHubCode: "",
+  selectedSectionCode: "",
   isBusy: false,
   isLoadingMore: false,
   nextCatalogCursor: null,
   catalogPageMessage: "",
   catalogRequestVersion: 0,
   categoryRequestVersion: 0,
+  catalogHubRequestVersion: 0,
   priceChangeRequestVersion: 0,
   detailRequestVersion: 0,
 };
@@ -153,14 +174,16 @@ async function loadDashboard() {
   if (!priceRangeIsValid()) {
     return;
   }
-  const requestVersion = beginCatalogRequest();
   setView(Boolean(state.selectedProductId));
   renderMarketplaceNav();
   setDashboardBusy(true);
   setApiStatus("Подключение");
+  const requestVersion = beginCatalogRequest();
+  const catalogHubsRequest = loadCatalogHubs();
   await Promise.all([
     loadProducts(elements.searchInput.value.trim(), requestVersion),
     loadCategories(),
+    catalogHubsRequest,
     loadPriceChanges(),
   ]);
   if (isCurrentCatalogRequest(requestVersion)) {
@@ -206,6 +229,8 @@ async function loadProducts(search, requestVersion, append = false) {
       search,
       marketplace,
       state.selectedCategoryName,
+      selectedCatalogHubName(),
+      selectedCatalogSectionName(),
     );
     renderProducts(state.products);
     updateCatalogPagination();
@@ -254,6 +279,12 @@ function productQuery(search, cursor) {
   }
   if (state.selectedCategoryName) {
     query.set("category", state.selectedCategoryName);
+  }
+  if (state.selectedHubCode) {
+    query.set("hub", state.selectedHubCode);
+  }
+  if (state.selectedSectionCode) {
+    query.set("section", state.selectedSectionCode);
   }
   if (minPrice) {
     query.set("min_price", minPrice);
@@ -360,6 +391,76 @@ function beginCategoryRequest() {
 
 function isCurrentCategoryRequest(requestVersion) {
   return requestVersion === state.categoryRequestVersion;
+}
+
+async function loadCatalogHubs() {
+  const requestVersion = beginCatalogHubRequest();
+  try {
+    const payload = await getJson(
+      "/catalog-hubs?limit=20&sort=product_count&direction=desc",
+    );
+    if (!isCurrentCatalogHubRequest(requestVersion)) {
+      return;
+    }
+    state.catalogHubs = (payload.items ?? [])
+      .map(curateCatalogHub)
+      .filter(Boolean);
+    normalizeCatalogHubSelection();
+    renderCatalogHubs();
+  } catch {
+    if (!isCurrentCatalogHubRequest(requestVersion)) {
+      return;
+    }
+    state.catalogHubs = [];
+    elements.catalogHubsSection.hidden = !state.selectedHubCode;
+    elements.clearCatalogHub.hidden = !state.selectedHubCode;
+    elements.catalogSectionPanel.hidden = true;
+    elements.catalogHubList.replaceChildren();
+    elements.catalogSectionList.replaceChildren();
+  }
+}
+
+function beginCatalogHubRequest() {
+  state.catalogHubRequestVersion += 1;
+  return state.catalogHubRequestVersion;
+}
+
+function isCurrentCatalogHubRequest(requestVersion) {
+  return requestVersion === state.catalogHubRequestVersion;
+}
+
+function curateCatalogHub(hub) {
+  const presentation = catalogHubInfo(hub?.code);
+  if (!presentation) {
+    return null;
+  }
+  return {
+    ...hub,
+    presentation,
+    sections: (hub.sections ?? []).filter((section) =>
+      Boolean(catalogSectionName(section.code)),
+    ),
+  };
+}
+
+function normalizeCatalogHubSelection() {
+  const selectedHub = state.catalogHubs.find(
+    (hub) => hub.code === state.selectedHubCode,
+  );
+  let changed = false;
+  if (
+    selectedHub &&
+    state.selectedSectionCode &&
+    !selectedHub?.sections.some(
+      (section) => section.code === state.selectedSectionCode,
+    )
+  ) {
+    state.selectedSectionCode = "";
+    changed = true;
+  }
+  if (changed) {
+    syncLocationState("replace");
+  }
 }
 
 async function loadPriceChanges() {
@@ -544,6 +645,137 @@ function renderProducts(products) {
       void selectProduct(card.dataset.productId ?? null);
     });
   }
+}
+
+function renderCatalogHubs() {
+  const hubs = state.catalogHubs;
+  elements.catalogHubsSection.hidden =
+    hubs.length === 0 && !state.selectedHubCode;
+  elements.clearCatalogHub.hidden = !state.selectedHubCode;
+  if (hubs.length === 0) {
+    elements.catalogHubList.replaceChildren();
+    elements.catalogSectionPanel.hidden = true;
+    elements.catalogSectionList.replaceChildren();
+    return;
+  }
+
+  const disabled = state.isBusy ? " disabled" : "";
+  elements.catalogHubList.innerHTML = hubs
+    .map((hub, index) => {
+      const active = hub.code === state.selectedHubCode;
+      const productLabel = countLabel(
+        hub.product_count,
+        "товар",
+        "товара",
+        "товаров",
+      );
+      return `
+        <button
+          class="catalog-hub"
+          type="button"
+          data-hub-index="${index}"
+          aria-pressed="${String(active)}"
+          ${disabled}
+        >
+          ${productImage(hub.presentation, "catalog-hub-art", 64)}
+          <span class="catalog-hub-copy">
+            <strong>${escapeHtml(hub.presentation.title)}</strong>
+            <small>${escapeHtml(productLabel)}</small>
+          </span>
+        </button>
+      `;
+    })
+    .join("");
+
+  for (const button of elements.catalogHubList.querySelectorAll(".catalog-hub")) {
+    button.addEventListener("click", () => {
+      selectCatalogHub(hubs[Number(button.dataset.hubIndex)]);
+    });
+  }
+  renderCatalogSections();
+}
+
+function renderCatalogSections() {
+  const hub = selectedCatalogHub();
+  elements.clearCatalogHub.hidden = !hub;
+  elements.catalogSectionPanel.hidden = !hub;
+  if (!hub) {
+    elements.catalogSectionContext.textContent = "";
+    elements.catalogSectionList.replaceChildren();
+    return;
+  }
+
+  elements.catalogSectionContext.textContent = hub.presentation.title;
+  const disabled = state.isBusy ? " disabled" : "";
+  const sectionButtons = hub.sections
+    .map((section, index) => {
+      const active = section.code === state.selectedSectionCode;
+      return `
+        <button
+          type="button"
+          data-section-index="${index}"
+          aria-pressed="${String(active)}"
+          ${disabled}
+        >
+          <span>${escapeHtml(catalogSectionName(section.code))}</span>
+          <small>${escapeHtml(section.product_count)}</small>
+        </button>
+      `;
+    })
+    .join("");
+  elements.catalogSectionList.innerHTML = `
+    <button
+      type="button"
+      data-section-index="-1"
+      aria-pressed="${String(!state.selectedSectionCode)}"
+      ${disabled}
+    >
+      <span>Все предложения</span>
+      <small>${escapeHtml(hub.product_count)}</small>
+    </button>
+    ${sectionButtons}
+  `;
+
+  for (const button of elements.catalogSectionList.querySelectorAll("button")) {
+    button.addEventListener("click", () => {
+      const index = Number(button.dataset.sectionIndex);
+      selectCatalogSection(index >= 0 ? hub.sections[index] : null);
+    });
+  }
+}
+
+function selectCatalogHub(hub) {
+  state.selectedHubCode = hub?.code ?? "";
+  state.selectedSectionCode = "";
+  state.selectedCategoryCode = "";
+  state.selectedCategoryName = "";
+  renderCatalogHubs();
+  renderCategories(state.categories);
+  syncLocationState("push");
+  void runProductSearch(elements.searchInput.value.trim());
+}
+
+function selectCatalogSection(section) {
+  state.selectedSectionCode = section?.code ?? "";
+  renderCatalogSections();
+  syncLocationState("push");
+  void runProductSearch(elements.searchInput.value.trim());
+}
+
+function selectedCatalogHub() {
+  return state.catalogHubs.find((hub) => hub.code === state.selectedHubCode);
+}
+
+function selectedCatalogHubName() {
+  return (
+    selectedCatalogHub()?.presentation.title ??
+    catalogHubInfo(state.selectedHubCode)?.title ??
+    ""
+  );
+}
+
+function selectedCatalogSectionName() {
+  return catalogSectionName(state.selectedSectionCode) ?? "";
 }
 
 function renderCategories(categories) {
@@ -854,6 +1086,13 @@ function setDashboardBusy(isBusy) {
   elements.maxPriceInput.disabled = isBusy;
   elements.loadMoreButton.disabled = isBusy || state.isLoadingMore;
   for (const button of elements.marketplaceNav.querySelectorAll("button")) button.disabled = isBusy;
+  for (const button of elements.catalogHubList.querySelectorAll("button")) {
+    button.disabled = isBusy;
+  }
+  for (const button of elements.catalogSectionList.querySelectorAll("button")) {
+    button.disabled = isBusy;
+  }
+  elements.clearCatalogHub.disabled = isBusy;
   for (const button of elements.categoryList.querySelectorAll(".category-filter")) {
     button.disabled = isBusy;
   }
@@ -868,7 +1107,12 @@ function updateSummary() {
   elements.productCount.textContent = count;
   elements.productCount.setAttribute("aria-label", `Товаров загружено: ${count}`);
   elements.dropCount.textContent = String(state.priceChanges.length);
-  document.querySelector("#catalogHero").hidden = Boolean(elements.searchInput.value || elements.marketplaceFilter.value || state.selectedCategoryName);
+  document.querySelector("#catalogHero").hidden = Boolean(
+    elements.searchInput.value ||
+    elements.marketplaceFilter.value ||
+    state.selectedCategoryName ||
+    state.selectedHubCode,
+  );
 }
 
 function renderEmpty(target, message) {
@@ -897,6 +1141,13 @@ function restoreLocationState() {
   elements.maxPriceInput.setCustomValidity("");
   state.selectedCategoryCode = "";
   state.selectedCategoryName = params.get("category") ?? "";
+  const requestedHub = params.get("hub") ?? "";
+  const requestedSection = params.get("section") ?? "";
+  state.selectedHubCode = catalogHubInfo(requestedHub) ? requestedHub : "";
+  state.selectedSectionCode =
+    state.selectedHubCode && catalogSectionName(requestedSection)
+      ? requestedSection
+      : "";
   state.selectedProductId = params.get("product");
   setFiltersOpen(Boolean(params.get("min_price") || params.get("max_price") || params.get("sort") || params.get("category")));
 }
@@ -908,6 +1159,8 @@ function syncLocationState(mode) {
   setUrlParam(url, "q", elements.searchInput.value.trim());
   setUrlParam(url, "marketplace", elements.marketplaceFilter.value);
   setUrlParam(url, "category", state.selectedCategoryName);
+  setUrlParam(url, "hub", state.selectedHubCode);
+  setUrlParam(url, "section", state.selectedSectionCode);
   setUrlParam(url, "min_price", elements.minPriceInput.value.trim());
   setUrlParam(url, "max_price", elements.maxPriceInput.value.trim());
   setUrlParam(url, "sort", sort === "recently_updated" ? "" : sort);
@@ -961,15 +1214,19 @@ function priceRangeIsValid() {
   return true;
 }
 
-function catalogTitle(search, marketplace, category) {
+function catalogTitle(search, marketplace, category, hub, section) {
   if (search) {
     return `Результаты по запросу «${search}»`;
+  }
+  if (hub) {
+    const selected = [hub, section, marketplaceLabel(marketplace)].filter(Boolean);
+    return selected.join(" · ");
   }
   const filters = [category, marketplaceLabel(marketplace)].filter(Boolean);
   if (filters.length > 0) {
     return `Товары: ${filters.join(" / ")}`;
   }
-  return "Каталог";
+  return "Актуальное";
 }
 
 function marketplaceLabel(value) {

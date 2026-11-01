@@ -6,6 +6,15 @@ This document records notable Project Passport updates.
 
 ## Unreleased
 
+- Connected verified game/service hubs to the working Market Terminal. The UI
+  reads `/catalog-hubs`, persists `hub/section` in the URL, shows repository-
+  reported subsections, and keeps large product cards in the separate
+  `Актуальное` stream. Only Minecraft currently has an approved local
+  presentation entry; unknown hubs and legacy unclassified offers stay hidden
+  instead of being inferred from titles. Public UI readiness passes `49`
+  checks, full Pytest reports `705 passed, 63 skipped`, MyPy checks `509`
+  files, and focused Ruff, format, JavaScript syntax, and diff checks pass.
+
 - Preserved exact marketplace source category evidence without turning it into
   an automatic canonical classification. GGSEL now carries `id_section` through
   `ParsedOffer` and persistence (`60/60` saved offers); Playerok carries

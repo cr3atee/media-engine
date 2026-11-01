@@ -37,13 +37,27 @@
             <span class="eyebrow">Меньше поиска. Больше игры.</span>
             <h1 id="heroTitle">Ваш следующий мир.<span class="hero-continuation">В одном поиске.</span></h1>
             <p>Сравните предложения площадок и выберите подходящий вариант игры.</p>
-            <a class="primary" href="#products">Выбрать игру <span aria-hidden="true">↗</span></a>
+            <a class="primary" href="#products">Смотреть актуальное <span aria-hidden="true">↗</span></a>
+          </div>
+        </section>
+        <section class="catalog-discovery" id="catalogHubsSection" aria-labelledby="catalogHubsTitle" hidden>
+          <div class="catalog-discovery-heading">
+            <div>
+              <p class="eyebrow">Каталог по играм</p>
+              <h2 id="catalogHubsTitle">Игры и сервисы</h2>
+            </div>
+            <button class="text-button" id="clearCatalogHub" type="button" hidden>Смотреть актуальное</button>
+          </div>
+          <nav class="catalog-hub-list" id="catalogHubList" aria-label="Игры и сервисы"></nav>
+          <div class="catalog-section-panel" id="catalogSectionPanel" hidden>
+            <p id="catalogSectionContext"></p>
+            <nav class="catalog-section-list" id="catalogSectionList" aria-label="Разделы выбранной игры"></nav>
           </div>
         </section>
         <nav class="market-nav" id="marketplaceNav" aria-label="Площадки"></nav>
         <section id="products" tabindex="-1" aria-labelledby="catalogTitle">
           <div class="catalog-heading">
-            <div><h2 id="catalogTitle">Каталог</h2><span class="count" id="productCount" aria-label="Товаров загружено">0</span></div>
+            <div><h2 id="catalogTitle">Актуальное</h2><span class="count" id="productCount" aria-label="Товаров загружено">0</span></div>
             <div class="catalog-actions">
               <button class="secondary" id="refreshButton" type="button">Обновить</button>
               <button class="secondary" id="filtersButton" type="button" aria-expanded="false" aria-controls="catalogFilters">Фильтры</button>
@@ -55,7 +69,7 @@
             <label for="minPriceInput">Цена от<input id="minPriceInput" name="min_price" type="number" min="0" step="0.01" inputmode="decimal" form="searchForm" placeholder="0"></label>
             <label for="maxPriceInput">Цена до<input id="maxPriceInput" name="max_price" type="number" min="0" step="0.01" inputmode="decimal" form="searchForm" placeholder="Без ограничения"></label>
             <button class="secondary" type="submit" form="searchForm">Применить</button>
-            <div class="category-section"><h3>Категории</h3><div id="categoryList" class="category-list" aria-live="polite"></div></div>
+            <div class="category-section"><h3>Тип предложения</h3><div id="categoryList" class="category-list" aria-live="polite"></div></div>
           </div>
           <div class="product-grid" id="productGrid" aria-live="polite"></div>
           <div class="catalog-pagination" id="catalogPagination" hidden><button class="secondary" id="loadMoreButton" type="button" aria-controls="productGrid">Показать ещё</button><span id="catalogPageStatus" role="status" aria-live="polite"></span></div>

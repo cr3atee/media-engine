@@ -140,3 +140,24 @@ history. Automated repeat checks returned `401` for GGSEL and `403` for
 Playerok; these protected responses were not misclassified as missing offers.
 The same action must be repeated only if this stale row exists in a future
 target deployment; direct SQL and fabricated replacement URLs remain forbidden.
+
+## Verified Catalog Navigation Follow-up
+
+The public catalog now exposes a fail-closed game/service hierarchy in the
+working `/terminal` UI. The interface reads `/api/v1/public/catalog-hubs`, sends
+the selected `hub` and `section` back through the existing product query, and
+keeps that state in the browser URL. Selecting a hub reveals only sections
+reported by the repository-backed projection. Large product cards remain in
+the separate `Актуальное` stream.
+
+The presentation manifest currently permits only `minecraft`, using the
+source-registered local Minecraft icon already documented in the brand asset
+registry. Unknown hub codes and sections without a known catalog label are not
+rendered. The saved three-marketplace preview still contains legacy offers
+without verified catalog source rules, so its hub rail is intentionally hidden;
+titles are not used to invent classifications.
+
+Verification on 2026-11-01: public UI readiness passed `49` checks over saved
+GGSEL `60/60`, Playerok `20/20`, and FunPay `1/1` snapshot-ready payloads. Full
+Pytest passed with `705 passed, 63 skipped`; MyPy passed across `509` source
+files; focused Ruff, Ruff format, JavaScript syntax, and diff checks passed.

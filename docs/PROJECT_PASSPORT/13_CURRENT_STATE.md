@@ -812,3 +812,15 @@ safe shutdown. Guarded live polling and durable per-integration run history are
 verified; unattended production scheduling should still wait for collector and
 secret infrastructure plus authenticated-source credential retrieval. The
 PostgreSQL operations gate and deployment configuration are complete.
+
+The working Market Terminal now consumes the repository-backed public catalog
+hub projection. Verified game/service hubs appear as compact square-icon
+navigation, a selected hub exposes only its reported subsections, and both
+filters persist through `hub/section` URL parameters. The existing large cards
+remain the `Актуальное` stream. The editorial presentation manifest currently
+allows only Minecraft with its registered local asset; unknown hub codes and
+legacy offers without exact source-rule classification remain hidden rather
+than being guessed from titles. Public UI readiness passes `49` checks over
+saved GGSEL, Playerok, and FunPay payloads. Full Pytest is `705 passed, 63
+skipped`, MyPy is clean across `509` files, and focused Ruff/format plus
+JavaScript syntax checks pass.
