@@ -2,6 +2,7 @@ import { brandMark, handleImageError } from "/terminal/preview/presentation.js";
 import { createProductAccess, productRoleLabel } from "/terminal/product-access.js";
 import { createDiagnosticJournal, installFrontendDiagnostics } from "/terminal/diagnostics.js";
 import { createOfferLifecycle } from "/terminal/offer-lifecycle.js";
+import { createCatalogClassification } from "/terminal/catalog-classification.js";
 
 document.addEventListener("error", handleImageError, true);
 
@@ -157,6 +158,11 @@ const offerLifecycle = createOfferLifecycle({
   onChanged: () => loadQueues(),
 });
 
+const catalogClassification = createCatalogClassification({
+  request: requestJson,
+  onAccessLoss: error => handleAccessLoss(error),
+});
+
 function renderProductIdentity(user) {
   document.querySelector("#productIdentity").textContent = user
     ? productRoleLabel(user.product_role) : "";
@@ -166,6 +172,7 @@ function renderProductIdentity(user) {
 function showReviewNavigation(visible) {
   document.querySelector("#reviewCandidatesLink").hidden = !visible;
   document.querySelector("#productProposalsLink").hidden = !visible;
+  document.querySelector("#catalogClassificationLink").hidden = !visible;
 }
 
 elements.loginForm.addEventListener("submit", (event) => {
@@ -369,10 +376,11 @@ async function selectTenant(tenantId) {
     state.activeTenantId = context.tenant_id;
     state.activeTenant = context;
     offerLifecycle.setContext(context);
+    catalogClassification.setContext(context);
     showReviewNavigation(true);
     elements.permissionSummary.textContent = "Проверка каталога разрешена";
     elements.reviewWorkspace.hidden = false;
-    await loadQueues();
+    await Promise.all([loadQueues(), catalogClassification.load()]);
   } catch (error) {
     if (!isCurrent()) return;
     if (handleAccessLoss(error)) return;
@@ -1147,6 +1155,7 @@ function clearSession(message) {
 /** Drop protected data immediately, including any open confirmation dialog. */
 function invalidateWorkspace() {
   offerLifecycle.reset();
+  catalogClassification.reset();
   showReviewNavigation(false);
   state.workspaceEpoch += 1;
   state.queueEpoch += 1;
@@ -1438,7 +1447,12 @@ function apiErrorMessage(body, status) {
     canonical_offer_decision_conflict: "Эта пара уже проверена.",
     canonical_offer_link_conflict: "Объявление уже связано с другим товаром.",
     offer_not_found: "Объявление не найдено в выбранной организации.",
-    optimistic_concurrency_conflict: "Состояние объявления уже изменилось.",
+    optimistic_concurrency_conflict: "Данные уже изменились. Обновите раздел и повторите действие.",
+    catalog_source_rule_conflict: "Для этой категории правило уже создано. Обновите раздел.",
+    catalog_hub_not_found: "Игра или сервис больше недоступны для настройки.",
+    catalog_section_not_found: "Раздел каталога больше недоступен для настройки.",
+    catalog_source_marketplace_mismatch: "Категория не относится к выбранному подключению.",
+    marketplace_integration_not_found: "Подключение площадки больше недоступно.",
     invalid_transition: "Это изменение больше недоступно для текущего состояния.",
   };
   if (typeof code === "string" && knownMessages[code]) {

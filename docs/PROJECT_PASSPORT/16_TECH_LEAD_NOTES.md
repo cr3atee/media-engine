@@ -301,6 +301,12 @@ This document captures architecture notes that are important for future reviews.
   retirement, exact public-read projection, and fresh-engine persistence; it
   does not authorize copying unresolved offers or bypassing target-environment
   source checks.
+- Catalog source classification is an exact tenant/integration/category rule,
+  not title inference. Keep seller tooling limited to category evidence already
+  persisted from that exact integration's marketplace observations; do not
+  aggregate evidence across two connections to the same marketplace. A new or
+  corrected rule applies on a subsequent source observation; do not introduce
+  an unaudited historical bulk rewrite to make catalog hubs appear immediately.
 
 ## Review Notes
 

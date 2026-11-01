@@ -824,3 +824,19 @@ than being guessed from titles. Public UI readiness passes `49` checks over
 saved GGSEL, Playerok, and FunPay payloads. Full Pytest is `705 passed, 63
 skipped`, MyPy is clean across `509` files, and focused Ruff/format plus
 JavaScript syntax checks pass.
+
+The seller cabinet now manages persisted marketplace source-category rules
+through tenant-scoped APIs. Category choices come only from active source
+observations owned by the selected integration, including already linked offers;
+another connection to the same marketplace cannot leak its categories. Each
+rule remains scoped to one explicit marketplace integration. The production
+runtime composition injects the same verified Minecraft/five-section taxonomy
+into GGSEL, Playerok, and FunPay runners. Classification is applied on the next
+successful source observation; there is no implicit title matching or
+unaudited historical bulk rewrite.
+Focused service/API/repository/runtime/shell verification passes `60` tests,
+the complete suite is `709 passed, 63 skipped`, MyPy is clean across `512`
+source files, and public UI readiness remains `49/49` over all three saved
+marketplace contracts. PostgreSQL query compilation covers the exact
+integration-scoped observation read; a separate live database rerun remains
+unperformed because no isolated Docker/database environment was available.

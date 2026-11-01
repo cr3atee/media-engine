@@ -277,6 +277,33 @@ class MemoryOfferRepository(OfferRepository):
             )
         )
 
+    async def list_by_integration(
+        self,
+        tenant_id: UUID,
+        integration_id: UUID,
+    ) -> Sequence[ParsedOffer]:
+        """Return active offers observed by one exact tenant integration."""
+        active_identities = {
+            (marketplace, external_id)
+            for (
+                observed_tenant_id,
+                observed_integration_id,
+                marketplace,
+                external_id,
+            ), observation in self._observations.items()
+            if observed_tenant_id == tenant_id
+            and observed_integration_id == integration_id
+            and observation.is_active
+        }
+        return tuple(
+            offer
+            for offer in self._offers
+            if offer.tenant_id == tenant_id
+            and offer.external_id is not None
+            and (offer.marketplace, offer.external_id) in active_identities
+            and self._is_manually_active(offer)
+        )
+
     async def list_by_tenant(self, tenant_id: UUID) -> Sequence[ParsedOffer]:
         """Return parsed offers for one tenant in insertion order."""
         return tuple(
@@ -292,13 +319,7 @@ class MemoryOfferRepository(OfferRepository):
     def _is_active(self, offer: ParsedOffer) -> bool:
         if offer.external_id is None:
             return True
-        availability = self._availability.get(
-            (offer.tenant_id, offer.marketplace, offer.external_id)
-        )
-        if (
-            availability is not None
-            and availability.status is OfferAvailabilityStatus.RETIRED
-        ):
+        if not self._is_manually_active(offer):
             return False
         observations = (
             observation
@@ -309,6 +330,17 @@ class MemoryOfferRepository(OfferRepository):
         )
         states = tuple(observations)
         return not states or any(observation.is_active for observation in states)
+
+    def _is_manually_active(self, offer: ParsedOffer) -> bool:
+        if offer.external_id is None:
+            return True
+        availability = self._availability.get(
+            (offer.tenant_id, offer.marketplace, offer.external_id)
+        )
+        return (
+            availability is None
+            or availability.status is not OfferAvailabilityStatus.RETIRED
+        )
 
     def _ensure_availability(self, offer: ParsedOffer) -> None:
         if offer.external_id is None:

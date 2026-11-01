@@ -6,6 +6,17 @@ This document records notable Project Passport updates.
 
 ## Unreleased
 
+- Connected durable source-category rules to the seller cabinet and active
+  marketplace runtime. Reviewers select a concrete integration, persisted
+  source evidence, game, and subsection through tenant-scoped versioned APIs.
+  GGSEL, Playerok, and FunPay runners now share the same verified classifier;
+  rules apply on the next successful poll without title guessing or an
+  unaudited historical bulk rewrite. The management UI reuses the existing
+  flat cabinet language and reads categories only from active observations of
+  the selected integration, including already linked offers. Focused
+  verification passes `60` tests, full Pytest reports `709 passed, 63
+  skipped`, MyPy checks `512` files, and public UI readiness remains `49/49`.
+
 - Connected verified game/service hubs to the working Market Terminal. The UI
   reads `/catalog-hubs`, persists `hub/section` in the URL, shows repository-
   reported subsections, and keeps large product cards in the separate

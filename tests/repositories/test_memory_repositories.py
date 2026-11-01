@@ -250,6 +250,13 @@ def test_offer_observations_require_every_source_to_be_inactive() -> None:
     run_async(repository.save_observed(source_a, shared))
     run_async(repository.save_observed(source_b, shared))
 
+    assert tuple(
+        run_async(repository.list_by_integration(LEGACY_TENANT_ID, integration_a))
+    ) == (first, shared)
+    assert tuple(
+        run_async(repository.list_by_integration(LEGACY_TENANT_ID, integration_b))
+    ) == (shared,)
+
     deactivated = run_async(
         repository.reconcile_observations(
             _observation_context(integration_a, missing_at),
@@ -259,6 +266,12 @@ def test_offer_observations_require_every_source_to_be_inactive() -> None:
 
     assert deactivated == 1
     assert tuple(run_async(repository.list_all())) == (first, shared)
+    assert tuple(
+        run_async(repository.list_by_integration(LEGACY_TENANT_ID, integration_a))
+    ) == (first,)
+    assert tuple(
+        run_async(repository.list_by_integration(LEGACY_TENANT_ID, integration_b))
+    ) == (shared,)
 
     deactivated = run_async(
         repository.reconcile_observations(

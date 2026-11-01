@@ -373,6 +373,26 @@ def test_market_terminal_catalog_review_assets_are_served() -> None:
     assert "sessionStorage" not in script.text
 
 
+def test_catalog_classification_controls_use_guarded_runtime_rules() -> None:
+    client = _client()
+    page = client.get("/terminal/review")
+    script = client.get("/terminal/catalog-classification.js")
+
+    assert page.status_code == 200
+    assert 'id="catalogClassification"' in page.text
+    assert 'id="classificationIntegration"' in page.text
+    assert 'id="classificationSource"' in page.text
+    assert 'id="classificationHub"' in page.text
+    assert 'id="classificationSection"' in page.text
+    assert script.status_code == 200
+    assert script.headers["content-type"].startswith("application/javascript")
+    assert "catalog/classification/taxonomy" in script.text
+    assert "marketplace-integrations" in script.text
+    assert "source_category_id" in script.text
+    assert "localStorage" not in script.text
+    assert "sessionStorage" not in script.text
+
+
 def test_product_access_panel_uses_existing_session_and_explicit_asset() -> None:
     """Static shell exposes no role grants; all account data comes from guarded APIs."""
     client = _client()

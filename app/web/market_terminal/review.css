@@ -136,6 +136,24 @@
 .marketplace-progress-card small { color: var(--muted); }
 .workspace-message { padding: 14px 18px; background: var(--surface); border-left: 3px solid var(--accent); border-radius: 0 10px 10px 0; }
 .workspace-message.error { border-color: var(--error); }
+.classification-manager { margin: 30px 0 8px; padding: 26px 0 30px; border-block: 1px solid var(--line); scroll-margin-top: 20px; }
+.classification-manager[aria-busy="true"] { opacity: .72; }
+.classification-heading { display: flex; align-items: end; justify-content: space-between; gap: 24px; }
+.classification-heading h2 { font-size: 24px; }
+.classification-total { color: var(--muted); font-size: 13px; white-space: nowrap; }
+.classification-total strong { color: var(--text); font-size: 20px; margin-right: 4px; }
+.classification-form { display: grid; grid-template-columns: minmax(180px, 1.15fr) minmax(220px, 1.35fr) minmax(150px, .8fr) minmax(180px, 1fr) auto; gap: 16px; align-items: end; }
+.classification-form label { display: grid; gap: 8px; min-width: 0; font-size: 14px; font-weight: 500; }
+.classification-submit { white-space: nowrap; }
+.classification-message { min-height: 22px; margin: 16px 0 8px; color: var(--muted); font-size: 13px; }
+.classification-message.error { color: var(--error); }
+.classification-rules { border-top: 1px solid var(--line); }
+.classification-rule { display: grid; grid-template-columns: minmax(0, 1fr) 28px minmax(0, 1fr); align-items: center; gap: 14px; padding: 15px 0; border-bottom: 1px solid var(--line); }
+.classification-rule strong, .classification-rule small { display: block; overflow-wrap: anywhere; }
+.classification-rule strong { font-size: 14px; }
+.classification-rule small { margin-top: 4px; color: var(--muted); font-size: 12px; }
+.classification-arrow { color: var(--accent); text-align: center; }
+.classification-empty { padding: 18px 0; color: var(--muted); font-size: 13px; }
 .queue-toolbar { display: grid; grid-template-columns: minmax(180px, 1fr) minmax(200px, 1.2fr) minmax(160px, .7fr) auto; gap: 18px; align-items: end; padding: 28px 0; }
 .queue-toolbar-copy { align-self: center; font-size: 14px; }
 .review-columns { display: grid; gap: 32px; }
@@ -197,6 +215,8 @@
 .confirmation-pair dd { margin: 6px 0; font-weight: 550; }
 .confirmation-facts { white-space: pre-wrap; overflow-wrap: anywhere; font-size: 14px; }
 @media (max-width: 1100px) {
+  .classification-form { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .classification-submit { width: max-content; }
   .queue-toolbar { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
   .session-card { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
   .session-meta { grid-column: 1; }
@@ -221,6 +241,11 @@
   .session-actions > button { flex: 1; }
   .login-card { padding: 24px; }
   .workspace-heading { align-items: start; flex-direction: column; }
+  .classification-heading { align-items: start; }
+  .classification-form { grid-template-columns: minmax(0, 1fr); }
+  .classification-submit { width: 100%; }
+  .classification-rule { grid-template-columns: minmax(0, 1fr); gap: 6px; }
+  .classification-arrow { text-align: left; transform: rotate(90deg); transform-origin: center; width: 20px; }
   .workspace-context { text-align: left; overflow-wrap: anywhere; }
   .catalog-progress { flex-direction: column; align-items: stretch; gap: 12px; }
   .catalog-progress-value { width: 100%; }

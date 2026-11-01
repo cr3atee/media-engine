@@ -67,6 +67,10 @@ class RecordingResult:
         assert self._scalar is not None
         return self._scalar
 
+    def scalars(self) -> tuple[()]:
+        """Return no rows for read-query compilation tests."""
+        return ()
+
 
 def compile_postgres(statement: ClauseElement) -> str:
     """Compile a statement with the PostgreSQL dialect for assertions."""
@@ -423,6 +427,24 @@ def test_observed_offer_compiles_offer_and_source_upserts() -> None:
     assert "ON CONFLICT (tenant_id, integration_id, offer_id)" in observation_sql
     assert "greatest(" in observation_sql
     assert "least(" in observation_sql
+
+
+def test_offer_integration_listing_compiles_exact_source_scope() -> None:
+    session = RecordingSession()
+    repository = PostgresOfferRepository(cast(AsyncSession, session))
+    tenant_id = make_offer().tenant_id
+    integration_id = UUID("10000000-0000-4000-8000-000000000104")
+
+    assert (
+        tuple(run_async(repository.list_by_integration(tenant_id, integration_id)))
+        == ()
+    )
+
+    sql = compile_postgres(session.statements[0])
+    assert "JOIN offer_source_observations" in sql
+    assert "offer_source_observations.integration_id" in sql
+    assert "offer_source_observations.is_active IS true" in sql
+    assert "offers.manual_availability_status" in sql
 
 
 def test_snapshot_add_compiles_exact_conflict_suppression() -> None:

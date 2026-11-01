@@ -175,6 +175,16 @@ async def market_terminal_offer_lifecycle_script() -> Response:
     )
 
 
+@router.get("/terminal/catalog-classification.js", include_in_schema=False)
+async def market_terminal_catalog_classification_script() -> Response:
+    """Serve verified source-category mapping controls for seller tooling."""
+    return Response(
+        _read_asset("catalog-classification.js"),
+        media_type="application/javascript",
+        headers=_ASSET_HEADERS,
+    )
+
+
 @router.get("/terminal/diagnostics.js", include_in_schema=False)
 async def market_terminal_diagnostics_script() -> Response:
     """Serve the bounded browser reporter and admin journal controller."""

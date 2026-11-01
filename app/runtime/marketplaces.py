@@ -3,6 +3,7 @@ from __future__ import annotations
 from collections.abc import Mapping
 
 from app.analytics.price_change import PriceChangeDetector
+from app.catalog.taxonomy import MVP_CATALOG_HUBS
 from app.core.http_client import HttpClient
 from app.domain.marketplace import Marketplace
 from app.domain.marketplace_integrations import MarketplaceIntegration
@@ -13,6 +14,7 @@ from app.parsers.funpay_normalizer import FunPayNormalizer
 from app.parsers.ggsel_extractor import GGSelExtractor
 from app.parsers.ggsel_fetcher import GGSelFetcher
 from app.parsers.normalizers import OfferNormalizer
+from app.services.catalog_classification import CatalogClassificationService
 from app.services.event_builder import EventBuilder
 from app.services.funpay_pipeline import FunPayPipeline
 from app.services.marketplace_application_runner import MarketplaceApplicationRunner
@@ -57,6 +59,10 @@ def create_marketplace_runner_factories(
         http_client,
         stage_reporter=stage_reporter,
     )
+    catalog_classification = CatalogClassificationService(
+        repository_scope_factory,
+        MVP_CATALOG_HUBS,
+    )
 
     def ggsel_factory(
         integration: MarketplaceIntegration,
@@ -68,6 +74,7 @@ def create_marketplace_runner_factories(
             pipeline=pipeline,
             tenant_id=integration.tenant_id,
             integration_id=integration.id,
+            catalog_classification=catalog_classification,
         )
 
     def playerok_factory(
@@ -85,6 +92,7 @@ def create_marketplace_runner_factories(
             pipeline=pipeline,
             tenant_id=integration.tenant_id,
             integration_id=integration.id,
+            catalog_classification=catalog_classification,
         )
 
     def funpay_factory(
@@ -102,6 +110,7 @@ def create_marketplace_runner_factories(
             pipeline=pipeline,
             tenant_id=integration.tenant_id,
             integration_id=integration.id,
+            catalog_classification=catalog_classification,
         )
 
     return {

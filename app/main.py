@@ -38,6 +38,9 @@ from app.api.routes.diagnostics import router as diagnostics_router
 from app.api.routes.health import router as health_router
 from app.api.routes.product_roles import router as product_roles_router
 from app.api.routes.public import router as public_router
+from app.api.routes.seller_catalog_classification import (
+    router as seller_catalog_classification_router,
+)
 from app.api.routes.seller_catalog_reviews import (
     router as seller_catalog_reviews_router,
 )
@@ -136,6 +139,7 @@ def create_app(
     application.include_router(product_roles_router)
     application.include_router(diagnostics_router)
     application.include_router(seller_workflows_router)
+    application.include_router(seller_catalog_classification_router)
     application.include_router(seller_catalog_reviews_router)
     application.include_router(seller_marketplace_integrations_router)
     if configuration.api_docs_enabled:

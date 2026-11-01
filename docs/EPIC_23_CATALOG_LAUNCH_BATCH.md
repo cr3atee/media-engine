@@ -161,3 +161,27 @@ Verification on 2026-11-01: public UI readiness passed `49` checks over saved
 GGSEL `60/60`, Playerok `20/20`, and FunPay `1/1` snapshot-ready payloads. Full
 Pytest passed with `705 passed, 63 skipped`; MyPy passed across `509` source
 files; focused Ruff, Ruff format, JavaScript syntax, and diff checks passed.
+
+## Source-category Rule Management
+
+The authenticated seller cabinet now exposes the existing durable
+`CatalogSourceRule` boundary instead of requiring manual repository calls. A
+catalog reviewer selects one concrete tenant integration, one source category
+observed by that integration in persisted offers, and one configured game
+subsection. The API lists, creates, and corrects rules with tenant ownership and
+optimistic versions; it never derives a game from an offer title.
+
+Runtime factories for GGSEL, Playerok, and FunPay now receive the same shared
+classification service and the same configured taxonomy. Rules therefore take
+effect during the next successful poll of their exact integration. Existing
+offers are not rewritten as an unaudited bulk action; they acquire the verified
+classification when that source is observed again. FunPay remains fail-closed
+where its supported payload contains no source-category evidence.
+
+Verification on 2026-11-01: `60` focused service/API/repository/runtime/shell
+tests and the complete suite passed (`709 passed, 63 skipped`). MyPy is clean
+across `512` source files. Public UI readiness remains `49/49` over saved GGSEL
+`60/60`, Playerok `20/20`, and FunPay `1/1` data. The exact integration-scoped
+PostgreSQL query has dialect-compilation coverage; no isolated live database
+was available because the local Docker daemon was not running and no dedicated
+test URL was configured.

@@ -80,6 +80,16 @@ class CatalogOfferClassification:
         )
 
 
+@dataclass(slots=True, frozen=True, kw_only=True)
+class CatalogSourceCategoryEvidence:
+    """Observed tenant source category available for explicit classification."""
+
+    marketplace: str
+    source_category_id: str
+    source_category_name: str | None
+    offer_count: int
+
+
 class CatalogClassificationServiceError(Exception):
     """Safe catalog-classification failure with stable API semantics."""
 
@@ -128,6 +138,43 @@ class CatalogClassificationService:
                 tenant_id,
                 integration_id,
             )
+
+    async def list_source_categories(
+        self,
+        tenant_id: UUID,
+        integration_id: UUID,
+    ) -> tuple[CatalogSourceCategoryEvidence, ...]:
+        """Return source evidence observed by one tenant-owned integration."""
+        async with self._repository_scope_factory() as repositories:
+            await _require_integration(repositories, tenant_id, integration_id)
+            offers = await repositories.offers.list_by_integration(
+                tenant_id,
+                integration_id,
+            )
+        indexed: dict[tuple[str, str], CatalogSourceCategoryEvidence] = {}
+        for offer in offers:
+            if offer.source_category_id is None or not offer.source_category_id.strip():
+                continue
+            marketplace = offer.marketplace.strip().casefold()
+            source_category_id = offer.source_category_id.strip()
+            key = (marketplace, source_category_id)
+            existing = indexed.get(key)
+            source_category_name = _normalized_optional(offer.source_category_name)
+            indexed[key] = CatalogSourceCategoryEvidence(
+                marketplace=marketplace,
+                source_category_id=source_category_id,
+                source_category_name=(
+                    existing.source_category_name
+                    if existing is not None
+                    and existing.source_category_name is not None
+                    else source_category_name
+                ),
+                offer_count=(existing.offer_count + 1 if existing is not None else 1),
+            )
+        return tuple(
+            indexed[key]
+            for key in sorted(indexed, key=lambda item: (item[0], item[1].casefold()))
+        )
 
     async def create_rule(
         self,
@@ -403,3 +450,10 @@ def _service_error(
         message,
         details=details,
     )
+
+
+def _normalized_optional(value: str | None) -> str | None:
+    if value is None:
+        return None
+    normalized = " ".join(value.split())
+    return normalized or None

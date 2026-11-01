@@ -334,6 +334,32 @@ class PostgresOfferRepository(OfferRepository):
         )
         return tuple(self._to_parsed_offer(offer) for offer in result.scalars())
 
+    async def list_by_integration(
+        self,
+        tenant_id: UUID,
+        integration_id: UUID,
+    ) -> Sequence[ParsedOffer]:
+        """Return active offers observed by one exact tenant integration."""
+        result = await self._session.execute(
+            select(Offer)
+            .join(
+                OfferSourceObservationRecord,
+                and_(
+                    OfferSourceObservationRecord.tenant_id == Offer.tenant_id,
+                    OfferSourceObservationRecord.offer_id == Offer.id,
+                ),
+            )
+            .where(
+                Offer.tenant_id == tenant_id,
+                OfferSourceObservationRecord.integration_id == integration_id,
+                OfferSourceObservationRecord.is_active.is_(True),
+                Offer.manual_availability_status
+                == OfferAvailabilityStatus.ACTIVE.value,
+            )
+            .order_by(Offer.created_at, Offer.id)
+        )
+        return tuple(self._to_parsed_offer(offer) for offer in result.scalars())
+
     async def list_all(self) -> Sequence[ParsedOffer]:
         """Return all parsed offers in insertion order."""
         result = await self._session.execute(

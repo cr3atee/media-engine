@@ -64,6 +64,7 @@
         <a href="/terminal/review" aria-current="page">Личный кабинет</a>
         <a id="reviewCandidatesLink" href="#reviewCandidates" hidden>Совпадения</a>
         <a id="productProposalsLink" href="#productProposals" hidden>Новые товары</a>
+        <a id="catalogClassificationLink" href="#catalogClassification" hidden>Категории</a>
         <a id="offerLifecycleLink" href="#offerLifecycle" hidden>Объявления</a>
         <a id="productAccessLink" href="#productAccess" hidden>Доступ</a>
         <a id="diagnosticsLink" href="#diagnosticJournal" hidden>Ошибки</a>
@@ -354,6 +355,70 @@
           aria-live="polite"
           aria-atomic="true"
         ></p>
+
+        <section
+          class="classification-manager"
+          id="catalogClassification"
+          aria-labelledby="catalogClassificationTitle"
+          aria-busy="false"
+          hidden
+        >
+          <header class="classification-heading">
+            <div>
+              <p class="section-label">Структура каталога</p>
+              <h2 id="catalogClassificationTitle">Категории площадок</h2>
+            </div>
+            <span class="classification-total">
+              <strong id="classificationRuleCount">0</strong>
+              правил
+            </span>
+          </header>
+          <p class="panel-copy">
+            Свяжите фактическую категорию источника с разделом игры. Названия
+            объявлений не используются для автоматического угадывания.
+          </p>
+          <form class="classification-form" id="classificationForm">
+            <label for="classificationIntegration">
+              <span>Подключение</span>
+              <select id="classificationIntegration" required>
+                <option value="">Выберите подключение</option>
+              </select>
+            </label>
+            <label for="classificationSource">
+              <span>Категория площадки</span>
+              <select id="classificationSource" required disabled>
+                <option value="">Выберите категорию площадки</option>
+              </select>
+            </label>
+            <label for="classificationHub">
+              <span>Игра или сервис</span>
+              <select id="classificationHub" required></select>
+            </label>
+            <label for="classificationSection">
+              <span>Раздел</span>
+              <select id="classificationSection" required></select>
+            </label>
+            <button
+              class="primary-button classification-submit"
+              id="classificationSubmit"
+              type="submit"
+              disabled
+            >
+              Сохранить правило
+            </button>
+          </form>
+          <p
+            class="classification-message"
+            id="classificationMessage"
+            role="status"
+            aria-live="polite"
+          ></p>
+          <div
+            class="classification-rules"
+            id="classificationRules"
+            aria-label="Сохранённые соответствия"
+          ></div>
+        </section>
 
         <section class="queue-toolbar" aria-label="Фильтры очередей">
           <div class="queue-toolbar-copy">

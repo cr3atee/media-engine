@@ -16,6 +16,7 @@ from app.domain.marketplace_integrations import (
     MarketplaceIntegrationStatus,
 )
 from app.parsers.models import ParsedOffer
+from app.repositories.offers import OfferObservationContext
 from app.repositories.provider import RepositoryProvider, create_memory_provider
 from app.services.catalog_classification import (
     CatalogClassificationService,
@@ -154,6 +155,58 @@ def test_classification_uses_exact_rules_and_never_guesses_from_title() -> None:
     assert results[2].rule_id is None
 
 
+def test_source_category_evidence_is_scoped_to_exact_integration() -> None:
+    provider = _provider(include_second_integration=True)
+    run_async(
+        provider.offers.save_observed(
+            _observation(INTEGRATION_A),
+            _offer("first", source_category_id="minecraft-keys"),
+        )
+    )
+    run_async(
+        provider.offers.save_observed(
+            _observation(INTEGRATION_A),
+            replace(
+                _offer("second", source_category_id="minecraft-keys"),
+                source_category_name="Minecraft keys",
+                canonical_product_id=UUID(int=9001),
+            ),
+        )
+    )
+    run_async(
+        provider.offers.save_observed(
+            _observation(INTEGRATION_A),
+            _offer("missing", source_category_id=None),
+        )
+    )
+    run_async(
+        provider.offers.save_observed(
+            _observation(INTEGRATION_B),
+            replace(
+                _offer("other", source_category_id="accounts"),
+                source_category_name="Accounts",
+            ),
+        )
+    )
+
+    service = _service(provider)
+    evidence = run_async(service.list_source_categories(TENANT_A, INTEGRATION_A))
+    other_evidence = run_async(service.list_source_categories(TENANT_A, INTEGRATION_B))
+
+    assert len(evidence) == 1
+    assert evidence[0].marketplace == "playerok"
+    assert evidence[0].source_category_id == "minecraft-keys"
+    assert evidence[0].source_category_name == "Minecraft keys"
+    assert evidence[0].offer_count == 2
+    assert len(other_evidence) == 1
+    assert other_evidence[0].source_category_id == "accounts"
+    assert other_evidence[0].offer_count == 1
+
+    with pytest.raises(CatalogClassificationServiceError) as foreign:
+        run_async(service.list_source_categories(TENANT_B, INTEGRATION_A))
+    assert foreign.value.code == "marketplace_integration_not_found"
+
+
 def test_same_source_category_can_be_scoped_to_different_integrations() -> None:
     provider = _provider(include_second_integration=True)
     identifiers = iter((UUID(int=50_001), UUID(int=50_002)))
@@ -253,6 +306,15 @@ def _integration(integration_id: UUID, name: str) -> MarketplaceIntegration:
         source_url=f"https://playerok.com/catalog/{integration_id}",
         created_at=NOW,
         updated_at=NOW,
+    )
+
+
+def _observation(integration_id: UUID) -> OfferObservationContext:
+    return OfferObservationContext(
+        tenant_id=TENANT_A,
+        integration_id=integration_id,
+        marketplace="playerok",
+        observed_at=NOW,
     )
 
 

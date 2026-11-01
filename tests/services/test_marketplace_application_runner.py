@@ -283,6 +283,14 @@ class FailingOfferRepository(OfferRepository):
         """Delegate marketplace listing."""
         return await self._delegate.list_by_marketplace(tenant_id, marketplace)
 
+    async def list_by_integration(
+        self,
+        tenant_id: UUID,
+        integration_id: UUID,
+    ) -> Sequence[ParsedOffer]:
+        """Delegate exact integration listing."""
+        return await self._delegate.list_by_integration(tenant_id, integration_id)
+
     async def list_all(self) -> Sequence[ParsedOffer]:
         """Delegate complete listing."""
         return await self._delegate.list_all()
