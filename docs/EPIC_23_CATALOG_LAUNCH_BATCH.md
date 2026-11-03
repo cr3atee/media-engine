@@ -179,9 +179,26 @@ classification when that source is observed again. FunPay remains fail-closed
 where its supported payload contains no source-category evidence.
 
 Verification on 2026-11-01: `60` focused service/API/repository/runtime/shell
-tests and the complete suite passed (`709 passed, 63 skipped`). MyPy is clean
+tests and the complete suite passed (`710 passed, 63 skipped`). MyPy is clean
 across `512` source files. Public UI readiness remains `49/49` over saved GGSEL
 `60/60`, Playerok `20/20`, and FunPay `1/1` data. The exact integration-scoped
 PostgreSQL query has dialect-compilation coverage; no isolated live database
 was available because the local Docker daemon was not running and no dedicated
 test URL was configured.
+
+## Live Source-category Recheck
+
+The read-only live verifier was repeated on 2026-11-01. GGSEL returned a
+complete `111/111` Minecraft Keys snapshot; every normalized offer carried
+source category ID `66568`, while the response supplied no category name.
+FunPay returned a complete `1349/1349` showcase, but its supported public
+preview contract supplied neither a source category ID nor a category name.
+Playerok returned its explicit rate-limit response, so this run is intentionally
+recorded as incomplete three-source evidence.
+
+`verify_aligned_marketplace_categories.py` now reports ID/name coverage and a
+bounded deterministic sample of unique source IDs for every successful batch.
+This diagnostic does not create a rule, infer a category from an offer title,
+or mutate repository state. The verified GGSEL identity can be mapped to the
+Minecraft `keys` section through the existing seller workflow once an isolated
+PostgreSQL runtime is available; FunPay remains fail-closed.

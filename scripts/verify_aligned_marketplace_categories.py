@@ -104,6 +104,7 @@ async def main() -> int:
             f"complete={batch.source_snapshot_complete}"
         )
         print(f"  completeness: {batch.source_snapshot_reason}")
+        print(f"  {_source_category_diagnostic(batch)}")
 
     if len(batches) < 2:
         print("At least two successful marketplace sources are required.")
@@ -247,6 +248,29 @@ def _safe_error_summary(error: Exception) -> str:
     if http_status is not None:
         return summary[: http_status.end()]
     return summary[:240]
+
+
+def _source_category_diagnostic(batch: MarketplaceCategoryBatch) -> str:
+    """Return deterministic source-category coverage for one live batch."""
+    offers = batch.offers
+    category_ids = tuple(
+        sorted(
+            {
+                offer.source_category_id
+                for offer in offers
+                if offer.source_category_id is not None
+            }
+        )
+    )
+    id_coverage = sum(offer.source_category_id is not None for offer in offers)
+    name_coverage = sum(offer.source_category_name is not None for offer in offers)
+    sample = ", ".join(category_ids[:5]) if category_ids else "none"
+    return (
+        "source-categories: "
+        f"id={id_coverage}/{len(offers)}, "
+        f"name={name_coverage}/{len(offers)}, "
+        f"unique_ids={len(category_ids)} [{sample}]"
+    )
 
 
 async def _fetch_ggsel(http_client: HttpClient) -> MarketplaceCategoryBatch:

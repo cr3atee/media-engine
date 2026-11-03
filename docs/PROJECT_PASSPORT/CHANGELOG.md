@@ -6,6 +6,12 @@ This document records notable Project Passport updates.
 
 ## Unreleased
 
+- Extended the read-only aligned-marketplace verifier with deterministic source
+  category coverage. A 2026-11-01 live run confirmed complete GGSEL `111/111`
+  extraction with category ID `66568`, complete FunPay `1349/1349` extraction
+  with no category evidence in the supported preview contract, and an explicit
+  Playerok rate-limit response. No rule or repository state was mutated.
+
 - Connected durable source-category rules to the seller cabinet and active
   marketplace runtime. Reviewers select a concrete integration, persisted
   source evidence, game, and subsection through tenant-scoped versioned APIs.
@@ -14,7 +20,7 @@ This document records notable Project Passport updates.
   unaudited historical bulk rewrite. The management UI reuses the existing
   flat cabinet language and reads categories only from active observations of
   the selected integration, including already linked offers. Focused
-  verification passes `60` tests, full Pytest reports `709 passed, 63
+  verification passes `60` tests, full Pytest reports `710 passed, 63
   skipped`, MyPy checks `512` files, and public UI readiness remains `49/49`.
 
 - Connected verified game/service hubs to the working Market Terminal. The UI

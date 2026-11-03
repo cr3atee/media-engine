@@ -835,8 +835,16 @@ into GGSEL, Playerok, and FunPay runners. Classification is applied on the next
 successful source observation; there is no implicit title matching or
 unaudited historical bulk rewrite.
 Focused service/API/repository/runtime/shell verification passes `60` tests,
-the complete suite is `709 passed, 63 skipped`, MyPy is clean across `512`
+the complete suite is `710 passed, 63 skipped`, MyPy is clean across `512`
 source files, and public UI readiness remains `49/49` over all three saved
 marketplace contracts. PostgreSQL query compilation covers the exact
 integration-scoped observation read; a separate live database rerun remains
 unperformed because no isolated Docker/database environment was available.
+
+The 2026-11-01 read-only source recheck confirmed complete live extraction for
+GGSEL (`111/111`) and FunPay (`1349/1349`). GGSEL supplied source category ID
+`66568` for every offer in the Minecraft Keys category but no category name.
+FunPay supplied neither category field through its supported public preview
+contract. Playerok returned a rate-limit response, so no new Playerok readiness
+claim was made. The live verifier now prints deterministic source-category
+coverage for each successful marketplace batch.
