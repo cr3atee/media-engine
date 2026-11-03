@@ -6,6 +6,15 @@ This document records notable Project Passport updates.
 
 ## Unreleased
 
+- Preserved exact FunPay listing identity through the production pipeline
+  without parsing product titles: only a trusted numeric
+  `funpay.com/lots/<id>/` integration URL supplies `source_category_id`.
+  Lookalike hosts, offer pages, malformed paths, and non-HTTP URLs remain
+  unclassified. Read-only live verification returned FunPay `1319/1319` with
+  category ID `1015`, GGSEL `116/116` with `66568`, and the existing explicit
+  Playerok rate-limit result. Focused parser/pipeline verification passes `18`
+  tests with clean focused MyPy, Ruff, and Ruff format.
+
 - Added a guarded production-composition verifier for the complete GGSEL source
   rule lifecycle. Against isolated PostgreSQL 17.10 it passed `17/17`: three
   real GGSEL polls persisted `116` category-`66568` offers, applied one explicit

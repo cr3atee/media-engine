@@ -40,6 +40,8 @@ under the complete catalog view and receives no invented category.
 Marketplace source category evidence is separate from this public taxonomy.
 `ParsedOffer.source_category_id` and `source_category_name` retain exact adapter
 data through memory and PostgreSQL persistence. GGSEL currently supplies the
-section identifier, Playerok supplies category ID and name, and the supported
-FunPay offer-preview contract supplies neither. The review workspace displays
-this evidence, but only the reviewer selects the canonical public category.
+section identifier, Playerok supplies category ID and name, and FunPay raw
+offer previews supply neither. The FunPay runtime preserves the numeric listing
+ID only when it comes from the trusted `funpay.com/lots/<id>/` integration URL;
+it does not invent a name. The review workspace displays this evidence, but
+only the reviewer selects the canonical public category.

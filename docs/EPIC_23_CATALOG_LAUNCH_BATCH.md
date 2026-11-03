@@ -175,8 +175,10 @@ Runtime factories for GGSEL, Playerok, and FunPay now receive the same shared
 classification service and the same configured taxonomy. Rules therefore take
 effect during the next successful poll of their exact integration. Existing
 offers are not rewritten as an unaudited bulk action; they acquire the verified
-classification when that source is observed again. FunPay remains fail-closed
-where its supported payload contains no source-category evidence.
+classification when that source is observed again. FunPay raw previews contain
+no category fields, so the pipeline accepts only the numeric category ID from
+its trusted `funpay.com/lots/<id>/` integration URL; other URLs remain
+fail-closed.
 
 Verification on 2026-11-03: the exact integration-scoped repository contract
 passed twice against isolated PostgreSQL 17.10 database
@@ -203,8 +205,14 @@ bounded deterministic sample of unique source IDs for every successful batch.
 This diagnostic does not create a rule, infer a category from an offer title,
 or mutate repository state. The verified GGSEL identity can be mapped to the
 Minecraft `keys` section through the existing seller workflow and applied on
-the next successful poll. This verification did not create a production rule;
-FunPay remains fail-closed.
+the next successful poll. This verification did not create a production rule.
+
+On 2026-11-03 the same read-only verifier confirmed the FunPay URL provenance
+boundary: a complete `1319/1319` live snapshot from `/lots/1015/` carried
+source category ID `1015` on every normalized offer, with no invented category
+name. A lookalike host, offer URL, nonnumeric listing, or non-HTTP URL produces
+no category evidence. Playerok still returned its explicit rate-limit response,
+so the run remains intentionally incomplete as three-source evidence.
 
 ## Live Source-rule Polling Closure
 

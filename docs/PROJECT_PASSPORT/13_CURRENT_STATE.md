@@ -853,6 +853,14 @@ contract. Playerok returned a rate-limit response, so no new Playerok readiness
 claim was made. The live verifier now prints deterministic source-category
 coverage for each successful marketplace batch.
 
+On 2026-11-03 the FunPay production pipeline closed that context gap without
+HTML title inference: it propagates a numeric source category only from a
+trusted `funpay.com/lots/<id>/` integration URL. Live verification returned a
+complete `1319/1319` snapshot with category ID `1015` on every offer and no
+fabricated category name. Untrusted hosts, offer URLs, nonnumeric paths, and
+non-HTTP URLs remain unclassified. GGSEL returned `116/116` with category ID
+`66568`; Playerok remained explicitly rate-limited.
+
 The complete GGSEL source-rule lifecycle was live-verified on 2026-11-03
 against isolated PostgreSQL 17.10. Three real polls produced a current `116`
 offer snapshot for source category `66568`: the first stored evidence without

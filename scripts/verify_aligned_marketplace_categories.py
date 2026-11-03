@@ -25,6 +25,7 @@ from app.parsers.playerok_extractor import PlayerokExtractor  # noqa: E402
 from app.parsers.playerok_fetcher import PlayerokFetcher  # noqa: E402
 from app.parsers.playerok_normalizer import PlayerokNormalizer  # noqa: E402
 from app.parsers.source_snapshot import SourceSnapshotEvidence  # noqa: E402
+from app.services.funpay_pipeline import FunPayPipeline  # noqa: E402
 from scripts.analyze_cross_marketplace_matching import (  # noqa: E402
     analyze_cross_marketplace_matching,
 )
@@ -303,15 +304,16 @@ async def _fetch_playerok(http_client: HttpClient) -> MarketplaceCategoryBatch:
 
 
 async def _fetch_funpay(http_client: HttpClient) -> MarketplaceCategoryBatch:
-    fetcher = FunPayFetcher(http_client)
-    html = await fetcher.fetch(FUNPAY_CATEGORY_URL)
-    extraction = FunPayExtractor().extract_with_evidence(html)
-    offers = tuple(FunPayNormalizer().normalize(list(extraction.items)))
+    result = await FunPayPipeline(
+        fetcher=FunPayFetcher(http_client),
+        extractor=FunPayExtractor(),
+        normalizer=FunPayNormalizer(),
+    ).ingest(FUNPAY_CATEGORY_URL)
     return _batch(
         "funpay",
-        extraction.evidence.source_items,
-        offers,
-        extraction.evidence,
+        result.evidence.source_items,
+        result.offers,
+        result.evidence,
     )
 
 
