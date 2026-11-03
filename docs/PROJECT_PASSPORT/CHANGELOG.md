@@ -6,6 +6,16 @@ This document records notable Project Passport updates.
 
 ## Unreleased
 
+- Added a guarded production-composition verifier for the complete GGSEL source
+  rule lifecycle. Against isolated PostgreSQL 17.10 it passed `17/17`: three
+  real GGSEL polls persisted `116` category-`66568` offers, applied one explicit
+  `minecraft/keys` rule to `116/116`, preserved an explicit canonical review
+  link on rerun, exposed the repository-backed public hub, and survived a fresh
+  engine. Alembic clean upgrade/current/check/offline SQL passed at
+  `0024_offer_catalog_fields`; focused tests passed `43`, full Pytest passed
+  `710` with `64` guarded skips, MyPy checked `513` files, and Ruff/format
+  passed. No production database or tenant rule was changed.
+
 - Completed the live PostgreSQL follow-up for integration-scoped marketplace
   source categories against isolated PostgreSQL 17.10 database
   `mediaengine_source_category_test` at `0024_offer_catalog_fields`. The

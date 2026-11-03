@@ -205,3 +205,26 @@ or mutate repository state. The verified GGSEL identity can be mapped to the
 Minecraft `keys` section through the existing seller workflow and applied on
 the next successful poll. This verification did not create a production rule;
 FunPay remains fail-closed.
+
+## Live Source-rule Polling Closure
+
+On 2026-11-03, `verify_epic23_source_rule_polling_postgres.py` passed `17/17`
+checks against temporary PostgreSQL 17.10 database
+`epic23_source_rule_verify`. The guarded verifier performed three real GGSEL
+polls through the production composition boundary. The current snapshot
+contained `116` offers with source category ID `66568`.
+
+The first poll persisted exact source evidence without classification. The
+seller application service then created one explicit
+`66568 -> minecraft/keys` rule. The second poll classified all `116/116`
+offers, while the verifier continued to reject title-based inference for any
+unmapped category. One explicit canonical review decision linked one offer;
+the repository-backed public read then exposed the Minecraft `keys` hub. A
+third poll preserved both the classification and reviewed link, and a fresh
+engine read the same rule, offer, decision-backed link, and public hub.
+
+Alembic clean upgrade, `current`, `check`, and offline SQL passed at
+`0024_offer_catalog_fields`. Focused verification passed `43` tests; the full
+default suite passed `710` tests with `64` guarded skips; MyPy is clean across
+`513` source files; Ruff and Ruff format pass. No production database or
+seller rule was changed, and the temporary container and volume were removed.

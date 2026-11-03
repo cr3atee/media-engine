@@ -852,3 +852,16 @@ FunPay supplied neither category field through its supported public preview
 contract. Playerok returned a rate-limit response, so no new Playerok readiness
 claim was made. The live verifier now prints deterministic source-category
 coverage for each successful marketplace batch.
+
+The complete GGSEL source-rule lifecycle was live-verified on 2026-11-03
+against isolated PostgreSQL 17.10. Three real polls produced a current `116`
+offer snapshot for source category `66568`: the first stored evidence without
+classification, the second applied one explicit `minecraft/keys` rule to
+`116/116`, and the third preserved the rule-backed classification plus one
+explicitly reviewed canonical link. The repository-backed public read exposed
+the Minecraft `keys` hub before and after a fresh-engine restart. The verifier
+passed `17/17`; Alembic reached `0024_offer_catalog_fields` with clean
+`current`, `check`, and offline SQL; focused tests passed `43`, full Pytest
+passed `710` with `64` guarded skips, and MyPy passed across `513` source
+files. This proves the isolated production-composition path, not deployment of
+the verification rule into a production tenant.

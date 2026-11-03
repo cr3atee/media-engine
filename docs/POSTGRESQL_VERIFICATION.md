@@ -798,3 +798,26 @@ no pending operations, and offline `upgrade head --sql` succeeded.
 Full Pytest with the guarded database URL reports `712 passed, 62 skipped`.
 MyPy is clean across `512` source files, and focused Ruff plus Ruff format
 checks pass. The temporary container and volume were removed after verification.
+
+## EPIC 23 Live Source-rule Polling
+
+`scripts/verify_epic23_source_rule_polling_postgres.py` ran on 2026-11-03
+against temporary PostgreSQL 17.10 database `epic23_source_rule_verify` on
+loopback port `55439`. The script refuses non-loopback URLs and database names
+outside the `epic23_source_rule_*` guard. No project or production database was
+used.
+
+All `17/17` checks passed. Three real GGSEL polls exercised the production
+runtime factory and repository scope. The first stored source evidence without
+classification. One explicit seller-service rule mapped source category
+`66568` to `minecraft/keys`; the next poll classified all current `116/116`
+offers. One explicit confirmed canonical review then made the classified
+product visible through the repository-backed public hub read. A third poll
+preserved the canonical link and classification, and a fresh engine retained
+the exact rule, linked offer, migration head, and public hub.
+
+Clean upgrade, Alembic `current`, `check`, and offline SQL passed at
+`0024_offer_catalog_fields`. Focused tests passed `43`; the full default suite
+passed `710` tests with `64` guarded skips; MyPy passed across `513` source
+files; Ruff and Ruff format passed. The temporary container and volume were
+removed after verification.
