@@ -178,13 +178,15 @@ offers are not rewritten as an unaudited bulk action; they acquire the verified
 classification when that source is observed again. FunPay remains fail-closed
 where its supported payload contains no source-category evidence.
 
-Verification on 2026-11-01: `60` focused service/API/repository/runtime/shell
-tests and the complete suite passed (`710 passed, 63 skipped`). MyPy is clean
-across `512` source files. Public UI readiness remains `49/49` over saved GGSEL
-`60/60`, Playerok `20/20`, and FunPay `1/1` data. The exact integration-scoped
-PostgreSQL query has dialect-compilation coverage; no isolated live database
-was available because the local Docker daemon was not running and no dedicated
-test URL was configured.
+Verification on 2026-11-03: the exact integration-scoped repository contract
+passed twice against isolated PostgreSQL 17.10 database
+`mediaengine_source_category_test`. Fresh-session persistence, two GGSEL
+integrations under one tenant, foreign-tenant isolation, integration-scoped
+observation deactivation, source-category preservation, and rollback all
+passed. A clean migration reached `0024_offer_catalog_fields`; Alembic
+`current`, `check`, and offline upgrade SQL passed. Full Pytest reports `712
+passed, 62 skipped`, MyPy is clean across `512` source files, and focused Ruff
+plus Ruff format checks pass. The temporary container and volume were removed.
 
 ## Live Source-category Recheck
 
@@ -200,5 +202,6 @@ recorded as incomplete three-source evidence.
 bounded deterministic sample of unique source IDs for every successful batch.
 This diagnostic does not create a rule, infer a category from an offer title,
 or mutate repository state. The verified GGSEL identity can be mapped to the
-Minecraft `keys` section through the existing seller workflow once an isolated
-PostgreSQL runtime is available; FunPay remains fail-closed.
+Minecraft `keys` section through the existing seller workflow and applied on
+the next successful poll. This verification did not create a production rule;
+FunPay remains fail-closed.

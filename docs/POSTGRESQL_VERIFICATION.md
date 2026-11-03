@@ -12,7 +12,7 @@ API boundaries are also live-verified. EPIC 16 and EPIC 17 verification used
 isolated PostgreSQL 17.10 databases without using a project or production
 database. Durable marketplace polling history is additionally verified against
 an isolated PostgreSQL 17 database, including bounded retention and pruning.
-The current verified revision is `0017_marketplace_polling_runs`.
+The current verified revision is `0024_offer_catalog_fields`.
 
 ## Verified Schema
 
@@ -779,3 +779,22 @@ category evidence when a later upsert omits it, and rollback without a retained
 row. Full Pytest reports `680 passed, 61 skipped`; MyPy checks `497` files; Ruff,
 Ruff format and JavaScript syntax checks pass. The temporary container and
 volume were removed after verification.
+
+## Integration-scoped Source-category Reads
+
+On 2026-11-03 the source-category repository contract was rerun twice against
+temporary PostgreSQL 17.10 and isolated loopback database
+`mediaengine_source_category_test` on port `55439`. No project or production
+database was used.
+
+The two focused tests passed on both runs. They cover source-category
+persistence, partial-upsert preservation, exact tenant/integration reads for
+two GGSEL integrations owned by one tenant, foreign-tenant isolation,
+integration-scoped observation deactivation, fresh-session persistence, and
+rollback without a retained offer. A clean migration reached
+`0024_offer_catalog_fields`; Alembic `current` reported head, `check` reported
+no pending operations, and offline `upgrade head --sql` succeeded.
+
+Full Pytest with the guarded database URL reports `712 passed, 62 skipped`.
+MyPy is clean across `512` source files, and focused Ruff plus Ruff format
+checks pass. The temporary container and volume were removed after verification.

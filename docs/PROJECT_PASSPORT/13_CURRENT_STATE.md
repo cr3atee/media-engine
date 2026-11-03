@@ -837,9 +837,13 @@ unaudited historical bulk rewrite.
 Focused service/API/repository/runtime/shell verification passes `60` tests,
 the complete suite is `710 passed, 63 skipped`, MyPy is clean across `512`
 source files, and public UI readiness remains `49/49` over all three saved
-marketplace contracts. PostgreSQL query compilation covers the exact
-integration-scoped observation read; a separate live database rerun remains
-unperformed because no isolated Docker/database environment was available.
+marketplace contracts. The exact integration-scoped repository path was then
+verified twice against isolated PostgreSQL 17.10 at migration
+`0024_offer_catalog_fields`: fresh-session persistence, same-tenant integration
+isolation, cross-tenant isolation, scoped deactivation, category preservation,
+and rollback passed. Alembic `current`, `check`, and offline SQL passed; the
+resulting full suite is `712 passed, 62 skipped`. The temporary container and
+volume were removed without touching a project or production database.
 
 The 2026-11-01 read-only source recheck confirmed complete live extraction for
 GGSEL (`111/111`) and FunPay (`1349/1349`). GGSEL supplied source category ID

@@ -6,6 +6,16 @@ This document records notable Project Passport updates.
 
 ## Unreleased
 
+- Completed the live PostgreSQL follow-up for integration-scoped marketplace
+  source categories against isolated PostgreSQL 17.10 database
+  `mediaengine_source_category_test` at `0024_offer_catalog_fields`. The
+  focused contract passed twice and covers fresh-session persistence, two
+  same-marketplace integrations, cross-tenant isolation, scoped observation
+  deactivation, source-category preservation, and rollback. Alembic
+  `current`, `check`, and offline SQL passed; full Pytest reports `712 passed,
+  62 skipped`, MyPy checks `512` source files, and focused Ruff/format checks
+  pass. Temporary Docker resources were removed.
+
 - Extended the read-only aligned-marketplace verifier with deterministic source
   category coverage. A 2026-11-01 live run confirmed complete GGSEL `111/111`
   extraction with category ID `66568`, complete FunPay `1349/1349` extraction
