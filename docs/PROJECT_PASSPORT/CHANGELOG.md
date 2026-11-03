@@ -6,6 +6,17 @@ This document records notable Project Passport updates.
 
 ## Unreleased
 
+- Made the Market Terminal browser release gate independent of the old fixed
+  Minecraft seed. Search, marketplace, comparison, and deep-link assertions now
+  come from the current public API, and working-page checks wait for the real
+  transition lifecycle. Added off-screen card rendering containment for dense
+  grids; the accepted 50-card CPU-4x run fell from approximately `286 ms` to a
+  `133 ms` maximum long task. All `111` browser checks, the `25/25` deployment
+  verifier, JavaScript syntax, full Pytest (`714 passed, 64 skipped`), and MyPy
+  (`514` files) pass. Full Ruff still reports `57` unrelated pre-existing
+  Python findings and format reports `14` unrelated pre-existing files; none
+  was modified in this focused change.
+
 - Preserved exact FunPay listing identity through the production pipeline
   without parsing product titles: only a trusted numeric
   `funpay.com/lots/<id>/` integration URL supplies `source_category_id`.

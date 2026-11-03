@@ -236,3 +236,29 @@ Alembic clean upgrade, `current`, `check`, and offline SQL passed at
 default suite passed `710` tests with `64` guarded skips; MyPy is clean across
 `513` source files; Ruff and Ruff format pass. No production database or
 seller rule was changed, and the temporary container and volume were removed.
+
+## Data-driven Browser Release Gate
+
+On 2026-11-03 the Market Terminal browser verifier was detached from the old
+fixed Minecraft seed. It now obtains the product ID, title, marketplace, search
+term, comparison status, and deep-link target from the current public API. The
+same acceptance flow therefore exercises the saved GGSEL, Playerok, and FunPay
+examples without fabricating a stable catalog composition. Direct-product
+navigation waits for the real page-transition lifecycle, and comparison copy is
+checked against the API status rather than assuming a currency mismatch.
+
+The production and preview grids now defer rendering off-screen cards through
+`content-visibility` while retaining the same DOM and keyboard flow. In the
+final accepted Chromium run, the 50-card page under CPU 4x throttling recorded
+a `133 ms` maximum long task, down from approximately `286 ms` before the
+change. All `111` browser checks passed across desktop, mobile, 320 px, native
+200% zoom, keyboard, accessibility tree, reduced motion, offline/retry, 404,
+direct links, and the working catalog. No runtime/CSP errors were observed and
+all application requests made by the verifier were `GET` requests.
+
+The saved-payload preview check passed with three real products and production
+deployment verification passed `25/25`. Full Pytest passed `714` tests with
+`64` guarded skips, and MyPy passed across `514` source files. JavaScript syntax
+and diff checks passed. Repository-wide Ruff still reports `57` pre-existing
+Python findings and Ruff format reports `14` pre-existing Python files; none is
+in the CSS/MJS change set and they were not modified as part of this gate.

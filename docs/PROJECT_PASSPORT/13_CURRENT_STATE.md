@@ -873,3 +873,16 @@ passed `17/17`; Alembic reached `0024_offer_catalog_fields` with clean
 passed `710` with `64` guarded skips, and MyPy passed across `513` source
 files. This proves the isolated production-composition path, not deployment of
 the verification rule into a production tenant.
+
+The Market Terminal browser release gate is now data-driven rather than tied
+to the former fixed Minecraft seed. It derives search, marketplace,
+comparison, and deep-link expectations from the current public API and waits
+for the actual page-transition lifecycle before interaction. The accepted
+Chromium run passed `111/111` checks over desktop, mobile, 320 px, native 200%
+zoom, keyboard, accessibility, 404, offline/retry, and direct-link flows with
+no runtime/CSP errors. Off-screen card rendering is deferred for non-compact
+grids; the final 50-card CPU-4x run measured a `133 ms` maximum long task,
+compared with approximately `286 ms` before the optimization. Full Pytest is
+`714 passed, 64 skipped`; MyPy is clean across `514` files. Repository-wide
+Ruff and format remain blocked only by `57` and `14` pre-existing unrelated
+Python findings respectively.
