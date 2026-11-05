@@ -426,8 +426,12 @@ catalog readiness still depends on controlled target-environment promotion.
 
 EPIC 23 prepared that bounded batch from a successful 2026-10-22 live
 three-source refresh and a human reviewer completed the retained local decision
-set. The next catalog-launch action is controlled promotion with a fresh source
-and link audit, not automatic approval of the unresolved catalog.
+set. EPIC 24 Task 1 now produces a deterministic read-only promotion manifest
+containing only active links backed by immutable confirmed decisions. Memory and
+PostgreSQL parity, tenant isolation, retired/rejected exclusion, no source-state
+mutation, and fresh-engine persistence are verified. The next catalog-launch
+action is guarded target preflight and import with a fresh source/link audit, not
+automatic approval of the unresolved catalog.
 
 ## Not Present Yet
 
@@ -441,10 +445,10 @@ and link audit, not automatic approval of the unresolved catalog.
 
 ## Recommended Next EPIC
 
-**Catalog onboarding and controlled deployment rollout.**
+**Guarded catalog target preflight and controlled import.**
 
-Use the completed review workspace to process a bounded initial catalog batch
-from human-verified evidence, then deploy the verified operations boundary into
-an operator-managed test environment. Do not invent links, bulk-confirm
-`NO_MATCH` offers, lower matching thresholds, or enable authenticated sources
-before reviewed credential delivery exists.
+Consume the deterministic EPIC 24 manifest in an operator-managed test
+environment, revalidate source identities, produce a conflict report before any
+write, and require explicit approval for the bounded import. Do not invent
+links, bulk-confirm `NO_MATCH` offers, lower matching thresholds, copy secrets,
+or enable authenticated sources before reviewed credential delivery exists.

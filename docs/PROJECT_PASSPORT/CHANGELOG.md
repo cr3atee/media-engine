@@ -6,6 +6,16 @@ This document records notable Project Passport updates.
 
 ## Unreleased
 
+- Added EPIC 24's deterministic read-only catalog promotion manifest. It exports
+  only active canonical links backed by immutable confirmed decisions, carries
+  source and decision evidence, excludes rejected/retired state, fails closed on
+  incomplete launch data, and protects canonical JSON with a SHA-256 integrity
+  digest. Focused Pytest passed `13`; Ruff, format, and strict MyPy passed. A
+  clean isolated PostgreSQL 17 run at `0024_offer_catalog_fields` passed `14/14`
+  checks plus Alembic `current`, `check`, and offline SQL. No target import or
+  production mutation was performed, and temporary Docker resources were
+  removed.
+
 - Made the Market Terminal browser release gate independent of the old fixed
   Minecraft seed. Search, marketplace, comparison, and deep-link assertions now
   come from the current public API, and working-page checks wait for the real

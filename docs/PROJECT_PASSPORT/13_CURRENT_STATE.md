@@ -886,3 +886,14 @@ compared with approximately `286 ms` before the optimization. Full Pytest is
 `714 passed, 64 skipped`; MyPy is clean across `514` files. Repository-wide
 Ruff and format remain blocked only by `57` and `14` pre-existing unrelated
 Python findings respectively.
+
+EPIC 24 Task 1 adds a deterministic read-only catalog promotion manifest. It
+exports only canonical products referenced by active links that have immutable
+confirmed decisions, preserves exact marketplace/source evidence, counts but
+excludes retired confirmations, and rejects incomplete or unreviewed state. A
+SHA-256 payload digest detects manifest changes without being presented as a
+signature. Focused Pytest passes `13` tests; focused Ruff, format, and strict
+MyPy pass. Against a clean isolated PostgreSQL 17 database at
+`0024_offer_catalog_fields`, the verifier passed `14/14` for memory/PostgreSQL
+parity, idempotent rerun, tenant isolation, fail-closed behavior, zero repository
+mutation, and fresh-engine persistence. Target preflight/import has not started.

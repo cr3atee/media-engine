@@ -307,6 +307,11 @@ This document captures architecture notes that are important for future reviews.
   aggregate evidence across two connections to the same marketplace. A new or
   corrected rule applies on a subsequent source observation; do not introduce
   an unaudited historical bulk rewrite to make catalog hubs appear immediately.
+- Treat the EPIC 24 promotion manifest as a read-only handoff contract, not an
+  import command. Its digest detects payload changes but does not authenticate
+  an operator. A target importer must revalidate marketplace identities, report
+  conflicts before writes, require explicit approval, and never copy credentials
+  or unresolved offers from the source workspace.
 
 ## Review Notes
 
