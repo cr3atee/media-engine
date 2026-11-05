@@ -31,7 +31,12 @@ if _CONFIGURED_DATABASE_URL:
 
 from app.database.repository_scope import create_postgres_repository_scope
 from app.database.session import engine as default_engine
-from app.domain.admin_actions import AdminActorType
+from app.domain.admin_actions import (
+    AdminAction,
+    AdminActionType,
+    AdminActorType,
+    AdminResourceType,
+)
 from app.domain.canonical_offer_decisions import (
     CanonicalOfferDecision,
     CanonicalOfferDecisionType,
@@ -41,7 +46,17 @@ from app.domain.processing import StateTransitionOutcome
 from app.domain.tenancy import Tenant
 from app.models.canonical_product import CanonicalProduct
 from app.parsers.models import ParsedOffer
+from app.repositories.base import RepositoryIdentityConflictError
 from app.repositories.provider import create_memory_provider
+from app.services.admin_mutations import AdminCommandContext
+from app.services.catalog_promotion_import import (
+    CatalogPromotionImportCommand,
+    CatalogPromotionImportError,
+    CatalogPromotionImportResult,
+    CatalogPromotionImportService,
+    catalog_promotion_approval_phrase,
+    catalog_promotion_resource_id,
+)
 from app.services.catalog_promotion_manifest import (
     CatalogPromotionManifest,
     CatalogPromotionManifestError,
@@ -50,6 +65,7 @@ from app.services.catalog_promotion_manifest import (
 from app.services.catalog_promotion_preflight import (
     CatalogPromotionIssueCode,
     CatalogPromotionLinkActionType,
+    CatalogPromotionPreflightResult,
     CatalogPromotionPreflightService,
     CatalogPromotionPreflightStatus,
 )
@@ -62,10 +78,16 @@ TENANT_ID = UUID("75000000-0000-4000-8000-000000000001")
 FOREIGN_TENANT_ID = UUID("75000000-0000-4000-8000-000000000002")
 INCOMPLETE_TENANT_ID = UUID("75000000-0000-4000-8000-000000000003")
 TARGET_TENANT_ID = UUID("75000000-0000-4000-8000-000000000004")
+IMPORT_SOURCE_TENANT_ID = UUID("75000000-0000-4000-8000-000000000005")
 MINECRAFT_ID = UUID("75000000-0000-4000-8000-000000000010")
 FORTNITE_ID = UUID("75000000-0000-4000-8000-000000000011")
 FOREIGN_PRODUCT_ID = UUID("75000000-0000-4000-8000-000000000012")
 INCOMPLETE_PRODUCT_ID = UUID("75000000-0000-4000-8000-000000000013")
+IMPORT_PRODUCT_ID = UUID("75000000-0000-4000-8000-000000000014")
+ROLLBACK_BLOCK_ACTION_ID = UUID("75000000-0000-4000-8000-000000000020")
+IMPORT_ACTION_A_ID = UUID("75000000-0000-4000-8000-000000000021")
+IMPORT_ACTION_B_ID = UUID("75000000-0000-4000-8000-000000000022")
+ROLLBACK_RESOURCE_ID = UUID("75000000-0000-4000-8000-000000000023")
 DECIDED_AT = datetime(2026, 11, 4, 8, 0, tzinfo=UTC)
 
 
@@ -123,6 +145,7 @@ async def main() -> int:
         and {issue.code for issue in memory_preflight.issues}
         == {CatalogPromotionIssueCode.PRODUCT_OWNED_BY_OTHER_TENANT},
     )
+    import_manifest = await _build_import_manifest()
 
     engine = create_async_engine(database_url)
     sessions = async_sessionmaker(engine, expire_on_commit=False)
@@ -190,6 +213,137 @@ async def main() -> int:
             target_after == target_before,
         )
 
+        ready_preflight = await preflight_service.inspect(
+            import_manifest,
+            target_tenant_id=TARGET_TENANT_ID,
+        )
+        verifier.check(
+            "independent target manifest is ready",
+            ready_preflight.status is CatalogPromotionPreflightStatus.READY
+            and ready_preflight.required_mutations == 3,
+        )
+        await _seed_rollback_blocker(postgres_scope)
+        rollback_command = _import_command(
+            import_manifest,
+            ready_preflight,
+            request_id="epic24-rollback-request",
+            idempotency_key="epic24-catalog-import-rollback",
+        )
+        rollback_service = CatalogPromotionImportService(
+            postgres_scope,
+            clock=lambda: DECIDED_AT,
+            action_id_factory=lambda: ROLLBACK_BLOCK_ACTION_ID,
+        )
+        rollback_failed = False
+        try:
+            await rollback_service.apply(rollback_command)
+        except RepositoryIdentityConflictError:
+            rollback_failed = True
+        rollback_state = await _snapshot(postgres_scope, TARGET_TENANT_ID)
+        verifier.check(
+            "audit failure rolls back the complete PostgreSQL import",
+            rollback_failed and rollback_state == target_before,
+        )
+
+        import_command_a = _import_command(
+            import_manifest,
+            ready_preflight,
+            request_id="epic24-import-request-a",
+            idempotency_key="epic24-catalog-import-a",
+        )
+        import_command_b = _import_command(
+            import_manifest,
+            ready_preflight,
+            request_id="epic24-import-request-b",
+            idempotency_key="epic24-catalog-import-b",
+        )
+        outcomes = await asyncio.gather(
+            CatalogPromotionImportService(
+                postgres_scope,
+                clock=lambda: DECIDED_AT,
+                action_id_factory=lambda: IMPORT_ACTION_A_ID,
+            ).apply(import_command_a),
+            CatalogPromotionImportService(
+                postgres_scope,
+                clock=lambda: DECIDED_AT,
+                action_id_factory=lambda: IMPORT_ACTION_B_ID,
+            ).apply(import_command_b),
+            return_exceptions=True,
+        )
+        imported_results = tuple(
+            outcome
+            for outcome in outcomes
+            if isinstance(outcome, CatalogPromotionImportResult)
+        )
+        failed_results = tuple(
+            outcome
+            for outcome in outcomes
+            if isinstance(outcome, CatalogPromotionImportError)
+        )
+        verifier.check(
+            "resource lock permits exactly one concurrent import",
+            len(imported_results) == 1
+            and len(failed_results) == 1
+            and failed_results[0].code == "preflight_drift",
+        )
+        imported = imported_results[0]
+        accepted_command = (
+            import_command_a
+            if imported.action_id == IMPORT_ACTION_A_ID
+            else import_command_b
+        )
+        replayed = await CatalogPromotionImportService(postgres_scope).apply(
+            accepted_command
+        )
+        verifier.check(
+            "atomic import creates one product and two links",
+            imported.products_created == 1
+            and imported.links_created == 2
+            and not imported.replayed,
+        )
+        verifier.check(
+            "same idempotency key replays the accepted import",
+            replayed.action_id == imported.action_id and replayed.replayed,
+        )
+        async with postgres_scope() as repositories:
+            imported_product = (
+                await repositories.canonical_products.get_by_tenant_and_id(
+                    TARGET_TENANT_ID,
+                    IMPORT_PRODUCT_ID,
+                )
+            )
+            imported_links = (
+                await repositories.offers.get_by_identity(
+                    TARGET_TENANT_ID,
+                    "ggsel",
+                    "gg-active",
+                ),
+                await repositories.offers.get_by_identity(
+                    TARGET_TENANT_ID,
+                    "playerok",
+                    "pl-active",
+                ),
+            )
+            audit = await repositories.admin_actions.list_for_resource(
+                AdminResourceType.CATALOG_PROMOTION,
+                catalog_promotion_resource_id(
+                    TARGET_TENANT_ID,
+                    import_manifest.digest,
+                ),
+            )
+        verifier.check(
+            "imported product and links are tenant-owned",
+            imported_product is not None
+            and all(
+                offer is not None and offer.canonical_product_id == IMPORT_PRODUCT_ID
+                for offer in imported_links
+            ),
+        )
+        verifier.check(
+            "import audit is immutable and unique",
+            len(audit) == 1 and audit[0].id == imported.action_id,
+        )
+
         foreign = await service.build(FOREIGN_TENANT_ID)
         verifier.check(
             "tenant isolation excludes foreign catalog state",
@@ -219,8 +373,33 @@ async def main() -> int:
             target_tenant_id=TARGET_TENANT_ID,
         )
         verifier.check(
-            "fresh engine retains the exact preflight plan",
-            fresh_preflight == memory_preflight,
+            "fresh engine reports durable product and offer ownership conflicts",
+            fresh_preflight.status is CatalogPromotionPreflightStatus.BLOCKED
+            and fresh_preflight.product_actions == ()
+            and fresh_preflight.link_actions == ()
+            and fresh_preflight.required_mutations == 0
+            and {issue.code for issue in fresh_preflight.issues}
+            == {
+                CatalogPromotionIssueCode.OFFER_LINK_CONFLICT,
+                CatalogPromotionIssueCode.PRODUCT_OWNED_BY_OTHER_TENANT,
+            },
+        )
+        fresh_import_preflight = await CatalogPromotionPreflightService(
+            fresh_scope
+        ).inspect(
+            import_manifest,
+            target_tenant_id=TARGET_TENANT_ID,
+        )
+        verifier.check(
+            "fresh engine observes imported state as no changes",
+            fresh_import_preflight.status is CatalogPromotionPreflightStatus.NO_CHANGES,
+        )
+        fresh_replay = await CatalogPromotionImportService(fresh_scope).apply(
+            accepted_command
+        )
+        verifier.check(
+            "fresh engine replays durable import audit",
+            fresh_replay.action_id == imported.action_id and fresh_replay.replayed,
         )
     finally:
         await fresh_engine.dispose()
@@ -237,7 +416,7 @@ async def main() -> int:
         f"links={memory_manifest.summary.promoted_links}, "
         f"digest={memory_manifest.digest}"
     )
-    print("Mode: export verification only; no target import was performed.")
+    print("Mode: isolated approved target import; no production state was used.")
     return 0
 
 
@@ -278,6 +457,88 @@ def _verify_manifest(
             for link in manifest.links
         ),
     )
+
+
+async def _build_import_manifest() -> CatalogPromotionManifest:
+    provider = create_memory_provider()
+    await provider.canonical_products.save(
+        _product(IMPORT_SOURCE_TENANT_ID, IMPORT_PRODUCT_ID, "Minecraft")
+    )
+    for marketplace, external_id, ordinal in (
+        ("ggsel", "gg-active", 21),
+        ("playerok", "pl-active", 22),
+    ):
+        await provider.offers.save(
+            IMPORT_SOURCE_TENANT_ID,
+            _offer(
+                IMPORT_SOURCE_TENANT_ID,
+                marketplace,
+                external_id,
+                IMPORT_PRODUCT_ID,
+            ),
+        )
+        await provider.canonical_offer_decisions.append(
+            _decision(
+                IMPORT_SOURCE_TENANT_ID,
+                marketplace,
+                external_id,
+                IMPORT_PRODUCT_ID,
+                True,
+                ordinal,
+            )
+        )
+    return await CatalogPromotionManifestService(
+        create_memory_repository_scope(provider)
+    ).build(IMPORT_SOURCE_TENANT_ID)
+
+
+def _import_command(
+    manifest: CatalogPromotionManifest,
+    preflight: CatalogPromotionPreflightResult,
+    *,
+    request_id: str = "epic24-import-request",
+    idempotency_key: str = "epic24-catalog-import",
+) -> CatalogPromotionImportCommand:
+    return CatalogPromotionImportCommand(
+        manifest=manifest,
+        preflight=preflight,
+        approval_phrase=catalog_promotion_approval_phrase(
+            manifest,
+            TARGET_TENANT_ID,
+        ),
+        context=AdminCommandContext(
+            tenant_id=TARGET_TENANT_ID,
+            actor_id="epic24-verifier",
+            actor_type=AdminActorType.USER,
+            request_id=request_id,
+            idempotency_key=idempotency_key,
+        ),
+        reason="Verify guarded catalog promotion import",
+    )
+
+
+async def _seed_rollback_blocker(scope: RepositoryScopeFactory) -> None:
+    async with scope() as repositories:
+        await repositories.admin_actions.append(
+            AdminAction(
+                id=ROLLBACK_BLOCK_ACTION_ID,
+                tenant_id=TARGET_TENANT_ID,
+                action=AdminActionType.APPROVE_CONTENT,
+                resource_type=AdminResourceType.CONTENT,
+                resource_id=ROLLBACK_RESOURCE_ID,
+                previous_state="draft",
+                resulting_state="approved",
+                actor_id="epic24-verifier",
+                actor_type=AdminActorType.USER,
+                request_id="epic24-rollback-blocker",
+                idempotency_key="epic24-rollback-blocker",
+                request_fingerprint=sha256(b"epic24-rollback-blocker").hexdigest(),
+                expected_version=1,
+                resulting_version=2,
+                created_at=DECIDED_AT,
+                reason="Force an audit identity conflict for rollback verification",
+            )
+        )
 
 
 async def _seed(scope: RepositoryScopeFactory) -> None:

@@ -426,13 +426,13 @@ catalog readiness still depends on controlled target-environment promotion.
 
 EPIC 23 prepared that bounded batch from a successful 2026-10-22 live
 three-source refresh and a human reviewer completed the retained local decision
-set. EPIC 24 Tasks 1 and 2 now produce a deterministic promotion manifest and a
-read-only target preflight. Only active confirmed links are exported; target
-tenant, product ownership, source evidence, retirement, and link conflicts are
-checked without writes. Memory/PostgreSQL parity, deterministic rerun, tenant
-isolation, no source/target mutation, and fresh-engine persistence are verified.
-The next catalog-launch action is an explicitly approved atomic import, not
-automatic approval of the unresolved catalog.
+set. EPIC 24 now provides a deterministic promotion manifest, read-only target
+preflight, and guarded atomic importer. Only active confirmed links are
+exported; target ownership and source evidence are rechecked in the import
+transaction. Exact approval, immutable audit, idempotent replay, rollback,
+concurrent-worker serialization, tenant isolation, and fresh-engine persistence
+are verified on isolated PostgreSQL. Production target promotion has not been
+performed and remains an explicit operator release action.
 
 ## Not Present Yet
 
@@ -446,11 +446,11 @@ automatic approval of the unresolved catalog.
 
 ## Recommended Next EPIC
 
-**Guarded atomic catalog import.**
+**Guarded target-environment catalog rollout.**
 
-Consume only an unchanged `ready` EPIC 24 preflight plan in an operator-managed
-test environment. Re-check target state transactionally, require explicit
-approval, persist import audit identity, and abort the whole batch on drift. Do
-not invent links, bulk-confirm `NO_MATCH` offers, lower matching thresholds,
-copy secrets, or enable authenticated sources before reviewed credential
-delivery exists.
+Generate a fresh EPIC 24 manifest and target preflight after source refresh,
+review target backup and monitoring readiness, then invoke the existing atomic
+import with explicit operator approval. Verify public reads and metrics after
+the transaction. Do not invent links, bulk-confirm `NO_MATCH` offers, lower
+matching thresholds, copy secrets, or enable authenticated sources before
+reviewed credential delivery exists.

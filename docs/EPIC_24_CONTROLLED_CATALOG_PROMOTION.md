@@ -2,15 +2,16 @@
 
 ## Status
 
-Tasks 1 and 2 are complete: the deterministic promotion manifest and read-only
-target preflight are implemented. Import and deployment rollout have not started.
+Tasks 1 through 3 are complete: the deterministic promotion manifest, read-only
+target preflight, and guarded atomic importer are implemented. Production target
+rollout has not been performed.
 
 ## Purpose
 
 Move only a bounded, human-reviewed catalog toward a target environment without
 copying unresolved marketplace state or weakening the existing review boundary.
-The first step is an immutable export description built from one consistent
-tenant repository scope.
+The handoff starts with an immutable export description built from one
+consistent tenant repository scope.
 
 ## Manifest Contract
 
@@ -41,12 +42,12 @@ Rejected pairs, unresolved offers, inactive source observations, and manually
 retired offers are never promoted. A prior confirmed decision for a retired
 offer remains counted as excluded audit evidence.
 
-## Safety Boundary
+## Manifest Safety Boundary
 
-This task is read-only. It does not create target tenants, import offers, copy
-credentials, rewrite canonical links, call marketplaces, or mutate source
-repositories. Source URLs are evidence for a later target preflight; they are
-not trusted as proof that an outbound listing is still available.
+Manifest generation and target preflight are read-only. They do not create
+target tenants, import offers, copy credentials, rewrite canonical links, call
+marketplaces, or mutate source repositories. Source URLs are target evidence;
+they are not trusted as proof that an outbound listing is still available.
 
 ## Target Preflight
 
@@ -62,6 +63,23 @@ not invalidate identity evidence because prices are intentionally outside the
 promotion identity fingerprint. In a shared database, a canonical UUID already
 owned by the source tenant is reported as a blocking ownership conflict; it is
 never silently reassigned.
+
+## Atomic Import
+
+`CatalogPromotionImportService` accepts only the exact manifest and unchanged
+`ready` preflight reviewed by the operator. The command requires a target- and
+digest-bound approval phrase, tenant-scoped command context, idempotency key,
+and human reason. Inside one repository transaction it serializes imports for
+the target manifest, recomputes preflight, creates only proposed products,
+links only proposed target offers through the existing linking service, and
+appends one immutable `catalog_promotion` admin action.
+
+Digest changes, target drift, tenant mismatch, non-ready plans, conflicting
+idempotency reuse, and concurrent duplicate imports fail closed. A failed audit
+append rolls back product and link writes. An accepted command can be replayed
+after restart without creating duplicate records. The importer never creates
+target offers, copies credentials, calls a marketplace, or changes unresolved
+review decisions.
 
 ## Verification
 
@@ -88,10 +106,19 @@ read-only behavior, same-database ownership conflict detection, and fresh-engine
 persistence. Full Pytest passed `733` tests with `64` guarded skips, and MyPy
 passed across `520` source files. Temporary Docker resources were removed.
 
+On 2026-11-05, Task 3 added five focused importer tests and passed the combined
+`19`-test importer/preflight/admin suite. A clean isolated PostgreSQL `17.10`
+database migrated to `0025_catalog_promotion_audit`; the verifier passed `29/29`
+checks covering atomic apply, exact durable replay, tenant ownership, immutable
+audit, forced rollback, concurrent-worker serialization, conflict detection,
+and fresh-engine persistence. Alembic `current`, `check`, downgrade/upgrade,
+and offline SQL passed. Focused Ruff and format passed, full Pytest passed `738`
+tests with `64` guarded skips, and strict MyPy passed across `548` source files.
+No production database or tenant was used.
+
 ## Next Task
 
-Implement an atomic importer that accepts only an unchanged `ready` preflight
-plan plus explicit operator approval. It must re-check the digest and target
-state inside the write transaction, abort on drift, write only proposed actions,
-and persist auditable import identity. Import remains separate from export and
-preflight.
+Run a guarded target-environment release using a freshly generated manifest and
+preflight, reviewed credentials and backups, explicit operator approval, and
+post-import public-read/monitoring checks. Do not copy unresolved offers or
+credentials, and do not treat isolated verification as production rollout.

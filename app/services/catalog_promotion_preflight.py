@@ -6,6 +6,7 @@ from uuid import UUID
 
 from app.domain.offer_availability import OfferAvailabilityStatus
 from app.models.canonical_product import CanonicalProduct
+from app.repositories.provider import RepositoryProvider
 from app.services.catalog_promotion_manifest import (
     CatalogPromotionManifest,
     CatalogPromotionManifestError,
@@ -116,141 +117,154 @@ class CatalogPromotionPreflightService:
         target_tenant_id: UUID,
     ) -> CatalogPromotionPreflightResult:
         """Return a complete deterministic conflict report without writes."""
-        if not manifest.has_valid_digest():
-            return _blocked_result(
-                target_tenant_id,
+        async with self._repository_scope_factory() as repositories:
+            return await inspect_catalog_promotion_target(
+                repositories,
                 manifest,
-                CatalogPromotionIssue(
-                    code=CatalogPromotionIssueCode.INVALID_MANIFEST,
-                    resource="manifest",
-                    detail="Manifest digest does not match its payload.",
-                ),
+                target_tenant_id=target_tenant_id,
             )
 
-        product_actions: list[CatalogPromotionProductAction] = []
-        link_actions: list[CatalogPromotionLinkAction] = []
-        issues: list[CatalogPromotionIssue] = []
-        async with self._repository_scope_factory() as repositories:
-            tenant = await repositories.tenants.get_by_id(target_tenant_id)
-            if tenant is None:
-                issues.append(
-                    CatalogPromotionIssue(
-                        code=CatalogPromotionIssueCode.TARGET_TENANT_NOT_FOUND,
-                        resource=f"tenant:{target_tenant_id}",
-                        detail="Target tenant does not exist.",
-                    )
-                )
-            elif not tenant.is_active:
-                issues.append(
-                    CatalogPromotionIssue(
-                        code=CatalogPromotionIssueCode.TARGET_TENANT_INACTIVE,
-                        resource=f"tenant:{target_tenant_id}",
-                        detail="Target tenant is inactive.",
-                    )
-                )
 
-            for product in manifest.products:
-                stored = await repositories.canonical_products.get_by_id(product.id)
-                _inspect_product(
-                    product,
-                    stored,
-                    target_tenant_id,
-                    product_actions,
-                    issues,
-                )
-
-            for link in manifest.links:
-                resource = f"offer:{link.marketplace}:{link.external_id}"
-                availability = await repositories.offers.get_availability_state(
-                    target_tenant_id,
-                    link.marketplace,
-                    link.external_id,
-                )
-                if (
-                    availability is not None
-                    and availability.status is OfferAvailabilityStatus.RETIRED
-                ):
-                    issues.append(
-                        CatalogPromotionIssue(
-                            code=CatalogPromotionIssueCode.OFFER_RETIRED,
-                            resource=resource,
-                            detail="Target offer is manually retired.",
-                        )
-                    )
-                    continue
-
-                offer = await repositories.offers.get_by_identity(
-                    target_tenant_id,
-                    link.marketplace,
-                    link.external_id,
-                )
-                if offer is None:
-                    issues.append(
-                        CatalogPromotionIssue(
-                            code=CatalogPromotionIssueCode.SOURCE_REFRESH_REQUIRED,
-                            resource=resource,
-                            detail="Fresh target source evidence is required.",
-                        )
-                    )
-                    continue
-                try:
-                    fingerprint = catalog_promotion_source_fingerprint(offer)
-                except CatalogPromotionManifestError:
-                    fingerprint = ""
-                if fingerprint != link.source_fingerprint:
-                    issues.append(
-                        CatalogPromotionIssue(
-                            code=CatalogPromotionIssueCode.SOURCE_EVIDENCE_MISMATCH,
-                            resource=resource,
-                            detail="Target source evidence differs from the manifest.",
-                        )
-                    )
-                    continue
-                if offer.canonical_product_id is None:
-                    action = CatalogPromotionLinkActionType.LINK
-                elif offer.canonical_product_id == link.canonical_product_id:
-                    action = CatalogPromotionLinkActionType.REUSE
-                else:
-                    issues.append(
-                        CatalogPromotionIssue(
-                            code=CatalogPromotionIssueCode.OFFER_LINK_CONFLICT,
-                            resource=resource,
-                            detail="Target offer is linked to another product.",
-                        )
-                    )
-                    continue
-                link_actions.append(
-                    CatalogPromotionLinkAction(
-                        marketplace=link.marketplace,
-                        external_id=link.external_id,
-                        canonical_product_id=link.canonical_product_id,
-                        action=action,
-                    )
-                )
-
-        product_result = tuple(sorted(product_actions, key=_product_action_key))
-        link_result = tuple(sorted(link_actions, key=_link_action_key))
-        issue_result = tuple(sorted(issues, key=_issue_key))
-        if issue_result:
-            status = CatalogPromotionPreflightStatus.BLOCKED
-        elif any(
-            action.action is CatalogPromotionProductActionType.CREATE
-            for action in product_result
-        ) or any(
-            action.action is CatalogPromotionLinkActionType.LINK
-            for action in link_result
-        ):
-            status = CatalogPromotionPreflightStatus.READY
-        else:
-            status = CatalogPromotionPreflightStatus.NO_CHANGES
-        return CatalogPromotionPreflightResult(
-            target_tenant_id=target_tenant_id,
-            manifest_digest=manifest.digest,
-            status=status,
-            product_actions=product_result,
-            link_actions=link_result,
-            issues=issue_result,
+async def inspect_catalog_promotion_target(
+    repositories: RepositoryProvider,
+    manifest: CatalogPromotionManifest,
+    *,
+    target_tenant_id: UUID,
+) -> CatalogPromotionPreflightResult:
+    """Inspect target state inside a caller-owned transaction scope."""
+    if not manifest.has_valid_digest():
+        return _blocked_result(
+            target_tenant_id,
+            manifest,
+            CatalogPromotionIssue(
+                code=CatalogPromotionIssueCode.INVALID_MANIFEST,
+                resource="manifest",
+                detail="Manifest digest does not match its payload.",
+            ),
         )
+
+    product_actions: list[CatalogPromotionProductAction] = []
+    link_actions: list[CatalogPromotionLinkAction] = []
+    issues: list[CatalogPromotionIssue] = []
+    tenant = await repositories.tenants.get_by_id(target_tenant_id)
+    if tenant is None:
+        issues.append(
+            CatalogPromotionIssue(
+                code=CatalogPromotionIssueCode.TARGET_TENANT_NOT_FOUND,
+                resource=f"tenant:{target_tenant_id}",
+                detail="Target tenant does not exist.",
+            )
+        )
+    elif not tenant.is_active:
+        issues.append(
+            CatalogPromotionIssue(
+                code=CatalogPromotionIssueCode.TARGET_TENANT_INACTIVE,
+                resource=f"tenant:{target_tenant_id}",
+                detail="Target tenant is inactive.",
+            )
+        )
+
+    for product in manifest.products:
+        stored = await repositories.canonical_products.get_by_id(product.id)
+        _inspect_product(
+            product,
+            stored,
+            target_tenant_id,
+            product_actions,
+            issues,
+        )
+
+    for link in manifest.links:
+        resource = f"offer:{link.marketplace}:{link.external_id}"
+        availability = await repositories.offers.get_availability_state(
+            target_tenant_id,
+            link.marketplace,
+            link.external_id,
+        )
+        if (
+            availability is not None
+            and availability.status is OfferAvailabilityStatus.RETIRED
+        ):
+            issues.append(
+                CatalogPromotionIssue(
+                    code=CatalogPromotionIssueCode.OFFER_RETIRED,
+                    resource=resource,
+                    detail="Target offer is manually retired.",
+                )
+            )
+            continue
+
+        offer = await repositories.offers.get_by_identity(
+            target_tenant_id,
+            link.marketplace,
+            link.external_id,
+        )
+        if offer is None:
+            issues.append(
+                CatalogPromotionIssue(
+                    code=CatalogPromotionIssueCode.SOURCE_REFRESH_REQUIRED,
+                    resource=resource,
+                    detail="Fresh target source evidence is required.",
+                )
+            )
+            continue
+        try:
+            fingerprint = catalog_promotion_source_fingerprint(offer)
+        except CatalogPromotionManifestError:
+            fingerprint = ""
+        if fingerprint != link.source_fingerprint:
+            issues.append(
+                CatalogPromotionIssue(
+                    code=CatalogPromotionIssueCode.SOURCE_EVIDENCE_MISMATCH,
+                    resource=resource,
+                    detail="Target source evidence differs from the manifest.",
+                )
+            )
+            continue
+        if offer.canonical_product_id is None:
+            action = CatalogPromotionLinkActionType.LINK
+        elif offer.canonical_product_id == link.canonical_product_id:
+            action = CatalogPromotionLinkActionType.REUSE
+        else:
+            issues.append(
+                CatalogPromotionIssue(
+                    code=CatalogPromotionIssueCode.OFFER_LINK_CONFLICT,
+                    resource=resource,
+                    detail="Target offer is linked to another product.",
+                )
+            )
+            continue
+        link_actions.append(
+            CatalogPromotionLinkAction(
+                marketplace=link.marketplace,
+                external_id=link.external_id,
+                canonical_product_id=link.canonical_product_id,
+                action=action,
+            )
+        )
+
+    product_result = tuple(sorted(product_actions, key=_product_action_key))
+    link_result = tuple(sorted(link_actions, key=_link_action_key))
+    issue_result = tuple(sorted(issues, key=_issue_key))
+    if issue_result:
+        status = CatalogPromotionPreflightStatus.BLOCKED
+    elif any(
+        action.action is CatalogPromotionProductActionType.CREATE
+        for action in product_result
+    ) or any(
+        action.action is CatalogPromotionLinkActionType.LINK for action in link_result
+    ):
+        status = CatalogPromotionPreflightStatus.READY
+    else:
+        status = CatalogPromotionPreflightStatus.NO_CHANGES
+    return CatalogPromotionPreflightResult(
+        target_tenant_id=target_tenant_id,
+        manifest_digest=manifest.digest,
+        status=status,
+        product_actions=product_result,
+        link_actions=link_result,
+        issues=issue_result,
+    )
 
 
 def _inspect_product(

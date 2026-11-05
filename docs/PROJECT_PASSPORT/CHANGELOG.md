@@ -6,6 +6,17 @@ This document records notable Project Passport updates.
 
 ## Unreleased
 
+- Added EPIC 24's guarded atomic catalog importer. It accepts only an unchanged
+  `ready` plan plus an exact target-bound approval phrase, recomputes target
+  state inside one transaction, reuses canonical linking, and commits immutable
+  audit with the batch. Revision `0025_catalog_promotion_audit` permits the new
+  audit identity. Focused verification passed `19` tests; the isolated
+  PostgreSQL `17.10` verifier passed `29/29`, including rollback, concurrent
+  worker serialization, idempotent replay, and fresh-engine persistence.
+  Alembic current/check/downgrade/upgrade/offline SQL, focused Ruff/format, full
+  Pytest (`738 passed, 64 skipped`), and MyPy (`548` files) passed. Production
+  target rollout was not performed.
+
 - Added EPIC 24's read-only target preflight. It validates manifest integrity,
   classifies product and offer-link actions, requires fresh target source
   evidence, and blocks tenant, ownership, definition, source-drift, retirement,

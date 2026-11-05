@@ -907,4 +907,16 @@ clean Ruff, format, and strict MyPy. The isolated PostgreSQL 17 verifier passes
 `20/20`, including memory/PostgreSQL parity, deterministic rerun, zero target
 mutations, same-database ownership conflict detection, and fresh-engine
 persistence. Full Pytest is `733 passed, 64 skipped`; MyPy is clean across `520`
-source files. Atomic import has not started.
+source files. This preflight remains read-only and is consumed by Task 3.
+
+EPIC 24 Task 3 adds the guarded atomic importer. It accepts only an unchanged
+`ready` preflight with an exact target-bound approval phrase, recomputes target
+state under a resource-level transaction lock, applies only proposed product
+and link mutations, and appends immutable audit in the same transaction.
+Idempotent restart replay, stale-plan rejection, audit-failure rollback, and
+concurrent-worker serialization are verified. Revision
+`0025_catalog_promotion_audit` extends the existing admin-action constraints;
+no new persistence abstraction was introduced. The isolated PostgreSQL `17.10`
+verifier passes `29/29`, Alembic current/check/downgrade/upgrade/offline SQL
+passes, full Pytest is `738 passed, 64 skipped`, and MyPy is clean across `548`
+files. Production target rollout has not been performed.
