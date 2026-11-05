@@ -47,6 +47,12 @@ from app.services.catalog_promotion_manifest import (
     CatalogPromotionManifestError,
     CatalogPromotionManifestService,
 )
+from app.services.catalog_promotion_preflight import (
+    CatalogPromotionIssueCode,
+    CatalogPromotionLinkActionType,
+    CatalogPromotionPreflightService,
+    CatalogPromotionPreflightStatus,
+)
 from app.services.repository_scope import (
     RepositoryScopeFactory,
     create_memory_repository_scope,
@@ -55,6 +61,7 @@ from app.services.repository_scope import (
 TENANT_ID = UUID("75000000-0000-4000-8000-000000000001")
 FOREIGN_TENANT_ID = UUID("75000000-0000-4000-8000-000000000002")
 INCOMPLETE_TENANT_ID = UUID("75000000-0000-4000-8000-000000000003")
+TARGET_TENANT_ID = UUID("75000000-0000-4000-8000-000000000004")
 MINECRAFT_ID = UUID("75000000-0000-4000-8000-000000000010")
 FORTNITE_ID = UUID("75000000-0000-4000-8000-000000000011")
 FOREIGN_PRODUCT_ID = UUID("75000000-0000-4000-8000-000000000012")
@@ -105,6 +112,17 @@ async def main() -> int:
     verifier.check(
         "memory manifest digest is valid", memory_manifest.has_valid_digest()
     )
+    memory_preflight = await CatalogPromotionPreflightService(memory_scope).inspect(
+        memory_manifest,
+        target_tenant_id=TARGET_TENANT_ID,
+    )
+    verifier.check(
+        "memory preflight blocks a source-owned product ID in the same database",
+        memory_preflight.status is CatalogPromotionPreflightStatus.BLOCKED
+        and memory_preflight.required_mutations == 2
+        and {issue.code for issue in memory_preflight.issues}
+        == {CatalogPromotionIssueCode.PRODUCT_OWNED_BY_OTHER_TENANT},
+    )
 
     engine = create_async_engine(database_url)
     sessions = async_sessionmaker(engine, expire_on_commit=False)
@@ -136,6 +154,42 @@ async def main() -> int:
             "manifest generation does not mutate repositories", after == before
         )
 
+        target_before = await _snapshot(postgres_scope, TARGET_TENANT_ID)
+        preflight_service = CatalogPromotionPreflightService(postgres_scope)
+        preflight = await preflight_service.inspect(
+            manifest,
+            target_tenant_id=TARGET_TENANT_ID,
+        )
+        repeated_preflight = await preflight_service.inspect(
+            manifest,
+            target_tenant_id=TARGET_TENANT_ID,
+        )
+        target_after = await _snapshot(postgres_scope, TARGET_TENANT_ID)
+        verifier.check(
+            "PostgreSQL preflight matches memory",
+            preflight == memory_preflight,
+        )
+        verifier.check(
+            "preflight reports ownership conflict and two otherwise ready links",
+            preflight.status is CatalogPromotionPreflightStatus.BLOCKED
+            and preflight.product_actions == ()
+            and all(
+                action.action is CatalogPromotionLinkActionType.LINK
+                for action in preflight.link_actions
+            )
+            and preflight.required_mutations == 2
+            and {issue.code for issue in preflight.issues}
+            == {CatalogPromotionIssueCode.PRODUCT_OWNED_BY_OTHER_TENANT},
+        )
+        verifier.check(
+            "repeated preflight is deterministic",
+            repeated_preflight == preflight,
+        )
+        verifier.check(
+            "preflight does not mutate target repositories",
+            target_after == target_before,
+        )
+
         foreign = await service.build(FOREIGN_TENANT_ID)
         verifier.check(
             "tenant isolation excludes foreign catalog state",
@@ -159,6 +213,14 @@ async def main() -> int:
         verifier.check(
             "fresh engine retains the exact manifest",
             fresh.to_json() == memory_manifest.to_json(),
+        )
+        fresh_preflight = await CatalogPromotionPreflightService(fresh_scope).inspect(
+            fresh,
+            target_tenant_id=TARGET_TENANT_ID,
+        )
+        verifier.check(
+            "fresh engine retains the exact preflight plan",
+            fresh_preflight == memory_preflight,
         )
     finally:
         await fresh_engine.dispose()
@@ -228,6 +290,7 @@ async def _seed(scope: RepositoryScopeFactory) -> None:
                 "EPIC 24 incomplete",
                 "epic24-incomplete",
             ),
+            _tenant(TARGET_TENANT_ID, "EPIC 24 target", "epic24-target"),
         ):
             if await repositories.tenants.get_by_id(tenant.id) is None:
                 await repositories.tenants.create(tenant)
@@ -256,6 +319,8 @@ async def _seed(scope: RepositoryScopeFactory) -> None:
                 "unconfirmed-link",
                 INCOMPLETE_PRODUCT_ID,
             ),
+            _offer(TARGET_TENANT_ID, "ggsel", "gg-active", None),
+            _offer(TARGET_TENANT_ID, "playerok", "pl-active", None),
         )
         for offer in offers:
             await repositories.offers.save(offer.tenant_id, offer)

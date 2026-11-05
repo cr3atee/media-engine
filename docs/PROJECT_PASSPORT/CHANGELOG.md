@@ -6,6 +6,15 @@ This document records notable Project Passport updates.
 
 ## Unreleased
 
+- Added EPIC 24's read-only target preflight. It validates manifest integrity,
+  classifies product and offer-link actions, requires fresh target source
+  evidence, and blocks tenant, ownership, definition, source-drift, retirement,
+  and link conflicts without writing. Focused verification passed `19` tests;
+  Ruff, format, and strict MyPy passed. The isolated PostgreSQL 17 verifier now
+  passes `20/20` with plan parity, deterministic rerun, no target mutation, and
+  fresh-engine persistence. Full Pytest is `733 passed, 64 skipped`; MyPy checks
+  `520` source files. Atomic import remains intentionally unimplemented.
+
 - Added EPIC 24's deterministic read-only catalog promotion manifest. It exports
   only active canonical links backed by immutable confirmed decisions, carries
   source and decision evidence, excludes rejected/retired state, fails closed on

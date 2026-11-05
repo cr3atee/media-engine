@@ -312,6 +312,11 @@ This document captures architecture notes that are important for future reviews.
   an operator. A target importer must revalidate marketplace identities, report
   conflicts before writes, require explicit approval, and never copy credentials
   or unresolved offers from the source workspace.
+- The EPIC 24 preflight is also read-only and its `ready` result is not durable
+  authorization. A later importer must re-check manifest digest and target state
+  inside one transaction. Never reassign a canonical UUID owned by another
+  tenant; same-database promotion must block or use an explicit future identity
+  mapping design.
 
 ## Review Notes
 

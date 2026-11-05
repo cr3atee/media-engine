@@ -331,16 +331,6 @@ def _promotion_link(
     canonical_product_id = offer.canonical_product_id
     if canonical_product_id is None:
         raise AssertionError("Linked offer lost its canonical product ID.")
-    source_payload: dict[str, object] = {
-        "catalog_hub_code": _optional_text(offer.catalog_hub_code),
-        "catalog_section_code": _optional_text(offer.catalog_section_code),
-        "external_id": external_id,
-        "marketplace": marketplace,
-        "source_category_id": _optional_text(offer.source_category_id),
-        "source_category_name": _optional_text(offer.source_category_name),
-        "title": title,
-        "url": url,
-    }
     return CatalogPromotionLink(
         marketplace=marketplace,
         external_id=external_id,
@@ -351,11 +341,33 @@ def _promotion_link(
         source_category_name=_optional_text(offer.source_category_name),
         catalog_hub_code=_optional_text(offer.catalog_hub_code),
         catalog_section_code=_optional_text(offer.catalog_section_code),
-        source_fingerprint=_payload_digest(source_payload),
+        source_fingerprint=catalog_promotion_source_fingerprint(offer),
         decision_id=decision.id,
         decision_fingerprint=decision.request_fingerprint,
         decision_created_at=decision.created_at,
         decision_reason=decision.reason,
+    )
+
+
+def catalog_promotion_source_fingerprint(offer: ParsedOffer) -> str:
+    """Hash the exact marketplace evidence covered by a promotion link."""
+    return _payload_digest(
+        {
+            "catalog_hub_code": _optional_text(offer.catalog_hub_code),
+            "catalog_section_code": _optional_text(offer.catalog_section_code),
+            "external_id": _required_offer_text(
+                offer.external_id,
+                field_name="external_id",
+            ),
+            "marketplace": _required_offer_text(
+                offer.marketplace,
+                field_name="marketplace",
+            ).lower(),
+            "source_category_id": _optional_text(offer.source_category_id),
+            "source_category_name": _optional_text(offer.source_category_name),
+            "title": _required_offer_text(offer.title, field_name="title"),
+            "url": _required_offer_text(offer.url, field_name="url"),
+        }
     )
 
 

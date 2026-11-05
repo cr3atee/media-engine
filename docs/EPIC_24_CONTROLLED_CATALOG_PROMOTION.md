@@ -2,8 +2,8 @@
 
 ## Status
 
-Task 1, the deterministic read-only promotion manifest, is complete. Target
-preflight, import, and deployment rollout have not started.
+Tasks 1 and 2 are complete: the deterministic promotion manifest and read-only
+target preflight are implemented. Import and deployment rollout have not started.
 
 ## Purpose
 
@@ -48,6 +48,21 @@ credentials, rewrite canonical links, call marketplaces, or mutate source
 repositories. Source URLs are evidence for a later target preflight; they are
 not trusted as proof that an outbound listing is still available.
 
+## Target Preflight
+
+`CatalogPromotionPreflightService` validates the manifest digest and inspects one
+explicit target tenant without writing. It returns `ready`, `no_changes`, or
+`blocked`, together with deterministic product/link actions and sanitized issue
+codes. It blocks missing or inactive tenants, product ownership/definition
+conflicts, absent target source evidence, source fingerprint drift, retired
+offers, and links already assigned to another product.
+
+A fresh target offer must exist before a link can be proposed. Price changes do
+not invalidate identity evidence because prices are intentionally outside the
+promotion identity fingerprint. In a shared database, a canonical UUID already
+owned by the source tenant is reported as a blocking ownership conflict; it is
+never silently reassigned.
+
 ## Verification
 
 On 2026-11-04:
@@ -66,9 +81,17 @@ On 2026-11-04:
 
 No production database or target tenant was used.
 
+On 2026-11-05, Task 2 focused verification passed `19` tests with clean Ruff,
+Ruff format, and strict MyPy. The isolated PostgreSQL 17 verifier passed `20/20`
+checks, including memory/PostgreSQL plan parity, deterministic rerun, target
+read-only behavior, same-database ownership conflict detection, and fresh-engine
+persistence. Full Pytest passed `733` tests with `64` guarded skips, and MyPy
+passed across `520` source files. Temporary Docker resources were removed.
+
 ## Next Task
 
-Implement a guarded target preflight and import plan that consumes this exact
-schema, re-fetches or validates source identities in the target environment,
-reports conflicts without partial writes, and requires an explicit operator
-approval before any target mutation. Import must remain separate from export.
+Implement an atomic importer that accepts only an unchanged `ready` preflight
+plan plus explicit operator approval. It must re-check the digest and target
+state inside the write transaction, abort on drift, write only proposed actions,
+and persist auditable import identity. Import remains separate from export and
+preflight.

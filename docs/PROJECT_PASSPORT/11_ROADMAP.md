@@ -426,11 +426,12 @@ catalog readiness still depends on controlled target-environment promotion.
 
 EPIC 23 prepared that bounded batch from a successful 2026-10-22 live
 three-source refresh and a human reviewer completed the retained local decision
-set. EPIC 24 Task 1 now produces a deterministic read-only promotion manifest
-containing only active links backed by immutable confirmed decisions. Memory and
-PostgreSQL parity, tenant isolation, retired/rejected exclusion, no source-state
-mutation, and fresh-engine persistence are verified. The next catalog-launch
-action is guarded target preflight and import with a fresh source/link audit, not
+set. EPIC 24 Tasks 1 and 2 now produce a deterministic promotion manifest and a
+read-only target preflight. Only active confirmed links are exported; target
+tenant, product ownership, source evidence, retirement, and link conflicts are
+checked without writes. Memory/PostgreSQL parity, deterministic rerun, tenant
+isolation, no source/target mutation, and fresh-engine persistence are verified.
+The next catalog-launch action is an explicitly approved atomic import, not
 automatic approval of the unresolved catalog.
 
 ## Not Present Yet
@@ -445,10 +446,11 @@ automatic approval of the unresolved catalog.
 
 ## Recommended Next EPIC
 
-**Guarded catalog target preflight and controlled import.**
+**Guarded atomic catalog import.**
 
-Consume the deterministic EPIC 24 manifest in an operator-managed test
-environment, revalidate source identities, produce a conflict report before any
-write, and require explicit approval for the bounded import. Do not invent
-links, bulk-confirm `NO_MATCH` offers, lower matching thresholds, copy secrets,
-or enable authenticated sources before reviewed credential delivery exists.
+Consume only an unchanged `ready` EPIC 24 preflight plan in an operator-managed
+test environment. Re-check target state transactionally, require explicit
+approval, persist import audit identity, and abort the whole batch on drift. Do
+not invent links, bulk-confirm `NO_MATCH` offers, lower matching thresholds,
+copy secrets, or enable authenticated sources before reviewed credential
+delivery exists.

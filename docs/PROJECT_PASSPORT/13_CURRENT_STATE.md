@@ -897,3 +897,14 @@ MyPy pass. Against a clean isolated PostgreSQL 17 database at
 `0024_offer_catalog_fields`, the verifier passed `14/14` for memory/PostgreSQL
 parity, idempotent rerun, tenant isolation, fail-closed behavior, zero repository
 mutation, and fresh-engine persistence. Target preflight/import has not started.
+
+EPIC 24 Task 2 adds a deterministic read-only target preflight. It validates the
+manifest digest, requires a real active target tenant and fresh target offers,
+and reports create/reuse/link actions separately from sanitized blocking issues.
+Product ownership/definition conflicts, source-evidence drift, retired offers,
+and conflicting links fail closed. Focused verification passes `19` tests with
+clean Ruff, format, and strict MyPy. The isolated PostgreSQL 17 verifier passes
+`20/20`, including memory/PostgreSQL parity, deterministic rerun, zero target
+mutations, same-database ownership conflict detection, and fresh-engine
+persistence. Full Pytest is `733 passed, 64 skipped`; MyPy is clean across `520`
+source files. Atomic import has not started.
