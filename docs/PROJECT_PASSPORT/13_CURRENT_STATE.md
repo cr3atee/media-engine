@@ -920,3 +920,14 @@ no new persistence abstraction was introduced. The isolated PostgreSQL `17.10`
 verifier passes `29/29`, Alembic current/check/downgrade/upgrade/offline SQL
 passes, full Pytest is `738 passed, 64 skipped`, and MyPy is clean across `548`
 files. Production target rollout has not been performed.
+
+EPIC 24 Task 4 adds a two-phase cross-environment release gate. Preview builds
+the current source manifest and target preflight without writes. Apply requires
+independent target database, backup, monitoring, approval, actor, request,
+idempotency, and reason guards before delegating to the atomic importer. It then
+verifies target `no_changes`, product/link ownership, immutable audit, and
+repository-backed public visibility. Two isolated PostgreSQL `17.10` databases
+passed `12/12`, including missing-guard rejection and fresh-engine duplicate-free
+replay. Full Pytest is `747 passed, 64 skipped`; MyPy is clean across `553`
+files. No production database was changed; real target commissioning remains an
+operator action.

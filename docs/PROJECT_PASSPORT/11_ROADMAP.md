@@ -427,12 +427,13 @@ catalog readiness still depends on controlled target-environment promotion.
 EPIC 23 prepared that bounded batch from a successful 2026-10-22 live
 three-source refresh and a human reviewer completed the retained local decision
 set. EPIC 24 now provides a deterministic promotion manifest, read-only target
-preflight, and guarded atomic importer. Only active confirmed links are
-exported; target ownership and source evidence are rechecked in the import
-transaction. Exact approval, immutable audit, idempotent replay, rollback,
-concurrent-worker serialization, tenant isolation, and fresh-engine persistence
-are verified on isolated PostgreSQL. Production target promotion has not been
-performed and remains an explicit operator release action.
+preflight, guarded atomic importer, and two-phase release gate for distinct
+source/target databases. Only active confirmed links are exported; target
+ownership and source evidence are rechecked in the import transaction. Exact
+approval, immutable audit, idempotent replay, rollback, concurrent-worker
+serialization, public-read verification, tenant isolation, and fresh-engine
+persistence are verified on isolated PostgreSQL. Production target promotion
+has not been performed and remains an explicit operator release action.
 
 ## Not Present Yet
 
@@ -446,11 +447,11 @@ performed and remains an explicit operator release action.
 
 ## Recommended Next EPIC
 
-**Guarded target-environment catalog rollout.**
+**Target-environment commissioning and guarded catalog rollout.**
 
-Generate a fresh EPIC 24 manifest and target preflight after source refresh,
-review target backup and monitoring readiness, then invoke the existing atomic
-import with explicit operator approval. Verify public reads and metrics after
-the transaction. Do not invent links, bulk-confirm `NO_MATCH` offers, lower
+Provide managed source/target database access and tenant identities, verify the
+real target backup and monitoring stack, refresh target marketplace evidence,
+and review the existing release gate's fresh preview. Apply only the exact
+approved digest. Do not invent links, bulk-confirm `NO_MATCH` offers, lower
 matching thresholds, copy secrets, or enable authenticated sources before
 reviewed credential delivery exists.

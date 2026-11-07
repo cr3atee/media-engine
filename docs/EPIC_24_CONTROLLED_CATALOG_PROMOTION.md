@@ -2,9 +2,9 @@
 
 ## Status
 
-Tasks 1 through 3 are complete: the deterministic promotion manifest, read-only
-target preflight, and guarded atomic importer are implemented. Production target
-rollout has not been performed.
+Tasks 1 through 4 are complete: the deterministic promotion manifest, read-only
+target preflight, guarded atomic importer, and two-phase target release gate are
+implemented. Production target rollout has not been performed.
 
 ## Purpose
 
@@ -116,9 +116,20 @@ and offline SQL passed. Focused Ruff and format passed, full Pytest passed `738`
 tests with `64` guarded skips, and strict MyPy passed across `548` source files.
 No production database or tenant was used.
 
+On 2026-11-07, Task 4 added the cross-environment release service and guarded
+operator CLI documented in `EPIC_24_CATALOG_RELEASE_RUNBOOK.md`. Two clean
+PostgreSQL `17.10` databases at `0025_catalog_promotion_audit` passed `12/12`
+release checks: mutation-free preview, missing-guard rejection, atomic apply,
+source immutability, target convergence, public-read visibility, immutable
+audit, and fresh-engine replay without duplicates. Source and target Alembic
+`current/check` plus offline SQL passed. Focused tests passed `20`, full Pytest
+passed `747` with `64` guarded skips, and strict MyPy passed across `553` files.
+No production rollout was performed.
+
 ## Next Task
 
-Run a guarded target-environment release using a freshly generated manifest and
-preflight, reviewed credentials and backups, explicit operator approval, and
-post-import public-read/monitoring checks. Do not copy unresolved offers or
-credentials, and do not treat isolated verification as production rollout.
+Commission the intended target environment: provide managed database access and
+tenant identities, verify the real backup and monitoring stack, refresh target
+marketplace evidence, and review the release gate's fresh preview. Invoke apply
+only for that exact digest and target. Do not treat isolated verification as a
+production rollout.

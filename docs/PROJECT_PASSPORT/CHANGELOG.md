@@ -6,6 +6,16 @@ This document records notable Project Passport updates.
 
 ## Unreleased
 
+- Added EPIC 24's two-phase cross-environment catalog release gate. Preview is
+  read-only; apply requires matching database identity, backup and monitoring
+  attestations, exact digest/target approval, actor, request, idempotency key,
+  and reason. Post-commit verification covers target convergence, immutable
+  audit, links, and public reads; restart replay creates no duplicates. Two
+  isolated PostgreSQL `17.10` databases passed `12/12` release checks plus
+  independent Alembic current/check and offline SQL. Focused tests passed `20`,
+  full Pytest passed `747` with `64` skips, and MyPy checked `553` files. No
+  production rollout was performed.
+
 - Added EPIC 24's guarded atomic catalog importer. It accepts only an unchanged
   `ready` plan plus an exact target-bound approval phrase, recomputes target
   state inside one transaction, reuses canonical linking, and commits immutable

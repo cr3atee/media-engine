@@ -319,6 +319,12 @@ This document captures architecture notes that are important for future reviews.
   bound to the original tenant-scoped idempotency key. Never reassign a
   canonical UUID owned by another tenant; same-database promotion must block or
   use an explicit future identity mapping design.
+- Keep catalog release as a two-step operator flow. Preview must remain
+  mutation-free, and apply must retain distinct source/target database checks,
+  target-bound backup/monitoring attestations, exact digest approval, and the
+  original idempotency identity. The CLI verifies but cannot create a real
+  backup or monitoring stack. Never print connection URLs, copy marketplace
+  credentials, or treat an isolated release verifier as production rollout.
 
 ## Review Notes
 
