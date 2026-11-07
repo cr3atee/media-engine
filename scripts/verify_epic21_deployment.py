@@ -201,7 +201,46 @@ def _verify_deployment_files(verifier: Verifier) -> None:
     verifier.check("check_worker_health.py" in compose, "worker health is configured")
     verifier.check("stop_grace_period" in compose, "shutdown grace is configured")
     verifier.check("metrics-collector" in compose, "textfile collection is configured")
+    release_service = compose.split("  catalog-release:\n", maxsplit=1)[1].split(
+        "\n  api:\n", maxsplit=1
+    )[0]
+    verifier.check(
+        'profiles: ["catalog-release"]' in release_service,
+        "catalog release has a dedicated opt-in profile",
+    )
+    verifier.check(
+        'entrypoint: [".venv/bin/python", '
+        '"scripts/run_catalog_promotion_release.py"]' in release_service,
+        "catalog release uses the guarded CLI",
+    )
+    verifier.check(
+        'restart: "no"' in release_service and "command: []" in release_service,
+        "catalog release is a one-shot preview by default",
+    )
+    verifier.check(
+        "ports:" not in release_service and "volumes:" not in release_service,
+        "catalog release exposes no ports or storage",
+    )
+    verifier.check(
+        "MEDIAENGINE_CATALOG_PROMOTION_APPLY: "
+        "${MEDIAENGINE_CATALOG_PROMOTION_APPLY:-}" in release_service,
+        "catalog release apply remains an external explicit guard",
+    )
     policy = _read_environment(environment_path)
+    verifier.check(
+        all(
+            name in policy and not policy[name]
+            for name in (
+                "MEDIAENGINE_CATALOG_PROMOTION_SOURCE_DATABASE_URL",
+                "MEDIAENGINE_CATALOG_PROMOTION_TARGET_DATABASE_URL",
+                "MEDIAENGINE_CATALOG_PROMOTION_SOURCE_TENANT_ID",
+                "MEDIAENGINE_CATALOG_PROMOTION_TARGET_TENANT_ID",
+                "MEDIAENGINE_CATALOG_PROMOTION_APPLY",
+                "MEDIAENGINE_CATALOG_PROMOTION_APPROVAL_PHRASE",
+            )
+        ),
+        "catalog release example contains no credentials or approvals",
+    )
     retry_budget = float(policy["WORKER_POLL_TIMEOUT_SECONDS"]) * (
         int(policy["WORKER_POLL_RETRY_COUNT"]) + 1
     ) + float(policy["WORKER_POLL_RETRY_DELAY_SECONDS"]) * int(

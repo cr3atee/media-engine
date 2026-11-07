@@ -24,6 +24,20 @@ marketplace integrations, review decisions, or secrets.
 The CLI confirmation strings are attestations. It cannot create or validate an
 external backup or monitoring stack by itself.
 
+## Production Compose Boundary
+
+`docker-compose.production.yml` exposes the release command only through the
+dedicated `catalog-release` profile. The service is a one-shot, non-restarting
+operator command with no ports or persistent volumes. It is never started with
+the API or worker services. Preview remains the default, while apply requires
+both the `--apply` argument and every independent environment guard described
+below.
+
+Copy `docker/production.env.example` to an operator-controlled file outside
+source control and populate only that copy. The committed example deliberately
+contains no URLs, tenant IDs, approval phrases, or operator identities. Normal
+API and worker deployment does not require catalog-release variables.
+
 ## Preview
 
 Set connection URLs and tenant IDs in the process environment. Do not put
@@ -49,6 +63,17 @@ Preview mode is the default and performs no writes. Review:
 A blocked preview exits without an import. Correct target source evidence and
 run preview again; do not bypass the issue or alter the manifest digest.
 
+The equivalent production-image preview is:
+
+```powershell
+docker compose `
+  --env-file C:\secure\mediaengine-catalog-release.env `
+  -f docker-compose.production.yml `
+  --profile catalog-release run --rm catalog-release
+```
+
+This explicit profile does not start API, worker, migrations, or metrics.
+
 ## Apply
 
 After independently verifying backup and monitoring readiness, set the exact
@@ -66,6 +91,19 @@ $env:MEDIAENGINE_CATALOG_PROMOTION_IDEMPOTENCY_KEY = '<stable retry key>'
 $env:MEDIAENGINE_CATALOG_PROMOTION_REASON = '<reviewed release reason>'
 .\.venv\Scripts\python.exe scripts\run_catalog_promotion_release.py --apply
 ```
+
+With the reviewed values stored in the external operator environment file, run
+the same guarded apply through the immutable production image:
+
+```powershell
+docker compose `
+  --env-file C:\secure\mediaengine-catalog-release.env `
+  -f docker-compose.production.yml `
+  --profile catalog-release run --rm catalog-release --apply
+```
+
+Do not use `up` for this profile. Do not place connection URLs or confirmation
+phrases in shell history as command-line arguments.
 
 All guards must match the newly recomputed preview. A stale digest, target
 database mismatch, missing attestation, blocked preflight, or changed target
@@ -107,7 +145,10 @@ checks covering mutation-free preview, incomplete-guard rejection, guarded
 apply, source immutability, target convergence, immutable audit, public reads,
 fresh-engine replay, and duplicate prevention. Alembic `current` and `check`
 passed independently for source and target, and offline SQL generation passed.
-Focused tests passed `20`; full Pytest passed `747` with `64` guarded skips;
+The follow-up production Compose integration verifier passed `31/31`, including
+normal deployment interpolation, dedicated-profile isolation, one-shot
+execution, no exposed ports/storage, and empty committed operator values.
+Focused tests passed `20`; full Pytest passed `749` with `64` guarded skips;
 Ruff, format, and strict MyPy across `553` files passed. Temporary databases,
 container, and volume were removed. No production state was used.
 

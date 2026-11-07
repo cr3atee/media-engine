@@ -325,6 +325,11 @@ This document captures architecture notes that are important for future reviews.
   original idempotency identity. The CLI verifies but cannot create a real
   backup or monitoring stack. Never print connection URLs, copy marketplace
   credentials, or treat an isolated release verifier as production rollout.
+- Keep the production Compose catalog release isolated behind its dedicated
+  profile. It must remain one-shot, preview-first, without ports, volumes, or
+  restart policy, and must never join normal API/worker startup. Supply all
+  database URLs, tenant IDs, and apply guards from an operator-controlled file
+  outside source control.
 
 ## Review Notes
 

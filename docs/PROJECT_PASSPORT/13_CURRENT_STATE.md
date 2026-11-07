@@ -928,6 +928,9 @@ idempotency, and reason guards before delegating to the atomic importer. It then
 verifies target `no_changes`, product/link ownership, immutable audit, and
 repository-backed public visibility. Two isolated PostgreSQL `17.10` databases
 passed `12/12`, including missing-guard rejection and fresh-engine duplicate-free
-replay. Full Pytest is `747 passed, 64 skipped`; MyPy is clean across `553`
-files. No production database was changed; real target commissioning remains an
-operator action.
+replay. The production Compose file now exposes this gate only as a separate
+one-shot `catalog-release` profile: preview is the default, apply remains
+explicit, no ports or storage are attached, and operator values stay outside
+Git. The deployment verifier passes `31/31`; full Pytest is `749 passed, 64
+skipped`; MyPy is clean across `553` files. No production database was changed;
+real target commissioning remains an operator action.

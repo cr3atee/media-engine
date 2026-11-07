@@ -12,9 +12,11 @@ This document records notable Project Passport updates.
   and reason. Post-commit verification covers target convergence, immutable
   audit, links, and public reads; restart replay creates no duplicates. Two
   isolated PostgreSQL `17.10` databases passed `12/12` release checks plus
-  independent Alembic current/check and offline SQL. Focused tests passed `20`,
-  full Pytest passed `747` with `64` skips, and MyPy checked `553` files. No
-  production rollout was performed.
+  independent Alembic current/check and offline SQL. Added a dedicated one-shot
+  production Compose profile with preview by default, no ports/storage, and
+  external-only operator values; deployment verification passes `31/31`.
+  Focused tests passed `20`, full Pytest passed `749` with `64` skips, and MyPy
+  checked `553` files. No production rollout was performed.
 
 - Added EPIC 24's guarded atomic catalog importer. It accepts only an unchanged
   `ready` plan plus an exact target-bound approval phrase, recomputes target

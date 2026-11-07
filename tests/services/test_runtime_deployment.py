@@ -16,6 +16,8 @@ from scripts.check_api_health import check_api_health
 from scripts.check_worker_health import check_worker_health
 from scripts.run_mediaengine_worker import _wait_for_shutdown
 
+ROOT = Path(__file__).resolve().parents[2]
+
 
 def run_async[T](awaitable: Coroutine[Any, Any, T]) -> T:
     """Run async deployment-boundary checks without an async pytest plugin."""
@@ -125,3 +127,61 @@ def test_worker_health_rejects_stale_metrics(tmp_path: Path) -> None:
             max_age_seconds=10,
             observed_at=observed_at,
         )
+
+
+def test_catalog_release_compose_service_is_manual_and_fail_closed() -> None:
+    compose = (ROOT / "docker-compose.production.yml").read_text(encoding="utf-8")
+    service = compose.split("  catalog-release:\n", maxsplit=1)[1].split(
+        "\n  api:\n", maxsplit=1
+    )[0]
+
+    assert 'profiles: ["catalog-release"]' in service
+    assert 'restart: "no"' in service
+    assert (
+        'entrypoint: [".venv/bin/python", '
+        '"scripts/run_catalog_promotion_release.py"]' in service
+    )
+    assert "command: []" in service
+    assert "ports:" not in service
+    assert "volumes:" not in service
+    assert "\n      DATABASE_URL:" not in service
+
+    for variable in (
+        "MEDIAENGINE_CATALOG_PROMOTION_SOURCE_DATABASE_URL",
+        "MEDIAENGINE_CATALOG_PROMOTION_TARGET_DATABASE_URL",
+        "MEDIAENGINE_CATALOG_PROMOTION_SOURCE_TENANT_ID",
+        "MEDIAENGINE_CATALOG_PROMOTION_TARGET_TENANT_ID",
+        "MEDIAENGINE_CATALOG_PROMOTION_APPLY",
+        "MEDIAENGINE_CATALOG_PROMOTION_TARGET_DATABASE",
+        "MEDIAENGINE_CATALOG_PROMOTION_BACKUP_CONFIRMATION",
+        "MEDIAENGINE_CATALOG_PROMOTION_MONITORING_CONFIRMATION",
+        "MEDIAENGINE_CATALOG_PROMOTION_APPROVAL_PHRASE",
+        "MEDIAENGINE_CATALOG_PROMOTION_ACTOR_ID",
+        "MEDIAENGINE_CATALOG_PROMOTION_REQUEST_ID",
+        "MEDIAENGINE_CATALOG_PROMOTION_IDEMPOTENCY_KEY",
+        "MEDIAENGINE_CATALOG_PROMOTION_REASON",
+    ):
+        assert f"{variable}: ${{{variable}:-}}" in service
+
+
+def test_catalog_release_environment_example_contains_no_operator_values() -> None:
+    environment = (ROOT / "docker" / "production.env.example").read_text(
+        encoding="utf-8"
+    )
+
+    for variable in (
+        "MEDIAENGINE_CATALOG_PROMOTION_SOURCE_DATABASE_URL",
+        "MEDIAENGINE_CATALOG_PROMOTION_TARGET_DATABASE_URL",
+        "MEDIAENGINE_CATALOG_PROMOTION_SOURCE_TENANT_ID",
+        "MEDIAENGINE_CATALOG_PROMOTION_TARGET_TENANT_ID",
+        "MEDIAENGINE_CATALOG_PROMOTION_APPLY",
+        "MEDIAENGINE_CATALOG_PROMOTION_TARGET_DATABASE",
+        "MEDIAENGINE_CATALOG_PROMOTION_BACKUP_CONFIRMATION",
+        "MEDIAENGINE_CATALOG_PROMOTION_MONITORING_CONFIRMATION",
+        "MEDIAENGINE_CATALOG_PROMOTION_APPROVAL_PHRASE",
+        "MEDIAENGINE_CATALOG_PROMOTION_ACTOR_ID",
+        "MEDIAENGINE_CATALOG_PROMOTION_REQUEST_ID",
+        "MEDIAENGINE_CATALOG_PROMOTION_IDEMPOTENCY_KEY",
+        "MEDIAENGINE_CATALOG_PROMOTION_REASON",
+    ):
+        assert f"{variable}=\n" in environment

@@ -16,6 +16,10 @@ The deployment uses:
 - metrics-file freshness for worker liveness;
 - `SIGTERM` and an explicit stop grace period for bounded shutdown.
 
+The same Compose file also contains a separate, opt-in `catalog-release`
+operator profile. It is not part of API or worker startup and is documented in
+`docs/EPIC_24_CATALOG_RELEASE_RUNBOOK.md`.
+
 ## Initial Operations Policy
 
 The values below are deployment policy, not domain defaults. They are explicit
@@ -164,3 +168,10 @@ and offline SQL generation also passed at `0017_marketplace_polling_runs`.
 This verification closes EPIC 21 software readiness. It does not replace
 target-environment PostgreSQL backup validation, secret delivery, collector and
 alert-manager rollout, or approved credentials for authenticated sources.
+
+On 2026-11-07, a follow-up deployment check added the isolated EPIC 24
+`catalog-release` operator profile without changing API or worker startup. The
+offline verifier passed `31/31`; the profile is opt-in, one-shot, preview-first,
+has no ports or persistent volumes, and receives every URL and approval value
+only from an external environment file. Full Pytest passed `749` with `64`
+guarded skips, and strict MyPy checked `553` files.
