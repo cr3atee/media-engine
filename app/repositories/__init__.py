@@ -11,6 +11,7 @@ from app.repositories.canonical_offer_decisions import (
     CanonicalOfferDecisionRepository,
 )
 from app.repositories.canonical_products import CanonicalProductRepository
+from app.repositories.catalog_source_rules import CatalogSourceRuleRepository
 from app.repositories.events import MarketEventRepository
 from app.repositories.generated_contents import GeneratedContentRepository
 from app.repositories.marketplace_integrations import MarketplaceIntegrationRepository
@@ -28,6 +29,7 @@ __all__ = (
     "BaseRepository",
     "CanonicalProductRepository",
     "CanonicalOfferDecisionRepository",
+    "CatalogSourceRuleRepository",
     "GeneratedContentRepository",
     "MarketEventRepository",
     "MarketplaceIntegrationRepository",

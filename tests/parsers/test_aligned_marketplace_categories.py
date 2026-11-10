@@ -144,21 +144,56 @@ def test_error_summary_is_bounded_and_single_line() -> None:
     assert aligned._safe_error_summary(html_error) == "Playerok returned HTTP 502"
 
 
+def test_source_category_diagnostic_is_deterministic_and_bounded() -> None:
+    """Live diagnostics expose coverage and stable unique source identities."""
+    offers = (
+        _offer("first", source_category_id="28831", source_category_name=None),
+        _offer(
+            "second",
+            source_category_id="28831",
+            source_category_name="Digital keys",
+        ),
+        _offer("third", source_category_id=None, source_category_name=None),
+    )
+    batch = aligned.MarketplaceCategoryBatch(
+        marketplace="ggsel",
+        source_total=3,
+        offers=offers,
+        snapshot_ready_offers=offers,
+    )
+
+    assert aligned._source_category_diagnostic(batch) == (
+        "source-categories: id=2/3, name=1/3, unique_ids=1 [28831]"
+    )
+
+
 def _batch(
     marketplace: str,
     external_id: str,
 ) -> aligned.MarketplaceCategoryBatch:
-    offer = ParsedOffer(
+    offer = _offer(external_id, marketplace=marketplace)
+    return aligned.MarketplaceCategoryBatch(
+        marketplace=marketplace,
+        source_total=1,
+        offers=(offer,),
+        snapshot_ready_offers=(offer,),
+    )
+
+
+def _offer(
+    external_id: str,
+    *,
+    marketplace: str = "ggsel",
+    source_category_id: str | None = None,
+    source_category_name: str | None = None,
+) -> ParsedOffer:
+    return ParsedOffer(
         marketplace=marketplace,
         external_id=external_id,
         title="Minecraft Java Bedrock",
         url=f"https://example.com/{external_id}",
         price=Decimal("1000"),
         currency="RUB",
-    )
-    return aligned.MarketplaceCategoryBatch(
-        marketplace=marketplace,
-        source_total=1,
-        offers=(offer,),
-        snapshot_ready_offers=(offer,),
+        source_category_id=source_category_id,
+        source_category_name=source_category_name,
     )

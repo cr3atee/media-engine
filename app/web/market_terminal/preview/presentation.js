@@ -6,6 +6,20 @@ export const artwork = {
   "7c862a70-5619-5b6d-a2aa-798560d29f18": { title: "Minecraft", subtitle: "Java & Bedrock Edition · PC", label: "PC", image: "minecraft-pc.jpg", alt: "Minecraft: Java & Bedrock Edition для PC, обложка Microsoft Store" },
   "9a520758-e499-5837-90bb-9e6b67d7a591": { title: "Minecraft", subtitle: "Активация промокодом · iOS", label: "iOS", image: "minecraft-ios.jpg", alt: "Minecraft для iOS, иконка приложения Mojang из App Store" },
 };
+export const catalogHubArtwork = {
+  minecraft: {
+    title: "Minecraft",
+    image: "minecraft-ios.jpg",
+    alt: "Minecraft, иконка приложения Mojang из App Store",
+  },
+};
+export const catalogSectionNames = {
+  games: "Игры и предметы",
+  keys: "Ключи и подарки",
+  accounts: "Аккаунты",
+  subscriptions: "Подписки",
+  topups: "Пополнение баланса",
+};
 
 export function escapeHtml(value) {
   return String(value ?? "").replace(/[&<>"']/g, (char) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[char]);
@@ -32,6 +46,14 @@ export function infoFor(product) {
 
 export function productImage(art, className = "", size = 512, lazy = false) {
   return `<img class="product-art ${className}" src="${assets}/${art.image}" width="${size}" height="${size}" alt="${escapeHtml(art.alt)}" ${lazy ? 'loading="lazy"' : ""} decoding="async">`;
+}
+
+export function catalogHubInfo(code) {
+  return catalogHubArtwork[code] ?? null;
+}
+
+export function catalogSectionName(code) {
+  return catalogSectionNames[code] ?? null;
 }
 
 export function money(offer) {

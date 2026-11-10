@@ -51,5 +51,6 @@ def test_runtime_marketplace_factories_cover_supported_marketplaces() -> None:
             for marketplace in Marketplace:
                 runner = factories[marketplace.value](make_integration(marketplace))
                 assert isinstance(runner, MarketplaceApplicationRunner)
+                assert runner._catalog_classification is not None
 
     run_async(scenario())

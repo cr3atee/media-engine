@@ -236,6 +236,9 @@ class PostgresOfferRepository(OfferRepository):
             seller_name=offer.seller_name,
             source_category_id=offer.source_category_id,
             source_category_name=offer.source_category_name,
+            catalog_hub_code=offer.catalog_hub_code,
+            catalog_section_code=offer.catalog_section_code,
+            catalog_source_rule_id=offer.catalog_source_rule_id,
             canonical_product_id=offer.canonical_product_id,
             created_at=datetime.now(UTC),
         )
@@ -262,6 +265,18 @@ class PostgresOfferRepository(OfferRepository):
                     "source_category_name": func.coalesce(
                         excluded.source_category_name,
                         Offer.source_category_name,
+                    ),
+                    "catalog_hub_code": func.coalesce(
+                        excluded.catalog_hub_code,
+                        Offer.catalog_hub_code,
+                    ),
+                    "catalog_section_code": func.coalesce(
+                        excluded.catalog_section_code,
+                        Offer.catalog_section_code,
+                    ),
+                    "catalog_source_rule_id": func.coalesce(
+                        excluded.catalog_source_rule_id,
+                        Offer.catalog_source_rule_id,
                     ),
                     "canonical_product_id": func.coalesce(
                         excluded.canonical_product_id,
@@ -315,6 +330,32 @@ class PostgresOfferRepository(OfferRepository):
         result = await self._session.execute(
             select(Offer)
             .where(Offer.tenant_id == tenant_id, self._active_offer_predicate())
+            .order_by(Offer.created_at, Offer.id)
+        )
+        return tuple(self._to_parsed_offer(offer) for offer in result.scalars())
+
+    async def list_by_integration(
+        self,
+        tenant_id: UUID,
+        integration_id: UUID,
+    ) -> Sequence[ParsedOffer]:
+        """Return active offers observed by one exact tenant integration."""
+        result = await self._session.execute(
+            select(Offer)
+            .join(
+                OfferSourceObservationRecord,
+                and_(
+                    OfferSourceObservationRecord.tenant_id == Offer.tenant_id,
+                    OfferSourceObservationRecord.offer_id == Offer.id,
+                ),
+            )
+            .where(
+                Offer.tenant_id == tenant_id,
+                OfferSourceObservationRecord.integration_id == integration_id,
+                OfferSourceObservationRecord.is_active.is_(True),
+                Offer.manual_availability_status
+                == OfferAvailabilityStatus.ACTIVE.value,
+            )
             .order_by(Offer.created_at, Offer.id)
         )
         return tuple(self._to_parsed_offer(offer) for offer in result.scalars())
@@ -400,6 +441,9 @@ class PostgresOfferRepository(OfferRepository):
             seller_name=offer.seller_name,
             source_category_id=offer.source_category_id,
             source_category_name=offer.source_category_name,
+            catalog_hub_code=offer.catalog_hub_code,
+            catalog_section_code=offer.catalog_section_code,
+            catalog_source_rule_id=offer.catalog_source_rule_id,
             canonical_product_id=offer.canonical_product_id,
         )
 

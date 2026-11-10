@@ -56,6 +56,9 @@ def test_market_terminal_shell_is_served() -> None:
         assert 'aria-controls="productGrid"' in response.text
         assert 'id="filtersButton"' in response.text
         assert 'id="catalogFilters"' in response.text
+        assert 'id="catalogHubsSection"' in response.text
+        assert 'id="catalogHubList"' in response.text
+        assert 'id="catalogSectionList"' in response.text
         assert 'id="dropCount"' in response.text
         assert 'id="marketplaceFilter"' in response.text
         assert 'id="sortFilter"' in response.text
@@ -111,6 +114,8 @@ def test_market_terminal_static_assets_are_served() -> None:
     assert "function setDashboardBusy(isBusy)" in script.text
     assert 'query.set("marketplace", marketplace);' in script.text
     assert 'query.set("category", state.selectedCategoryName);' in script.text
+    assert 'query.set("hub", state.selectedHubCode);' in script.text
+    assert 'query.set("section", state.selectedSectionCode);' in script.text
     assert 'query.set("min_price", minPrice);' in script.text
     assert 'query.set("max_price", maxPrice);' in script.text
     assert 'query.set("sort", sort);' in script.text
@@ -121,6 +126,14 @@ def test_market_terminal_static_assets_are_served() -> None:
     assert "function updateCatalogPagination()" in script.text
     assert "function renderCategories(categories)" in script.text
     assert "function selectCategory(category)" in script.text
+    assert "function loadCatalogHubs()" in script.text
+    assert "function renderCatalogHubs()" in script.text
+    assert "function renderCatalogSections()" in script.text
+    assert "function selectCatalogHub(hub)" in script.text
+    assert "function selectCatalogSection(section)" in script.text
+    assert '"/catalog-hubs?limit=20&sort=product_count&direction=desc"' in script.text
+    assert "hubs.length === 0 && !state.selectedHubCode" in script.text
+    assert "elements.clearCatalogHub.hidden = !state.selectedHubCode;" in script.text
     assert "function priceRangeIsValid()" in script.text
     assert 'window.addEventListener("popstate"' in script.text
     assert "function restoreLocationState()" in script.text
@@ -188,7 +201,13 @@ def test_working_catalog_reuses_preview_assets_without_mock_actions() -> None:
     assert presentation.status_code == 200
     assert "export function offerFootprint" in presentation.text
     assert "export function handleImageError" in presentation.text
+    assert "export const catalogHubArtwork" in presentation.text
+    assert "minecraft: {" in presentation.text
+    assert 'image: "minecraft-ios.jpg"' in presentation.text
+    assert "export function catalogSectionName" in presentation.text
     assert 'from "/terminal/preview/presentation.js"' in script
+    assert ".catalog-hub-list" in styles.text
+    assert ".catalog-section-list" in styles.text
     assert 'comparison.status === "currency_mismatch"' in script
     assert 'method: "POST"' not in script
     assert "previewRole" not in script
@@ -350,6 +369,26 @@ def test_market_terminal_catalog_review_assets_are_served() -> None:
     assert 'typeof crypto.randomUUID === "function"' in script.text
     assert "state.pendingMutations" in script.text
     assert "state.refreshPromise" in script.text
+    assert "localStorage" not in script.text
+    assert "sessionStorage" not in script.text
+
+
+def test_catalog_classification_controls_use_guarded_runtime_rules() -> None:
+    client = _client()
+    page = client.get("/terminal/review")
+    script = client.get("/terminal/catalog-classification.js")
+
+    assert page.status_code == 200
+    assert 'id="catalogClassification"' in page.text
+    assert 'id="classificationIntegration"' in page.text
+    assert 'id="classificationSource"' in page.text
+    assert 'id="classificationHub"' in page.text
+    assert 'id="classificationSection"' in page.text
+    assert script.status_code == 200
+    assert script.headers["content-type"].startswith("application/javascript")
+    assert "catalog/classification/taxonomy" in script.text
+    assert "marketplace-integrations" in script.text
+    assert "source_category_id" in script.text
     assert "localStorage" not in script.text
     assert "sessionStorage" not in script.text
 

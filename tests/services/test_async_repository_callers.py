@@ -144,6 +144,15 @@ class RecordingOfferRepository(OfferRepository):
             offer for offer in self._offers if offer.marketplace == offer_marketplace
         )
 
+    async def list_by_integration(
+        self,
+        tenant_id: UUID,
+        integration_id: UUID,
+    ) -> Sequence[ParsedOffer]:
+        """Return no source observations from this narrow caller double."""
+        del tenant_id, integration_id
+        return ()
+
     async def list_all(self) -> Sequence[ParsedOffer]:
         """Return all offers and record an awaited list operation."""
         self._state.offer_list_count += 1

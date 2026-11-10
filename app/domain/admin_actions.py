@@ -23,6 +23,7 @@ class AdminActionType(StrEnum):
     RESOLVE_PUBLICATION_CANCELLED = "resolve_publication_cancelled"
     RETIRE_OFFER = "retire_offer"
     RESTORE_OFFER = "restore_offer"
+    IMPORT_CATALOG_PROMOTION = "import_catalog_promotion"
 
 
 class AdminResourceType(StrEnum):
@@ -31,6 +32,7 @@ class AdminResourceType(StrEnum):
     CONTENT = "content"
     PUBLICATION = "publication"
     OFFER = "offer"
+    CATALOG_PROMOTION = "catalog_promotion"
 
 
 class AdminActorType(StrEnum):

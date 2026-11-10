@@ -92,6 +92,10 @@ function hasAxNode(nodes, roles, namePattern = null) {
   return nodes.some(node => expectedRoles.includes(axRole(node)) && (!namePattern || namePattern.test(axName(node))));
 }
 
+function escapeRegex(value) {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
 async function checkAccessibility(name, predicate) {
   const { nodes } = await send("Accessibility.getFullAXTree");
   const exposed = nodes.filter(node => !node.ignored);
@@ -162,8 +166,9 @@ async function catalogReady() {
 }
 
 async function workingCatalog(query = "") {
-  await send("Page.navigate", { url: `${base}/terminal${query}` });
-  await new Promise(resolve => setTimeout(resolve, 200));
+  const targetUrl = `${base}/terminal${query}`;
+  await send("Page.navigate", { url: targetUrl });
+  await until(`location.href===${JSON.stringify(targetUrl)} && document.documentElement.classList.contains("terminal-ready")`);
   await catalogReady();
 }
 
@@ -177,6 +182,16 @@ try {
   await size(1440);
   await navigate();
   await check("real public catalog loaded", 'document.querySelectorAll(".product-card").length > 0');
+  const catalogResponse = await fetch(`${base}/api/v1/public/products?limit=50`);
+  assert.equal(catalogResponse.status, 200);
+  const catalogPayload = await catalogResponse.json();
+  const runtimeProduct = catalogPayload.items.find(product => product.name && product.marketplaces?.length);
+  assert(runtimeProduct, "Catalog must expose a named product with at least one marketplace");
+  const searchTerm = runtimeProduct.name;
+  const marketplace = runtimeProduct.marketplaces[0];
+  const marketplaceLabel = { ggsel: "GGSEL", playerok: "Playerok", funpay: "FunPay" }[marketplace] ?? marketplace;
+  const visibleProductTitle = await evaluate('document.querySelector(".product-card h3").textContent.trim()');
+  const visibleProductPattern = new RegExp(escapeRegex(visibleProductTitle), "i");
   await check("local font loaded", 'document.fonts.check("16px Onest")');
   await check("first products above the fold", 'document.querySelector(".product-card").getBoundingClientRect().top < 900');
   await check("square artwork", '[...document.querySelectorAll(".card-image")].every(el=>Math.abs(el.offsetWidth-el.offsetHeight)<2)');
@@ -188,7 +203,7 @@ try {
     hasAxNode(nodes, "search") &&
     hasAxNode(nodes, ["searchbox", "textbox"], /^Поиск товаров$/) &&
     hasAxNode(nodes, "button", /^Найти товары$/) &&
-    hasAxNode(nodes, "link", /Minecraft/i));
+    hasAxNode(nodes, "link", visibleProductPattern));
   await check("service captions removed", '!["Цена и условия покупки уточняются", "Данные подключённого каталога", "Оригинальные предложения.", "Без выдуманных скидок."].some(text=>document.querySelector("main").textContent.includes(text))');
   await check("offer counts are compact numbers with accessible labels", '[...document.querySelectorAll(".product-card .offer-count")].every(el=>/^\\d+$/.test(el.innerText.trim()) && el.getAttribute("aria-label").includes("предложени"))');
   await check("card logos come from real product memberships", `(async()=>{const response=await fetch('/api/v1/public/products?limit=50');const data=await response.json();const names={ggsel:'GGSEL',playerok:'Playerok',funpay:'FunPay'};return [...document.querySelectorAll('.product-card')].every(card=>{const product=data.items.find(p=>p.id===new URL(card.href).searchParams.get('product'));const actual=[...card.querySelectorAll('.marketplace-logos .market-mark')].map(el=>el.getAttribute('aria-label'));return product.marketplaces.length>0 && JSON.stringify(actual)===JSON.stringify(product.marketplaces.map(code=>names[code]??code)) && card.querySelector('.offer-count').innerText.trim()===String(product.offer_count);});})()`);
@@ -197,11 +212,13 @@ try {
   await check("failed logo preserves marketplace name", '(() => { const el = document.querySelector(".product-card .image-unavailable"); return !!el && el.querySelector("img").hidden && el.innerText.trim() === el.getAttribute("aria-label"); })()');
   await click(".product-card");
   await ready();
+  const visibleDetailTitle = await evaluate('document.querySelector("#productTitle").textContent.trim()');
+  const visibleDetailPattern = new RegExp(escapeRegex(visibleDetailTitle), "i");
   await check("product opens in a distinct page", '!!document.querySelector("#productTitle") && !document.querySelector(".hero")');
   await check("marketplace offers visible", 'document.querySelectorAll(".offer-row").length > 0');
   await check("source links safe", '[...document.querySelectorAll(".offer-row a")].every(a=>a.protocol==="https:" && a.rel.includes("noopener"))');
   await checkAccessibility("product accessibility tree exposes its heading and source actions", nodes =>
-    hasAxNode(nodes, "heading", /Minecraft/i) &&
+    hasAxNode(nodes, "heading", visibleDetailPattern) &&
     hasAxNode(nodes, "link", /^На площадку/));
   await check("mixed currencies not presented as a lowest price", '!document.querySelector(".notice")?.textContent.includes("Цены в разных валютах") || !document.querySelector(".notice")?.textContent.includes("Лучшее предложение:")');
   await screenshot("02-product-desktop");
@@ -213,12 +230,12 @@ try {
   await evaluate("history.back()");
   await ready();
   await check("browser back restores catalog", '!!document.querySelector("#catalog")');
-  await navigate("?q=Minecraft&marketplace=ggsel");
+  await navigate(`?q=${encodeURIComponent(searchTerm)}&marketplace=${encodeURIComponent(marketplace)}`);
   await click(".product-card");
   await ready();
   await click(".back");
   await ready();
-  await check("back link preserves search and marketplace", 'new URLSearchParams(location.search).get("q")==="Minecraft" && document.querySelector("[aria-current=page]").textContent.includes("GGSEL")');
+  await check("back link preserves search and marketplace", `new URLSearchParams(location.search).get("q")===${JSON.stringify(searchTerm)} && document.querySelector("[aria-current=page]").textContent.includes(${JSON.stringify(marketplaceLabel)})`);
   await navigate("?q=there-is-no-such-product-92");
   await check("real empty search", '!!document.querySelector(".empty") && !document.querySelector(".product-card")');
   await navigate("?screen=review");
@@ -250,7 +267,7 @@ try {
     hasAxNode(nodes, "main") &&
     hasAxNode(nodes, "search") &&
     hasAxNode(nodes, ["searchbox", "textbox"], /^Поиск товаров$/) &&
-    hasAxNode(nodes, "link", /Minecraft/i));
+    hasAxNode(nodes, "link", visibleProductPattern));
   await check("mobile marketplace strip stays inside each card", '[...document.querySelectorAll(".product-card")].every(card=>card.querySelector(".offer-footprint").getBoundingClientRect().right<=card.getBoundingClientRect().right+1)');
   await check("platform badges leave the artwork title visible", '[...document.querySelectorAll(".card-image .art-label")].every(el=>el.getBoundingClientRect().top>el.parentElement.getBoundingClientRect().top+el.parentElement.offsetHeight/2 && el.offsetHeight<32)');
   await screenshot("04-catalog-mobile");
@@ -338,9 +355,9 @@ try {
   assert.equal(densityPerformance.activeTransitionAll, 0, JSON.stringify(densityPerformance));
   checks += 5;
   console.log(`PASS dense motion budget ${JSON.stringify(densityPerformance)}`);
-  await evaluate(`document.querySelectorAll('.market-nav a')[1].click();document.querySelector('#searchInput').value='Minecraft';document.querySelector('#searchForm').requestSubmit()`);
+  await evaluate(`document.querySelectorAll('.market-nav a')[1].click();document.querySelector('#searchInput').value=${JSON.stringify(searchTerm)};document.querySelector('#searchForm').requestSubmit()`);
   await ready();
-  await check("rapid navigation retains latest intent", 'document.querySelector("#catalogTitle").textContent.includes("Minecraft") && !location.search.includes("marketplace")');
+  await check("rapid navigation retains latest intent", `document.querySelector("#catalogTitle").textContent.includes(${JSON.stringify(searchTerm)}) && !location.search.includes("marketplace")`);
   await send("Emulation.setCPUThrottlingRate", { rate: 1 });
   await send("Network.emulateNetworkConditions", { offline: true, latency: 0, downloadThroughput: 0, uploadThroughput: 0 });
   await evaluate('document.querySelector("#searchForm").requestSubmit()');
@@ -358,10 +375,10 @@ try {
   await press("Enter", "Enter", 13);
   await check("skip link moves focus to content", 'document.activeElement.id==="main"');
   await tabTo("#searchInput");
-  await send("Input.insertText", { text: "Minecraft" });
+  await send("Input.insertText", { text: searchTerm });
   await press("Enter", "Enter", 13);
   await ready();
-  await check("keyboard search announces new content through focus", 'document.activeElement.id==="main" && document.querySelector("#catalogTitle").textContent.includes("Minecraft")');
+  await check("keyboard search announces new content through focus", `document.activeElement.id==="main" && document.querySelector("#catalogTitle").textContent.includes(${JSON.stringify(searchTerm)})`);
   await check("keyboard search does not frame the entire results region", 'getComputedStyle(document.activeElement).outlineStyle==="none"');
   await tabTo(".product-card");
   await check("keyboard product link has visible focus", 'document.activeElement.matches(":focus-visible") && parseFloat(getComputedStyle(document.activeElement).outlineWidth)>=2');
@@ -372,7 +389,7 @@ try {
   await tabTo(".back");
   await press("Enter", "Enter", 13);
   await ready();
-  await check("keyboard return preserves search", 'document.querySelector("#catalogTitle").textContent.includes("Minecraft")');
+  await check("keyboard return preserves search", `document.querySelector("#catalogTitle").textContent.includes(${JSON.stringify(searchTerm)})`);
   await tabTo("#profileButton");
   await press("Enter", "Enter", 13);
   await check("dialog has an accessible name and initial focus", 'document.querySelector("dialog").open && document.activeElement.id==="closeDialog" && document.getElementById(document.querySelector("dialog").getAttribute("aria-labelledby")).textContent.length>0');
@@ -435,7 +452,7 @@ try {
   await setBrowserZoom(originalZoom);
   await size(1440);
   await workingCatalog();
-  await check("working catalog uses real products without preview tools", 'document.querySelectorAll(".product-card").length===2 && !document.querySelector("#previewTools") && !document.querySelector("#profileButton") && document.querySelector("#details").hidden');
+  await check("working catalog uses real products without preview tools", 'document.querySelectorAll(".product-card").length>0 && !document.querySelector("#previewTools") && !document.querySelector("#profileButton") && document.querySelector("#details").hidden');
   await check("working catalog has local official artwork", '[...document.querySelectorAll(".product-art")].every(img=>img.complete && img.naturalWidth>0 && img.src.startsWith(location.origin))');
   await check("working catalog starts above fold", 'document.querySelector(".product-card").getBoundingClientRect().top<innerHeight-120');
   await screenshot("14-working-catalog");
@@ -444,25 +461,34 @@ try {
   await evaluate('document.querySelector("#minPriceInput").value="100";document.querySelector("#maxPriceInput").value="10"');
   await click('#catalogFilters button[type="submit"]');
   await check("working price range rejects inverted bounds", '!document.querySelector("#maxPriceInput").checkValidity() && document.activeElement.id==="maxPriceInput"');
-  await evaluate('document.querySelector("#minPriceInput").value="";document.querySelector("#maxPriceInput").value="";document.querySelector("#maxPriceInput").dispatchEvent(new Event("input"));document.querySelector("#searchInput").value="Minecraft";document.querySelector("#sortFilter").value="name:asc";document.querySelector("#searchForm").requestSubmit()');
+  await evaluate(`document.querySelector("#minPriceInput").value="";document.querySelector("#maxPriceInput").value="";document.querySelector("#maxPriceInput").dispatchEvent(new Event("input"));document.querySelector("#searchInput").value=${JSON.stringify(searchTerm)};document.querySelector("#sortFilter").value="name:asc";document.querySelector("#searchForm").requestSubmit()`);
   await catalogReady();
-  await check("working search and sort survive in URL", 'new URLSearchParams(location.search).get("q")==="Minecraft" && new URLSearchParams(location.search).get("sort")==="name" && document.querySelectorAll(".product-card").length===2');
-  await click('[data-marketplace="playerok"]');
+  await check("working search and sort survive in URL", `new URLSearchParams(location.search).get("q")===${JSON.stringify(searchTerm)} && new URLSearchParams(location.search).get("sort")==="name" && document.querySelectorAll(".product-card").length>0`);
+  await click(`[data-marketplace="${marketplace}"]`);
   await catalogReady();
-  await check("working marketplace filter preserves query and sort", 'new URLSearchParams(location.search).get("marketplace")==="playerok" && document.querySelector("#sortFilter").value==="name:asc" && document.querySelector("#searchInput").value==="Minecraft"');
+  await check("working marketplace filter preserves query and sort", `new URLSearchParams(location.search).get("marketplace")===${JSON.stringify(marketplace)} && document.querySelector("#sortFilter").value==="name:asc" && document.querySelector("#searchInput").value===${JSON.stringify(searchTerm)}`);
   await screenshot("15-working-filters");
   const catalogQuery = await evaluate("location.search");
+  const selectedProductId = await evaluate('document.querySelector(".product-card").dataset.productId');
+  const comparisonResponse = await fetch(`${base}/api/v1/public/products/${selectedProductId}/comparison`);
+  assert.equal(comparisonResponse.status, 200);
+  const comparisonPayload = await comparisonResponse.json();
+  const expectedComparisonText = comparisonPayload.status === "currency_mismatch"
+    ? "Цены в разных валютах"
+    : comparisonPayload.best_offer
+      ? "Лучшее предложение"
+      : "Сопоставимых цен пока нет";
   await click(".product-card");
   await until('document.querySelector("#details").getAttribute("aria-busy")==="false"');
   await check("working product is a distinct view with source rows", 'document.querySelector("#catalogView").hidden && !document.querySelector("#details").hidden && document.querySelectorAll(".offer-row").length>0');
-  await check("working detail shows original name and truthful currency status", 'document.querySelector("#originalName").textContent.length>0 && document.querySelector("#comparisonCard").textContent.includes("разных валютах")');
+  await check("working detail shows original name and truthful currency status", `document.querySelector("#originalName").textContent.length>0 && document.querySelector("#comparisonCard").textContent.includes(${JSON.stringify(expectedComparisonText)})`);
   await check("working history section remains available", 'document.querySelector("#historyCard").textContent.trim().length>0');
   await check("working source links are safe", '[...document.querySelectorAll(".offer-row a")].every(a=>a.protocol==="https:" && a.rel.includes("noopener") && a.rel.includes("noreferrer"))');
   await screenshot("16-working-product");
   await click("#backToCatalog");
   await until(`location.search===${JSON.stringify(catalogQuery)} && !document.querySelector("#catalogView").hidden`);
   await catalogReady();
-  await check("working back restores filters and page title", 'document.querySelector("#marketplaceFilter").value==="playerok" && document.querySelector("#sortFilter").value==="name:asc" && document.title.startsWith("Каталог")');
+  await check("working back restores filters and page title", `document.querySelector("#marketplaceFilter").value===${JSON.stringify(marketplace)} && document.querySelector("#sortFilter").value==="name:asc" && document.title.startsWith("Каталог")`);
   if (await evaluate('!!document.querySelector(\'.category-filter[data-category-index="0"]\')')) {
     await click('.category-filter[data-category-index="0"]');
     await catalogReady();
@@ -474,9 +500,11 @@ try {
   await check("working empty search never shows stale product", '!document.querySelector(".product-card") && document.querySelector("#details").hidden');
   await workingCatalog("?category=not-a-real-category-xyz");
   await check("category deep link sends filter and returns honest empty result", '!document.querySelector(".product-card") && performance.getEntriesByType("resource").some(entry=>entry.name.includes("/api/v1/public/products?") && new URL(entry.name).searchParams.get("category")==="not-a-real-category-xyz")');
-  await workingCatalog("?product=7c862a70-5619-5b6d-a2aa-798560d29f18");
-  await check("working product deep link loads", '!document.querySelector("#details").hidden && document.querySelector("#detailTitle").textContent==="Minecraft"');
+  await workingCatalog(`?product=${encodeURIComponent(runtimeProduct.id)}`);
+  await check("working product deep link loads", `!document.querySelector("#details").hidden && document.querySelector("#originalName").textContent===${JSON.stringify(runtimeProduct.name)}`);
+  await evaluate('history.replaceState(null, "", location.href)');
   await click("#backToCatalog");
+  await until('!new URLSearchParams(location.search).has("product") && !document.querySelector("#catalogView").hidden');
   await catalogReady();
   await check("direct product can return without browser history", '!document.querySelector("#catalogView").hidden && !new URLSearchParams(location.search).has("product")');
   await size(390, 844);
@@ -500,7 +528,7 @@ try {
   await send("Network.emulateNetworkConditions", { offline: false, latency: 0, downloadThroughput: -1, uploadThroughput: -1 });
   await click("#refreshButton");
   await catalogReady();
-  await check("working retry restores real catalog", 'document.querySelectorAll(".product-card").length===2');
+  await check("working retry restores real catalog", 'document.querySelectorAll(".product-card").length>0');
   await check("working cabinet link retains authenticated workspace", 'document.querySelector(".header .profile").getAttribute("href")==="/terminal/review"');
   await workingCatalog();
   await press("Tab", "Tab", 9);

@@ -140,3 +140,125 @@ history. Automated repeat checks returned `401` for GGSEL and `403` for
 Playerok; these protected responses were not misclassified as missing offers.
 The same action must be repeated only if this stale row exists in a future
 target deployment; direct SQL and fabricated replacement URLs remain forbidden.
+
+## Verified Catalog Navigation Follow-up
+
+The public catalog now exposes a fail-closed game/service hierarchy in the
+working `/terminal` UI. The interface reads `/api/v1/public/catalog-hubs`, sends
+the selected `hub` and `section` back through the existing product query, and
+keeps that state in the browser URL. Selecting a hub reveals only sections
+reported by the repository-backed projection. Large product cards remain in
+the separate `Актуальное` stream.
+
+The presentation manifest currently permits only `minecraft`, using the
+source-registered local Minecraft icon already documented in the brand asset
+registry. Unknown hub codes and sections without a known catalog label are not
+rendered. The saved three-marketplace preview still contains legacy offers
+without verified catalog source rules, so its hub rail is intentionally hidden;
+titles are not used to invent classifications.
+
+Verification on 2026-11-01: public UI readiness passed `49` checks over saved
+GGSEL `60/60`, Playerok `20/20`, and FunPay `1/1` snapshot-ready payloads. Full
+Pytest passed with `705 passed, 63 skipped`; MyPy passed across `509` source
+files; focused Ruff, Ruff format, JavaScript syntax, and diff checks passed.
+
+## Source-category Rule Management
+
+The authenticated seller cabinet now exposes the existing durable
+`CatalogSourceRule` boundary instead of requiring manual repository calls. A
+catalog reviewer selects one concrete tenant integration, one source category
+observed by that integration in persisted offers, and one configured game
+subsection. The API lists, creates, and corrects rules with tenant ownership and
+optimistic versions; it never derives a game from an offer title.
+
+Runtime factories for GGSEL, Playerok, and FunPay now receive the same shared
+classification service and the same configured taxonomy. Rules therefore take
+effect during the next successful poll of their exact integration. Existing
+offers are not rewritten as an unaudited bulk action; they acquire the verified
+classification when that source is observed again. FunPay raw previews contain
+no category fields, so the pipeline accepts only the numeric category ID from
+its trusted `funpay.com/lots/<id>/` integration URL; other URLs remain
+fail-closed.
+
+Verification on 2026-11-03: the exact integration-scoped repository contract
+passed twice against isolated PostgreSQL 17.10 database
+`mediaengine_source_category_test`. Fresh-session persistence, two GGSEL
+integrations under one tenant, foreign-tenant isolation, integration-scoped
+observation deactivation, source-category preservation, and rollback all
+passed. A clean migration reached `0024_offer_catalog_fields`; Alembic
+`current`, `check`, and offline upgrade SQL passed. Full Pytest reports `712
+passed, 62 skipped`, MyPy is clean across `512` source files, and focused Ruff
+plus Ruff format checks pass. The temporary container and volume were removed.
+
+## Live Source-category Recheck
+
+The read-only live verifier was repeated on 2026-11-01. GGSEL returned a
+complete `111/111` Minecraft Keys snapshot; every normalized offer carried
+source category ID `66568`, while the response supplied no category name.
+FunPay returned a complete `1349/1349` showcase, but its supported public
+preview contract supplied neither a source category ID nor a category name.
+Playerok returned its explicit rate-limit response, so this run is intentionally
+recorded as incomplete three-source evidence.
+
+`verify_aligned_marketplace_categories.py` now reports ID/name coverage and a
+bounded deterministic sample of unique source IDs for every successful batch.
+This diagnostic does not create a rule, infer a category from an offer title,
+or mutate repository state. The verified GGSEL identity can be mapped to the
+Minecraft `keys` section through the existing seller workflow and applied on
+the next successful poll. This verification did not create a production rule.
+
+On 2026-11-03 the same read-only verifier confirmed the FunPay URL provenance
+boundary: a complete `1319/1319` live snapshot from `/lots/1015/` carried
+source category ID `1015` on every normalized offer, with no invented category
+name. A lookalike host, offer URL, nonnumeric listing, or non-HTTP URL produces
+no category evidence. Playerok still returned its explicit rate-limit response,
+so the run remains intentionally incomplete as three-source evidence.
+
+## Live Source-rule Polling Closure
+
+On 2026-11-03, `verify_epic23_source_rule_polling_postgres.py` passed `17/17`
+checks against temporary PostgreSQL 17.10 database
+`epic23_source_rule_verify`. The guarded verifier performed three real GGSEL
+polls through the production composition boundary. The current snapshot
+contained `116` offers with source category ID `66568`.
+
+The first poll persisted exact source evidence without classification. The
+seller application service then created one explicit
+`66568 -> minecraft/keys` rule. The second poll classified all `116/116`
+offers, while the verifier continued to reject title-based inference for any
+unmapped category. One explicit canonical review decision linked one offer;
+the repository-backed public read then exposed the Minecraft `keys` hub. A
+third poll preserved both the classification and reviewed link, and a fresh
+engine read the same rule, offer, decision-backed link, and public hub.
+
+Alembic clean upgrade, `current`, `check`, and offline SQL passed at
+`0024_offer_catalog_fields`. Focused verification passed `43` tests; the full
+default suite passed `710` tests with `64` guarded skips; MyPy is clean across
+`513` source files; Ruff and Ruff format pass. No production database or
+seller rule was changed, and the temporary container and volume were removed.
+
+## Data-driven Browser Release Gate
+
+On 2026-11-03 the Market Terminal browser verifier was detached from the old
+fixed Minecraft seed. It now obtains the product ID, title, marketplace, search
+term, comparison status, and deep-link target from the current public API. The
+same acceptance flow therefore exercises the saved GGSEL, Playerok, and FunPay
+examples without fabricating a stable catalog composition. Direct-product
+navigation waits for the real page-transition lifecycle, and comparison copy is
+checked against the API status rather than assuming a currency mismatch.
+
+The production and preview grids now defer rendering off-screen cards through
+`content-visibility` while retaining the same DOM and keyboard flow. In the
+final accepted Chromium run, the 50-card page under CPU 4x throttling recorded
+a `133 ms` maximum long task, down from approximately `286 ms` before the
+change. All `111` browser checks passed across desktop, mobile, 320 px, native
+200% zoom, keyboard, accessibility tree, reduced motion, offline/retry, 404,
+direct links, and the working catalog. No runtime/CSP errors were observed and
+all application requests made by the verifier were `GET` requests.
+
+The saved-payload preview check passed with three real products and production
+deployment verification passed `25/25`. Full Pytest passed `714` tests with
+`64` guarded skips, and MyPy passed across `514` source files. JavaScript syntax
+and diff checks passed. Repository-wide Ruff still reports `57` pre-existing
+Python findings and Ruff format reports `14` pre-existing Python files; none is
+in the CSS/MJS change set and they were not modified as part of this gate.

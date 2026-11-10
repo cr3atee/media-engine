@@ -12,7 +12,7 @@ API boundaries are also live-verified. EPIC 16 and EPIC 17 verification used
 isolated PostgreSQL 17.10 databases without using a project or production
 database. Durable marketplace polling history is additionally verified against
 an isolated PostgreSQL 17 database, including bounded retention and pruning.
-The current verified revision is `0017_marketplace_polling_runs`.
+The current verified revision is `0024_offer_catalog_fields`.
 
 ## Verified Schema
 
@@ -779,3 +779,45 @@ category evidence when a later upsert omits it, and rollback without a retained
 row. Full Pytest reports `680 passed, 61 skipped`; MyPy checks `497` files; Ruff,
 Ruff format and JavaScript syntax checks pass. The temporary container and
 volume were removed after verification.
+
+## Integration-scoped Source-category Reads
+
+On 2026-11-03 the source-category repository contract was rerun twice against
+temporary PostgreSQL 17.10 and isolated loopback database
+`mediaengine_source_category_test` on port `55439`. No project or production
+database was used.
+
+The two focused tests passed on both runs. They cover source-category
+persistence, partial-upsert preservation, exact tenant/integration reads for
+two GGSEL integrations owned by one tenant, foreign-tenant isolation,
+integration-scoped observation deactivation, fresh-session persistence, and
+rollback without a retained offer. A clean migration reached
+`0024_offer_catalog_fields`; Alembic `current` reported head, `check` reported
+no pending operations, and offline `upgrade head --sql` succeeded.
+
+Full Pytest with the guarded database URL reports `712 passed, 62 skipped`.
+MyPy is clean across `512` source files, and focused Ruff plus Ruff format
+checks pass. The temporary container and volume were removed after verification.
+
+## EPIC 23 Live Source-rule Polling
+
+`scripts/verify_epic23_source_rule_polling_postgres.py` ran on 2026-11-03
+against temporary PostgreSQL 17.10 database `epic23_source_rule_verify` on
+loopback port `55439`. The script refuses non-loopback URLs and database names
+outside the `epic23_source_rule_*` guard. No project or production database was
+used.
+
+All `17/17` checks passed. Three real GGSEL polls exercised the production
+runtime factory and repository scope. The first stored source evidence without
+classification. One explicit seller-service rule mapped source category
+`66568` to `minecraft/keys`; the next poll classified all current `116/116`
+offers. One explicit confirmed canonical review then made the classified
+product visible through the repository-backed public hub read. A third poll
+preserved the canonical link and classification, and a fresh engine retained
+the exact rule, linked offer, migration head, and public hub.
+
+Clean upgrade, Alembic `current`, `check`, and offline SQL passed at
+`0024_offer_catalog_fields`. Focused tests passed `43`; the full default suite
+passed `710` tests with `64` guarded skips; MyPy passed across `513` source
+files; Ruff and Ruff format passed. The temporary container and volume were
+removed after verification.

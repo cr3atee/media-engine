@@ -3,6 +3,7 @@ from __future__ import annotations
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from datetime import UTC, datetime
+from decimal import Decimal
 from typing import Any, cast
 from uuid import UUID, uuid4
 
@@ -18,6 +19,8 @@ from app.domain.marketplace_polling import (
 )
 from app.domain.tenancy import Membership, Tenant, TenantRole, User
 from app.main import create_app
+from app.parsers.models import ParsedOffer
+from app.repositories.offers import OfferObservationContext
 from app.repositories.provider import RepositoryProvider, create_memory_provider
 from app.repositories.queries.provider import ReadRepositoryProvider
 from app.services.passwords import PasswordHasher
@@ -30,6 +33,207 @@ TENANT_B_ID = UUID("23000000-0000-4000-8000-000000000202")
 ADMIN_USER_ID = UUID("13000000-0000-4000-8000-000000000101")
 VIEWER_USER_ID = UUID("13000000-0000-4000-8000-000000000202")
 PASSWORD = "correct horse battery staple"
+
+
+def test_catalog_source_rules_are_tenant_scoped_and_versioned() -> None:
+    provider = create_memory_provider()
+    run_async(_seed_identity(provider))
+    client = _client(provider)
+    admin_headers = _login_headers(client, "admin@example.com")
+    viewer_headers = _login_headers(client, "viewer@example.com")
+    integration = _create_integration(client, admin_headers)
+    integration_id = integration["id"]
+    second_integration = _create_integration(
+        client,
+        admin_headers,
+        display_name="GGSEL secondary",
+        external_account_id="seller-2",
+        source_url="https://ggsel.net/catalog/secondary",
+    )
+    run_async(
+        provider.offers.save_observed(
+            OfferObservationContext(
+                tenant_id=TENANT_A_ID,
+                integration_id=UUID(integration_id),
+                marketplace="ggsel",
+                observed_at=NOW,
+            ),
+            ParsedOffer(
+                tenant_id=TENANT_A_ID,
+                marketplace="ggsel",
+                external_id="minecraft-offer",
+                title="Minecraft Java & Bedrock",
+                url="https://example.com/minecraft-offer",
+                price=Decimal("990.00"),
+                currency="RUB",
+                source_category_id="minecraft-keys",
+                source_category_name="Minecraft keys",
+            ),
+        )
+    )
+    run_async(
+        provider.offers.save_observed(
+            OfferObservationContext(
+                tenant_id=TENANT_A_ID,
+                integration_id=UUID(second_integration["id"]),
+                marketplace="ggsel",
+                observed_at=NOW,
+            ),
+            ParsedOffer(
+                tenant_id=TENANT_A_ID,
+                marketplace="ggsel",
+                external_id="secondary-offer",
+                title="Another product",
+                url=None,
+                price=None,
+                currency=None,
+                source_category_id="other-category",
+                source_category_name="Other category",
+            ),
+        )
+    )
+    base = (
+        f"/api/v1/tenants/{TENANT_A_ID}/catalog/classification/"
+        f"integrations/{integration_id}/rules"
+    )
+
+    taxonomy = client.get(
+        f"/api/v1/tenants/{TENANT_A_ID}/catalog/classification/taxonomy",
+        headers=admin_headers,
+    )
+    sources = client.get(
+        f"/api/v1/tenants/{TENANT_A_ID}/catalog/classification/"
+        f"integrations/{integration_id}/source-categories",
+        headers=admin_headers,
+    )
+    second_sources = client.get(
+        f"/api/v1/tenants/{TENANT_A_ID}/catalog/classification/"
+        f"integrations/{second_integration['id']}/source-categories",
+        headers=admin_headers,
+    )
+    forbidden = client.get(
+        f"/api/v1/tenants/{TENANT_A_ID}/catalog/classification/taxonomy",
+        headers=viewer_headers,
+    )
+    created = client.post(
+        base,
+        headers=admin_headers,
+        json={
+            "marketplace": "ggsel",
+            "source_category_id": "minecraft-keys",
+            "source_category_name": "Minecraft keys",
+            "hub_code": "minecraft",
+            "section_code": "keys",
+        },
+    )
+    duplicate = client.post(
+        base,
+        headers=admin_headers,
+        json={
+            "marketplace": "ggsel",
+            "source_category_id": "minecraft-keys",
+            "source_category_name": "Minecraft keys",
+            "hub_code": "minecraft",
+            "section_code": "keys",
+        },
+    )
+    listed = client.get(base, headers=admin_headers)
+    updated = client.post(
+        f"{base}/update",
+        headers=admin_headers,
+        json={
+            "marketplace": "ggsel",
+            "source_category_id": "minecraft-keys",
+            "source_category_name": "Minecraft accounts",
+            "hub_code": "minecraft",
+            "section_code": "accounts",
+            "expected_version": 1,
+        },
+    )
+    stale = client.post(
+        f"{base}/update",
+        headers=admin_headers,
+        json={
+            "marketplace": "ggsel",
+            "source_category_id": "minecraft-keys",
+            "source_category_name": "Minecraft keys",
+            "hub_code": "minecraft",
+            "section_code": "keys",
+            "expected_version": 1,
+        },
+    )
+    foreign = client.get(
+        base.replace(str(TENANT_A_ID), str(TENANT_B_ID)),
+        headers=admin_headers,
+    )
+
+    assert taxonomy.status_code == 200
+    assert taxonomy.json() == {
+        "hubs": [
+            {
+                "code": "minecraft",
+                "name": "Minecraft",
+                "sections": [
+                    {
+                        "code": "games",
+                        "name": "Игры и предметы",
+                        "offer_type": "games",
+                    },
+                    {
+                        "code": "keys",
+                        "name": "Ключи и подарки",
+                        "offer_type": "keys",
+                    },
+                    {
+                        "code": "accounts",
+                        "name": "Аккаунты",
+                        "offer_type": "accounts",
+                    },
+                    {
+                        "code": "subscriptions",
+                        "name": "Подписки",
+                        "offer_type": "subscriptions",
+                    },
+                    {
+                        "code": "topups",
+                        "name": "Пополнение баланса",
+                        "offer_type": "topups",
+                    },
+                ],
+            }
+        ]
+    }
+    assert forbidden.status_code == 403
+    assert sources.status_code == 200
+    assert sources.json() == [
+        {
+            "marketplace": "ggsel",
+            "source_category_id": "minecraft-keys",
+            "source_category_name": "Minecraft keys",
+            "offer_count": 1,
+        }
+    ]
+    assert second_sources.status_code == 200
+    assert second_sources.json() == [
+        {
+            "marketplace": "ggsel",
+            "source_category_id": "other-category",
+            "source_category_name": "Other category",
+            "offer_count": 1,
+        }
+    ]
+    assert created.status_code == 201
+    assert created.json()["version"] == 1
+    assert duplicate.status_code == 409
+    assert duplicate.json()["error"]["code"] == "catalog_source_rule_conflict"
+    assert listed.status_code == 200
+    assert len(listed.json()) == 1
+    assert updated.status_code == 200
+    assert updated.json()["section_code"] == "accounts"
+    assert updated.json()["version"] == 2
+    assert stale.status_code == 409
+    assert stale.json()["error"]["code"] == "optimistic_concurrency_conflict"
+    assert foreign.status_code == 404
 
 
 def test_seller_can_create_read_and_scope_integrations() -> None:
@@ -289,17 +493,21 @@ def test_seller_reads_bounded_tenant_scoped_polling_history() -> None:
 def _create_integration(
     client: TestClient,
     headers: dict[str, str],
+    *,
+    display_name: str = "GGSEL main",
+    external_account_id: str = "seller-1",
+    source_url: str = "https://ggsel.net/catalog/minecraft",
 ) -> dict[str, Any]:
     response = client.post(
         f"/api/v1/tenants/{TENANT_A_ID}/marketplace-integrations",
         headers=headers,
         json={
             "marketplace": "ggsel",
-            "display_name": "GGSEL main",
+            "display_name": display_name,
             "enabled": True,
             "status": "active",
-            "external_account_id": "seller-1",
-            "source_url": "https://ggsel.net/catalog/minecraft",
+            "external_account_id": external_account_id,
+            "source_url": source_url,
         },
     )
     assert response.status_code == 201

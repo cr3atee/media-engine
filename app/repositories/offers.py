@@ -114,6 +114,14 @@ class OfferRepository(BaseRepository):
     ) -> Sequence[ParsedOffer]:
         """Return parsed offers for one tenant and marketplace."""
 
+    @abstractmethod
+    async def list_by_integration(
+        self,
+        tenant_id: UUID,
+        integration_id: UUID,
+    ) -> Sequence[ParsedOffer]:
+        """Return active offers observed by one exact tenant integration."""
+
     async def list_by_tenant(self, tenant_id: UUID) -> Sequence[ParsedOffer]:
         """Return parsed offers owned by one tenant."""
         return tuple(

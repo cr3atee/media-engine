@@ -13,6 +13,8 @@ class PublicProductQuery:
     tenant_id: UUID | None = None
     search: str | None = None
     category: str | None = None
+    hub: str | None = None
+    section: str | None = None
     marketplace: str | None = None
     min_price: Decimal | None = None
     max_price: Decimal | None = None
@@ -60,6 +62,14 @@ class PublicCategoryQuery:
 
 
 @dataclass(slots=True, frozen=True)
+class PublicCatalogHubQuery:
+    """Typed filters for public game and service hub discovery."""
+
+    tenant_id: UUID | None = None
+    marketplace: str | None = None
+
+
+@dataclass(slots=True, frozen=True)
 class OfferSummaryRead:
     """UI-safe read projection for one marketplace offer."""
 
@@ -86,6 +96,8 @@ class ProductSummaryRead:
     marketplace_count: int
     updated_at: datetime | None
     marketplaces: tuple[str, ...] = ()
+    catalog_hub_code: str | None = None
+    catalog_section_code: str | None = None
 
 
 @dataclass(slots=True, frozen=True)
@@ -101,6 +113,8 @@ class ProductDetailRead:
     marketplace_count: int
     updated_at: datetime | None
     marketplaces: tuple[str, ...] = ()
+    catalog_hub_code: str | None = None
+    catalog_section_code: str | None = None
 
 
 @dataclass(slots=True, frozen=True)
@@ -156,3 +170,24 @@ class CategoryRead:
     code: str
     name: str
     product_count: int
+
+
+@dataclass(slots=True, frozen=True)
+class CatalogSectionRead:
+    """One verified subsection represented by public canonical products."""
+
+    code: str
+    product_count: int
+    offer_count: int
+    marketplaces: tuple[str, ...] = ()
+
+
+@dataclass(slots=True, frozen=True)
+class CatalogHubRead:
+    """One verified game or service hub available in the public catalog."""
+
+    code: str
+    product_count: int
+    offer_count: int
+    marketplaces: tuple[str, ...]
+    sections: tuple[CatalogSectionRead, ...]

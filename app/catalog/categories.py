@@ -15,7 +15,7 @@ type CatalogCategoryCode = Literal[
 
 @dataclass(slots=True, frozen=True)
 class CatalogCategory:
-    """One stable buyer-facing category in the MVP catalog taxonomy."""
+    """One stable offer type used as a subsection inside catalog hubs."""
 
     code: CatalogCategoryCode
     name: str
@@ -133,7 +133,7 @@ _INFERENCE_MARKERS: Final[tuple[tuple[CatalogCategoryCode, tuple[str, ...]], ...
 
 
 def resolve_catalog_category(value: str | None) -> CatalogCategory | None:
-    """Resolve a persisted legacy value or public code to the MVP category."""
+    """Resolve a persisted legacy value or public code to an offer type."""
     if value is None or not value.strip():
         return None
     return next(
@@ -143,7 +143,7 @@ def resolve_catalog_category(value: str | None) -> CatalogCategory | None:
 
 
 def infer_catalog_category(title: str | None) -> CatalogCategory | None:
-    """Infer a category only when a marketplace title contains explicit evidence."""
+    """Infer an offer type only when a title contains explicit evidence."""
     if title is None or not title.strip():
         return None
     normalized = _normalize_title(title)
@@ -159,7 +159,7 @@ def infer_catalog_category(title: str | None) -> CatalogCategory | None:
 
 
 def category_by_code(code: CatalogCategoryCode) -> CatalogCategory:
-    """Return one configured category by its stable public code."""
+    """Return one configured offer type by its stable public code."""
     return next(
         category for category in MVP_CATALOG_CATEGORIES if category.code == code
     )

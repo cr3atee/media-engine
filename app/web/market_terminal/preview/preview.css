@@ -149,6 +149,7 @@ main { min-height: 62vh; padding-top: 24px; outline: none; }
 .product-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 24px; }
 .product-grid.compact { grid-template-columns: repeat(2, minmax(0, 1fr)); max-width: 900px; }
 .product-card { min-width: 0; display: block; border-radius: 16px; transition: transform var(--fast) var(--ease); }
+.product-grid:not(.compact) .product-card { content-visibility: auto; contain-intrinsic-size: auto 360px; }
 .product-card:hover { transform: translateY(-3px); }
 .card-image { position: relative; overflow: hidden; border-radius: 16px; aspect-ratio: 1; background: var(--surface); max-height: 220px; }
 .product-art { object-fit: contain; background: var(--surface); }

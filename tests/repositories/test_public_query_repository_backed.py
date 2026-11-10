@@ -20,6 +20,7 @@ from app.models.canonical_product import CanonicalProduct
 from app.parsers.models import ParsedOffer
 from app.repositories.provider import create_memory_provider
 from app.repositories.public_queries.models import (
+    PublicCatalogHubQuery,
     PublicCategoryQuery,
     PublicOfferQuery,
     PublicPriceChangeQuery,
@@ -44,6 +45,132 @@ def test_product_marketplace_identities_are_sorted_unique_and_product_scoped() -
 
 def test_public_categories_use_fixed_taxonomy_and_legacy_values() -> None:
     asyncio.run(_assert_fixed_category_taxonomy())
+
+
+def test_public_catalog_hubs_use_only_consistent_verified_classification() -> None:
+    asyncio.run(_assert_verified_catalog_hubs())
+
+
+async def _assert_verified_catalog_hubs() -> None:
+    provider = create_memory_provider()
+    products = (
+        CanonicalProduct(
+            id=UUID(int=201),
+            name="Minecraft Java & Bedrock",
+            category="Games",
+            aliases=(),
+        ),
+        CanonicalProduct(
+            id=UUID(int=202),
+            name="Fortnite account",
+            category="Accounts",
+            aliases=(),
+        ),
+        CanonicalProduct(
+            id=UUID(int=203),
+            name="Unknown product",
+            category=None,
+            aliases=(),
+        ),
+        CanonicalProduct(
+            id=UUID(int=204),
+            name="Conflicting product",
+            category=None,
+            aliases=(),
+        ),
+        CanonicalProduct(
+            id=UUID(int=205),
+            name="Incomplete classification",
+            category=None,
+            aliases=(),
+        ),
+    )
+    for product in products:
+        await provider.canonical_products.save(product)
+
+    offers = (
+        _classified_offer(201, "ggsel", "minecraft", "keys", 301),
+        _classified_offer(201, "playerok", "minecraft", "keys", 302),
+        _classified_offer(202, "playerok", "fortnite", "accounts", 303),
+        ParsedOffer(
+            marketplace="funpay",
+            external_id="unknown",
+            title="Unknown product",
+            url=None,
+            price=Decimal("100"),
+            currency="RUB",
+            canonical_product_id=products[2].id,
+        ),
+        _classified_offer(204, "ggsel", "minecraft", "keys", 304),
+        _classified_offer(204, "playerok", "fortnite", "accounts", 305),
+        ParsedOffer(
+            marketplace="ggsel",
+            external_id="incomplete",
+            title="Incomplete classification",
+            url=None,
+            price=Decimal("100"),
+            currency="RUB",
+            catalog_hub_code="minecraft",
+            catalog_section_code="keys",
+            canonical_product_id=products[4].id,
+        ),
+    )
+    for offer in offers:
+        await provider.offers.save(offer)
+
+    repository = RepositoryBackedPublicReadRepository(provider)
+    hubs = await repository.list_catalog_hubs(
+        PublicCatalogHubQuery(),
+        _page(sort="product_count", direction="desc"),
+    )
+
+    assert [hub.code for hub in hubs.items] == ["minecraft", "fortnite"]
+    minecraft = hubs.items[0]
+    assert minecraft.product_count == 1
+    assert minecraft.offer_count == 2
+    assert minecraft.marketplaces == ("ggsel", "playerok")
+    assert len(minecraft.sections) == 1
+    assert minecraft.sections[0].code == "keys"
+    assert minecraft.sections[0].product_count == 1
+    assert minecraft.sections[0].offer_count == 2
+
+    filtered_products = await repository.list_products(
+        PublicProductQuery(hub="minecraft", section="keys"),
+        _page(sort="name", direction="asc"),
+    )
+    assert [item.id for item in filtered_products.items] == [UUID(int=201)]
+    assert filtered_products.items[0].catalog_hub_code == "minecraft"
+    assert filtered_products.items[0].catalog_section_code == "keys"
+
+    ggsel_hubs = await repository.list_catalog_hubs(
+        PublicCatalogHubQuery(marketplace="ggsel"),
+        _page(sort="code", direction="asc"),
+    )
+    assert len(ggsel_hubs.items) == 1
+    assert ggsel_hubs.items[0].code == "minecraft"
+    assert ggsel_hubs.items[0].offer_count == 1
+    assert ggsel_hubs.items[0].marketplaces == ("ggsel",)
+
+
+def _classified_offer(
+    product_number: int,
+    marketplace: str,
+    hub_code: str,
+    section_code: str,
+    rule_number: int,
+) -> ParsedOffer:
+    return ParsedOffer(
+        marketplace=marketplace,
+        external_id=f"{marketplace}-{product_number}",
+        title=f"Product {product_number}",
+        url=f"https://example.com/{marketplace}/{product_number}",
+        price=Decimal("790"),
+        currency="RUB",
+        catalog_hub_code=hub_code,
+        catalog_section_code=section_code,
+        catalog_source_rule_id=UUID(int=rule_number),
+        canonical_product_id=UUID(int=product_number),
+    )
 
 
 async def _assert_fixed_category_taxonomy() -> None:

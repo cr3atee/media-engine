@@ -301,6 +301,40 @@ This document captures architecture notes that are important for future reviews.
   retirement, exact public-read projection, and fresh-engine persistence; it
   does not authorize copying unresolved offers or bypassing target-environment
   source checks.
+- Catalog source classification is an exact tenant/integration/category rule,
+  not title inference. Keep seller tooling limited to category evidence already
+  persisted from that exact integration's marketplace observations; do not
+  aggregate evidence across two connections to the same marketplace. A new or
+  corrected rule applies on a subsequent source observation; do not introduce
+  an unaudited historical bulk rewrite to make catalog hubs appear immediately.
+- Treat the EPIC 24 promotion manifest as a read-only handoff contract, not an
+  import command. Its digest detects payload changes but does not authenticate
+  an operator. A target importer must revalidate marketplace identities, report
+  conflicts before writes, require explicit approval, and never copy credentials
+  or unresolved offers from the source workspace.
+- The EPIC 24 preflight is also read-only and its `ready` result is not durable
+  authorization. The importer re-checks manifest digest and target state inside
+  one transaction, requires an exact target-bound approval phrase, serializes
+  concurrent imports, and commits immutable audit with the batch. Keep replay
+  bound to the original tenant-scoped idempotency key. Never reassign a
+  canonical UUID owned by another tenant; same-database promotion must block or
+  use an explicit future identity mapping design.
+- Keep catalog release as a two-step operator flow. Preview must remain
+  mutation-free, and apply must retain distinct source/target database checks,
+  target-bound backup/monitoring attestations, exact digest approval, and the
+  original idempotency identity. The CLI verifies but cannot create a real
+  backup or monitoring stack. Never print connection URLs, copy marketplace
+  credentials, or treat an isolated release verifier as production rollout.
+- Keep the production Compose catalog release isolated behind its dedicated
+  profile. It must remain one-shot, preview-first, without ports, volumes, or
+  restart policy, and must never join normal API/worker startup. Supply all
+  database URLs, tenant IDs, and apply guards from an operator-controlled file
+  outside source control.
+- Keep CI read-only and production-independent. Every PR must run full strict
+  typing/tests plus changed-file Ruff/format, while the catalog release uses
+  two disposable loopback PostgreSQL databases. The current changed-file lint
+  boundary is explicit technical debt containment, not a claim that the legacy
+  tree is fully clean; repository-wide Ruff/format still report `58`/`15`.
 
 ## Review Notes
 

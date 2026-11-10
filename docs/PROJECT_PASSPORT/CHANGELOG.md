@@ -6,6 +6,119 @@ This document records notable Project Passport updates.
 
 ## Unreleased
 
+- Added EPIC 24's two-phase cross-environment catalog release gate. Preview is
+  read-only; apply requires matching database identity, backup and monitoring
+  attestations, exact digest/target approval, actor, request, idempotency key,
+  and reason. Post-commit verification covers target convergence, immutable
+  audit, links, and public reads; restart replay creates no duplicates. Two
+  isolated PostgreSQL `17.10` databases passed `12/12` release checks plus
+  independent Alembic current/check and offline SQL. Added a dedicated one-shot
+  production Compose profile with preview by default, no ports/storage, and
+  external-only operator values. Added a read-only GitHub Actions gate with
+  pinned Node 24-compatible actions, changed-file Ruff/format, full MyPy/Pytest,
+  deployment verification, and two disposable PostgreSQL release databases.
+  Initial run `42778551173` passed both jobs and release checks `12/12`;
+  deployment verification passes `38/38`, focused tests pass `21`, full Pytest
+  passes `750` with `64` skips, and MyPy checks `553` files. Repository-wide
+  Ruff/format retains `58`/`15` legacy findings. No production rollout was
+  performed.
+
+- Added EPIC 24's guarded atomic catalog importer. It accepts only an unchanged
+  `ready` plan plus an exact target-bound approval phrase, recomputes target
+  state inside one transaction, reuses canonical linking, and commits immutable
+  audit with the batch. Revision `0025_catalog_promotion_audit` permits the new
+  audit identity. Focused verification passed `19` tests; the isolated
+  PostgreSQL `17.10` verifier passed `29/29`, including rollback, concurrent
+  worker serialization, idempotent replay, and fresh-engine persistence.
+  Alembic current/check/downgrade/upgrade/offline SQL, focused Ruff/format, full
+  Pytest (`738 passed, 64 skipped`), and MyPy (`548` files) passed. Production
+  target rollout was not performed.
+
+- Added EPIC 24's read-only target preflight. It validates manifest integrity,
+  classifies product and offer-link actions, requires fresh target source
+  evidence, and blocks tenant, ownership, definition, source-drift, retirement,
+  and link conflicts without writing. Focused verification passed `19` tests;
+  Ruff, format, and strict MyPy passed. The isolated PostgreSQL 17 verifier now
+  passes `20/20` with plan parity, deterministic rerun, no target mutation, and
+  fresh-engine persistence. Full Pytest is `733 passed, 64 skipped`; MyPy checks
+  `520` source files. Atomic import remains intentionally unimplemented.
+
+- Added EPIC 24's deterministic read-only catalog promotion manifest. It exports
+  only active canonical links backed by immutable confirmed decisions, carries
+  source and decision evidence, excludes rejected/retired state, fails closed on
+  incomplete launch data, and protects canonical JSON with a SHA-256 integrity
+  digest. Focused Pytest passed `13`; Ruff, format, and strict MyPy passed. A
+  clean isolated PostgreSQL 17 run at `0024_offer_catalog_fields` passed `14/14`
+  checks plus Alembic `current`, `check`, and offline SQL. No target import or
+  production mutation was performed, and temporary Docker resources were
+  removed.
+
+- Made the Market Terminal browser release gate independent of the old fixed
+  Minecraft seed. Search, marketplace, comparison, and deep-link assertions now
+  come from the current public API, and working-page checks wait for the real
+  transition lifecycle. Added off-screen card rendering containment for dense
+  grids; the accepted 50-card CPU-4x run fell from approximately `286 ms` to a
+  `133 ms` maximum long task. All `111` browser checks, the `25/25` deployment
+  verifier, JavaScript syntax, full Pytest (`714 passed, 64 skipped`), and MyPy
+  (`514` files) pass. Full Ruff still reports `57` unrelated pre-existing
+  Python findings and format reports `14` unrelated pre-existing files; none
+  was modified in this focused change.
+
+- Preserved exact FunPay listing identity through the production pipeline
+  without parsing product titles: only a trusted numeric
+  `funpay.com/lots/<id>/` integration URL supplies `source_category_id`.
+  Lookalike hosts, offer pages, malformed paths, and non-HTTP URLs remain
+  unclassified. Read-only live verification returned FunPay `1319/1319` with
+  category ID `1015`, GGSEL `116/116` with `66568`, and the existing explicit
+  Playerok rate-limit result. Focused parser/pipeline verification passes `18`
+  tests with clean focused MyPy, Ruff, and Ruff format.
+
+- Added a guarded production-composition verifier for the complete GGSEL source
+  rule lifecycle. Against isolated PostgreSQL 17.10 it passed `17/17`: three
+  real GGSEL polls persisted `116` category-`66568` offers, applied one explicit
+  `minecraft/keys` rule to `116/116`, preserved an explicit canonical review
+  link on rerun, exposed the repository-backed public hub, and survived a fresh
+  engine. Alembic clean upgrade/current/check/offline SQL passed at
+  `0024_offer_catalog_fields`; focused tests passed `43`, full Pytest passed
+  `710` with `64` guarded skips, MyPy checked `513` files, and Ruff/format
+  passed. No production database or tenant rule was changed.
+
+- Completed the live PostgreSQL follow-up for integration-scoped marketplace
+  source categories against isolated PostgreSQL 17.10 database
+  `mediaengine_source_category_test` at `0024_offer_catalog_fields`. The
+  focused contract passed twice and covers fresh-session persistence, two
+  same-marketplace integrations, cross-tenant isolation, scoped observation
+  deactivation, source-category preservation, and rollback. Alembic
+  `current`, `check`, and offline SQL passed; full Pytest reports `712 passed,
+  62 skipped`, MyPy checks `512` source files, and focused Ruff/format checks
+  pass. Temporary Docker resources were removed.
+
+- Extended the read-only aligned-marketplace verifier with deterministic source
+  category coverage. A 2026-11-01 live run confirmed complete GGSEL `111/111`
+  extraction with category ID `66568`, complete FunPay `1349/1349` extraction
+  with no category evidence in the supported preview contract, and an explicit
+  Playerok rate-limit response. No rule or repository state was mutated.
+
+- Connected durable source-category rules to the seller cabinet and active
+  marketplace runtime. Reviewers select a concrete integration, persisted
+  source evidence, game, and subsection through tenant-scoped versioned APIs.
+  GGSEL, Playerok, and FunPay runners now share the same verified classifier;
+  rules apply on the next successful poll without title guessing or an
+  unaudited historical bulk rewrite. The management UI reuses the existing
+  flat cabinet language and reads categories only from active observations of
+  the selected integration, including already linked offers. Focused
+  verification passes `60` tests, full Pytest reports `710 passed, 63
+  skipped`, MyPy checks `512` files, and public UI readiness remains `49/49`.
+
+- Connected verified game/service hubs to the working Market Terminal. The UI
+  reads `/catalog-hubs`, persists `hub/section` in the URL, shows repository-
+  reported subsections, and keeps large product cards in the separate
+  `Актуальное` stream. Only Minecraft currently has an approved local
+  presentation entry; unknown hubs and legacy unclassified offers stay hidden
+  instead of being inferred from titles. Public UI readiness passes `49`
+  checks, full Pytest reports `705 passed, 63 skipped`, MyPy checks `509`
+  files, and focused Ruff, format, JavaScript syntax, and diff checks pass.
+
 - Preserved exact marketplace source category evidence without turning it into
   an automatic canonical classification. GGSEL now carries `id_section` through
   `ParsedOffer` and persistence (`60/60` saved offers); Playerok carries

@@ -16,6 +16,10 @@ The deployment uses:
 - metrics-file freshness for worker liveness;
 - `SIGTERM` and an explicit stop grace period for bounded shutdown.
 
+The same Compose file also contains a separate, opt-in `catalog-release`
+operator profile. It is not part of API or worker startup and is documented in
+`docs/EPIC_24_CATALOG_RELEASE_RUNBOOK.md`.
+
 ## Initial Operations Policy
 
 The values below are deployment policy, not domain defaults. They are explicit
@@ -164,3 +168,15 @@ and offline SQL generation also passed at `0017_marketplace_polling_runs`.
 This verification closes EPIC 21 software readiness. It does not replace
 target-environment PostgreSQL backup validation, secret delivery, collector and
 alert-manager rollout, or approved credentials for authenticated sources.
+
+On 2026-11-10, a follow-up deployment check added the isolated EPIC 24
+`catalog-release` operator profile without changing API or worker startup. The
+offline verifier passed `38/38`; the profile is opt-in, one-shot, preview-first,
+has no ports or persistent volumes, and receives every URL and approval value
+only from an external environment file. The GitHub quality workflow uses
+read-only permissions and pinned Node 24-compatible actions. It runs changed
+Python Ruff/format, full strict MyPy/Pytest, this deployment verifier, and a
+second isolated PostgreSQL catalog-release job. Run `42778551173` passed both
+jobs, including release verification `12/12`, Alembic head/current/check, and
+offline SQL. Full Pytest passed `750` with `64` guarded skips, and strict MyPy
+checked `553` files.

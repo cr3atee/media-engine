@@ -34,11 +34,13 @@ class FunPayFetcher:
         self._http_client = http_client
         self.last_status_code: int | None = None
         self.last_content_type: str | None = None
+        self.last_url: str | None = None
 
     async def fetch(self, url: str = DEFAULT_URL) -> str:
         """Download and return the raw FunPay response body as text."""
         self.last_status_code = None
         self.last_content_type = None
+        self.last_url = None
 
         current_url = url
         for _ in range(self.MAX_REDIRECTS + 1):
@@ -55,6 +57,7 @@ class FunPayFetcher:
             self.last_content_type = response.headers.get("content-type")
 
             if not 300 <= response.status_code < 400:
+                self.last_url = current_url
                 break
 
             location = response.headers.get("location")

@@ -22,6 +22,7 @@ OfferSort = Literal["price", "marketplace", "title"]
 PriceHistorySort = Literal["collected_at"]
 PriceChangeSort = Literal["changed_at"]
 CategorySort = Literal["name", "product_count"]
+CatalogHubSort = Literal["code", "product_count", "offer_count"]
 SortDirection = Literal["asc", "desc"]
 
 
@@ -62,6 +63,8 @@ class PublicProductsQueryParams(ApiModel):
         validation_alias=AliasChoices("search", "q"),
     )
     category: str | None = Field(default=None, max_length=120)
+    hub: str | None = Field(default=None, max_length=64)
+    section: str | None = Field(default=None, max_length=64)
     marketplace: str | None = Field(default=None, max_length=64)
     min_price: Decimal | None = Field(default=None, ge=0)
     max_price: Decimal | None = Field(default=None, ge=0)
@@ -74,6 +77,8 @@ class PublicProductsQueryParams(ApiModel):
     def validate_price_range(self) -> PublicProductsQueryParams:
         """Reject reversed explicit price ranges."""
         _validate_decimal_range(self.min_price, self.max_price, "price")
+        if self.section is not None and self.hub is None:
+            raise ValueError("Catalog section filter requires a hub filter.")
         return self
 
 
@@ -142,6 +147,16 @@ class PublicCategoriesQueryParams(ApiModel):
     cursor: str | None = Field(default=None, max_length=2048)
 
 
+class PublicCatalogHubsQueryParams(ApiModel):
+    """Validated filters for public game and service hub navigation."""
+
+    marketplace: str | None = Field(default=None, max_length=64)
+    sort: CatalogHubSort = "product_count"
+    direction: SortDirection = "desc"
+    limit: int | None = Field(default=None, ge=1, le=100)
+    cursor: str | None = Field(default=None, max_length=2048)
+
+
 class PublicOfferSummary(ApiModel):
     """UI-safe marketplace offer summary."""
 
@@ -166,6 +181,14 @@ class PublicProductCard(ApiModel):
     marketplace_count: int = Field(ge=0)
     marketplaces: list[str] = Field(default_factory=list)
     updated_at: datetime | None = None
+    catalog_hub_code: str | None = Field(
+        default=None,
+        exclude_if=lambda value: value is None,
+    )
+    catalog_section_code: str | None = Field(
+        default=None,
+        exclude_if=lambda value: value is None,
+    )
 
     _normalize_updated_at = field_validator("updated_at")(_optional_utc_datetime)
 
@@ -182,6 +205,14 @@ class PublicProductDetail(ApiModel):
     marketplace_count: int = Field(ge=0)
     marketplaces: list[str] = Field(default_factory=list)
     updated_at: datetime | None = None
+    catalog_hub_code: str | None = Field(
+        default=None,
+        exclude_if=lambda value: value is None,
+    )
+    catalog_section_code: str | None = Field(
+        default=None,
+        exclude_if=lambda value: value is None,
+    )
 
     _normalize_updated_at = field_validator("updated_at")(_optional_utc_datetime)
 
@@ -238,3 +269,22 @@ class PublicCategory(ApiModel):
     code: str
     name: str
     product_count: int = Field(ge=0)
+
+
+class PublicCatalogSection(ApiModel):
+    """Verified subsection summary inside one public catalog hub."""
+
+    code: str
+    product_count: int = Field(ge=0)
+    offer_count: int = Field(ge=0)
+    marketplaces: list[str] = Field(default_factory=list)
+
+
+class PublicCatalogHub(ApiModel):
+    """Verified game or service hub backed by classified public offers."""
+
+    code: str
+    product_count: int = Field(ge=0)
+    offer_count: int = Field(ge=0)
+    marketplaces: list[str] = Field(default_factory=list)
+    sections: list[PublicCatalogSection] = Field(default_factory=list)

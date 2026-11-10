@@ -56,6 +56,9 @@ def make_offer(
     currency: str | None = "RUB",
     source_category_id: str | None = "section-1",
     source_category_name: str | None = "Digital keys",
+    catalog_hub_code: str | None = None,
+    catalog_section_code: str | None = None,
+    catalog_source_rule_id: UUID | None = None,
     canonical_product_id: UUID | None = None,
 ) -> ParsedOffer:
     """Create a parsed offer for repository tests."""
@@ -70,6 +73,9 @@ def make_offer(
         seller_name=f"{marketplace} Seller",
         source_category_id=source_category_id,
         source_category_name=source_category_name,
+        catalog_hub_code=catalog_hub_code,
+        catalog_section_code=catalog_section_code,
+        catalog_source_rule_id=catalog_source_rule_id,
         canonical_product_id=canonical_product_id,
         tenant_id=tenant_id or LEGACY_TENANT_ID,
     )
@@ -125,9 +131,13 @@ def test_offer_repository_updates_by_marketplace_and_external_id() -> None:
 def test_offer_repository_preserves_meaningful_optional_values() -> None:
     repository = MemoryOfferRepository()
     product_id = uuid4()
+    rule_id = uuid4()
     original = make_offer(
         external_id="same",
         title="Old title",
+        catalog_hub_code="minecraft",
+        catalog_section_code="keys",
+        catalog_source_rule_id=rule_id,
         canonical_product_id=product_id,
     )
     incoming = ParsedOffer(
@@ -141,6 +151,9 @@ def test_offer_repository_preserves_meaningful_optional_values() -> None:
         seller_name=None,
         source_category_id=None,
         source_category_name=None,
+        catalog_hub_code=None,
+        catalog_section_code=None,
+        catalog_source_rule_id=None,
         canonical_product_id=None,
     )
 
@@ -237,6 +250,13 @@ def test_offer_observations_require_every_source_to_be_inactive() -> None:
     run_async(repository.save_observed(source_a, shared))
     run_async(repository.save_observed(source_b, shared))
 
+    assert tuple(
+        run_async(repository.list_by_integration(LEGACY_TENANT_ID, integration_a))
+    ) == (first, shared)
+    assert tuple(
+        run_async(repository.list_by_integration(LEGACY_TENANT_ID, integration_b))
+    ) == (shared,)
+
     deactivated = run_async(
         repository.reconcile_observations(
             _observation_context(integration_a, missing_at),
@@ -246,6 +266,12 @@ def test_offer_observations_require_every_source_to_be_inactive() -> None:
 
     assert deactivated == 1
     assert tuple(run_async(repository.list_all())) == (first, shared)
+    assert tuple(
+        run_async(repository.list_by_integration(LEGACY_TENANT_ID, integration_a))
+    ) == (first,)
+    assert tuple(
+        run_async(repository.list_by_integration(LEGACY_TENANT_ID, integration_b))
+    ) == (shared,)
 
     deactivated = run_async(
         repository.reconcile_observations(

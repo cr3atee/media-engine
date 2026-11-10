@@ -1,6 +1,7 @@
 """Public consumer read-side query contracts for Market Terminal."""
 
 from app.repositories.public_queries.contracts import (
+    PublicCatalogHubQueryRepository,
     PublicCategoryQueryRepository,
     PublicComparisonQueryRepository,
     PublicOfferQueryRepository,
@@ -9,6 +10,8 @@ from app.repositories.public_queries.contracts import (
     PublicProductQueryRepository,
 )
 from app.repositories.public_queries.models import (
+    CatalogHubRead,
+    CatalogSectionRead,
     CategoryRead,
     OfferSummaryRead,
     PriceChangeRead,
@@ -17,6 +20,7 @@ from app.repositories.public_queries.models import (
     ProductComparisonRead,
     ProductDetailRead,
     ProductSummaryRead,
+    PublicCatalogHubQuery,
     PublicCategoryQuery,
     PublicOfferQuery,
     PublicPriceChangeQuery,
@@ -35,6 +39,8 @@ from app.repositories.public_queries.repository_backed import (
 
 __all__ = [
     "CategoryRead",
+    "CatalogHubRead",
+    "CatalogSectionRead",
     "OfferSummaryRead",
     "PriceChangeRead",
     "PriceDifferenceRead",
@@ -44,6 +50,8 @@ __all__ = [
     "ProductSummaryRead",
     "PublicCategoryQuery",
     "PublicCategoryQueryRepository",
+    "PublicCatalogHubQuery",
+    "PublicCatalogHubQueryRepository",
     "PublicComparisonQueryRepository",
     "PublicOfferQuery",
     "PublicOfferQueryRepository",

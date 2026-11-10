@@ -36,10 +36,12 @@ from app.services.canonical_offer_review_queue import (
     CanonicalOfferReviewQueueService,
 )
 from app.services.canonical_product_proposals import CanonicalProductProposalService
+from app.services.catalog_classification import CatalogClassificationService
 from app.services.diagnostics import DiagnosticService
 from app.services.marketplace_integrations import MarketplaceIntegrationService
 from app.services.passwords import PasswordHasher
 from app.services.product_roles import ProductRoleService
+from app.services.public_catalog_hubs import PublicCatalogHubReadService
 from app.services.public_categories import PublicCategoryReadService
 from app.services.public_comparisons import PublicComparisonReadService
 from app.services.public_offers import PublicOfferReadService
@@ -197,6 +199,16 @@ async def get_public_category_read_service(
     return PublicCategoryReadService(repositories.categories)
 
 
+async def get_public_catalog_hub_read_service(
+    repositories: Annotated[
+        PublicReadRepositoryProvider,
+        Depends(get_public_read_repositories),
+    ],
+) -> PublicCatalogHubReadService:
+    """Build a public catalog-hub service from a request-scoped provider."""
+    return PublicCatalogHubReadService(repositories.catalog_hubs)
+
+
 async def get_admin_mutation_service(request: Request) -> AdminMutationService:
     """Build the guarded mutation service from the application scope factory."""
     factory = getattr(request.app.state, "repository_scope_factory", None)
@@ -223,6 +235,18 @@ async def get_marketplace_integration_service(
 ) -> MarketplaceIntegrationService:
     """Build the seller marketplace integration service from app repositories."""
     return MarketplaceIntegrationService(_repository_scope_factory(request))
+
+
+async def get_catalog_classification_service(
+    request: Request,
+) -> CatalogClassificationService:
+    """Build verified catalog classification from the shared taxonomy."""
+    from app.catalog.taxonomy import MVP_CATALOG_HUBS
+
+    return CatalogClassificationService(
+        _repository_scope_factory(request),
+        MVP_CATALOG_HUBS,
+    )
 
 
 async def get_canonical_offer_review_service(

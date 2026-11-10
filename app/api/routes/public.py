@@ -7,6 +7,7 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, Query, Request
 
 from app.api.dependencies import (
+    get_public_catalog_hub_read_service,
     get_public_category_read_service,
     get_public_comparison_read_service,
     get_public_offer_read_service,
@@ -16,6 +17,7 @@ from app.api.dependencies import (
 )
 from app.api.errors import ApiError
 from app.api.public_mappers import (
+    public_catalog_hub,
     public_category,
     public_comparison_result,
     public_offer_summary,
@@ -27,6 +29,8 @@ from app.api.public_mappers import (
 from app.api.routes.helpers import next_cursor, page_request
 from app.api.schemas.common import PageResponse
 from app.api.schemas.public import (
+    PublicCatalogHub,
+    PublicCatalogHubsQueryParams,
     PublicCategoriesQueryParams,
     PublicCategory,
     PublicComparisonResult,
@@ -41,12 +45,14 @@ from app.api.schemas.public import (
     PublicProductsQueryParams,
 )
 from app.repositories.public_queries.models import (
+    PublicCatalogHubQuery,
     PublicCategoryQuery,
     PublicOfferQuery,
     PublicPriceChangeQuery,
     PublicPriceHistoryQuery,
     PublicProductQuery,
 )
+from app.services.public_catalog_hubs import PublicCatalogHubReadService
 from app.services.public_categories import PublicCategoryReadService
 from app.services.public_comparisons import PublicComparisonReadService
 from app.services.public_offers import PublicOfferReadService
@@ -79,6 +85,8 @@ async def list_public_products(
         PublicProductQuery(
             search=search,
             category=params.category,
+            hub=params.hub,
+            section=params.section,
             marketplace=params.marketplace,
             min_price=params.min_price,
             max_price=params.max_price,
@@ -243,6 +251,28 @@ async def list_public_categories(
     )
     return PageResponse(
         items=[public_category(item) for item in result.items],
+        next_cursor=next_cursor(request, position=result.next_cursor),
+        page_size=page.limit,
+    )
+
+
+@router.get("/catalog-hubs", response_model=PageResponse[PublicCatalogHub])
+async def list_public_catalog_hubs(
+    request: Request,
+    params: Annotated[PublicCatalogHubsQueryParams, Depends()],
+    service: Annotated[
+        PublicCatalogHubReadService,
+        Depends(get_public_catalog_hub_read_service),
+    ],
+) -> PageResponse[PublicCatalogHub]:
+    """List verified game and service hubs represented in the public catalog."""
+    page = page_request(request, resource="public_catalog_hubs", params=params)
+    result = await service.list_catalog_hubs(
+        PublicCatalogHubQuery(marketplace=params.marketplace),
+        page,
+    )
+    return PageResponse(
+        items=[public_catalog_hub(item) for item in result.items],
         next_cursor=next_cursor(request, position=result.next_cursor),
         page_size=page.limit,
     )

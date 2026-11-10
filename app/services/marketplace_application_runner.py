@@ -10,6 +10,7 @@ from app.domain.tenancy import LEGACY_TENANT_ID
 from app.parsers.models import ParsedOffer
 from app.parsers.source_snapshot import SourceSnapshotEvidence
 from app.repositories.offers import OfferObservationContext
+from app.services.catalog_classification import CatalogClassificationService
 from app.services.marketplace_ingestion import MarketplaceIngestionResult
 from app.services.marketplace_pipeline import MarketplacePipeline
 from app.services.repository_scope import RepositoryScopeFactory
@@ -61,6 +62,7 @@ class MarketplaceApplicationRunner:
         pipeline: MarketplacePipeline,
         tenant_id: UUID = LEGACY_TENANT_ID,
         integration_id: UUID | None = None,
+        catalog_classification: CatalogClassificationService | None = None,
         source_snapshot_complete: bool = False,
         clock: Callable[[], datetime] | None = None,
     ) -> None:
@@ -71,6 +73,7 @@ class MarketplaceApplicationRunner:
         self._pipeline = pipeline
         self._tenant_id = tenant_id
         self._integration_id = integration_id
+        self._catalog_classification = catalog_classification
         self._source_snapshot_complete = source_snapshot_complete
         self._clock = clock or _utc_now
 
@@ -95,7 +98,6 @@ class MarketplaceApplicationRunner:
         parsed_offers = tuple(
             replace(offer, tenant_id=self._tenant_id) for offer in source_offers
         )
-        prepared = self._pipeline.prepare_offers(parsed_offers)
         observation_context = (
             OfferObservationContext(
                 tenant_id=self._tenant_id,
@@ -107,13 +109,37 @@ class MarketplaceApplicationRunner:
             else None
         )
 
-        async with self._repository_scope_factory() as repository_provider:
-            transactional = await self._pipeline.process_with_repositories(
-                prepared,
-                repository_provider,
-                observation_context=observation_context,
-                reconcile_missing_offers=source_evidence.complete,
-            )
+        if (
+            self._catalog_classification is not None
+            and self._integration_id is not None
+        ):
+            async with self._repository_scope_factory() as repository_provider:
+                classifications = (
+                    await self._catalog_classification.classify_with_repositories(
+                        repository_provider,
+                        self._tenant_id,
+                        self._integration_id,
+                        parsed_offers,
+                    )
+                )
+                prepared = self._pipeline.prepare_offers(
+                    tuple(result.apply() for result in classifications)
+                )
+                transactional = await self._pipeline.process_with_repositories(
+                    prepared,
+                    repository_provider,
+                    observation_context=observation_context,
+                    reconcile_missing_offers=source_evidence.complete,
+                )
+        else:
+            prepared = self._pipeline.prepare_offers(parsed_offers)
+            async with self._repository_scope_factory() as repository_provider:
+                transactional = await self._pipeline.process_with_repositories(
+                    prepared,
+                    repository_provider,
+                    observation_context=observation_context,
+                    reconcile_missing_offers=source_evidence.complete,
+                )
 
         return MarketplaceRunResult(
             marketplace=self._marketplace,

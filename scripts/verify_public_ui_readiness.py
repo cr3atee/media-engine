@@ -265,6 +265,12 @@ def _verify_terminal_shell(client: TestClient, violations: list[str]) -> int:
     )
     checks += _expect_contains(
         document.text,
+        'id="catalogHubList"',
+        "terminal game and service hub navigation",
+        violations,
+    )
+    checks += _expect_contains(
+        document.text,
         'id="loadMoreButton"',
         "terminal catalog pagination control",
         violations,
@@ -290,6 +296,7 @@ def _verify_terminal_shell(client: TestClient, violations: list[str]) -> int:
     for endpoint in (
         "/products?",
         "/categories?",
+        "/catalog-hubs?",
         "/price-changes?",
         "/products/${productId}",
         "/offers?",

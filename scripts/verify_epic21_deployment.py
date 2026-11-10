@@ -143,8 +143,10 @@ async def _verify_runtime(verifier: Verifier) -> None:
 def _verify_deployment_files(verifier: Verifier) -> None:
     compose_path = ROOT / "docker-compose.production.yml"
     environment_path = ROOT / "docker" / "production.env.example"
+    workflow_path = ROOT / ".github" / "workflows" / "quality.yml"
     dockerfile = (ROOT / "Dockerfile").read_text(encoding="utf-8")
     compose = compose_path.read_text(encoding="utf-8")
+    workflow = workflow_path.read_text(encoding="utf-8")
     command = [
         "docker",
         "compose",
@@ -201,7 +203,82 @@ def _verify_deployment_files(verifier: Verifier) -> None:
     verifier.check("check_worker_health.py" in compose, "worker health is configured")
     verifier.check("stop_grace_period" in compose, "shutdown grace is configured")
     verifier.check("metrics-collector" in compose, "textfile collection is configured")
+    release_service = compose.split("  catalog-release:\n", maxsplit=1)[1].split(
+        "\n  api:\n", maxsplit=1
+    )[0]
+    verifier.check(
+        'profiles: ["catalog-release"]' in release_service,
+        "catalog release has a dedicated opt-in profile",
+    )
+    verifier.check(
+        'entrypoint: [".venv/bin/python", '
+        '"scripts/run_catalog_promotion_release.py"]' in release_service,
+        "catalog release uses the guarded CLI",
+    )
+    verifier.check(
+        'restart: "no"' in release_service and "command: []" in release_service,
+        "catalog release is a one-shot preview by default",
+    )
+    verifier.check(
+        "ports:" not in release_service and "volumes:" not in release_service,
+        "catalog release exposes no ports or storage",
+    )
+    verifier.check(
+        "MEDIAENGINE_CATALOG_PROMOTION_APPLY: "
+        "${MEDIAENGINE_CATALOG_PROMOTION_APPLY:-}" in release_service,
+        "catalog release apply remains an external explicit guard",
+    )
     policy = _read_environment(environment_path)
+    verifier.check(
+        all(
+            name in policy and not policy[name]
+            for name in (
+                "MEDIAENGINE_CATALOG_PROMOTION_SOURCE_DATABASE_URL",
+                "MEDIAENGINE_CATALOG_PROMOTION_TARGET_DATABASE_URL",
+                "MEDIAENGINE_CATALOG_PROMOTION_SOURCE_TENANT_ID",
+                "MEDIAENGINE_CATALOG_PROMOTION_TARGET_TENANT_ID",
+                "MEDIAENGINE_CATALOG_PROMOTION_APPLY",
+                "MEDIAENGINE_CATALOG_PROMOTION_APPROVAL_PHRASE",
+            )
+        ),
+        "catalog release example contains no credentials or approvals",
+    )
+    verifier.check(
+        "permissions:\n  contents: read" in workflow,
+        "CI uses read-only repository permissions",
+    )
+    verifier.check(
+        "actions/checkout@v7.0.1" in workflow
+        and "actions/setup-python@v7.1.0" in workflow
+        and "astral-sh/setup-uv@v10.3.3" in workflow,
+        "CI actions use pinned Node 24-compatible releases",
+    )
+    verifier.check(
+        "uv sync --frozen --dev" in workflow,
+        "CI installs the frozen development environment",
+    )
+    verifier.check(
+        "git diff --name-only --diff-filter=ACMRT" in workflow
+        and 'ruff format --check "${files[@]}"' in workflow,
+        "CI lints and formats changed Python files",
+    )
+    verifier.check(
+        "mypy --explicit-package-bases" in workflow and "python -m pytest" in workflow,
+        "CI runs full typing and tests",
+    )
+    verifier.check(
+        "postgres:17.10" in workflow
+        and "verify_epic24_catalog_release_postgres.py" in workflow
+        and "epic24_release_source_ci" in workflow
+        and "epic24_release_target_ci" in workflow,
+        "CI verifies catalog release on isolated PostgreSQL databases",
+    )
+    verifier.check(
+        "secrets." not in workflow
+        and "@127.0.0.1:5432/epic24_release_source_ci" in workflow
+        and "@127.0.0.1:5432/epic24_release_target_ci" in workflow,
+        "CI catalog release does not consume production credentials",
+    )
     retry_budget = float(policy["WORKER_POLL_TIMEOUT_SECONDS"]) * (
         int(policy["WORKER_POLL_RETRY_COUNT"]) + 1
     ) + float(policy["WORKER_POLL_RETRY_DELAY_SECONDS"]) * int(

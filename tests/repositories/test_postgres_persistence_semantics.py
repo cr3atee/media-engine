@@ -22,6 +22,7 @@ from sqlalchemy.sql import ClauseElement
 from app.domain.price_snapshot import PriceSnapshot
 from app.models.canonical_offer_decision_record import CanonicalOfferDecisionRecord
 from app.models.canonical_product_record import CanonicalProductRecord
+from app.models.catalog_source_rule_record import CatalogSourceRuleRecord
 from app.models.offer import Offer
 from app.models.offer_source_observation_record import OfferSourceObservationRecord
 from app.models.price_snapshot_record import PriceSnapshotRecord
@@ -66,6 +67,10 @@ class RecordingResult:
         assert self._scalar is not None
         return self._scalar
 
+    def scalars(self) -> tuple[()]:
+        """Return no rows for read-query compilation tests."""
+        return ()
+
 
 def compile_postgres(statement: ClauseElement) -> str:
     """Compile a statement with the PostgreSQL dialect for assertions."""
@@ -87,6 +92,9 @@ def make_offer(*, external_id: str | None = "offer-1") -> ParsedOffer:
         seller_name="Seller",
         source_category_id="section-1",
         source_category_name="Digital keys",
+        catalog_hub_code="minecraft",
+        catalog_section_code="keys",
+        catalog_source_rule_id=UUID("10000000-0000-4000-8000-000000000501"),
     )
 
 
@@ -222,6 +230,57 @@ def test_offer_observation_metadata_is_source_scoped_and_ordered() -> None:
     )
 
 
+def test_offer_catalog_classification_metadata_is_tenant_safe() -> None:
+    """Classification fields form one complete tenant-owned source-rule link."""
+    table = cast(Table, Offer.__table__)
+    checks = {
+        constraint.name
+        for constraint in table.constraints
+        if isinstance(constraint, CheckConstraint)
+    }
+    assert "ck_offers_catalog_classification_complete" in checks
+
+    foreign_key = next(
+        constraint
+        for constraint in table.constraints
+        if constraint.name == "fk_offers_tenant_catalog_source_rule"
+    )
+    assert isinstance(foreign_key, ForeignKeyConstraint)
+    assert tuple(column.name for column in foreign_key.columns) == (
+        "tenant_id",
+        "catalog_source_rule_id",
+    )
+    assert tuple(element.target_fullname for element in foreign_key.elements) == (
+        "catalog_source_rules.tenant_id",
+        "catalog_source_rules.id",
+    )
+    assert foreign_key.ondelete == "RESTRICT"
+
+    index = next(
+        index
+        for index in table.indexes
+        if index.name == "ix_offers_tenant_catalog_classification"
+    )
+    assert tuple(column.name for column in index.columns) == (
+        "tenant_id",
+        "catalog_hub_code",
+        "catalog_section_code",
+    )
+    assert index.dialect_options["postgresql"]["where"] is not None
+
+    rule_table = cast(Table, CatalogSourceRuleRecord.__table__)
+    tenant_rule_identity = next(
+        constraint
+        for constraint in rule_table.constraints
+        if constraint.name == "uq_catalog_source_rules_tenant_id_id"
+    )
+    assert isinstance(tenant_rule_identity, UniqueConstraint)
+    assert tuple(column.name for column in tenant_rule_identity.columns) == (
+        "tenant_id",
+        "id",
+    )
+
+
 def test_snapshot_metadata_defines_exact_identity_and_history_index() -> None:
     table = cast(Table, PriceSnapshotRecord.__table__)
     exact_identity = next(
@@ -334,6 +393,9 @@ def test_offer_save_compiles_partial_identity_upsert() -> None:
     assert "price = coalesce(excluded.price, offers.price)" in sql
     assert "source_category_id = coalesce(" in sql
     assert "source_category_name = coalesce(" in sql
+    assert "catalog_hub_code = coalesce(" in sql
+    assert "catalog_section_code = coalesce(" in sql
+    assert "catalog_source_rule_id = coalesce(" in sql
     assert "canonical_product_id = coalesce(" in sql
 
 
@@ -365,6 +427,24 @@ def test_observed_offer_compiles_offer_and_source_upserts() -> None:
     assert "ON CONFLICT (tenant_id, integration_id, offer_id)" in observation_sql
     assert "greatest(" in observation_sql
     assert "least(" in observation_sql
+
+
+def test_offer_integration_listing_compiles_exact_source_scope() -> None:
+    session = RecordingSession()
+    repository = PostgresOfferRepository(cast(AsyncSession, session))
+    tenant_id = make_offer().tenant_id
+    integration_id = UUID("10000000-0000-4000-8000-000000000104")
+
+    assert (
+        tuple(run_async(repository.list_by_integration(tenant_id, integration_id)))
+        == ()
+    )
+
+    sql = compile_postgres(session.statements[0])
+    assert "JOIN offer_source_observations" in sql
+    assert "offer_source_observations.integration_id" in sql
+    assert "offer_source_observations.is_active IS true" in sql
+    assert "offers.manual_availability_status" in sql
 
 
 def test_snapshot_add_compiles_exact_conflict_suppression() -> None:
