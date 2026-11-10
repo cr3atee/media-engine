@@ -14,9 +14,14 @@ This document records notable Project Passport updates.
   isolated PostgreSQL `17.10` databases passed `12/12` release checks plus
   independent Alembic current/check and offline SQL. Added a dedicated one-shot
   production Compose profile with preview by default, no ports/storage, and
-  external-only operator values; deployment verification passes `31/31`.
-  Focused tests passed `20`, full Pytest passed `749` with `64` skips, and MyPy
-  checked `553` files. No production rollout was performed.
+  external-only operator values. Added a read-only GitHub Actions gate with
+  pinned Node 24-compatible actions, changed-file Ruff/format, full MyPy/Pytest,
+  deployment verification, and two disposable PostgreSQL release databases.
+  Initial run `42778551173` passed both jobs and release checks `12/12`;
+  deployment verification passes `38/38`, focused tests pass `21`, full Pytest
+  passes `750` with `64` skips, and MyPy checks `553` files. Repository-wide
+  Ruff/format retains `58`/`15` legacy findings. No production rollout was
+  performed.
 
 - Added EPIC 24's guarded atomic catalog importer. It accepts only an unchanged
   `ready` plan plus an exact target-bound approval phrase, recomputes target

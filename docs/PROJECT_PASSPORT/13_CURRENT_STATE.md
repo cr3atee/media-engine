@@ -931,6 +931,11 @@ passed `12/12`, including missing-guard rejection and fresh-engine duplicate-fre
 replay. The production Compose file now exposes this gate only as a separate
 one-shot `catalog-release` profile: preview is the default, apply remains
 explicit, no ports or storage are attached, and operator values stay outside
-Git. The deployment verifier passes `31/31`; full Pytest is `749 passed, 64
-skipped`; MyPy is clean across `553` files. No production database was changed;
-real target commissioning remains an operator action.
+Git. A read-only GitHub Actions gate now runs changed-file Ruff/format, full
+typing/tests/deployment verification, and a second PostgreSQL `17.10` job with
+two disposable release databases. Initial run `42778551173` passed both jobs,
+including release `12/12`; the expanded deployment verifier passes `38/38`,
+full Pytest is `750 passed, 64 skipped`, and MyPy is clean across `553` files.
+Repository-wide Ruff/format still expose `58` and `15` unrelated legacy
+findings, so only changed Python files are blocked today. No production database
+was changed; real target commissioning remains an operator action.

@@ -145,12 +145,16 @@ checks covering mutation-free preview, incomplete-guard rejection, guarded
 apply, source immutability, target convergence, immutable audit, public reads,
 fresh-engine replay, and duplicate prevention. Alembic `current` and `check`
 passed independently for source and target, and offline SQL generation passed.
-The follow-up production Compose integration verifier passed `31/31`, including
-normal deployment interpolation, dedicated-profile isolation, one-shot
-execution, no exposed ports/storage, and empty committed operator values.
-Focused tests passed `20`; full Pytest passed `749` with `64` guarded skips;
-Ruff, format, and strict MyPy across `553` files passed. Temporary databases,
-container, and volume were removed. No production state was used.
+The follow-up production Compose and CI integration verifier passed `38/38`,
+including normal deployment interpolation, dedicated-profile isolation,
+one-shot execution, no exposed ports/storage, empty committed operator values,
+and read-only GitHub permissions. GitHub Actions run `42778551173` passed both
+the Python quality job and the PostgreSQL catalog-release job; the latter
+repeated the `12/12` release verification on two disposable databases and
+removed its container. Focused tests passed `21`; full Pytest passed `750` with
+`64` guarded skips; changed-file Ruff/format and strict MyPy across `553` files
+passed. Repository-wide Ruff/format still report `58` and `15` unrelated legacy
+findings and are not represented as clean. No production state was used.
 
 ## Remaining Operator Action
 

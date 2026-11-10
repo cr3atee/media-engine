@@ -248,6 +248,12 @@ def _verify_deployment_files(verifier: Verifier) -> None:
         "CI uses read-only repository permissions",
     )
     verifier.check(
+        "actions/checkout@v7.0.1" in workflow
+        and "actions/setup-python@v7.1.0" in workflow
+        and "astral-sh/setup-uv@v10.3.3" in workflow,
+        "CI actions use pinned Node 24-compatible releases",
+    )
+    verifier.check(
         "uv sync --frozen --dev" in workflow,
         "CI installs the frozen development environment",
     )

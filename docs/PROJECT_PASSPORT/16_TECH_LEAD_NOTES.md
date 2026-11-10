@@ -330,6 +330,11 @@ This document captures architecture notes that are important for future reviews.
   restart policy, and must never join normal API/worker startup. Supply all
   database URLs, tenant IDs, and apply guards from an operator-controlled file
   outside source control.
+- Keep CI read-only and production-independent. Every PR must run full strict
+  typing/tests plus changed-file Ruff/format, while the catalog release uses
+  two disposable loopback PostgreSQL databases. The current changed-file lint
+  boundary is explicit technical debt containment, not a claim that the legacy
+  tree is fully clean; repository-wide Ruff/format still report `58`/`15`.
 
 ## Review Notes
 

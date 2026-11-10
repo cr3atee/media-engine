@@ -435,7 +435,9 @@ serialization, public-read verification, tenant isolation, and fresh-engine
 persistence are verified on isolated PostgreSQL. Production target promotion
 has not been performed and remains an explicit operator release action. A
 dedicated production Compose profile now provides the same preview-first,
-guarded one-shot command without coupling it to API or worker startup.
+guarded one-shot command without coupling it to API or worker startup. GitHub
+now gates the integration PR with full tests/type checking and a disposable
+two-database PostgreSQL release verification.
 
 ## Not Present Yet
 

@@ -193,6 +193,9 @@ def test_quality_workflow_is_read_only_and_uses_isolated_postgres() -> None:
     )
 
     assert "permissions:\n  contents: read" in workflow
+    assert "actions/checkout@v7.0.1" in workflow
+    assert "actions/setup-python@v7.1.0" in workflow
+    assert "astral-sh/setup-uv@v10.3.3" in workflow
     assert "uv sync --frozen --dev" in workflow
     assert "mypy --explicit-package-bases" in workflow
     assert "python -m pytest" in workflow
