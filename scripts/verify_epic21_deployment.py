@@ -143,8 +143,10 @@ async def _verify_runtime(verifier: Verifier) -> None:
 def _verify_deployment_files(verifier: Verifier) -> None:
     compose_path = ROOT / "docker-compose.production.yml"
     environment_path = ROOT / "docker" / "production.env.example"
+    workflow_path = ROOT / ".github" / "workflows" / "quality.yml"
     dockerfile = (ROOT / "Dockerfile").read_text(encoding="utf-8")
     compose = compose_path.read_text(encoding="utf-8")
+    workflow = workflow_path.read_text(encoding="utf-8")
     command = [
         "docker",
         "compose",
@@ -240,6 +242,36 @@ def _verify_deployment_files(verifier: Verifier) -> None:
             )
         ),
         "catalog release example contains no credentials or approvals",
+    )
+    verifier.check(
+        "permissions:\n  contents: read" in workflow,
+        "CI uses read-only repository permissions",
+    )
+    verifier.check(
+        "uv sync --frozen --dev" in workflow,
+        "CI installs the frozen development environment",
+    )
+    verifier.check(
+        "git diff --name-only --diff-filter=ACMRT" in workflow
+        and 'ruff format --check "${files[@]}"' in workflow,
+        "CI lints and formats changed Python files",
+    )
+    verifier.check(
+        "mypy --explicit-package-bases" in workflow and "python -m pytest" in workflow,
+        "CI runs full typing and tests",
+    )
+    verifier.check(
+        "postgres:17.10" in workflow
+        and "verify_epic24_catalog_release_postgres.py" in workflow
+        and "epic24_release_source_ci" in workflow
+        and "epic24_release_target_ci" in workflow,
+        "CI verifies catalog release on isolated PostgreSQL databases",
+    )
+    verifier.check(
+        "secrets." not in workflow
+        and "@127.0.0.1:5432/epic24_release_source_ci" in workflow
+        and "@127.0.0.1:5432/epic24_release_target_ci" in workflow,
+        "CI catalog release does not consume production credentials",
     )
     retry_budget = float(policy["WORKER_POLL_TIMEOUT_SECONDS"]) * (
         int(policy["WORKER_POLL_RETRY_COUNT"]) + 1

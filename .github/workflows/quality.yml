@@ -1,0 +1,155 @@
+name: Quality
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: quality-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  quality:
+    name: Python quality and tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Set up uv
+        uses: astral-sh/setup-uv@v6
+        with:
+          version: "0.13.1"
+          enable-cache: true
+
+      - name: Install frozen dependencies
+        run: uv sync --frozen --dev
+
+      - name: Lint changed Python files
+        shell: bash
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        run: |
+          if [[ "${GITHUB_EVENT_NAME}" == "pull_request" ]]; then
+            mapfile -t files < <(
+              git diff --name-only --diff-filter=ACMRT \
+                "${BASE_SHA}...${GITHUB_SHA}" -- "*.py"
+            )
+          else
+            mapfile -t files < <(
+              git diff-tree --no-commit-id --name-only \
+                --diff-filter=ACMRT -r "${GITHUB_SHA}" -- "*.py"
+            )
+          fi
+          if (( ${#files[@]} == 0 )); then
+            echo "No changed Python files."
+            exit 0
+          fi
+          printf "Checking %s changed Python files.\n" "${#files[@]}"
+          .venv/bin/python -m ruff check "${files[@]}"
+          .venv/bin/python -m ruff format --check "${files[@]}"
+
+      - name: Run strict MyPy
+        run: >-
+          .venv/bin/python -m mypy --explicit-package-bases
+          app scripts tests alembic
+
+      - name: Run full Pytest
+        run: .venv/bin/python -m pytest
+
+      - name: Verify production deployment wiring
+        run: .venv/bin/python scripts/verify_epic21_deployment.py
+
+  catalog-release-postgres:
+    name: Catalog release on PostgreSQL
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    needs: quality
+    env:
+      POSTGRES_PASSWORD: mediaengine-ci-only
+      SOURCE_DATABASE: epic24_release_source_ci
+      TARGET_DATABASE: epic24_release_target_ci
+      SOURCE_DATABASE_URL: postgresql+asyncpg://postgres:mediaengine-ci-only@127.0.0.1:5432/epic24_release_source_ci
+      TARGET_DATABASE_URL: postgresql+asyncpg://postgres:mediaengine-ci-only@127.0.0.1:5432/epic24_release_target_ci
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Set up uv
+        uses: astral-sh/setup-uv@v6
+        with:
+          version: "0.13.1"
+          enable-cache: true
+
+      - name: Install frozen dependencies
+        run: uv sync --frozen --dev
+
+      - name: Start isolated PostgreSQL
+        run: |
+          docker run --detach --rm \
+            --name mediaengine-ci-postgres \
+            --env POSTGRES_PASSWORD="${POSTGRES_PASSWORD}" \
+            --publish 127.0.0.1:5432:5432 \
+            postgres:17.10
+          for attempt in {1..30}; do
+            if docker exec mediaengine-ci-postgres \
+              pg_isready --username postgres --dbname postgres; then
+              exit 0
+            fi
+            sleep 1
+          done
+          echo "PostgreSQL did not become ready." >&2
+          exit 1
+
+      - name: Create isolated release databases
+        run: |
+          docker exec mediaengine-ci-postgres \
+            createdb --username postgres "${SOURCE_DATABASE}"
+          docker exec mediaengine-ci-postgres \
+            createdb --username postgres "${TARGET_DATABASE}"
+
+      - name: Apply and verify migrations
+        run: |
+          for database_url in \
+            "${SOURCE_DATABASE_URL}" \
+            "${TARGET_DATABASE_URL}"; do
+            DATABASE_URL="${database_url}" .venv/bin/alembic upgrade head
+            DATABASE_URL="${database_url}" .venv/bin/alembic current
+            DATABASE_URL="${database_url}" .venv/bin/alembic check
+          done
+
+      - name: Verify guarded catalog release
+        env:
+          EPIC24_RELEASE_SOURCE_DATABASE_URL: ${{ env.SOURCE_DATABASE_URL }}
+          EPIC24_RELEASE_TARGET_DATABASE_URL: ${{ env.TARGET_DATABASE_URL }}
+        run: .venv/bin/python scripts/verify_epic24_catalog_release_postgres.py
+
+      - name: Generate offline migration SQL
+        env:
+          DATABASE_URL: ${{ env.SOURCE_DATABASE_URL }}
+        run: .venv/bin/alembic upgrade head --sql > /tmp/mediaengine-upgrade.sql
+
+      - name: Stop isolated PostgreSQL
+        if: always()
+        run: docker rm --force mediaengine-ci-postgres || true

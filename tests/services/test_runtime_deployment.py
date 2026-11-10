@@ -185,3 +185,22 @@ def test_catalog_release_environment_example_contains_no_operator_values() -> No
         "MEDIAENGINE_CATALOG_PROMOTION_REASON",
     ):
         assert f"{variable}=\n" in environment
+
+
+def test_quality_workflow_is_read_only_and_uses_isolated_postgres() -> None:
+    workflow = (ROOT / ".github" / "workflows" / "quality.yml").read_text(
+        encoding="utf-8"
+    )
+
+    assert "permissions:\n  contents: read" in workflow
+    assert "uv sync --frozen --dev" in workflow
+    assert "mypy --explicit-package-bases" in workflow
+    assert "python -m pytest" in workflow
+    assert "verify_epic21_deployment.py" in workflow
+    assert "verify_epic24_catalog_release_postgres.py" in workflow
+    assert "postgres:17.10" in workflow
+    assert "epic24_release_source_ci" in workflow
+    assert "epic24_release_target_ci" in workflow
+    assert "secrets." not in workflow
+    assert "@127.0.0.1:5432/epic24_release_source_ci" in workflow
+    assert "@127.0.0.1:5432/epic24_release_target_ci" in workflow
