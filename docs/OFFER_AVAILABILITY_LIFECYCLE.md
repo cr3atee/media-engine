@@ -16,9 +16,13 @@ parsed count, an optional declared total, a completeness decision, and its
 reason. A successful HTTP request or a non-empty first page is never treated as
 proof of completeness.
 
-The 2026-10-29 live category check verifies GGSEL `110/110` through the current
-public `/buybox/goods` pagination contract and FunPay `1442/1442` through its
-closed unpaginated showcase. Both adapters can therefore enable
+The 2026-10-29 live category check verified GGSEL `110/110` through the public
+category pagination contract available at that time and FunPay `1442/1442`
+through its closed unpaginated showcase. On 2026-11-13 the GGSEL adapter was
+updated for the current public `/elastic/goods/categories` POST contract; a
+read-only EPIC 25 run proved complete `80/80`, `30/30`, and `305/305` snapshots
+for the ExitLag, Duolingo, and Spotify launch categories. Both adapters can
+therefore enable
 integration-scoped reconciliation for those complete responses. Playerok now
 traverses bounded GraphQL cursors and verifies the final cursor, `totalCount`,
 parser coverage, and unique identities before returning complete evidence. The
