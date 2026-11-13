@@ -92,6 +92,8 @@ _INFERENCE_MARKERS: Final[tuple[tuple[CatalogCategoryCode, tuple[str, ...]], ...
             "playstation plus",
             "ps plus",
             "discord nitro",
+            "exitlag",
+            "duolingo",
             "spotify premium",
             "telegram premium",
         ),

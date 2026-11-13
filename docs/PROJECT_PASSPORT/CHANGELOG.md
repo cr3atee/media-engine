@@ -6,6 +6,14 @@ This document records notable Project Passport updates.
 
 ## Unreleased
 
+- Started EPIC 25 with a bounded three-product launch assortment: one-month
+  ExitLag, Duolingo Super, and Spotify Premium Individual. Added the three
+  service hubs to the shared taxonomy, retained Minecraft compatibility for
+  saved rules, and classified explicit service titles as subscriptions. No
+  offer, price, URL, or discount was fabricated; real-source collection and
+  three explicit review decisions remain the next gate. Focused taxonomy/API
+  tests pass `25`.
+
 - Added EPIC 24's two-phase cross-environment catalog release gate. Preview is
   read-only; apply requires matching database identity, backup and monitoring
   attestations, exact digest/target approval, actor, request, idempotency key,
