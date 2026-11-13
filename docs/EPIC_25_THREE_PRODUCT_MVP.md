@@ -58,8 +58,22 @@ appear in the first release merely to fill the catalog.
 
 ## Current Status
 
-Task 1 is implemented in the working branch: the three service hubs are part of
-the shared taxonomy and explicit ExitLag/Duolingo/Spotify titles resolve to the
-subscription category. Existing Minecraft taxonomy remains available for saved
-rules but is not part of this launch assortment. Real offer collection and the
-three human review decisions remain outstanding.
+The three service hubs are part of the shared taxonomy and explicit
+ExitLag/Duolingo/Spotify titles resolve to the subscription category. Existing
+Minecraft taxonomy remains available for saved rules but is not part of this
+launch assortment.
+
+On 2026-11-13 the guarded read-only verifier used GGSEL's current public
+`/elastic/goods/categories` contract and proved complete category snapshots for
+all three launch sources: ExitLag `80/80`, Duolingo `30/30`, and Spotify
+`305/305`. It found `13`, `1`, and `9` exact one-month candidates respectively.
+The selected evidence examples contained stable IDs, titles, sellers, RUB
+prices, currencies, source categories, and outbound product URLs that each
+returned HTTP `200`. The run persisted nothing and made no review decision.
+Focused verification passes `19` tests; changed-file Ruff and format pass, full
+Pytest passes `766` with `64` guarded skips, and strict MyPy passes across `530`
+source files.
+
+The remaining gates are the three explicit human review decisions, creation or
+linking of exactly three canonical products, guarded target promotion, and the
+three-card browser acceptance run.

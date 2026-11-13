@@ -6,13 +6,24 @@ This document records notable Project Passport updates.
 
 ## Unreleased
 
+- Replaced GGSEL's retired `/buybox/goods` category request with the current
+  public `/elastic/goods/categories` POST contract while preserving bounded
+  pagination, stable-total, duplicate-identity, and completeness guards. Added
+  a guarded read-only EPIC 25 verifier that performs no persistence or review
+  mutations. The live run proved ExitLag `80/80`, Duolingo `30/30`, and Spotify
+  `305/305`, found exact one-month candidates for all `3/3` products, and
+  received HTTP `200` from each selected outbound URL. Focused verification
+  passes `19` tests; changed-file Ruff/format, full Pytest (`766 passed, 64
+  skipped`), and strict MyPy (`530` files) pass. Human review, canonical linking,
+  target promotion, and public browser acceptance remain outstanding.
+
 - Started EPIC 25 with a bounded three-product launch assortment: one-month
   ExitLag, Duolingo Super, and Spotify Premium Individual. Added the three
   service hubs to the shared taxonomy, retained Minecraft compatibility for
   saved rules, and classified explicit service titles as subscriptions. No
-  offer, price, URL, or discount was fabricated; real-source collection and
-  three explicit review decisions remain the next gate. Focused taxonomy/API
-  tests pass `25`.
+  offer, price, URL, or discount was fabricated. Public GGSEL source evidence
+  is now verified for all three products; three explicit review decisions
+  remain the next gate. Focused taxonomy/API tests pass `25`.
 
 - Added EPIC 24's two-phase cross-environment catalog release gate. Preview is
   read-only; apply requires matching database identity, backup and monitoring

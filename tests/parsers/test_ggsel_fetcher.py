@@ -54,16 +54,26 @@ def test_fetcher_traverses_complete_category() -> None:
     assert extraction.evidence.complete is True
     assert extraction.evidence.expected_items == 3
     assert fetcher.pages_fetched == 2
-    assert client.gets[0]["url"] == GGSelFetcher.CATEGORY_API_URL
-    assert client.gets[0]["params"] == {
+    assert client.posts[0]["url"] == GGSelFetcher.CATEGORY_API_URL
+    assert client.posts[0]["json"] == {
         "url": "minecraft-keys-pc",
         "lang": "en",
         "limit": 60,
         "page": 1,
         "sort": "sortByRec",
         "currency": "wmz",
+        "content_type_ids": [],
+        "search_after": [],
+        "with_filters": False,
+        "is_preorders": False,
+        "ab_test_without_emoji": False,
+        "query_string": "",
+        "with_forbidden": False,
+        "min_price": "",
+        "max_price": "",
+        "platforms": [],
     }
-    assert client.gets[1]["params"]["page"] == 2
+    assert client.posts[1]["json"]["page"] == 2
 
 
 def test_fetcher_rejects_duplicate_products_across_pages() -> None:
@@ -133,7 +143,7 @@ def test_fetcher_rejects_unsupported_category_url(url: str) -> None:
     with pytest.raises(GGSelFetchError, match="source URL is unsupported"):
         run_async(fetcher.fetch_complete_category(url))
 
-    assert client.gets == []
+    assert client.posts == []
 
 
 class _QueueHttpClient:
@@ -141,8 +151,8 @@ class _QueueHttpClient:
 
     def __init__(self, responses: list[httpx.Response]) -> None:
         self._responses = iter(responses)
-        self.gets: list[dict[str, Any]] = []
+        self.posts: list[dict[str, Any]] = []
 
-    async def get(self, url: str, **kwargs: Any) -> httpx.Response:
-        self.gets.append({"url": url, **kwargs})
+    async def post(self, url: str, **kwargs: Any) -> httpx.Response:
+        self.posts.append({"url": url, **kwargs})
         return next(self._responses)

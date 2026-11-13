@@ -335,6 +335,12 @@ This document captures architecture notes that are important for future reviews.
   two disposable loopback PostgreSQL databases. The current changed-file lint
   boundary is explicit technical debt containment, not a claim that the legacy
   tree is fully clean; repository-wide Ruff/format still report `58`/`15`.
+- Treat marketplace HTTP contracts as observed external interfaces rather than
+  permanent APIs. GGSEL retired the former category endpoint without changing
+  the business boundary. Keep its current `/elastic/goods/categories` request
+  isolated in `GGSelFetcher`, retain completeness and identity checks, and use
+  the guarded EPIC 25 live verifier before trusting launch evidence. Never turn
+  a successful source check into an automatic canonical-product decision.
 
 ## Review Notes
 

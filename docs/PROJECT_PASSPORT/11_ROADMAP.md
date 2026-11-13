@@ -455,8 +455,10 @@ two-database PostgreSQL release verification.
 
 Limit the first public assortment to ExitLag, Duolingo Super, and Spotify
 Premium Individual with one-month plans: three canonical products in total.
-Collect and review real offers, then provide managed source/target
-database access and tenant identities, verify the real target backup and
-monitoring stack, and apply only the exact approved three-product digest. Do not
-invent links or prices, bulk-confirm `NO_MATCH` offers, lower matching
-thresholds, copy secrets, or include deferred longer-duration plans.
+Live read-only GGSEL collection now proves exact one-month candidates for all
+three products. Review those offers, create or link exactly three canonical
+products, then provide managed source/target database access and tenant
+identities, verify the real target backup and monitoring stack, and apply only
+the exact approved three-product digest. Do not invent links or prices,
+bulk-confirm `NO_MATCH` offers, lower matching thresholds, copy secrets, or
+include deferred longer-duration plans.

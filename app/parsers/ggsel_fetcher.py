@@ -26,7 +26,7 @@ class GGSelFetchError(RuntimeError):
 class GGSelFetcher:
     """Fetches raw GGSEL data without converting it into domain objects."""
 
-    CATEGORY_API_URL = "https://api.ggsel.com/buybox/goods"
+    CATEGORY_API_URL = "https://api.ggsel.com/elastic/goods/categories"
     CATEGORY_PAGE_SIZE = 60
     DEFAULT_MAX_PAGES = 50
     CATEGORY_HEADERS = {
@@ -129,15 +129,25 @@ class GGSelFetcher:
 
         for page in range(1, self._max_pages + 1):
             try:
-                response = await self._http_client.get(
+                response = await self._http_client.post(
                     self.CATEGORY_API_URL,
-                    params={
+                    json={
                         "url": source.slug,
                         "lang": source.language,
                         "limit": self.CATEGORY_PAGE_SIZE,
                         "page": page,
                         "sort": "sortByRec",
                         "currency": source.currency,
+                        "content_type_ids": [],
+                        "search_after": [],
+                        "with_filters": False,
+                        "is_preorders": False,
+                        "ab_test_without_emoji": False,
+                        "query_string": "",
+                        "with_forbidden": False,
+                        "min_price": "",
+                        "max_price": "",
+                        "platforms": [],
                     },
                     headers=self.CATEGORY_HEADERS,
                 )

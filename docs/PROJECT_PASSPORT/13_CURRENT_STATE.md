@@ -946,5 +946,11 @@ three service hubs now exist in the shared taxonomy with the stable
 `subscriptions` section, and explicit service titles resolve to that category.
 Existing Minecraft rules remain compatible but Minecraft is outside the launch
 assortment. Focused taxonomy and seller API verification passes `25` tests.
-Real offer collection, three explicit human review decisions, target promotion,
-and three-card browser acceptance remain outstanding.
+The current GGSEL category API and guarded read-only verifier now prove complete
+live source coverage for ExitLag `80/80`, Duolingo `30/30`, and Spotify
+`305/305`; exact one-month candidates exist for all three launch products and
+their selected outbound URLs return HTTP `200`. No source result was persisted
+or auto-approved. Focused checks pass `19` tests, full Pytest passes `766` with
+`64` guarded skips, and strict MyPy passes `530` files. Three explicit human
+review decisions, exact canonical linking, target promotion, and three-card
+browser acceptance remain outstanding.
