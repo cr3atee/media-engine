@@ -168,7 +168,24 @@ def test_catalog_source_rules_are_tenant_scoped_and_versioned() -> None:
     )
 
     assert taxonomy.status_code == 200
-    assert taxonomy.json() == {
+    taxonomy_hubs = taxonomy.json()["hubs"]
+    assert [hub["code"] for hub in taxonomy_hubs[:3]] == [
+        "exitlag",
+        "duolingo",
+        "spotify",
+    ]
+    assert [hub["name"] for hub in taxonomy_hubs[:3]] == [
+        "ExitLag",
+        "Duolingo",
+        "Spotify",
+    ]
+    assert all(
+        len(hub["sections"]) == 1
+        and hub["sections"][0]["code"] == "subscriptions"
+        and hub["sections"][0]["offer_type"] == "subscriptions"
+        for hub in taxonomy_hubs[:3]
+    )
+    assert {"hubs": taxonomy_hubs[3:]} == {
         "hubs": [
             {
                 "code": "minecraft",

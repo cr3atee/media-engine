@@ -451,11 +451,12 @@ two-database PostgreSQL release verification.
 
 ## Recommended Next EPIC
 
-**Target-environment commissioning and guarded catalog rollout.**
+**EPIC 25 - Three Product MVP.**
 
-Provide managed source/target database access and tenant identities, verify the
-real target backup and monitoring stack, refresh target marketplace evidence,
-and review the existing release gate's fresh preview. Apply only the exact
-approved digest. Do not invent links, bulk-confirm `NO_MATCH` offers, lower
-matching thresholds, copy secrets, or enable authenticated sources before
-reviewed credential delivery exists.
+Limit the first public assortment to ExitLag, Duolingo Super, and Spotify
+Premium Individual with one-month plans: three canonical products in total.
+Collect and review real offers, then provide managed source/target
+database access and tenant identities, verify the real target backup and
+monitoring stack, and apply only the exact approved three-product digest. Do not
+invent links or prices, bulk-confirm `NO_MATCH` offers, lower matching
+thresholds, copy secrets, or include deferred longer-duration plans.

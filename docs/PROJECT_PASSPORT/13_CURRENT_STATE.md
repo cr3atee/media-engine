@@ -939,3 +939,12 @@ full Pytest is `750 passed, 64 skipped`, and MyPy is clean across `553` files.
 Repository-wide Ruff/format still expose `58` and `15` unrelated legacy
 findings, so only changed Python files are blocked today. No production database
 was changed; real target commissioning remains an operator action.
+
+EPIC 25 narrows the first public catalog to three subscription products:
+one-month ExitLag, Duolingo Super, and Spotify Premium Individual plans. The
+three service hubs now exist in the shared taxonomy with the stable
+`subscriptions` section, and explicit service titles resolve to that category.
+Existing Minecraft rules remain compatible but Minecraft is outside the launch
+assortment. Focused taxonomy and seller API verification passes `25` tests.
+Real offer collection, three explicit human review decisions, target promotion,
+and three-card browser acceptance remain outstanding.
