@@ -136,3 +136,31 @@ and revocation of reads and writes for an already-issued access token. The
 revocation cases verify that no decision was persisted. Focused auth/catalog/UI
 test run: **26 passed**. These tests use isolated memory repositories and do not
 claim a new PostgreSQL permissions migration or four-product-role implementation.
+
+## EPIC 25 review preparation (2026-11-21)
+
+Creating a new product now requires an editable canonical name in the UI. The
+dialog repeats that exact name, the API accepts it as an optional compatible
+field, and the service includes it in idempotency while retaining the raw source
+title. Empty and overlong names are rejected without product/link/audit writes.
+Classification management follows the review queues visually; background
+workspace loading no longer disables logout.
+
+The updated browser fixture verifier passes **79 checks**, including the new
+name field, inline empty-name feedback, exact dialog/payload name, disabled
+control restoration, and stale-response protection after logout. Desktop and
+mobile-dialog screenshots were inspected. One initial run timed out on CDP
+`Runtime.evaluate` during mobile emulation; the repeat passed without a code
+change. No fixture decision reached PostgreSQL.
+
+Separately, the real `--epic25-live-data` runner was executed twice after
+restarting an isolated PostgreSQL 17 database. Both runs exposed **3 offers,
+3 proposals, 0 links and 0 decisions**. Fresh queries confirmed three persisted
+integrations/rules with the correct service hub and subscriptions section.
+Alembic current/check pass at `0025_catalog_promotion_audit`.
+
+Focused tests pass **66**, full Pytest **773 passed / 64 skipped**, strict MyPy
+including Alembic **556 files**, changed-file Ruff/format and Node syntax checks
+pass, and deployment verification passes **38/38**. The three actual human
+decisions, target promotion, and final three-card public acceptance are not
+covered by fixture UI checks and remain pending.

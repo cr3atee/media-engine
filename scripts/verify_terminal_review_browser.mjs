@@ -82,6 +82,10 @@ async function intercept({ requestId, request }) {
   } else if (path.endsWith("/context")) {
     const selected = path.split("/")[4];
     body = { tenant_id: selected, tenant_name: selected === tenant ? "Проверка интерфейса (fixture)" : "Второе пространство (fixture)", role: forbidden ? "viewer" : "owner", permissions: forbidden ? [] : ["catalog_review"] };
+  } else if (path.endsWith("/catalog/classification/taxonomy")) {
+    body = { hubs: [] };
+  } else if (path.endsWith("/marketplace-integrations")) {
+    body = [];
   } else if (path.endsWith("/onboarding-workspace")) {
     if (workspaceError) { responseCode = workspaceError.status; body = { error: { code: workspaceError.code } }; }
     else if (expireOnce) { expireOnce = false; responseCode = 401; }
@@ -403,17 +407,23 @@ try {
   await click('[data-external-id="fixture-missing"] summary');
   await chooseDecision(missingSource, "create-product");
   await check("new product requires one of five categories", `!document.querySelector('${missingSource} .decision-category').hidden && document.querySelector('${missingSource} .review-category').required && document.querySelectorAll('${missingSource} .review-category option').length === 6`);
+  await check("new product exposes editable canonical name", `!document.querySelector('${missingSource} [data-canonical-name-field]').hidden && document.querySelector('${missingSource} .review-canonical-name').required && document.querySelector('${missingSource} .review-canonical-name').value.length > 0`);
   await check("new product choice makes comment optional", `!document.querySelector('${missingSource} textarea').required && document.querySelector('${missingSource} [data-reason-label]').textContent.includes('созданию')`);
   await click(`${missingSource} [data-submit-decision]`);
   await check("missing category is rejected before confirmation", `!document.querySelector("dialog").open && document.querySelector('${missingSource} .category-error').textContent.includes('пяти категорий') && document.activeElement.matches('${missingSource} .review-category')`);
   await chooseCategory(missingSource);
+  await evaluate(`document.querySelector('${missingSource} .review-canonical-name').value=''`);
+  await click(`${missingSource} [data-submit-decision]`);
+  await check("missing canonical name is rejected before confirmation", `!document.querySelector("dialog").open && document.querySelector('${missingSource} .canonical-name-error').textContent.length > 0 && document.activeElement.matches('${missingSource} .review-canonical-name')`);
+  await evaluate(`document.querySelector('${missingSource} .review-canonical-name').value='Launch Product - 1 month';document.querySelector('${missingSource} .review-canonical-name').dispatchEvent(new Event("input", {bubbles:true}))`);
   await click(`${missingSource} [data-submit-decision]`);
   await until('document.querySelector("dialog").open');
-  await check("create names product and selected category", 'document.querySelector("#decisionTargetLabel").textContent === "Новый товар" && document.querySelector("#decisionTargetId").textContent.includes("Игры и предметы") && document.querySelector("#decisionFacts").textContent.includes("не добавлен")');
+  await check("create names product and selected category", 'document.querySelector("#decisionTargetLabel").textContent === "Новый товар" && document.querySelector("#decisionTarget").textContent === "Launch Product - 1 month" && document.querySelector("#decisionTargetId").textContent.includes("Игры и предметы") && document.querySelector("#decisionFacts").textContent.includes("не добавлен")');
   mutationStatus = 503;
   await submit();
   await until('document.querySelector("[data-external-id=fixture-missing] .card-message").textContent.length > 0');
   assert.equal(JSON.parse(mutations.at(-1).postData).category, "games"); checks++;
+  assert.equal(JSON.parse(mutations.at(-1).postData).canonical_name, "Launch Product - 1 month"); checks++;
   await check("failure does not enable unavailable target", 'document.querySelector("[data-external-id=fixture-missing] .resolve").disabled');
   mutationStatus = 200;
   await openDecision(missingSource, "create-product");

@@ -13,7 +13,7 @@ from dataclasses import dataclass, replace
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, cast
-from uuid import UUID
+from uuid import UUID, uuid5
 
 from alembic.config import Config
 from sqlalchemy.engine import make_url
@@ -23,6 +23,8 @@ from alembic import command
 if TYPE_CHECKING:
     from fastapi import FastAPI
 
+    from app.catalog.hierarchy import CatalogSourceRule
+    from app.domain.marketplace_integrations import MarketplaceIntegration
     from app.parsers.models import ParsedOffer
     from app.services.repository_scope import RepositoryScopeFactory
 
@@ -37,6 +39,8 @@ USER_ID = UUID("45000000-0000-4000-8000-000000000002")
 MEMBERSHIP_ID = UUID("45000000-0000-4000-8000-000000000003")
 REVIEW_EMAIL = "reviewer@catalog.local"
 REVIEW_PASSWORD = "catalog review local"
+_REVIEW_INTEGRATION_NAMESPACE = UUID("45000000-0000-4000-8000-000000000010")
+_REVIEW_RULE_NAMESPACE = UUID("45000000-0000-4000-8000-000000000011")
 
 
 @dataclass(slots=True, frozen=True)
@@ -46,6 +50,7 @@ class RunnerArguments:
     port: int
     check: bool
     aligned_live_data: bool
+    epic25_live_data: bool
 
 
 @dataclass(slots=True, frozen=True)
@@ -59,6 +64,16 @@ class ReviewSeedSummary:
     def offer_count(self) -> int:
         """Return the number of unique offers in this seed operation."""
         return sum(count for _, count in self.offers_by_marketplace)
+
+
+@dataclass(slots=True, frozen=True)
+class LoadedReviewBatch:
+    """Source-backed offers and exact persistence metadata for review."""
+
+    offers: tuple[ParsedOffer, ...]
+    mode: str
+    integrations: tuple[MarketplaceIntegration, ...] = ()
+    source_rules: tuple[CatalogSourceRule, ...] = ()
 
 
 def parse_args(argv: Sequence[str] | None = None) -> RunnerArguments:
@@ -80,7 +95,8 @@ def parse_args(argv: Sequence[str] | None = None) -> RunnerArguments:
         action="store_true",
         help="Seed and verify the workspace without starting Uvicorn.",
     )
-    parser.add_argument(
+    source_group = parser.add_mutually_exclusive_group()
+    source_group.add_argument(
         "--aligned-live-data",
         action="store_true",
         help=(
@@ -88,11 +104,20 @@ def parse_args(argv: Sequence[str] | None = None) -> RunnerArguments:
             "flag, captured real payloads are used."
         ),
     )
+    source_group.add_argument(
+        "--epic25-live-data",
+        action="store_true",
+        help=(
+            "Fetch only the three source-verified EPIC 25 launch offers for "
+            "manual review."
+        ),
+    )
     namespace = parser.parse_args(argv)
     return RunnerArguments(
         port=cast(int, namespace.port),
         check=cast(bool, namespace.check),
         aligned_live_data=cast(bool, namespace.aligned_live_data),
+        epic25_live_data=cast(bool, namespace.epic25_live_data),
     )
 
 
@@ -138,10 +163,17 @@ async def _run(arguments: RunnerArguments, database_url: str) -> int:
     session_factory = async_sessionmaker(engine, expire_on_commit=False)
     repository_scope = create_postgres_repository_scope(session_factory)
     try:
-        offers, mode = await _load_offers(
+        batch = await _load_offers(
             aligned_live_data=arguments.aligned_live_data,
+            epic25_live_data=arguments.epic25_live_data,
         )
-        summary = await _seed_database(repository_scope, offers, mode=mode)
+        summary = await _seed_database(
+            repository_scope,
+            batch.offers,
+            mode=batch.mode,
+            integrations=batch.integrations,
+            source_rules=batch.source_rules,
+        )
         application = create_app(
             admin_api_settings=AdminApiSettings(
                 api_enabled=False,
@@ -189,7 +221,80 @@ async def _run(arguments: RunnerArguments, database_url: str) -> int:
 async def _load_offers(
     *,
     aligned_live_data: bool,
-) -> tuple[tuple[ParsedOffer, ...], str]:
+    epic25_live_data: bool,
+) -> LoadedReviewBatch:
+    if epic25_live_data:
+        from app.catalog.hierarchy import CatalogSourceRule
+        from app.core.http_client import HttpClient
+        from app.domain.marketplace_integrations import (
+            MarketplaceIntegration,
+            MarketplaceIntegrationStatus,
+        )
+        from scripts.verify_epic25_ggsel_sources import (
+            fetch_verified_launch_sources,
+        )
+
+        async with HttpClient(timeout=30.0, max_retries=2) as http_client:
+            verified = await fetch_verified_launch_sources(http_client)
+        now = datetime.now(UTC)
+        launch_offers: list[ParsedOffer] = []
+        integrations: list[MarketplaceIntegration] = []
+        source_rules: list[CatalogSourceRule] = []
+        for result in verified:
+            source_category_id = result.offer.source_category_id
+            if source_category_id is None:
+                raise RuntimeError(
+                    f"{result.spec.name} has no source category identity."
+                )
+            integration_id = uuid5(
+                _REVIEW_INTEGRATION_NAMESPACE,
+                f"{TENANT_ID}:ggsel:{result.spec.category_url}",
+            )
+            rule_id = uuid5(
+                _REVIEW_RULE_NAMESPACE,
+                f"{TENANT_ID}:{integration_id}:ggsel:{source_category_id}",
+            )
+            integrations.append(
+                MarketplaceIntegration(
+                    id=integration_id,
+                    tenant_id=TENANT_ID,
+                    marketplace="ggsel",
+                    display_name=f"GGSEL {result.spec.name}",
+                    source_url=result.spec.category_url,
+                    enabled=True,
+                    status=MarketplaceIntegrationStatus.ACTIVE,
+                    created_at=now,
+                    updated_at=now,
+                )
+            )
+            source_rules.append(
+                CatalogSourceRule(
+                    id=rule_id,
+                    tenant_id=TENANT_ID,
+                    integration_id=integration_id,
+                    marketplace="ggsel",
+                    source_category_id=source_category_id,
+                    hub_code=result.spec.hub_code,
+                    section_code=result.spec.section_code,
+                    created_at=now,
+                    updated_at=now,
+                )
+            )
+            launch_offers.append(
+                replace(
+                    result.offer,
+                    catalog_hub_code=result.spec.hub_code,
+                    catalog_section_code=result.spec.section_code,
+                    catalog_source_rule_id=rule_id,
+                )
+            )
+        return LoadedReviewBatch(
+            offers=tuple(launch_offers),
+            mode="three source-verified EPIC 25 launch offers",
+            integrations=tuple(integrations),
+            source_rules=tuple(source_rules),
+        )
+
     if aligned_live_data:
         from scripts.run_catalog_review_preview import (
             _select_aligned_review_offers,
@@ -202,7 +307,10 @@ async def _load_offers(
         offers = _select_aligned_review_offers(batches)
         if not offers:
             raise RuntimeError("Aligned live sources produced no reviewable batch.")
-        return offers, "bounded aligned live review batch"
+        return LoadedReviewBatch(
+            offers=offers,
+            mode="bounded aligned live review batch",
+        )
 
     from scripts.verify_marketplace_data_readiness import (
         load_saved_marketplace_offers,
@@ -216,7 +324,10 @@ async def _load_offers(
     )
     if not offers:
         raise RuntimeError("Captured marketplace payloads contain no offers.")
-    return offers, "captured real marketplace payloads"
+    return LoadedReviewBatch(
+        offers=offers,
+        mode="captured real marketplace payloads",
+    )
 
 
 async def _seed_database(
@@ -224,6 +335,8 @@ async def _seed_database(
     offers: tuple[ParsedOffer, ...],
     *,
     mode: str,
+    integrations: tuple[MarketplaceIntegration, ...] = (),
+    source_rules: tuple[CatalogSourceRule, ...] = (),
 ) -> ReviewSeedSummary:
     from app.domain.auth import PasswordCredential
     from app.domain.tenancy import Membership, Tenant, TenantRole, User
@@ -246,6 +359,11 @@ async def _seed_database(
             )
         elif tenant.slug != "catalog-launch-review":
             raise RuntimeError("Catalog-review tenant ID belongs to another tenant.")
+
+        for integration in integrations:
+            await repositories.marketplace_integrations.save(integration)
+        for rule in source_rules:
+            await repositories.catalog_source_rules.save(rule)
 
         user = await repositories.users.get_by_email(REVIEW_EMAIL)
         if user is None:

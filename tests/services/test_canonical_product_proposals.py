@@ -110,6 +110,59 @@ def test_confirmation_creates_links_audits_and_replays_atomically() -> None:
     run_async(scenario())
 
 
+def test_confirmation_uses_explicit_reviewed_canonical_name() -> None:
+    """A reviewer can replace marketplace copy with a clean catalog name."""
+
+    async def scenario() -> None:
+        provider = create_memory_provider()
+        offer = _offer(title="Vendor SEO title with delivery claims")
+        await provider.offers.save(TENANT_A_ID, offer)
+        service = _service(create_memory_repository_scope(provider))
+
+        confirmed = await service.confirm(
+            _command(
+                offer,
+                canonical_name="  Stardew Valley - Complete Edition  ",
+            ),
+            _context("reviewed-name"),
+        )
+
+        assert confirmed.product.name == "Stardew Valley - Complete Edition"
+        assert confirmed.offer.title == "Vendor SEO title with delivery claims"
+
+    run_async(scenario())
+
+
+@pytest.mark.parametrize("canonical_name", ["", "   ", "x" * 256])
+def test_confirmation_rejects_invalid_name_without_writes(canonical_name: str) -> None:
+    """Invalid reviewed names cannot create a product, link, or audit record."""
+
+    async def scenario() -> None:
+        provider = create_memory_provider()
+        offer = _offer()
+        await provider.offers.save(TENANT_A_ID, offer)
+        service = _service(create_memory_repository_scope(provider))
+
+        with pytest.raises(CanonicalProductProposalUnavailableError):
+            await service.confirm(
+                _command(offer, canonical_name=canonical_name),
+                _context("invalid-name"),
+            )
+
+        assert not await provider.canonical_products.list_by_tenant(TENANT_A_ID)
+        stored = await provider.offers.get_by_identity(
+            TENANT_A_ID, offer.marketplace, offer.external_id
+        )
+        assert stored is not None
+        assert stored.canonical_product_id is None
+        assert offer.external_id is not None
+        assert not await provider.canonical_offer_decisions.list_for_offer(
+            TENANT_A_ID, offer.marketplace, offer.external_id
+        )
+
+    run_async(scenario())
+
+
 def test_confirmation_rejects_idempotency_fingerprint_reuse() -> None:
     async def scenario() -> None:
         provider = create_memory_provider()
@@ -127,6 +180,11 @@ def test_confirmation_rejects_idempotency_fingerprint_reuse() -> None:
         with pytest.raises(CanonicalOfferReviewIdempotencyConflictError):
             await service.confirm(
                 _command(offer, category="keys"),
+                context,
+            )
+        with pytest.raises(CanonicalOfferReviewIdempotencyConflictError):
+            await service.confirm(
+                _command(offer, canonical_name="Different catalog name"),
                 context,
             )
 
@@ -469,6 +527,7 @@ def _command(
     offer: ParsedOffer,
     *,
     category: CatalogCategoryCode = "games",
+    canonical_name: str | None = None,
     reason: str | None = "Verified source product",
 ) -> ConfirmCanonicalProductProposalCommand:
     return ConfirmCanonicalProductProposalCommand(
@@ -477,6 +536,7 @@ def _command(
         marketplace="ggsel",
         external_id="proposal-offer",
         category=category,
+        canonical_name=canonical_name,
         reason=reason,
     )
 

@@ -479,8 +479,11 @@ def test_review_uses_shared_presentation_and_explicit_pair_confirmation() -> Non
     assert 'from "/terminal/preview/presentation.js"' in script
     assert "window.confirm" not in script
     assert (
-        'async function confirmDecision(card, action, reason, category = "")' in script
+        'async function confirmDecision(card, action, reason, category = "", '
+        'canonicalName = "")' in script
     )
+    assert "payload.canonical_name = canonicalName" in script
+    assert "validateCanonicalProductName(card, action)" in script
     assert 'code: "games", name: "Игры и предметы"' in script
     assert "Выберите одну из пяти категорий." in script
     assert "tenantId === state.activeTenantId" in script

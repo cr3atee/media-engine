@@ -293,6 +293,7 @@ def test_product_proposal_confirmation_is_atomic_audited_and_idempotent() -> Non
     payload = {
         "marketplace": "playerok",
         "external_id": "offer-proposal",
+        "canonical_name": "  Stardew   Valley Complete  ",
         "category": "games",
         "reason": "Verified source product",
     }
@@ -320,6 +321,11 @@ def test_product_proposal_confirmation_is_atomic_audited_and_idempotent() -> Non
         confirm_url,
         headers=headers,
         json={**payload, "category": "keys"},
+    )
+    name_conflict = client.post(
+        confirm_url,
+        headers=headers,
+        json={**payload, "canonical_name": "Different catalog name"},
     )
     invalid_category = client.post(
         confirm_url,
@@ -383,6 +389,8 @@ def test_product_proposal_confirmation_is_atomic_audited_and_idempotent() -> Non
     assert "fingerprint" not in conflict.text.lower()
     assert category_conflict.status_code == 409
     assert category_conflict.json()["error"]["code"] == "idempotency_conflict"
+    assert name_conflict.status_code == 409
+    assert name_conflict.json()["error"]["code"] == "idempotency_conflict"
     assert invalid_category.status_code == 422
     assert empty_queue.status_code == 200
     assert empty_queue.json() == []

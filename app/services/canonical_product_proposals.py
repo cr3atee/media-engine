@@ -44,6 +44,7 @@ class ConfirmCanonicalProductProposalCommand:
     marketplace: str
     external_id: str
     category: CatalogCategoryCode
+    canonical_name: str | None = None
     reason: str | None = None
 
 
@@ -125,11 +126,25 @@ class CanonicalProductProposalService:
         """Create, link, and audit one still-current no-match proposal."""
         marketplace = command.marketplace.strip().lower()
         external_id = command.external_id.strip()
+        requested_name = (
+            " ".join(command.canonical_name.split())
+            if command.canonical_name is not None
+            else None
+        )
+        if requested_name == "" or (
+            requested_name is not None and len(requested_name) > 255
+        ):
+            raise CanonicalProductProposalUnavailableError(
+                "Canonical product name is invalid."
+            )
         category = resolve_catalog_category(command.category)
         if category is None:
             raise CanonicalProductCategoryUnavailableError(
                 "Canonical product category is outside the configured taxonomy."
             )
+        qualifiers: dict[str, str] = {"category": category.code}
+        if requested_name is not None:
+            qualifiers["canonical_name"] = requested_name
         fingerprint = build_canonical_offer_decision_fingerprint(
             tenant_id=command.tenant_id,
             marketplace=marketplace,
@@ -139,7 +154,7 @@ class CanonicalProductProposalService:
             actor_id=context.actor_id,
             actor_type=context.actor_type,
             reason=command.reason,
-            qualifiers={"category": category.code},
+            qualifiers=qualifiers,
         )
         async with self._repository_scope_factory() as repositories:
             decisions = repositories.canonical_offer_decisions
@@ -192,7 +207,8 @@ class CanonicalProductProposalService:
                 external_id=external_id,
                 matching_service=self._matching_service,
             )
-            if len(proposal.proposed_name) > 255:
+            product_name = requested_name or proposal.proposed_name
+            if len(product_name) > 255:
                 raise CanonicalProductProposalUnavailableError(
                     "Canonical product proposal name exceeds storage limits."
                 )
@@ -204,7 +220,7 @@ class CanonicalProductProposalService:
             product = CanonicalProduct(
                 id=command.proposal_id,
                 tenant_id=command.tenant_id,
-                name=proposal.proposed_name,
+                name=product_name,
                 category=category.name,
                 aliases=(),
             )

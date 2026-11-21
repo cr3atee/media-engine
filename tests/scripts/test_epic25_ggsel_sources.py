@@ -104,6 +104,15 @@ def test_snapshot_ready_validation_rejects_untrusted_url() -> None:
         validate_snapshot_ready_offer(offer)
 
 
+def test_launch_specs_define_exact_catalog_destination() -> None:
+    """Dedicated source categories map to one explicit hub and section."""
+    assert tuple((spec.hub_code, spec.section_code) for spec in LAUNCH_PRODUCTS) == (
+        ("exitlag", "subscriptions"),
+        ("duolingo", "subscriptions"),
+        ("spotify", "subscriptions"),
+    )
+
+
 def _offer(
     *,
     external_id: str,
