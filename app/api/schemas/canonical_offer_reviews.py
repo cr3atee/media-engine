@@ -58,11 +58,15 @@ class ConfirmCanonicalProductProposalRequest(ApiModel):
 
     marketplace: str = Field(min_length=1, max_length=64)
     external_id: str = Field(min_length=1, max_length=255)
+    canonical_name: str | None = Field(default=None, min_length=1, max_length=255)
     category: CatalogCategoryCode
     reason: str | None = Field(default=None, max_length=2000)
 
     _normalize_marketplace = field_validator("marketplace")(_nonempty_text)
     _normalize_external_id = field_validator("external_id")(_nonempty_text)
+    _normalize_canonical_name = field_validator("canonical_name")(
+        _optional_nonempty_text
+    )
     _normalize_reason = field_validator("reason")(_optional_nonempty_text)
 
 

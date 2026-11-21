@@ -954,3 +954,18 @@ or auto-approved. Focused checks pass `19` tests, full Pytest passes `766` with
 `64` guarded skips, and strict MyPy passes `530` files. Three explicit human
 review decisions, exact canonical linking, target promotion, and three-card
 browser acceptance remain outstanding.
+
+On 2026-11-21 the existing PostgreSQL review runner gained an explicit
+`--epic25-live-data` mode for the three verified monthly offers. Deterministic
+tenant integrations and source-category rules precede classified offer writes.
+After a database restart, two live runs retained `3 offers / 3 proposals /
+0 decisions`, with `3 integrations / 3 rules` and correct subscription hubs.
+The review API/UI now accepts an explicit clean canonical name, preserves the
+raw title, and fingerprints the reviewed name for idempotency; omitted API
+names retain the previous behavior. No human review decision was automated.
+Full Pytest passes `773` with `64` skips; focused tests pass `66`; strict MyPy
+including Alembic passes `556` files; changed-file Ruff/format pass. The review
+browser passes `79` fixture-only checks on repeat after one CDP timeout;
+deployment checks pass `38/38`. Alembic current/check pass at
+`0025_catalog_promotion_audit`. Three real review decisions, target promotion,
+and final public-catalog acceptance remain pending, not completed.

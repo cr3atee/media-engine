@@ -74,6 +74,42 @@ Focused verification passes `19` tests; changed-file Ruff and format pass, full
 Pytest passes `766` with `64` guarded skips, and strict MyPy passes across `530`
 source files.
 
-The remaining gates are the three explicit human review decisions, creation or
+### Three-product review preparation (2026-11-21)
+
+`scripts/run_catalog_review_postgres.py --epic25-live-data` now loads only the
+three source-verified launch examples into the existing isolated PostgreSQL
+review workspace. It uses the existing loopback/database-name guard and is
+mutually exclusive with `--aligned-live-data`. The runner persists three
+deterministic tenant-owned integrations and source-category rules before saving
+classified offers; no database constraint was weakened. It does not approve a
+proposal or fabricate a price, duration, seller, or URL.
+
+The reviewer can now supply a clean canonical product name rather than copying
+marketplace advertising into the public catalog. The UI requires a nonempty
+name, repeats it in the confirmation dialog, and includes it in the request.
+The service normalizes whitespace, rejects invalid names, includes an explicit
+name in the idempotency fingerprint, and preserves the original offer title.
+Clients omitting the optional API field retain the existing fallback behavior.
+
+Verification on 2026-11-21:
+
+- The isolated PostgreSQL 17 review database was restarted and the live runner
+  executed twice. Both runs exposed `3 offers / 0 linked / 3 proposals /
+  0 decisions`; fresh reads showed exactly `3 integrations / 3 source rules`
+  and the correct hub and `subscriptions` section on every offer.
+- Alembic current is `0025_catalog_promotion_audit`; `alembic check` detected no
+  new upgrade operations. No migration or production mutation was required.
+- Focused tests: `66 passed`; full Pytest: `773 passed, 64 skipped`.
+  Guarded skips are not claimed as passed. The existing Starlette/httpx
+  deprecation warning remains unchanged.
+- Strict MyPy passes `556` files including Alembic; changed-file Ruff and format
+  pass. Deployment verification passes `38/38`.
+- Review browser verification passes `79` fixture-only checks. The first run
+  hit a CDP `Runtime.evaluate` timeout during mobile emulation; a repeat passed
+  without a code change. Desktop and mobile-dialog screenshots were inspected.
+  These are not real catalog decisions or final public three-card acceptance.
+
+The remaining gates are three explicit human review decisions, creation or
 linking of exactly three canonical products, guarded target promotion, and the
-three-card browser acceptance run.
+three-card public browser acceptance run. Marketplace sources must be refreshed
+before promotion. This preparation does not mark EPIC 25 released.

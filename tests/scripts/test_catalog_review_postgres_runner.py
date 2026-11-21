@@ -24,6 +24,7 @@ def test_runner_defaults_to_captured_data_and_loopback_port() -> None:
     assert arguments.port == 8001
     assert arguments.check is False
     assert arguments.aligned_live_data is False
+    assert arguments.epic25_live_data is False
 
 
 def test_runner_accepts_explicit_live_check() -> None:
@@ -32,6 +33,20 @@ def test_runner_accepts_explicit_live_check() -> None:
     assert arguments.port == 8101
     assert arguments.check is True
     assert arguments.aligned_live_data is True
+    assert arguments.epic25_live_data is False
+
+
+def test_runner_accepts_three_product_live_review_mode() -> None:
+    arguments = parse_args(["--epic25-live-data", "--check"])
+
+    assert arguments.check is True
+    assert arguments.aligned_live_data is False
+    assert arguments.epic25_live_data is True
+
+
+def test_runner_rejects_two_live_source_modes() -> None:
+    with pytest.raises(SystemExit):
+        parse_args(["--aligned-live-data", "--epic25-live-data"])
 
 
 @pytest.mark.parametrize("host", ["localhost", "127.0.0.1", "::1"])

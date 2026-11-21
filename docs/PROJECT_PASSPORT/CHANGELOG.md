@@ -6,6 +6,19 @@ This document records notable Project Passport updates.
 
 ## Unreleased
 
+- Prepared the three-offer EPIC 25 PostgreSQL review mode and editable canonical
+  product names. Tenant-owned source integrations/rules are persisted before
+  classified offers, while canonical creation/linking still requires a human
+  decision. Explicit names participate in idempotency and do not alter raw
+  source titles. Review queues precede classification controls; background
+  loading no longer disables logout. On 2026-11-21 two live runs after database
+  restart retained `3 offers / 3 proposals / 0 decisions`; fresh reads found
+  `3 integrations / 3 rules`. Alembic current/check pass at `0025`. Focused tests
+  pass `66`, full Pytest `773` with `64` guarded skips, MyPy `556` files, and
+  changed-file Ruff/format pass. Browser fixtures pass `79` checks on repeat
+  after one CDP timeout; deployment verification passes `38/38`. Public release
+  and the three actual review decisions remain outstanding.
+
 - Replaced GGSEL's retired `/buybox/goods` category request with the current
   public `/elastic/goods/categories` POST contract while preserving bounded
   pagination, stable-total, duplicate-identity, and completeness guards. Added

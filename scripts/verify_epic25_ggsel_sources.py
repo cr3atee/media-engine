@@ -36,8 +36,10 @@ class LaunchProductSpec:
     """Describe source evidence required for one launch product."""
 
     name: str
+    hub_code: str
     category_url: str
     required_phrases: tuple[str, ...]
+    section_code: str = "subscriptions"
     forbidden_phrases: tuple[str, ...] = ()
 
 
@@ -55,16 +57,19 @@ class VerifiedSource:
 LAUNCH_PRODUCTS = (
     LaunchProductSpec(
         name="ExitLag - 1 month",
+        hub_code="exitlag",
         category_url="https://ggsel.net/en/catalog/exitlag",
         required_phrases=("exitlag",),
     ),
     LaunchProductSpec(
         name="Duolingo Super - 1 month",
+        hub_code="duolingo",
         category_url="https://ggsel.net/en/catalog/duolingo-keys",
         required_phrases=("duolingo", "super"),
     ),
     LaunchProductSpec(
         name="Spotify Premium Individual - 1 month",
+        hub_code="spotify",
         category_url="https://ggsel.net/en/catalog/spotify-premium",
         required_phrases=("spotify", "premium", "individual"),
         forbidden_phrases=("duo", "family", "student"),
@@ -138,7 +143,7 @@ async def main() -> int:
 
     try:
         async with HttpClient(timeout=30.0, max_retries=2) as http_client:
-            results = await _verify_sources(http_client)
+            results = await fetch_verified_launch_sources(http_client)
     except (Epic25SourceVerificationError, GGSelFetchError) as exc:
         print(f"FAIL: {exc}")
         return 1
@@ -161,7 +166,10 @@ async def main() -> int:
     return 0
 
 
-async def _verify_sources(http_client: HttpClient) -> tuple[VerifiedSource, ...]:
+async def fetch_verified_launch_sources(
+    http_client: HttpClient,
+) -> tuple[VerifiedSource, ...]:
+    """Return source-backed launch examples after complete live verification."""
     fetcher = GGSelFetcher(http_client)
     extractor = GGSelExtractor()
     normalizer = OfferNormalizer(marketplace="ggsel")

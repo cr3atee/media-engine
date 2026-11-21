@@ -260,6 +260,7 @@ async def confirm_canonical_product_proposal(
                 marketplace=payload.marketplace,
                 external_id=payload.external_id,
                 category=payload.category,
+                canonical_name=payload.canonical_name,
                 reason=payload.reason,
             ),
             CanonicalOfferReviewContext(
