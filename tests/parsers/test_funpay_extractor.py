@@ -63,6 +63,35 @@ def test_funpay_extractor_deduplicates_offers_by_external_id() -> None:
     assert offers[0].currency == "RUB"
 
 
+def test_funpay_extractor_preserves_structured_source_parameters() -> None:
+    """Terms stay source evidence and never become an inferred canonical link."""
+    html = """
+    <html><body><div class="showcase-table">
+      <a href="/lots/offer?id=1" class="tc-item" data-offer="1"
+         data-f-type="pc" data-f-time="1 месяц" data-f-method="цифровой код">
+        <div class="tc-desc-text">Monthly code</div>
+        <div class="tc-price" data-s="790"><div>790 ₽</div></div>
+      </a>
+    </div></body></html>
+    """
+    extractor = FunPayExtractor()
+    with_parameters = extractor.extract_with_parameters(html)
+    original_contract = extractor.extract_with_evidence(html)
+
+    assert with_parameters.evidence == original_contract.evidence
+    assert with_parameters.evidence.complete
+    assert (
+        tuple(item.offer for item in with_parameters.items) == original_contract.items
+    )
+    assert dict(with_parameters.items[0].parameters) == {
+        "f-type": "pc",
+        "f-time": "1 месяц",
+        "f-method": "цифровой код",
+        "offer": "1",
+    }
+    assert with_parameters.items[0].offer.canonical_product_id is None
+
+
 def test_funpay_extractor_ignores_links_without_offer_id() -> None:
     """Navigation links are not treated as marketplace offers."""
     html = '<a href="/lots/221/">Minecraft</a>'

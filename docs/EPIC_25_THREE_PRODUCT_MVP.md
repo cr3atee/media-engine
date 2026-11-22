@@ -195,3 +195,19 @@ replay, startup commands and exact limitations.
 Local first-version transfer and browser gates are complete for user acceptance.
 Public production deployment, licensed public brand use, automatic local polling
 and delivery-method filtering are not claimed complete.
+
+### FunPay evidence and review (2026-11-22)
+
+The three subscription categories are reachable through the existing FunPay
+integration. Structured listing parameters are now available beside the existing
+ParsedOffer contract and screened for period, device/tier, fulfillment, title
+conflicts and availability. Only an ExitLag PC monthly digital-code candidate
+was queued in the isolated review database, without creating a link or product.
+Two runs retained `4 offers / 3 links / 1 proposal / 3 decisions`; existing
+GGSEL/product/decision checksums and the published local catalog are unchanged.
+Duolingo plan/method and Spotify fulfillment are not yet verified as equivalent.
+This is candidate screening, not a completed runtime delivery-method schema or
+automatic comparison guard. Focused tests pass `50`, full Pytest `822` with `65`
+guarded skips, MyPy `564` files, and focused Ruff/format pass. PostgreSQL
+post-review verification passes `55/55`; Alembic remains `0026` with no drift.
+See [FunPay evidence and the one manual review action](EPIC_25_FUNPAY_REVIEW.md).

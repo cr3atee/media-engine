@@ -51,6 +51,7 @@ class RunnerArguments:
     check: bool
     aligned_live_data: bool
     epic25_live_data: bool
+    epic25_funpay_data: bool = False
 
 
 @dataclass(slots=True, frozen=True)
@@ -74,6 +75,17 @@ class LoadedReviewBatch:
     mode: str
     integrations: tuple[MarketplaceIntegration, ...] = ()
     source_rules: tuple[CatalogSourceRule, ...] = ()
+
+
+@dataclass(slots=True, frozen=True)
+class ReviewSourceOffer:
+    """One source-backed launch offer and its explicit catalog destination."""
+
+    offer: ParsedOffer
+    category_url: str
+    name: str
+    hub_code: str
+    section_code: str = "subscriptions"
 
 
 def parse_args(argv: Sequence[str] | None = None) -> RunnerArguments:
@@ -112,12 +124,18 @@ def parse_args(argv: Sequence[str] | None = None) -> RunnerArguments:
             "manual review."
         ),
     )
+    source_group.add_argument(
+        "--epic25-funpay-data",
+        action="store_true",
+        help="Queue verified FunPay launch candidates for human review; never link.",
+    )
     namespace = parser.parse_args(argv)
     return RunnerArguments(
         port=cast(int, namespace.port),
         check=cast(bool, namespace.check),
         aligned_live_data=cast(bool, namespace.aligned_live_data),
         epic25_live_data=cast(bool, namespace.epic25_live_data),
+        epic25_funpay_data=cast(bool, namespace.epic25_funpay_data),
     )
 
 
@@ -166,6 +184,7 @@ async def _run(arguments: RunnerArguments, database_url: str) -> int:
         batch = await _load_offers(
             aligned_live_data=arguments.aligned_live_data,
             epic25_live_data=arguments.epic25_live_data,
+            epic25_funpay_data=arguments.epic25_funpay_data,
         )
         summary = await _seed_database(
             repository_scope,
@@ -222,77 +241,57 @@ async def _load_offers(
     *,
     aligned_live_data: bool,
     epic25_live_data: bool,
+    epic25_funpay_data: bool = False,
 ) -> LoadedReviewBatch:
-    if epic25_live_data:
-        from app.catalog.hierarchy import CatalogSourceRule
+    if epic25_funpay_data:
         from app.core.http_client import HttpClient
-        from app.domain.marketplace_integrations import (
-            MarketplaceIntegration,
-            MarketplaceIntegrationStatus,
+        from scripts.verify_epic25_funpay_sources import fetch_funpay_launch_sources
+
+        async with HttpClient(timeout=30, max_retries=1) as http_client:
+            results = await fetch_funpay_launch_sources(http_client)
+        sources: list[ReviewSourceOffer] = []
+        for result in results:
+            if result.selected is None:
+                print(
+                    f"{result.spec.name}: no verified delivery-method candidate "
+                    "for equivalence review."
+                )
+                continue
+            sources.append(
+                ReviewSourceOffer(
+                    offer=result.selected.offer,
+                    category_url=result.spec.category_url,
+                    name=result.spec.name,
+                    hub_code=result.spec.hub_code,
+                )
+            )
+        if not sources:
+            raise RuntimeError("FunPay returned no safe launch review candidates.")
+        return _classified_launch_batch(
+            sources,
+            mode="FunPay launch candidates awaiting human equivalence review",
         )
+
+    if epic25_live_data:
+        from app.core.http_client import HttpClient
         from scripts.verify_epic25_ggsel_sources import (
             fetch_verified_launch_sources,
         )
 
         async with HttpClient(timeout=30.0, max_retries=2) as http_client:
             verified = await fetch_verified_launch_sources(http_client)
-        now = datetime.now(UTC)
-        launch_offers: list[ParsedOffer] = []
-        integrations: list[MarketplaceIntegration] = []
-        source_rules: list[CatalogSourceRule] = []
-        for result in verified:
-            source_category_id = result.offer.source_category_id
-            if source_category_id is None:
-                raise RuntimeError(
-                    f"{result.spec.name} has no source category identity."
-                )
-            integration_id = uuid5(
-                _REVIEW_INTEGRATION_NAMESPACE,
-                f"{TENANT_ID}:ggsel:{result.spec.category_url}",
-            )
-            rule_id = uuid5(
-                _REVIEW_RULE_NAMESPACE,
-                f"{TENANT_ID}:{integration_id}:ggsel:{source_category_id}",
-            )
-            integrations.append(
-                MarketplaceIntegration(
-                    id=integration_id,
-                    tenant_id=TENANT_ID,
-                    marketplace="ggsel",
-                    display_name=f"GGSEL {result.spec.name}",
-                    source_url=result.spec.category_url,
-                    enabled=True,
-                    status=MarketplaceIntegrationStatus.ACTIVE,
-                    created_at=now,
-                    updated_at=now,
-                )
-            )
-            source_rules.append(
-                CatalogSourceRule(
-                    id=rule_id,
-                    tenant_id=TENANT_ID,
-                    integration_id=integration_id,
-                    marketplace="ggsel",
-                    source_category_id=source_category_id,
+        return _classified_launch_batch(
+            [
+                ReviewSourceOffer(
+                    offer=result.offer,
+                    category_url=result.spec.category_url,
+                    name=result.spec.name,
                     hub_code=result.spec.hub_code,
                     section_code=result.spec.section_code,
-                    created_at=now,
-                    updated_at=now,
                 )
-            )
-            launch_offers.append(
-                replace(
-                    result.offer,
-                    catalog_hub_code=result.spec.hub_code,
-                    catalog_section_code=result.spec.section_code,
-                    catalog_source_rule_id=rule_id,
-                )
-            )
-        return LoadedReviewBatch(
-            offers=tuple(launch_offers),
+                for result in verified
+            ],
             mode="three source-verified EPIC 25 launch offers",
-            integrations=tuple(integrations),
-            source_rules=tuple(source_rules),
         )
 
     if aligned_live_data:
@@ -327,6 +326,79 @@ async def _load_offers(
     return LoadedReviewBatch(
         offers=offers,
         mode="captured real marketplace payloads",
+    )
+
+
+def _classified_launch_batch(
+    sources: Sequence[ReviewSourceOffer],
+    *,
+    mode: str,
+) -> LoadedReviewBatch:
+    """Reuse tenant source metadata for either marketplace without creating links."""
+    from app.catalog.hierarchy import CatalogSourceRule
+    from app.domain.marketplace_integrations import (
+        MarketplaceIntegration,
+        MarketplaceIntegrationStatus,
+    )
+
+    now = datetime.now(UTC)
+    offers: list[ParsedOffer] = []
+    integrations: list[MarketplaceIntegration] = []
+    rules: list[CatalogSourceRule] = []
+    for source in sources:
+        offer = source.offer
+        category_id = offer.source_category_id
+        if category_id is None:
+            raise RuntimeError(f"{source.name} has no source category identity.")
+        if offer.canonical_product_id is not None:
+            raise RuntimeError("Launch review input must not create an approved link.")
+        integration_id = uuid5(
+            _REVIEW_INTEGRATION_NAMESPACE,
+            f"{TENANT_ID}:{offer.marketplace}:{source.category_url}",
+        )
+        rule_id = uuid5(
+            _REVIEW_RULE_NAMESPACE,
+            f"{TENANT_ID}:{integration_id}:{offer.marketplace}:{category_id}",
+        )
+        integrations.append(
+            MarketplaceIntegration(
+                id=integration_id,
+                tenant_id=TENANT_ID,
+                marketplace=offer.marketplace,
+                display_name=f"{offer.marketplace.upper()} {source.name}",
+                source_url=source.category_url,
+                enabled=True,
+                status=MarketplaceIntegrationStatus.ACTIVE,
+                created_at=now,
+                updated_at=now,
+            )
+        )
+        rules.append(
+            CatalogSourceRule(
+                id=rule_id,
+                tenant_id=TENANT_ID,
+                integration_id=integration_id,
+                marketplace=offer.marketplace,
+                source_category_id=category_id,
+                hub_code=source.hub_code,
+                section_code=source.section_code,
+                created_at=now,
+                updated_at=now,
+            )
+        )
+        offers.append(
+            replace(
+                offer,
+                catalog_hub_code=source.hub_code,
+                catalog_section_code=source.section_code,
+                catalog_source_rule_id=rule_id,
+            )
+        )
+    return LoadedReviewBatch(
+        offers=tuple(offers),
+        mode=mode,
+        integrations=tuple(integrations),
+        source_rules=tuple(rules),
     )
 
 

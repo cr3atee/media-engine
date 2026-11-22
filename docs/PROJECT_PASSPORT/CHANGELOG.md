@@ -6,6 +6,17 @@ This document records notable Project Passport updates.
 
 ## Unreleased
 
+- Verified real FunPay subscription categories for ExitLag, Duolingo and Spotify.
+  Retained typed structured listing evidence without changing ParsedOffer or
+  repository schemas; added a guarded read-only candidate verifier that rejects
+  unknown fulfillment, incompatible device/tier, unavailable offers and duration
+  conflicts. The existing PostgreSQL review runner now stages one unlinked
+  ExitLag monthly PC code candidate idempotently; no fourth product, automatic
+  decision or public FunPay offer was created. Original data checksums are
+  unchanged. Focused tests `50`, full Pytest `822 passed, 65 skipped`, MyPy `564`
+  files, focused Ruff/format and read-only PostgreSQL `55/55` pass. Human review,
+  Duolingo/Spotify equivalence and runtime delivery-method modelling remain open.
+
 - Launched the user-selected local EPIC 25 catalog with exactly three reviewed
   monthly subscription products in a separate persistent PostgreSQL database.
   Fresh-source fingerprint checks, restored pre-import backup, exact atomic

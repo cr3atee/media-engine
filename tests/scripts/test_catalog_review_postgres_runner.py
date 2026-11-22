@@ -11,6 +11,8 @@ from app.services.repository_scope import create_memory_repository_scope
 from scripts.run_catalog_review_postgres import (
     DATABASE_URL_ENV,
     TENANT_ID,
+    ReviewSourceOffer,
+    _classified_launch_batch,
     _require_isolated_database,
     _safe_error_summary,
     _seed_database,
@@ -25,6 +27,7 @@ def test_runner_defaults_to_captured_data_and_loopback_port() -> None:
     assert arguments.check is False
     assert arguments.aligned_live_data is False
     assert arguments.epic25_live_data is False
+    assert arguments.epic25_funpay_data is False
 
 
 def test_runner_accepts_explicit_live_check() -> None:
@@ -47,6 +50,41 @@ def test_runner_accepts_three_product_live_review_mode() -> None:
 def test_runner_rejects_two_live_source_modes() -> None:
     with pytest.raises(SystemExit):
         parse_args(["--aligned-live-data", "--epic25-live-data"])
+
+
+def test_runner_accepts_only_explicit_funpay_review_mode() -> None:
+    arguments = parse_args(["--epic25-funpay-data", "--check"])
+    assert arguments.epic25_funpay_data
+    assert arguments.check
+    assert not arguments.epic25_live_data
+    with pytest.raises(SystemExit):
+        parse_args(["--epic25-funpay-data", "--epic25-live-data"])
+
+
+def test_classified_batch_is_stable_and_never_creates_links() -> None:
+    source = ReviewSourceOffer(
+        offer=ParsedOffer(
+            marketplace="funpay",
+            external_id="1",
+            title="Offline fixture monthly code",
+            url="https://funpay.com/lots/offer?id=1",
+            price=Decimal("790"),
+            currency="RUB",
+            source_category_id="1568",
+        ),
+        category_url="https://funpay.com/lots/1568/",
+        name="ExitLag",
+        hub_code="exitlag",
+    )
+    first = _classified_launch_batch([source], mode="offline fixture")
+    second = _classified_launch_batch([source], mode="offline fixture")
+    assert first.offers == second.offers
+    assert first.offers[0].canonical_product_id is None
+    assert first.offers[0].catalog_hub_code == "exitlag"
+    assert first.offers[0].catalog_section_code == "subscriptions"
+    assert first.offers[0].catalog_source_rule_id == first.source_rules[0].id
+    assert first.integrations[0].marketplace == "funpay"
+    assert first.integrations[0].id == second.integrations[0].id
 
 
 @pytest.mark.parametrize("host", ["localhost", "127.0.0.1", "::1"])
