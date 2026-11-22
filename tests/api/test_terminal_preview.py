@@ -49,6 +49,9 @@ def test_preview_is_separate_from_existing_terminal(
         ("playerok.svg", "image/svg+xml"),
         ("minecraft-pc.jpg", "image/jpeg"),
         ("minecraft-ios.jpg", "image/jpeg"),
+        ("exitlag.jpg", "image/jpeg"),
+        ("duolingo.png", "image/png"),
+        ("spotify.png", "image/png"),
         ("product-placeholder.svg", "image/svg+xml"),
     ],
 )
@@ -106,6 +109,18 @@ def test_product_artwork_is_a_bounded_local_jpeg(
         (
             "minecraft-ios.jpg",
             "3d51105eb4a01bafcaeaf9376400628bf7cd223af3e423b58b5bdbba1f1dcc81",
+        ),
+        (
+            "exitlag.jpg",
+            "50a6a992e5a8c328b1c589b843286eac861e388e65c9fb96a68915f64e6f9056",
+        ),
+        (
+            "duolingo.png",
+            "9cde6b94e9e0bc2c8f8578305799e037b690fab221369cab555ce1f945636b96",
+        ),
+        (
+            "spotify.png",
+            "193ef6f3d236da9a1e1e2991bf44a75a082fb3c99255c9eec9b47ea5f66413f1",
         ),
     ],
 )

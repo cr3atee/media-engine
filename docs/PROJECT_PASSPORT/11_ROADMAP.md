@@ -449,16 +449,24 @@ two-database PostgreSQL release verification.
   verification; raw credential storage in PostgreSQL is intentionally absent.
 - Production-hardened public Market Terminal frontend.
 
-## Recommended Next EPIC
+## Current Delivery
 
 **EPIC 25 - Three Product MVP.**
 
-Limit the first public assortment to ExitLag, Duolingo Super, and Spotify
-Premium Individual with one-month plans: three canonical products in total.
-Live read-only GGSEL collection now proves exact one-month candidates for all
-three products. Review those offers, create or link exactly three canonical
-products, then provide managed source/target database access and tenant
-identities, verify the real target backup and monitoring stack, and apply only
-the exact approved three-product digest. Do not invent links or prices,
-bulk-confirm `NO_MATCH` offers, lower matching thresholds, copy secrets, or
-include deferred longer-duration plans.
+The user selected a local first version on 2026-11-22. Three one-month
+subscriptions were reviewed and promoted into a separate persistent local
+catalog: ExitLag, Duolingo Super and Spotify Premium Individual. Fresh GGSEL
+evidence, restored backup, exact atomic promotion, source immutability and
+fresh-process replay were verified. The three service hubs and original-source
+images are connected; expanded browser acceptance passes `127` checks.
+
+Next is user acceptance of `http://localhost:8000/terminal`, not another backend
+EPIC or a larger assortment. The three-product local boundary is implemented;
+longer-duration plans and additional offers are not added to fill the catalog.
+See `docs/EPIC_25_LOCAL_RELEASE.md` for startup and limits.
+
+A later public deployment remains separate: provide managed target access,
+verify real backup/monitoring and asset-use conditions, and approve the exact
+target-bound release. Local scheduled ingestion and delivery-method filtering
+are not claimed complete. Do not invent links/prices, bulk-confirm `NO_MATCH`
+offers, lower matching thresholds, copy secrets or add deferred durations.

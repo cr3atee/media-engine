@@ -987,3 +987,18 @@ pass `15`, full Pytest `787` with `65` guarded skips, strict MyPy `562` files,
 and changed-file Ruff/format pass. Alembic lifecycle/current/check/offline SQL
 pass on an isolated test database. Target promotion and final public browser
 acceptance remain outstanding; no production release is claimed.
+
+EPIC 25 local first-version acceptance passed on 2026-11-22 after the user
+selected a local launch. Fresh GGSEL data matched all three reviewed identities
+and source fingerprints. The existing release service transferred three products
+and links into a separate persistent local catalog database; exact fresh-process
+replay returned the same audit and source checksums remained unchanged. A target
+backup was restored to a disposable database before apply. The working catalog
+is available at `http://localhost:8000/terminal`, with the original review
+environment retained separately. Official-source local imagery and shared hub
+navigation now cover ExitLag, Duolingo and Spotify without title-based guessing.
+Browser acceptance passes `127` checks; full Pytest `793 passed, 65 skipped`,
+MyPy `562` files, focused Ruff/format and Node syntax pass. See
+`docs/EPIC_25_LOCAL_RELEASE.md` for operational details. This is a three-product
+local catalog with one GGSEL offer per product, not public production, scheduled
+local ingestion, licensed public brand use or completed delivery-method filters.
