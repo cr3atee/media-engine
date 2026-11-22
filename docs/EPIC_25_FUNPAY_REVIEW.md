@@ -49,10 +49,12 @@ changed. No seller description is used to auto-create a product identity.
 
 ## Current Outcome
 
-**ExitLag:** monthly PC digital-code candidates exist. The deterministic review
-example is [FunPay offer 19847269](https://funpay.com/lots/offer?id=19847269),
+**Initial ExitLag review example:** monthly PC digital-code candidates exist.
+The original identity-based example was
+[FunPay offer 19847269](https://funpay.com/lots/offer?id=19847269),
 seller `ralli125`, `754.58 RUB` at the recorded run. Its page returned HTTP 200.
-It is a candidate, not an assertion of equivalence or a recommendation to buy.
+It was not selected for lowest price. It remains a candidate, not an assertion
+of equivalence or a recommendation to buy.
 The detail page states activation/region restrictions, so the reviewer must
 compare these and the device entitlement with the existing
 [GGSEL source 5077855](https://ggsel.net/en/catalog/product/podpiska-exitlag-30-dnei-kliuc-rossiia-157-stran-5077855).
@@ -110,3 +112,48 @@ to bypass missing terms. If equivalence cannot be established, do not link.
 
 The next gate is the explicit ExitLag review. Broader fulfillment modelling and
 verified Duolingo/Spotify equivalents remain unfinished, not silently approved.
+
+## Price-First Correction
+
+The user's intended value is finding supply for resale, not an arbitrary sample
+listing. The source verifier now delegates screened candidate selection to the
+existing `BestOfferSelector` using `MarketplaceOffer` and
+`ProductComparisonInput`. No new comparison algorithm or canonical link is
+created. Lowest price wins; equal-price ordering follows the existing selector,
+not a separate numeric-ID rule. A blocked listing never becomes eligible just
+because it is cheap.
+
+The actual FunPay month button was also checked in a separate browser. Clicking
+`1 month` sets `f-time` and filters the loaded listing without a new Fetch/XHR
+request. The verifier checks that same structured field rather than guessing
+the duration from the title. Browser lazy rendering of 200 rows is not proof
+that only 200 offers exist; the returned HTML contained 2000. These observations
+do not establish complete marketplace-wide coverage.
+
+A real read-only run after the correction returned:
+
+- ExitLag: 2000 rows, 673 monthly PC variants, 473 screened candidates and 22
+  title-duration conflicts.
+- Duolingo: 328 rows, 31 monthly Super variants and no review-ready candidate.
+- Spotify: 1528 rows, 304 monthly Individual variants and no review-ready
+  candidate. Existing method/plan blockers are unchanged.
+
+The minimum screened ExitLag offer was
+[82792757](https://funpay.com/lots/offer?id=82792757), seller `BuyerBOBR`,
+`208.96 RUB`; its detail page returned HTTP 200. Its description restricts use
+to a new account, requires VPN, excludes Russia and requires using the code
+within one hour. Other low-priced examples name different country sets. Thus
+the listing parameters alone do not establish equivalence to the existing
+Russia-including launch product or suitability for holding/reselling inventory.
+
+The cheapest candidate was **not** staged, approved or published. The existing
+`754.58 RUB` review example is retained as historical evidence, not advertised
+as the cheapest. This correction performs no database mutation and does not
+override any human decision. It does not certify sellers, resale permission,
+successful activation or net profit. Source price differences do not account
+for sale/payment fees, sale price, refund exposure or fulfillment costs.
+
+Current automated checks: focused `61 passed`; full Pytest `833 passed, 65
+skipped`; MyPy `564` files; changed-file Ruff/format pass. Existing guarded
+PostgreSQL skips and the existing TestClient warning remain unaltered. No schema,
+repository, public UI, scheduler, AI or Telegram change was required.

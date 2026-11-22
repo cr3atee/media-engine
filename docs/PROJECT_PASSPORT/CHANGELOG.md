@@ -6,6 +6,15 @@ This document records notable Project Passport updates.
 
 ## Unreleased
 
+- Corrected FunPay launch-candidate ranking to reuse `BestOfferSelector` for
+  minimum price instead of minimum numeric ID. Added regression coverage for
+  input order, price ties and cheap blocked offers; documented resale sourcing
+  as the product goal and distinguished price from resale profit. The real
+  `208.96 RUB` minimum had restrictive terms and was not staged or published.
+  No database, human decision or public comparison was changed. Focused tests
+  `61`, full Pytest `833 passed, 65 skipped`, MyPy `564` and focused Ruff/format
+  pass; existing fulfillment/region verification remains required.
+
 - Verified real FunPay subscription categories for ExitLag, Duolingo and Spotify.
   Retained typed structured listing evidence without changing ParsedOffer or
   repository schemas; added a guarded read-only candidate verifier that rejects

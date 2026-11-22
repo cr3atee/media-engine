@@ -7,6 +7,7 @@ import os
 import re
 import sys
 import unicodedata
+from collections.abc import Sequence
 from dataclasses import dataclass, replace
 from pathlib import Path
 
@@ -16,6 +17,11 @@ if str(ROOT) not in sys.path:
 
 from funpayparsers.parsers.categories_parser import CategoriesParser  # noqa: E402
 
+from app.comparator.models import (  # noqa: E402
+    MarketplaceOffer,
+    ProductComparisonInput,
+)
+from app.comparator.selector import BestOfferSelector  # noqa: E402
 from app.core.http_client import HttpClient  # noqa: E402
 from app.parsers.funpay_extractor import (  # noqa: E402
     FunPayExtractor,
@@ -162,6 +168,23 @@ def assess_candidate(
     )
 
 
+def select_review_candidate(
+    candidates: Sequence[FunPayCandidateAssessment],
+) -> FunPayCandidateAssessment | None:
+    """Reuse price selection for screened candidates, not canonical approval."""
+    eligible = tuple(item for item in candidates if item.ready_for_review)
+    selection = BestOfferSelector().select(
+        ProductComparisonInput(
+            canonical_product_id=None,
+            offers=tuple(MarketplaceOffer(offer=item.offer) for item in eligible),
+        )
+    )
+    selected = selection.selected_offer
+    if selected is None:
+        return None
+    return next(item for item in eligible if item.offer is selected.offer)
+
+
 async def fetch_funpay_launch_sources(
     http_client: HttpClient,
 ) -> tuple[FunPaySourceVerification, ...]:
@@ -200,11 +223,7 @@ async def fetch_funpay_launch_sources(
             offer = normalizer.normalize([item.offer])[0]
             offer = replace(offer, source_category_id=str(spec.category_id))
             monthly.append(assess_candidate(spec, replace(item, offer=offer)))
-        eligible = sorted(
-            (item for item in monthly if item.ready_for_review),
-            key=lambda item: int(item.offer.external_id or "0"),
-        )
-        selected = eligible[0] if eligible else None
+        selected = select_review_candidate(monthly)
         status: int | None = None
         if selected is not None:
             assert selected.offer.url is not None
@@ -215,7 +234,7 @@ async def fetch_funpay_launch_sources(
                 spec=spec,
                 returned_items=len(extraction.items),
                 monthly_items=len(monthly),
-                review_candidates=len(eligible),
+                review_candidates=sum(item.ready_for_review for item in monthly),
                 selected=selected,
                 url_status=status,
                 rejected_title_conflicts=sum(
@@ -259,9 +278,11 @@ async def main() -> int:
             )
             print(f"Source fields: {dict(selected.parameters)}")
             print(f"URL: {selected.offer.url}; HTTP: {result.url_status}")
+            print("Selection: lowest price among screened offers in this response.")
             print(
                 "Still requires human platform, region and activation-condition review."
             )
+            print("Not a resale-profit estimate or proof of resale permission.")
         else:
             print(
                 "NOT COMPARABLE: launch method/plan is unverified "
