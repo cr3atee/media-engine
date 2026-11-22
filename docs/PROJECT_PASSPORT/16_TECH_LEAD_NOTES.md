@@ -6,6 +6,16 @@ This document captures architecture notes that are important for future reviews.
 
 ## Current Notes
 
+- Activation-condition review is distinct from canonical identity review. Reuse
+  the shared tenant scope/admin journal, bind a command to the full displayed
+  source fingerprint and audit revision, and update only conditions with an
+  atomic CAS. Never overwrite a newer source price/link from an old form.
+  Unknown facts remain unknown. Migration `0028` protects only the new
+  activation-review audit kind from UPDATE/DELETE; do not claim legacy audit
+  rows are all database-immutable. Base64 audit chunks preserve exact source
+  evidence through metadata normalization; they are not encrypted secrets.
+  Review does not publish an offer or extend promotion manifests automatically.
+
 - Matching Engine is deterministic and marketplace independent.
 - Matching currently uses token preprocessing, Jaccard similarity, and fixed confidence thresholds.
 - `MatchingService` depends on existing matching components rather than duplicating preprocessing or similarity logic.

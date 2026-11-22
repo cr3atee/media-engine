@@ -96,10 +96,16 @@ The existing PostgreSQL CI job also provisions a separate
 
 ## Remaining Work
 
-Complete source-evidence collection and review entry for these profiles before
-enabling cross-offer comparisons for the subscription assortment. This step does
-not provide a free-text region recognizer, a review form for editing conditions,
-condition-aware promotion manifests, a variant-filtering interface, resale
+Structured human review entry is now implemented and verified in
+[activation review](EPIC_25_ACTIVATION_REVIEW.md), including condition-only CAS,
+immutable audit, tenant permissions and browser confirmation/retry. Migration
+`0028` follows this document's original `0027` foundation; current checks are
+recorded in that review document. No real terms were auto-confirmed.
+
+Complete source-evidence collection before enabling cross-offer comparisons
+for the subscription assortment. This does not provide a free-text region
+recognizer, automatic complete profiles, condition-aware promotion manifests,
+a variant-filtering interface, resale
 permission checks or a margin calculator. Historical snapshot/event identities
 have not been redesigned to track changes in activation conditions; do not claim
 condition-aware historical analytics. No AI, Telegram, scheduler or purchasing

@@ -4,6 +4,22 @@
 
 This document records the current implementation state of MediaEngine.
 
+## Latest Verified Increment (2026-11-22)
+
+EPIC 25 now includes structured human activation-condition review in the
+existing cabinet: tenant-authorized reads/writes, complete explicit facts,
+source/revision guarded condition-only updates, atomic audit, safe replay and
+an explicit reset to unknown. Migration `0028` protects the new action kind
+against UPDATE/DELETE; existing audit kinds are not retroactively redesigned.
+No real offer conditions or human canonical decisions were changed. The two
+local databases retain exact offer/product/decision/audit checksums and the
+published catalog remains three GGSEL offers. Full Pytest `891 passed, 65
+skipped`, MyPy `575`, focused Ruff/format, isolated PostgreSQL `20/20`, form
+browser `23/23`, offline form `29` and catalog browser `127/127` pass.
+Source evidence collection, condition-aware promotion and the public variant
+picker remain open. See `docs/EPIC_25_ACTIVATION_REVIEW.md`; older dated results
+below are historical, not an assertion that review entry is still absent.
+
 ## Status
 
 Foundation is complete.

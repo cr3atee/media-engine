@@ -6,6 +6,16 @@ This document records notable Project Passport updates.
 
 ## Unreleased
 
+- Added structured activation-condition review to the existing cabinet and
+  tenant API: explicit facts, source/revision guarded condition-only writes,
+  atomic append-only audit, exact idempotency replay, confirmation, safe retry
+  and reset to unknown. Migration `0028` protects the new audit kind without
+  rewriting legacy data. No real profiles or canonical decisions were changed.
+  Full Pytest `891 passed, 65 skipped`, strict MyPy `575`, PostgreSQL `20/20`,
+  offline form `29`, form browser `23/23` and catalog browser `127/127` pass;
+  focused Ruff/format pass. Source mapping, condition-aware promotion and the
+  public variant picker remain open. See `EPIC_25_ACTIVATION_REVIEW.md`.
+
 - Implemented the confirmed all-regions activation-compatibility boundary:
   immutable explicit condition profiles, nullable JSONB migration `0027`, aligned
   memory/PostgreSQL updates, condition-scoped grouping and shared guards against

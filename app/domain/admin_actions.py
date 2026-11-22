@@ -25,6 +25,7 @@ class AdminActionType(StrEnum):
     RESTORE_OFFER = "restore_offer"
     IMPORT_CATALOG_PROMOTION = "import_catalog_promotion"
     CHANGE_PRODUCT_CATEGORY = "change_product_category"
+    SET_OFFER_ACTIVATION_CONDITIONS = "set_offer_activation_conditions"
 
 
 class AdminResourceType(StrEnum):

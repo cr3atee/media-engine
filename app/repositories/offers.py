@@ -6,6 +6,7 @@ from dataclasses import dataclass
 from datetime import datetime
 from uuid import UUID
 
+from app.domain.activation_conditions import ActivationConditions
 from app.domain.identity import normalize_utc
 from app.domain.offer_availability import (
     OfferAvailabilityState,
@@ -62,6 +63,18 @@ class OfferRepository(BaseRepository):
         metadata. Runtime repositories override this method.
         """
         await self.save(context.tenant_id, offer)
+
+    async def compare_and_set_activation_conditions(
+        self,
+        tenant_id: UUID,
+        expected: ParsedOffer,
+        conditions: ActivationConditions | None,
+    ) -> bool:
+        """Update only conditions if the entire active source snapshot still matches.
+
+        Implementations must provide atomic compare-and-set, not read/save fallback.
+        """
+        raise NotImplementedError("Atomic activation condition updates are required.")
 
     async def reconcile_observations(
         self,

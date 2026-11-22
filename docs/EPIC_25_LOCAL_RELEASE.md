@@ -11,7 +11,7 @@ or public-domain deployment.
   port `55435`; its existing named volume retains both databases.
 - Original review database: `epic23_catalog_review_epic25_manual`.
 - Separate catalog database: `epic23_catalog_review_epic25_local_catalog`.
-- Both databases now use revision `0027_offer_activation_conditions`; the
+- Both databases now use revision `0028_offer_activation_audit`; the
   initial launch verification below used `0026`.
 
 Use the distinct hostnames shown above. Cookies do not have port isolation, so
@@ -135,8 +135,10 @@ The all-regions policy now has a persisted optional activation profile and a
 shared comparator guard. Legacy rows remain unknown; a multi-offer comparison
 with unknown/different conditions produces no asserted best offer or savings.
 Single-offer prices and the three-product catalog remain unchanged. See
-`EPIC_25_ACTIVATION_COMPARABILITY.md` for checks and the still-unfinished source
-mapping, review input and variant-selection UI.
+`EPIC_25_ACTIVATION_COMPARABILITY.md` for the comparison guard and
+`EPIC_25_ACTIVATION_REVIEW.md` for the implemented human review form. Automatic
+source mapping, condition-aware transfer and public variant-selection UI remain
+unfinished. No real condition profile was confirmed during verification.
 
 The first local three-product catalog is available for user acceptance. This
 does not mean the whole long-term MediaEngine roadmap or public launch is done.
