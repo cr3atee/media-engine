@@ -2,7 +2,49 @@
 
 Дата проверки источников: 2026-10-24. Область: локальный `/terminal/preview`.
 
-## Площадки
+## Сервисы локального MVP: 2026-11-22
+
+ExitLag, Duolingo и Spotify используют исходные файлы из официальных
+источников. Они обозначают сервис, но не подтверждают тариф, платформу,
+способ активации или партнёрство с продавцом. Данные предложения остаются в API.
+
+| Сервис | Первичный источник | Файл | Размер / объём |
+| --- | --- | --- | --- |
+| ExitLag | [App Store](https://apps.apple.com/us/app/exitlag-lower-your-ping/id6499235163), [Apple lookup](https://itunes.apple.com/lookup?id=6499235163&country=us), издатель `ExitLag, LLC`, `artworkUrl512` | `exitlag.jpg` | 512 x 512, 29251 bytes |
+| Duolingo | `apple-touch-icon`, объявленный в HTML [официального сайта](https://www.duolingo.com/): [исходный PNG](https://d35aaqx5ub95lt.cloudfront.net/images/duolingo-touch-icon2.png) | `duolingo.png` | 180 x 180, 11130 bytes |
+| Spotify | [официальный media kit](https://newsroom.spotify.com/media-kit/logo-and-brand-assets/), [исходный Primary Logo RGB Green](https://storage.googleapis.com/pr-newsroom-wp/1/2023/05/Spotify_Primary_Logo_RGB_Green.png) | `spotify.png` | 939 x 940, 24505 bytes |
+
+Прямой файл Apple CDN:
+[ExitLag artwork](https://is1-ssl.mzstatic.com/image/thumb/Purple221/v4/aa/7e/60/aa7e6070-ac08-a741-40b5-02ee2e6a8a00/AppIcon-0-0-1x_U007epad-0-1-85-220.png/512x512bb.jpg).
+Все три файла получены с HTTP 200, без локального изменения пикселей,
+перерисовки или AI. Разница сторон Spotify в один пиксель сохранена: квадратным
+остаётся контейнер, изображение размещается через `object-fit: contain`.
+
+```text
+exitlag.jpg  50a6a992e5a8c328b1c589b843286eac861e388e65c9fb96a68915f64e6f9056
+duolingo.png 9cde6b94e9e0bc2c8f8578305799e037b690fab221369cab555ce1f945636b96
+spotify.png  193ef6f3d236da9a1e1e2991bf44a75a082fb3c99255c9eec9b47ea5f66413f1
+```
+
+Файлы включены в существующий allowlist `/terminal/preview/`; hotlink, новые
+зависимости и расширение CSP не используются. Контрольные суммы проверяет
+`test_branded_asset_matches_provenance_registry`. Одна карта изображений
+применяется к мини-навигации, карточкам и страницам товаров по уже проверенному
+`catalog_hub_code`, без угадывания по заголовку. Старые точные Minecraft ID
+сохраняют свои изображения. Неизвестный ID без известного проверенного hub
+по-прежнему получает нейтральную заглушку.
+
+Источник ExitLag сайта вернул HTTP 403 при чтении HTML; обход защиты не
+применялся. Объявленная сайтом маленькая иконка непригодна для крупной карточки,
+поэтому использован проверенный официальный каталог Apple. Иконка приложения
+обозначает бренд, а не утверждает, что продаваемый ключ предназначен для iOS.
+
+Это подтверждение происхождения для локальной версии, а не полученное
+разрешение на публичное коммерческое распространение. Публичное использование
+брендов требует отдельного согласования применимых условий; партнёрство не
+заявляется. См. [границы локального запуска](EPIC_25_LOCAL_RELEASE.md).
+
+## Ранее подключённые площадки
 
 | Бренд | Официальный источник | Локальный файл в `app/web/market_terminal/preview/` | Размер |
 | --- | --- | --- | --- |

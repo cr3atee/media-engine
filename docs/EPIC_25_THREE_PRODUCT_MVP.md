@@ -174,6 +174,24 @@ Verification:
   initial focused run also reported a pytest cache permission warning, and the
   final focused run passed with cache disabled.
 
-The remaining gates are guarded target promotion and final three-card public
-browser acceptance. Refresh marketplace source evidence before promotion.
-Production deployment and delivery-method filtering are not claimed complete.
+### Local first version (2026-11-22)
+
+The user selected a local first version instead of a VDS/public launch. Fresh
+GGSEL evidence still matches the three reviewed IDs and source fingerprints;
+all three outbound links return HTTP `200`. A separate persistent local catalog
+database was initialized and the existing release service applied the exact
+three-product manifest. Target preflight converged to `no_changes`; fresh-process
+replay returned the same immutable promotion audit without duplicates. The
+source offers, products, decisions and audit checksums remain unchanged.
+
+The running local catalog is `http://localhost:8000/terminal`. The existing
+review workspace remains on `127.0.0.1:8001`. Service images and hub navigation
+now work for all three products, with the original reviewed names. Expanded
+browser acceptance passes `127` checks; full Pytest passes `793` with `65`
+guarded skips, MyPy passes `562` files, and focused Ruff/format and JS syntax
+checks pass. See [local release evidence](EPIC_25_LOCAL_RELEASE.md) for backup,
+replay, startup commands and exact limitations.
+
+Local first-version transfer and browser gates are complete for user acceptance.
+Public production deployment, licensed public brand use, automatic local polling
+and delivery-method filtering are not claimed complete.

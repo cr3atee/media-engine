@@ -34,6 +34,9 @@ _PREVIEW_ASSETS = {
     "playerok.svg": "image/svg+xml",
     "minecraft-pc.jpg": "image/jpeg",
     "minecraft-ios.jpg": "image/jpeg",
+    "exitlag.jpg": "image/jpeg",
+    "duolingo.png": "image/png",
+    "spotify.png": "image/png",
     "product-placeholder.svg": "image/svg+xml",
 }
 

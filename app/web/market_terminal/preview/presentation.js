@@ -7,6 +7,9 @@ export const artwork = {
   "9a520758-e499-5837-90bb-9e6b67d7a591": { title: "Minecraft", subtitle: "Активация промокодом · iOS", label: "iOS", image: "minecraft-ios.jpg", alt: "Minecraft для iOS, иконка приложения Mojang из App Store" },
 };
 export const catalogHubArtwork = {
+  exitlag: { title: "ExitLag", image: "exitlag.jpg", alt: "ExitLag, иконка приложения издателя ExitLag, LLC" },
+  duolingo: { title: "Duolingo", image: "duolingo.png", alt: "Duolingo, иконка официального сайта" },
+  spotify: { title: "Spotify", image: "spotify.png", alt: "Spotify, официальный логотип сервиса" },
   minecraft: {
     title: "Minecraft",
     image: "minecraft-ios.jpg",
@@ -41,7 +44,15 @@ export function offerFootprint(product) {
 }
 
 export function infoFor(product) {
-  return artwork[product.id] ?? { title: product.name, subtitle: product.category ?? "Цифровой товар", label: "Товар", image: "product-placeholder.svg", alt: "Изображение товара отсутствует" };
+  if (Object.hasOwn(artwork, product.id)) return artwork[product.id];
+  const hub = catalogHubInfo(product.catalog_hub_code);
+  return {
+    title: product.name,
+    subtitle: product.category ?? "Цифровой товар",
+    label: hub ? catalogSectionName(product.catalog_section_code) ?? "Товар" : "Товар",
+    image: hub?.image ?? "product-placeholder.svg",
+    alt: hub?.alt ?? "Изображение товара отсутствует",
+  };
 }
 
 export function productImage(art, className = "", size = 512, lazy = false) {
@@ -49,7 +60,7 @@ export function productImage(art, className = "", size = 512, lazy = false) {
 }
 
 export function catalogHubInfo(code) {
-  return catalogHubArtwork[code] ?? null;
+  return Object.hasOwn(catalogHubArtwork, code) ? catalogHubArtwork[code] : null;
 }
 
 export function catalogSectionName(code) {

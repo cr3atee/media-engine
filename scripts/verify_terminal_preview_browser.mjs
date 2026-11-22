@@ -6,6 +6,7 @@ import { join } from "node:path";
 
 const base = process.env.TERMINAL_PREVIEW_URL ?? "http://127.0.0.1:8002";
 const debug = process.env.TERMINAL_CDP_URL ?? "http://127.0.0.1:9224";
+const threeProductAcceptance = process.env.EPIC25_THREE_PRODUCT_ACCEPTANCE === "1";
 for (const address of [base, debug]) {
   const url = new URL(address);
   assert(["127.0.0.1", "localhost"].includes(url.hostname), "Use loopback test instances only");
@@ -185,6 +186,14 @@ try {
   const catalogResponse = await fetch(`${base}/api/v1/public/products?limit=50`);
   assert.equal(catalogResponse.status, 200);
   const catalogPayload = await catalogResponse.json();
+  if (threeProductAcceptance) {
+    assert.equal(catalogPayload.items.length, 3, "Launch catalog contains exactly three products");
+    assert.equal(catalogPayload.next_cursor, null, "Launch catalog has no hidden extra page");
+    assert.deepEqual(catalogPayload.items.map(product => product.catalog_hub_code).sort(), ["duolingo", "exitlag", "spotify"]);
+    assert(catalogPayload.items.every(product => product.offer_count === 1 && product.catalog_section_code === "subscriptions"), "Each launch subscription has one reviewed offer");
+    checks += 4;
+    console.log("PASS bounded three-product API contract");
+  }
   const runtimeProduct = catalogPayload.items.find(product => product.name && product.marketplaces?.length);
   assert(runtimeProduct, "Catalog must expose a named product with at least one marketplace");
   const searchTerm = runtimeProduct.name;
@@ -197,7 +206,7 @@ try {
   await check("square artwork", '[...document.querySelectorAll(".card-image")].every(el=>Math.abs(el.offsetWidth-el.offsetHeight)<2)');
   await check("desktop has no horizontal overflow", 'document.documentElement.scrollWidth <= innerWidth');
   await check("images loaded", '[...document.images].every(el=>el.complete && el.naturalWidth>0)');
-  await check("official artwork is square and edition specific", `(() => { const expected = {'7c862a70-5619-5b6d-a2aa-798560d29f18':'minecraft-pc.jpg','9a520758-e499-5837-90bb-9e6b67d7a591':'minecraft-ios.jpg'}; return [...document.querySelectorAll('.product-card')].every(card=>{const img=card.querySelector('.product-art');const id=new URL(card.href).searchParams.get('product');return new URL(img.src).origin===location.origin && img.src.endsWith(expected[id]??'product-placeholder.svg') && img.naturalWidth===img.naturalHeight && getComputedStyle(img).objectFit==='contain' && img.alt.length>0;});})()`);
+  await check("original artwork is contained and follows verified product or hub identity", `(() => { const expected = {'7c862a70-5619-5b6d-a2aa-798560d29f18':'minecraft-pc.jpg','9a520758-e499-5837-90bb-9e6b67d7a591':'minecraft-ios.jpg'}; const hubs={exitlag:'exitlag.jpg',duolingo:'duolingo.png',spotify:'spotify.png',minecraft:'minecraft-ios.jpg'}; const products=${JSON.stringify(catalogPayload.items)}; return [...document.querySelectorAll('.product-card')].every(card=>{const img=card.querySelector('.product-art');const id=new URL(card.href).searchParams.get('product');const product=products.find(item=>item.id===id);return new URL(img.src).origin===location.origin && img.src.endsWith(expected[id]??hubs[product?.catalog_hub_code]??'product-placeholder.svg') && Math.abs(img.naturalWidth-img.naturalHeight)<=1 && getComputedStyle(img).objectFit==='contain' && img.alt.length>0;});})()`);
   await checkAccessibility("catalog accessibility tree exposes landmarks and named search controls", nodes =>
     hasAxNode(nodes, "main") &&
     hasAxNode(nodes, "search") &&
@@ -456,6 +465,28 @@ try {
   await check("working catalog has local official artwork", '[...document.querySelectorAll(".product-art")].every(img=>img.complete && img.naturalWidth>0 && img.src.startsWith(location.origin))');
   await check("working catalog starts above fold", 'document.querySelector(".product-card").getBoundingClientRect().top<innerHeight-120');
   await screenshot("14-working-catalog");
+  if (threeProductAcceptance) {
+    await check("three launch cards use service artwork rather than placeholders", 'document.querySelectorAll(".product-card").length===3 && [...document.querySelectorAll(".product-card .product-art")].every(img=>img.complete && img.naturalWidth>0 && !img.src.includes("placeholder"))');
+    await check("all three service hubs are visible", 'document.querySelectorAll("#catalogHubList .catalog-hub").length===3');
+    await check("unclassified names do not acquire guessed branded artwork", '(async()=>{const {infoFor,catalogHubInfo}=await import("/terminal/preview/presentation.js");return infoFor({id:"unclassified-check",name:"Spotify Premium"}).image==="product-placeholder.svg" && catalogHubInfo("constructor")===null;})()');
+    for (const product of catalogPayload.items) {
+      await workingCatalog();
+      const hubTitle = { exitlag: "ExitLag", duolingo: "Duolingo", spotify: "Spotify" }[product.catalog_hub_code];
+      const hubIndex = await evaluate(`[...document.querySelectorAll("#catalogHubList .catalog-hub")].findIndex(button=>button.querySelector("strong").textContent===${JSON.stringify(hubTitle)})`);
+      assert(hubIndex >= 0);
+      await click(`#catalogHubList [data-hub-index="${hubIndex}"]`);
+      await until(`new URLSearchParams(location.search).get("hub")===${JSON.stringify(product.catalog_hub_code)} && document.querySelectorAll(".product-card").length===1 && document.querySelector(".shell").getAttribute("aria-busy")==="false"`);
+      await check(`${hubTitle} hub shows only its reviewed product`, `document.querySelector(".product-card").dataset.productId===${JSON.stringify(product.id)} && !document.querySelector("#catalogSectionPanel").hidden`);
+      await click('#catalogSectionList [data-section-index="0"]');
+      await until('new URLSearchParams(location.search).get("section")==="subscriptions" && document.querySelector(".shell").getAttribute("aria-busy")==="false"');
+      await check(`${hubTitle} subscription section preserves the one-card bound`, `document.querySelectorAll(".product-card").length===1 && document.querySelector(".product-card").dataset.productId===${JSON.stringify(product.id)}`);
+      await click(".product-card");
+      await until('document.querySelector("#details").getAttribute("aria-busy")==="false"');
+      await check(`${hubTitle} detail preserves the reviewed name and source`, `document.querySelector("#originalName").textContent===${JSON.stringify(product.name)} && document.querySelectorAll(".offer-row").length===1 && document.querySelector(".offer-row a").href===${JSON.stringify(product.best_offer.url)}`);
+      await screenshot(`epic25-${product.catalog_hub_code}`);
+    }
+    await workingCatalog();
+  }
   await click("#filtersButton");
   await check("working filters expose previous sort and price controls", '!document.querySelector("#catalogFilters").hidden && document.querySelectorAll("#sortFilter option").length===4');
   await evaluate('document.querySelector("#minPriceInput").value="100";document.querySelector("#maxPriceInput").value="10"');

@@ -6,6 +6,18 @@ This document records notable Project Passport updates.
 
 ## Unreleased
 
+- Launched the user-selected local EPIC 25 catalog with exactly three reviewed
+  monthly subscription products in a separate persistent PostgreSQL database.
+  Fresh-source fingerprint checks, restored pre-import backup, exact atomic
+  promotion, source immutability and fresh-process idempotent replay passed.
+  Added attributed local service images and completed shared hub presentation;
+  tightened discovery spacing and removed game-only copy from the live banner.
+  Expanded read-only browser acceptance passes `127` checks; full Pytest
+  `793 passed, 65 skipped`, MyPy `562` files and focused Ruff/format/JS syntax
+  checks pass. Local operation and restart instructions are recorded separately.
+  No production deployment, external AI, Telegram send or scheduled ingestion
+  worker was started.
+
 - Recorded the EPIC 25 human review result (`3 products / 3 confirmed links`)
   and separated subscription category from delivery method. Corrected the two
   local key-categorized subscription products using user-approved, transactional

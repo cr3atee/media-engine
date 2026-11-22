@@ -39,8 +39,8 @@ def test_market_terminal_shell_is_served() -> None:
             '<body class="terminal-page" data-transition-ready="app">' in response.text
         )
         assert "Market Terminal" in response.text
-        assert "Ваш следующий мир." in response.text
-        assert "Сравните предложения площадок" in response.text
+        assert "Цифровые товары." in response.text
+        assert "Находите подписки и сервисы" in response.text
         assert 'id="catalogView"' in response.text
         assert 'id="backToCatalog"' in response.text
         assert 'href="/terminal/review">Кабинет продавца</a>' in response.text
