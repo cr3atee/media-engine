@@ -53,11 +53,12 @@ class AdminActionRecord(Base):
             "'cancel_publication', 'resolve_publication_delivered', "
             "'resolve_publication_not_delivered', "
             "'resolve_publication_cancelled', 'retire_offer', "
-            "'restore_offer')",
+            "'restore_offer', 'import_catalog_promotion', 'change_product_category')",
             name="ck_admin_actions_action",
         ),
         CheckConstraint(
-            "resource_type IN ('content', 'publication', 'offer')",
+            "resource_type IN ('content', 'publication', 'offer', "
+            "'catalog_promotion', 'canonical_product')",
             name="ck_admin_actions_resource_type",
         ),
         CheckConstraint(
