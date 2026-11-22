@@ -1028,3 +1028,18 @@ staged or published as equivalent. No source/public database or human decision
 was changed by this correction. Net resale profit and automatic eligibility
 are not claimed. Focused tests pass `61`, full Pytest `833` with `65` guarded
 skips, strict MyPy `564` files and changed-file Ruff/format pass.
+
+The user confirmed an all-regions policy with comparisons only within identical
+activation conditions. `ParsedOffer` now supports a strict optional immutable
+activation profile; migration `0027` persists it as nullable JSONB without legacy
+backfill. Memory/PostgreSQL updates without evidence clear stale profiles.
+Grouping separates known profiles, and shared selection/difference/public reads
+reject unknown or conflicting multi-offer conditions without asserting savings.
+Single source prices remain visible. Source mapping, structured review entry,
+public variant selection and condition-aware historical analytics are not yet
+complete. Full Pytest passes `866` with `65` guarded skips, MyPy `571` files,
+changed-file Ruff/format and JS syntax pass. Repeated isolated PostgreSQL runs
+pass `9/9`, migration upgrade/check/downgrade/upgrade/offline SQL pass; local
+catalog/review databases were backed up and migrated with unchanged original
+data checksums. Both servers retain the original data and source post-review
+verification passes `55/55`. See `docs/EPIC_25_ACTIVATION_COMPARABILITY.md`.

@@ -177,7 +177,8 @@ def select_review_candidate(
         ProductComparisonInput(
             canonical_product_id=None,
             offers=tuple(MarketplaceOffer(offer=item.offer) for item in eligible),
-        )
+        ),
+        require_activation_conditions=False,
     )
     selected = selection.selected_offer
     if selected is None:

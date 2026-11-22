@@ -896,6 +896,12 @@ function renderOffers(offers) {
 }
 
 function renderComparison(comparison) {
+  if (["activation_conditions_unknown", "activation_conditions_mismatch"].includes(comparison.status)) {
+    renderEmpty(elements.comparisonCard, comparison.status === "activation_conditions_unknown"
+      ? "Условия активации ещё не подтверждены. Сравнение цен недоступно."
+      : "Предложения отличаются регионом, тарифом или условиями активации. Общую минимальную цену не выбираем.");
+    return;
+  }
   if (comparison.status === "currency_mismatch") {
     elements.comparisonCard.innerHTML = '<p class="notice">Цены в разных валютах. Показываем их без пересчёта и не выбираем общее самое дешёвое предложение.</p>';
     return;
@@ -1247,6 +1253,8 @@ function comparisonStatusLabel(status) {
     currency_mismatch: "Цены в разных валютах",
     no_valid_prices: "Нет доступных цен",
     unmatched: "Товар не сопоставлен",
+    activation_conditions_unknown: "Условия активации не подтверждены",
+    activation_conditions_mismatch: "Условия активации различаются",
   }[status] ?? status;
 }
 

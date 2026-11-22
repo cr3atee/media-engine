@@ -499,8 +499,8 @@ def test_repository_backed_comparison_loads_data_before_pure_comparator() -> Non
     assert state.offer_list_count == 1
     assert state.canonical_list_count == 1
     assert len(result) == 1
-    assert result[0].best_offer is not None
-    assert result[0].best_offer.offer.marketplace == "playerok"
+    assert result[0].best_offer is None
+    assert result[0].status is ComparisonStatus.ACTIVATION_UNKNOWN
 
 
 def test_playerok_comparison_helpers_await_repository_backed_pipeline() -> None:
@@ -533,7 +533,7 @@ def test_playerok_comparison_helpers_await_repository_backed_pipeline() -> None:
     assert state.offer_list_count == 1
     assert state.canonical_list_count == 1
     assert len(result) == 1
-    assert result[0].status is ComparisonStatus.COMPLETE
+    assert result[0].status is ComparisonStatus.ACTIVATION_UNKNOWN
 
 
 def test_repository_save_errors_propagate_from_marketplace_pipeline() -> None:

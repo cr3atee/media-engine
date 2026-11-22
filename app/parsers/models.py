@@ -5,6 +5,7 @@ from decimal import Decimal
 from typing import Any
 from uuid import UUID
 
+from app.domain.activation_conditions import ActivationConditions
 from app.domain.tenancy import LEGACY_TENANT_ID
 
 
@@ -41,4 +42,5 @@ class ParsedOffer:
     catalog_section_code: str | None = None
     catalog_source_rule_id: UUID | None = None
     canonical_product_id: UUID | None = None
+    activation_conditions: ActivationConditions | None = None
     tenant_id: UUID = LEGACY_TENANT_ID

@@ -82,3 +82,28 @@ def _offer(
         "price": price,
         "currency": currency,
     }
+
+
+@pytest.mark.parametrize(
+    "status", ["activation_conditions_unknown", "activation_conditions_mismatch"]
+)
+def test_comparison_truth_forbids_savings_without_compatible_terms(status: str) -> None:
+    offers = [
+        _offer("ggsel", "one", "700", "RUB"),
+        _offer("funpay", "two", "200", "RUB"),
+    ]
+    verifier = Verification()
+    _verify_comparison_truth(
+        {"status": status, "best_offer": None, "differences": []},
+        offers,
+        verifier,
+        name="activation guard",
+    )
+    assert verifier.passed == ["activation guard"]
+    with pytest.raises(AssertionError):
+        _verify_comparison_truth(
+            {"status": status, "best_offer": offers[1], "differences": []},
+            offers,
+            Verification(),
+            name="unsafe saving",
+        )

@@ -11,7 +11,8 @@ or public-domain deployment.
   port `55435`; its existing named volume retains both databases.
 - Original review database: `epic23_catalog_review_epic25_manual`.
 - Separate catalog database: `epic23_catalog_review_epic25_local_catalog`.
-- Both databases use revision `0026_product_category_audit`.
+- Both databases now use revision `0027_offer_activation_conditions`; the
+  initial launch verification below used `0026`.
 
 Use the distinct hostnames shown above. Cookies do not have port isolation, so
 opening both independent authentication databases through the same hostname
@@ -130,12 +131,19 @@ Connection credentials and backups are deliberately not committed to Git.
 
 ## Boundary
 
+The all-regions policy now has a persisted optional activation profile and a
+shared comparator guard. Legacy rows remain unknown; a multi-offer comparison
+with unknown/different conditions produces no asserted best offer or savings.
+Single-offer prices and the three-product catalog remain unchanged. See
+`EPIC_25_ACTIVATION_COMPARABILITY.md` for checks and the still-unfinished source
+mapping, review input and variant-selection UI.
+
 The first local three-product catalog is available for user acceptance. This
 does not mean the whole long-term MediaEngine roadmap or public launch is done.
 Only GGSEL offers are present for this assortment; Playerok/FunPay filters are
 honestly empty. There is one offer per product, so no cross-seller savings are
 claimed. Price history can be empty and is not fabricated. The local launcher
 does not start a scheduled ingestion worker: Refresh rereads persisted data,
-not the marketplaces. Delivery-method filtering, public asset-use approval,
+not the marketplaces. Public delivery-method filtering, public asset-use approval,
 VDS deployment, production monitoring and live Telegram delivery remain outside
 this local acceptance boundary. No external AI or Telegram call was made.

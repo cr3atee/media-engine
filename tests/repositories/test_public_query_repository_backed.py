@@ -395,14 +395,13 @@ async def _assert_repository_backed_public_reads() -> None:
 
     assert products.items[0].name == "Minecraft Premium"
     assert products.items[0].marketplaces == ("ggsel", "playerok")
-    assert products.items[0].best_offer is not None
-    assert products.items[0].best_offer.price == Decimal("790.00")
+    assert products.items[0].best_offer is None
     assert len(offers.items) == 2
     assert offers.items[0].marketplace == "playerok"
     assert comparison is not None
-    assert comparison.status == "complete"
-    assert comparison.best_offer is not None
-    assert comparison.best_offer.marketplace == "playerok"
+    assert comparison.status == "activation_conditions_unknown"
+    assert comparison.best_offer is None
+    assert comparison.differences == ()
     assert [point.price for point in history.items] == [
         Decimal("990.00"),
         Decimal("790.00"),
