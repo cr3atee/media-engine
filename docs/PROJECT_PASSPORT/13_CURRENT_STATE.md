@@ -1002,3 +1002,19 @@ MyPy `562` files, focused Ruff/format and Node syntax pass. See
 `docs/EPIC_25_LOCAL_RELEASE.md` for operational details. This is a three-product
 local catalog with one GGSEL offer per product, not public production, scheduled
 local ingestion, licensed public brand use or completed delivery-method filters.
+
+FunPay subscription source access was verified on 2026-11-22 for the same three
+services. The existing extractor now optionally retains structured parameters
+and availability beside ParsedOffer while preserving its existing outputs. A
+guarded read-only verifier rejects unknown/different fulfillment and duration
+conflicts rather than claiming every monthly listing equivalent. The local
+review runner queues one ExitLag PC digital-code candidate using the existing
+source metadata and repositories. Two runs retain four source offers, three
+links, one unresolved proposal and three original decisions; the fresh queue
+suggests the existing ExitLag product. No confirmation/promotion was automated.
+Existing GGSEL/product/decision checksums and the separate published catalog
+remain unchanged. Duolingo plan and Spotify fulfillment still need evidence;
+universal runtime method modelling/filtering remains unfinished. Focused tests
+pass `50`, full Pytest `822` with `65` skips, MyPy `564`, and focused Ruff/format
+pass. Post-review PostgreSQL verification remains `55/55`, Alembic current/check
+remain clean at `0026`. See `docs/EPIC_25_FUNPAY_REVIEW.md` for the manual gate.

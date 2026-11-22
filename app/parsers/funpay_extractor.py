@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from dataclasses import dataclass
 from decimal import ROUND_HALF_UP, Decimal
 from html.parser import HTMLParser
 from urllib.parse import parse_qs, urlencode, urlparse
@@ -20,6 +21,16 @@ class FunPayExtractionError(RuntimeError):
     """Raised when a FunPay listing no longer matches the parser contract."""
 
 
+@dataclass(slots=True, frozen=True)
+class FunPayOfferEvidence:
+    """One existing parsed offer with its unmodified structured listing fields."""
+
+    offer: ParsedOffer
+    parameters: tuple[tuple[str, str], ...]
+    disabled: bool = False
+    available_amount: int | None = None
+
+
 class FunPayExtractor:
     """Map typed FunPay offer previews to marketplace-independent offers."""
 
@@ -34,6 +45,17 @@ class FunPayExtractor:
         raw_response: str,
     ) -> SourceExtraction[ParsedOffer]:
         """Extract offers and audit whether the listing response is complete."""
+        extracted = self.extract_with_parameters(raw_response)
+        return SourceExtraction(
+            items=tuple(item.offer for item in extracted.items),
+            evidence=extracted.evidence,
+        )
+
+    def extract_with_parameters(
+        self,
+        raw_response: str,
+    ) -> SourceExtraction[FunPayOfferEvidence]:
+        """Retain source filter values without guessing terms from titles."""
         try:
             previews = OfferPreviewsParser(
                 raw_response,
@@ -43,18 +65,32 @@ class FunPayExtractor:
             msg = "FunPay listing does not match the supported HTML contract"
             raise FunPayExtractionError(msg) from exc
 
-        offers: list[ParsedOffer] = []
+        offers: list[FunPayOfferEvidence] = []
         seen_ids: set[str] = set()
         for preview in previews:
             offer = self._to_parsed_offer(preview)
             if offer.external_id is None or offer.external_id in seen_ids:
                 continue
             seen_ids.add(offer.external_id)
-            offers.append(offer)
+            offers.append(
+                FunPayOfferEvidence(
+                    offer=offer,
+                    parameters=tuple(
+                        sorted(
+                            (key, str(value))
+                            for key, value in preview.other_data.items()
+                        )
+                    ),
+                    disabled=preview.disabled,
+                    available_amount=preview.amount,
+                )
+            )
 
         audit = _FunPayListingAudit.inspect(raw_response)
         parsed_ids = frozenset(
-            offer.external_id for offer in offers if offer.external_id is not None
+            item.offer.external_id
+            for item in offers
+            if item.offer.external_id is not None
         )
         return SourceExtraction(
             items=tuple(offers),
