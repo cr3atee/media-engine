@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from collections.abc import Collection, Sequence
+from dataclasses import fields
 from datetime import UTC, datetime
 from typing import Any, cast
 from uuid import UUID, uuid4
@@ -293,6 +294,32 @@ class PostgresOfferRepository(OfferRepository):
             )
 
         return statement
+
+    async def compare_and_set_activation_conditions(
+        self,
+        tenant_id: UUID,
+        expected: ParsedOffer,
+        conditions: ActivationConditions | None,
+    ) -> bool:
+        """Atomically reject source changes without rewriting price or links."""
+        _validate_tenant(tenant_id, expected.tenant_id)
+        if expected.external_id is None:
+            return False
+        predicates: list[ColumnElement[bool]] = [self._active_offer_predicate()]
+        for field in fields(expected):
+            value = getattr(expected, field.name)
+            if field.name == "activation_conditions" and value is not None:
+                value = value.to_record()
+            predicates.append(getattr(Offer, field.name).is_not_distinct_from(value))
+        result = await self._session.execute(
+            update(Offer)
+            .where(*predicates)
+            .values(
+                activation_conditions=conditions.to_record() if conditions else None
+            )
+            .returning(Offer.id)
+        )
+        return result.scalar_one_or_none() is not None
 
     async def get_by_identity(
         self,

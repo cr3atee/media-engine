@@ -465,6 +465,14 @@ EPIC or a larger assortment. The three-product local boundary is implemented;
 longer-duration plans and additional offers are not added to fill the catalog.
 See `docs/EPIC_25_LOCAL_RELEASE.md` for startup and limits.
 
+The agreed all-regions boundary now has complete explicit condition profiles,
+compatibility guards and a tenant-authorized human review form with source CAS
+and atomic immutable audit (`0028`). Real profiles remain unknown until actual
+evidence is reviewed. Next within the same three-product scope: collect source
+conditions, review compatible alternatives and complete condition-aware transfer
+before claiming cross-marketplace savings. Public variant filtering and
+historical-condition analytics are not implied by this increment.
+
 A later public deployment remains separate: provide managed target access,
 verify real backup/monitoring and asset-use conditions, and approve the exact
 target-bound release. Local scheduled ingestion and delivery-method filtering

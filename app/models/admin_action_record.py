@@ -53,7 +53,8 @@ class AdminActionRecord(Base):
             "'cancel_publication', 'resolve_publication_delivered', "
             "'resolve_publication_not_delivered', "
             "'resolve_publication_cancelled', 'retire_offer', "
-            "'restore_offer', 'import_catalog_promotion', 'change_product_category')",
+            "'restore_offer', 'import_catalog_promotion', 'change_product_category', "
+            "'set_offer_activation_conditions')",
             name="ck_admin_actions_action",
         ),
         CheckConstraint(

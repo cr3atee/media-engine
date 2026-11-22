@@ -827,3 +827,154 @@ def _review_payload() -> dict[str, str]:
         "external_id": "offer-1",
         "canonical_product_id": str(PRODUCT_ID),
     }
+
+
+def _activation_payload(state: dict[str, object]) -> dict[str, object]:
+    """Explicit offline source evidence, not marketplace facts."""
+    return {
+        "offer_id": state["offer_id"],
+        "expected_version": state["version"],
+        "expected_source_fingerprint": state["source_fingerprint"],
+        "conditions": {
+            "regions": ["ru", "KZ"],
+            "excluded_regions": [],
+            "device": "pc",
+            "plan": "individual",
+            "period": "P1M",
+            "delivery_method": "key",
+            "account_requirement": "any",
+            "vpn_required": False,
+            "activation_window_seconds": None,
+        },
+        "reason": "Offline fixture confirmation of source facts.",
+    }
+
+
+def test_activation_review_api_saves_replays_and_resets_without_changing_offer() -> (
+    None
+):
+    provider = _seeded_provider()
+    client = _client(provider)
+    headers = _login_headers(client, "reviewer@example.com")
+    path = (
+        f"/api/v1/tenants/{TENANT_A_ID}/catalog/"
+        "offers/ggsel/offer-1/activation-conditions"
+    )
+    original = run_async(
+        provider.offers.get_by_identity(TENANT_A_ID, "ggsel", "offer-1")
+    )
+    initial = client.get(path, headers=headers)
+    assert initial.status_code == 200 and initial.json()["conditions"] is None
+    payload = _activation_payload(initial.json())
+    saved = client.post(
+        path, headers={**headers, "Idempotency-Key": "activation-save"}, json=payload
+    )
+    replay = client.post(
+        path, headers={**headers, "Idempotency-Key": "activation-save"}, json=payload
+    )
+    assert saved.status_code == replay.status_code == 200
+    assert (
+        replay.json()["replayed"]
+        and saved.json()["action_id"] == replay.json()["action_id"]
+    )
+    state = client.get(path, headers=headers).json()
+    assert state["version"] == 2 and state["conditions"]["regions"] == ["KZ", "RU"]
+    stored = run_async(provider.offers.get_by_identity(TENANT_A_ID, "ggsel", "offer-1"))
+    assert original is not None and stored is not None
+    assert (stored.price, stored.title, stored.url, stored.canonical_product_id) == (
+        original.price,
+        original.title,
+        original.url,
+        original.canonical_product_id,
+    )
+    stale = client.post(
+        path, headers={**headers, "Idempotency-Key": "activation-stale"}, json=payload
+    )
+    assert (
+        stale.status_code == 409
+        and stale.json()["error"]["code"] == "activation_version_conflict"
+    )
+    cleared_payload = {**_activation_payload(state), "conditions": None}
+    cleared = client.post(
+        path,
+        headers={**headers, "Idempotency-Key": "activation-clear"},
+        json=cleared_payload,
+    )
+    assert cleared.status_code == 200 and cleared.json()["resulting_state"] == "unknown"
+    assert client.get(path, headers=headers).json()["conditions"] is None
+
+
+@pytest.mark.parametrize(
+    "role,allowed",
+    [
+        (TenantRole.OWNER, True),
+        (TenantRole.ADMINISTRATOR, True),
+        (TenantRole.REVIEWER, True),
+        (TenantRole.OPERATOR, False),
+        (TenantRole.VIEWER, False),
+    ],
+)
+def test_activation_review_enforces_tenant_role_and_ignores_spoofed_headers(
+    role: TenantRole, allowed: bool
+) -> None:
+    provider = _seeded_provider()
+    run_async(_change_reviewer_role(provider, role))
+    client = _client(provider)
+    headers = {**_login_headers(client, "reviewer@example.com"), "X-Role": "admin"}
+    path = (
+        f"/api/v1/tenants/{TENANT_A_ID}/catalog/"
+        "offers/ggsel/offer-1/activation-conditions"
+    )
+    state = client.get(path, headers=headers)
+    assert state.status_code == (200 if allowed else 403)
+    payload = _activation_payload(
+        state.json()
+        if allowed
+        else {"offer_id": str(uuid4()), "version": 1, "source_fingerprint": "0" * 64}
+    )
+    changed = client.post(
+        path,
+        headers={**headers, "Idempotency-Key": "activation-permission"},
+        json=payload,
+    )
+    assert changed.status_code == (200 if allowed else 403)
+    foreign = client.get(
+        path.replace(str(TENANT_A_ID), str(TENANT_B_ID)), headers=headers
+    )
+    assert foreign.status_code == 404
+    assert client.get(path).status_code == 401
+
+
+@pytest.mark.parametrize(
+    "field,value",
+    [
+        ("vpn_required", "false"),
+        ("activation_window_seconds", False),
+        ("period", "1 month"),
+        ("regions", []),
+        ("extra", "not allowed"),
+    ],
+)
+def test_activation_review_rejects_ambiguous_or_extra_fields(
+    field: str, value: object
+) -> None:
+    provider = _seeded_provider()
+    client = _client(provider)
+    headers = _login_headers(client, "reviewer@example.com")
+    path = (
+        f"/api/v1/tenants/{TENANT_A_ID}/catalog/"
+        "offers/ggsel/offer-1/activation-conditions"
+    )
+    state = client.get(path, headers=headers).json()
+    payload = _activation_payload(state)
+    assert isinstance(payload["conditions"], dict)
+    payload["conditions"][field] = value
+    response = client.post(
+        path, headers={**headers, "Idempotency-Key": "activation-invalid"}, json=payload
+    )
+    assert response.status_code == 422
+    assert not run_async(
+        provider.admin_actions.list_for_resource(
+            AdminResourceType.OFFER, UUID(state["offer_id"])
+        )
+    )

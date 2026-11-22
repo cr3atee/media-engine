@@ -39,6 +39,7 @@ from app.services.canonical_product_proposals import CanonicalProductProposalSer
 from app.services.catalog_classification import CatalogClassificationService
 from app.services.diagnostics import DiagnosticService
 from app.services.marketplace_integrations import MarketplaceIntegrationService
+from app.services.offer_activation_review import OfferActivationReviewService
 from app.services.passwords import PasswordHasher
 from app.services.product_roles import ProductRoleService
 from app.services.public_catalog_hubs import PublicCatalogHubReadService
@@ -254,6 +255,13 @@ async def get_canonical_offer_review_service(
 ) -> CanonicalOfferReviewService:
     """Build the tenant-scoped canonical offer command service."""
     return CanonicalOfferReviewService(_repository_scope_factory(request))
+
+
+async def get_offer_activation_review_service(
+    request: Request,
+) -> OfferActivationReviewService:
+    """Build activation review on the shared tenant transaction boundary."""
+    return OfferActivationReviewService(_repository_scope_factory(request))
 
 
 async def get_canonical_offer_review_queue_service(

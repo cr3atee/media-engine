@@ -69,3 +69,19 @@ def test_ambiguous_json_scalar_types_are_rejected(field: str) -> None:
     record[field] = "unknown"
     with pytest.raises(ValueError):
         ActivationConditions.from_record(record)
+
+
+@pytest.mark.parametrize(
+    "field,value",
+    [
+        ("device", "unknown"),
+        ("plan", "unknown"),
+        ("plan", "other"),
+        ("regions", ("ZZ",)),
+    ],
+)
+def test_unknown_placeholders_cannot_be_confirmed(field: str, value: object) -> None:
+    record = conditions().to_record()
+    record[field] = list(value) if isinstance(value, tuple) else value
+    with pytest.raises(ValueError):
+        ActivationConditions.from_record(record)

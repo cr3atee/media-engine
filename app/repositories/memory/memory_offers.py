@@ -5,6 +5,7 @@ from dataclasses import dataclass, replace
 from datetime import UTC, datetime
 from uuid import UUID, uuid5
 
+from app.domain.activation_conditions import ActivationConditions
 from app.domain.identity import normalize_utc
 from app.domain.offer_availability import (
     OfferAvailabilityState,
@@ -235,6 +236,22 @@ class MemoryOfferRepository(OfferRepository):
             outcome=StateTransitionOutcome.APPLIED,
             version=updated.version,
         )
+
+    async def compare_and_set_activation_conditions(
+        self,
+        tenant_id: UUID,
+        expected: ParsedOffer,
+        conditions: ActivationConditions | None,
+    ) -> bool:
+        """Change only conditions inside the serialized memory transaction scope."""
+        _validate_tenant(tenant_id, expected.tenant_id)
+        if expected.external_id is None:
+            return False
+        for index, stored in enumerate(self._offers):
+            if stored == expected and self._is_active(stored):
+                self._offers[index] = replace(stored, activation_conditions=conditions)
+                return True
+        return False
 
     async def get_by_identity(
         self,

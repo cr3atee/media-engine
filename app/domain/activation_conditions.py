@@ -55,11 +55,20 @@ class ActivationConditions:
             raise ValueError(
                 "Explicit country codes or a worldwide scope are required."
             )
+        if {"XX", "ZZ"}.intersection(regions + excluded):
+            raise ValueError(
+                "Unknown region placeholders are not activation countries."
+            )
         if ("*" in regions and regions != ("*",)) or "*" in excluded:
             raise ValueError("Worldwide scope cannot be mixed with country codes.")
         if excluded and regions != ("*",):
             raise ValueError("Exclusions require an explicit worldwide scope.")
         device = self.device.strip().lower()
+        unknown_codes = {"unknown", "unconfirmed", "unspecified", "other"}
+        if device in unknown_codes or self.plan.strip().lower() in unknown_codes | {
+            "any"
+        }:
+            raise ValueError("Unknown placeholders cannot form comparable conditions.")
         if re.fullmatch(r"[a-z0-9][a-z0-9_-]{0,63}", device) is None:
             raise ValueError("An explicit normalized device code is required.")
         plan = self.plan.strip().lower()

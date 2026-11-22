@@ -66,6 +66,7 @@
         <a id="productProposalsLink" href="#productProposals" hidden>Новые товары</a>
         <a id="catalogClassificationLink" href="#catalogClassification" hidden>Категории</a>
         <a id="offerLifecycleLink" href="#offerLifecycle" hidden>Объявления</a>
+        <a id="activationReviewLink" href="#activationReview" hidden>Условия активации</a>
         <a id="productAccessLink" href="#productAccess" hidden>Доступ</a>
         <a id="diagnosticsLink" href="#diagnosticJournal" hidden>Ошибки</a>
         <span
@@ -254,6 +255,52 @@
             </div>
           </form>
         </div>
+      </section>
+
+      <section id="activationReview" class="offer-lifecycle" aria-labelledby="activationTitle" hidden>
+        <header class="workspace-heading">
+          <div><p class="section-label">Каталог</p><h2 id="activationTitle" tabindex="-1">Условия активации</h2></div>
+          <button id="activationClose" type="button" class="ghost-button">Закрыть раздел</button>
+        </header>
+        <form id="activationLookup" class="offer-lifecycle-lookup">
+          <label>Площадка<select id="activationMarketplace" required><option value="ggsel">GGSEL</option><option value="funpay">FunPay</option><option value="playerok">Playerok</option></select></label>
+          <label>ID объявления<input id="activationExternalId" required maxlength="255" autocomplete="off" placeholder="ID на площадке" /></label>
+          <button id="activationLoad" class="ghost-button" type="submit">Загрузить объявление</button>
+        </form>
+        <p id="activationMessage" class="workspace-message" role="status" aria-live="polite"></p>
+        <div id="activationDetails" hidden>
+          <h3 id="activationOfferTitle"></h3>
+          <p id="activationSourceState" class="form-hint"></p>
+          <a id="activationSource" class="ghost-button" target="_blank" rel="noopener noreferrer" hidden>Открыть источник ↗</a>
+          <form id="activationForm" class="activation-fields">
+            <label>Регион активации<select name="scope" required><option value="">Не подтверждён</option><option value="countries">Указанные страны</option><option value="worldwide">Любой регион, с учётом исключений</option></select></label>
+            <label>Устройство<select name="device" required><option value="">Не подтверждено</option><option value="pc">PC</option><option value="mobile">Мобильные устройства</option><option value="any">Все устройства</option></select></label>
+            <label id="activationRegionsLabel">Страны (коды)<input name="regions" maxlength="1000" autocomplete="off" placeholder="RU, KZ, BR" /><small class="form-hint">Например: RU — Россия, BR — Бразилия.</small></label>
+            <label id="activationExclusionsLabel">Исключённые страны (если есть)<input name="excluded_regions" maxlength="1000" autocomplete="off" placeholder="RU, UA" /></label>
+            <p id="activationRegionNames" class="form-hint activation-wide" aria-live="polite"></p>
+            <label>Тариф<select name="plan_choice" required><option value="">Не подтверждён</option><option value="individual">Индивидуальный</option><option value="family">Семейный</option><option value="solo">Solo</option><option value="duo">Duo</option><option value="super_individual">Super — индивидуальный</option><option value="super_family">Super — семейный</option><option value="max_individual">Max — индивидуальный</option><option value="max_family">Max — семейный</option><option value="other">Другой тариф</option></select></label>
+            <label id="activationPlanCodeLabel" hidden>Код другого тарифа<input name="plan_code" maxlength="64" pattern="[a-z0-9][a-z0-9_\-]{0,63}" placeholder="Одинаковый код для одинакового тарифа" /></label>
+            <label>Срок подписки<select name="period_unit" required><option value="">Не подтверждён</option><option value="M">Месяцы</option><option value="D">Дни</option><option value="W">Недели</option><option value="Y">Годы</option><option value="PERPETUAL">Бессрочно</option></select></label>
+            <label id="activationPeriodAmountLabel">Количество<input name="period_amount" type="number" min="1" max="99999" step="1" /></label>
+            <label>Способ получения<select name="delivery_method" required><option value="">Не подтверждён</option><option value="key">Ключ / цифровой код</option><option value="own_account">Активация на своём аккаунте</option><option value="new_account">Новый готовый аккаунт</option></select></label>
+            <label>Требования к аккаунту<select name="account_requirement" required><option value="">Не подтверждены</option><option value="new_only">Только новый аккаунт</option><option value="existing_only">Только существующий</option><option value="any">Новый или существующий</option></select></label>
+            <label>VPN при активации<select name="vpn_required" required><option value="">Не подтверждено</option><option value="false">Не требуется</option><option value="true">Требуется</option></select></label>
+            <label>Код нужно использовать<select name="window_unit" required><option value="">Не подтверждено</option><option value="unlimited">Без ограничения срока</option><option value="3600">В течение часов после получения</option><option value="86400">В течение дней после получения</option><option value="1">В течение секунд после получения</option></select></label>
+            <label id="activationWindowAmountLabel">Допустимый срок<input name="window_amount" type="number" min="1" max="2147483647" step="1" /></label>
+            <label class="activation-wide">На основании каких фактов подтверждены условия?<textarea name="reason" class="review-reason" required maxlength="2000" rows="3" placeholder="Перечислите сведения из описания или подтверждение продавца."></textarea></label>
+            <p class="form-hint activation-wide">Не выбирайте «любой регион», «не требуется» или «без ограничения», если это не подтверждено. Не вводите ключи и пароли.</p>
+            <div class="review-actions activation-wide">
+              <button id="activationClear" class="ghost-button" type="button">Сбросить в неизвестные</button>
+              <button id="activationRetry" class="ghost-button" type="button" hidden>Проверить результат повторным запросом</button>
+              <button id="activationSave" class="primary-button" type="submit">Проверить и сохранить условия</button>
+            </div>
+          </form>
+        </div>
+        <dialog id="activationDialog" aria-labelledby="activationDialogTitle">
+          <form method="dialog"><h3 id="activationDialogTitle">Подтвердить условия?</h3><p id="activationConfirmation"></p>
+            <div class="review-actions"><button class="ghost-button" value="cancel">Вернуться к проверке</button><button id="activationConfirm" class="primary-button" value="confirm">Сохранить условия</button></div>
+          </form>
+        </dialog>
       </section>
 
       <section id="diagnosticJournal" class="diagnostic-journal" aria-labelledby="diagnosticsTitle" hidden>

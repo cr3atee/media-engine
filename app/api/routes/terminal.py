@@ -178,6 +178,16 @@ async def market_terminal_offer_lifecycle_script() -> Response:
     )
 
 
+@router.get("/terminal/offer-activation.js", include_in_schema=False)
+async def market_terminal_offer_activation_script() -> Response:
+    """Serve the explicit activation-review client, never arbitrary files."""
+    return Response(
+        _read_asset("offer-activation.js"),
+        media_type="application/javascript",
+        headers=_ASSET_HEADERS,
+    )
+
+
 @router.get("/terminal/catalog-classification.js", include_in_schema=False)
 async def market_terminal_catalog_classification_script() -> Response:
     """Serve verified source-category mapping controls for seller tooling."""

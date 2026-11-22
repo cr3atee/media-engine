@@ -38,8 +38,10 @@ optional structured activation profile and comparator guard are now implemented;
 the existing source rows still have unknown profiles. All regions are in scope,
 but price comparisons require equal explicit region, period, plan, device,
 delivery, account, VPN and activation-window conditions. Missing facts are not
-permissive defaults. Source-evidence collection, review input and a public
-variant picker remain unfinished. MediaEngine does not collect buyer account
+permissive defaults. Structured human review input is implemented with audited
+condition-only writes; no real profiles were automatically confirmed.
+Source-evidence collection, condition-aware promotion and a public variant
+picker remain unfinished. MediaEngine does not collect buyer account
 passwords or activation keys as part of this catalog. See
 [activation comparability](EPIC_25_ACTIVATION_COMPARABILITY.md).
 
@@ -233,3 +235,16 @@ product. The previous review row and all human decisions remain unchanged.
 This completes the price-ranking correction, not automated resale eligibility
 or margin calculation. Focused tests pass `61`, full Pytest `833` with `65`
 guarded skips, and strict MyPy passes across `564` files.
+
+### Activation review entry (2026-11-22)
+
+The existing cabinet now supports explicit activation-condition review for an
+active offer without changing its title, price or canonical link. Tenant-scoped
+permissions, source/revision CAS, same-key replay, rollback and immutable audit
+are verified at migration `0028`. The form has no permissive defaults and an
+explicit confirmation/reset flow in the existing visual language. Full Pytest
+passes `891` with `65` skips, MyPy `575`, isolated PostgreSQL `20/20`, browser
+form `23/23` and existing catalog `127/127`; focused Ruff/format pass.
+No real profile was filled or new link created. See
+[activation review evidence](EPIC_25_ACTIVATION_REVIEW.md) for reproduction and
+the still-unfinished real source mapping/promotion boundary.

@@ -2,6 +2,7 @@ import { brandMark, handleImageError } from "/terminal/preview/presentation.js";
 import { createProductAccess, productRoleLabel } from "/terminal/product-access.js";
 import { createDiagnosticJournal, installFrontendDiagnostics } from "/terminal/diagnostics.js";
 import { createOfferLifecycle } from "/terminal/offer-lifecycle.js";
+import { createOfferActivationReview } from "/terminal/offer-activation.js";
 import { createCatalogClassification } from "/terminal/catalog-classification.js";
 
 document.addEventListener("error", handleImageError, true);
@@ -156,6 +157,13 @@ const offerLifecycle = createOfferLifecycle({
   request: requestJson,
   onAccessLoss: error => handleAccessLoss(error),
   onChanged: () => loadQueues(),
+});
+
+const activationReview = createOfferActivationReview({
+  request: requestJson,
+  onAccessLoss: error => handleAccessLoss(error),
+  externalUrl: safeExternalUrl,
+  formatMoney: money,
 });
 
 const catalogClassification = createCatalogClassification({
@@ -376,6 +384,7 @@ async function selectTenant(tenantId) {
     state.activeTenantId = context.tenant_id;
     state.activeTenant = context;
     offerLifecycle.setContext(context);
+    activationReview.setContext(context);
     catalogClassification.setContext(context);
     showReviewNavigation(true);
     elements.permissionSummary.textContent = "Проверка каталога разрешена";
@@ -661,6 +670,7 @@ function candidateCard(candidate) {
       ${factHtml("Решение", decisionLabel(candidate.match_decision))}
     </div>
     ${externalLinkHtml(candidate.offer_url)}
+    <a class="ghost-button" href="#activationReview" data-activation-review>Условия активации</a>
     </div>
     <div class="candidate-link">
       <span>
@@ -751,6 +761,7 @@ function proposalCard(proposal) {
       ${factHtml("Решение", decisionLabel(proposal.match_decision))}
     </div>
     ${externalLinkHtml(proposal.offer_url)}
+    <a class="ghost-button" href="#activationReview" data-activation-review>Условия активации</a>
     </div>
     ${proposalCandidateHtml(proposal)}
     <details class="decision-details">
@@ -1209,6 +1220,7 @@ function clearSession(message) {
 /** Drop protected data immediately, including any open confirmation dialog. */
 function invalidateWorkspace() {
   offerLifecycle.reset();
+  activationReview.reset();
   catalogClassification.reset();
   showReviewNavigation(false);
   state.workspaceEpoch += 1;

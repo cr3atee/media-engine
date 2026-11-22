@@ -123,6 +123,22 @@ class AdminMutationResult:
     recorded_at: datetime
     replayed: bool
 
+    @classmethod
+    def from_action(cls, action: AdminAction, *, replayed: bool) -> AdminMutationResult:
+        """Share the stable result mapping across audited command services."""
+        return cls(
+            action_id=action.id,
+            action=action.action,
+            resource_type=action.resource_type,
+            resource_id=action.resource_id,
+            previous_state=action.previous_state,
+            resulting_state=action.resulting_state,
+            resulting_version=action.resulting_version,
+            request_id=action.request_id,
+            recorded_at=action.created_at,
+            replayed=replayed,
+        )
+
 
 class AdminCommandError(Exception):
     """Safe application failure with a stable public code and details."""
@@ -638,18 +654,7 @@ def _resolve_command_tenant(
 
 
 def _result(action: AdminAction, *, replayed: bool) -> AdminMutationResult:
-    return AdminMutationResult(
-        action_id=action.id,
-        action=action.action,
-        resource_type=action.resource_type,
-        resource_id=action.resource_id,
-        previous_state=action.previous_state,
-        resulting_state=action.resulting_state,
-        resulting_version=action.resulting_version,
-        request_id=action.request_id,
-        recorded_at=action.created_at,
-        replayed=replayed,
-    )
+    return AdminMutationResult.from_action(action, replayed=replayed)
 
 
 def _guard_reviewable_content(

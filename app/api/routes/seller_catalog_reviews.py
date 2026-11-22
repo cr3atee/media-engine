@@ -10,6 +10,7 @@ from app.api.dependencies import (
     get_canonical_offer_review_queue_service,
     get_canonical_offer_review_service,
     get_canonical_product_proposal_service,
+    get_offer_activation_review_service,
     require_idempotency_key,
     require_tenant_permission,
 )
@@ -30,6 +31,11 @@ from app.api.schemas.canonical_offer_reviews import (
     OfferAvailabilityResponse,
     RejectCanonicalOfferRequest,
     ResolveCanonicalProductProposalRequest,
+)
+from app.api.schemas.offer_activation_review import (
+    ActivationConditionsPayload,
+    OfferActivationReviewRequest,
+    OfferActivationReviewResponse,
 )
 from app.domain.admin_actions import AdminActorType
 from app.domain.auth import Permission, TenantContext
@@ -73,6 +79,11 @@ from app.services.canonical_product_proposals import (
     ConfirmCanonicalProductProposalCommand,
     ResolveCanonicalProductProposalCommand,
 )
+from app.services.offer_activation_review import (
+    ActivationReviewError,
+    OfferActivationReviewService,
+    ReviewActivationConditionsCommand,
+)
 
 router = APIRouter(
     prefix="/api/v1/tenants/{tenant_id}/catalog",
@@ -83,6 +94,99 @@ CatalogReviewTenant = Annotated[
     TenantContext,
     Depends(require_tenant_permission(Permission.CATALOG_REVIEW)),
 ]
+
+
+def _activation_error(error: ActivationReviewError) -> ApiError:
+    status, message = {
+        "offer_not_found": (404, "Marketplace offer was not found."),
+        "permission_denied": (403, "Catalog review permission is required."),
+        "idempotency_conflict": (409, "Idempotency key is bound to another command."),
+        "activation_version_conflict": (
+            409,
+            "Activation conditions were already reviewed.",
+        ),
+        "activation_source_conflict": (
+            409,
+            "The displayed marketplace offer has changed.",
+        ),
+    }.get(error.code, (422, "Invalid activation condition review."))
+    return ApiError(status, error.code, message)
+
+
+@router.get(
+    "/offers/{marketplace}/{external_id}/activation-conditions",
+    response_model=OfferActivationReviewResponse,
+)
+async def get_offer_activation_conditions(
+    marketplace: str,
+    external_id: str,
+    context: CatalogReviewTenant,
+    service: Annotated[
+        OfferActivationReviewService, Depends(get_offer_activation_review_service)
+    ],
+) -> OfferActivationReviewResponse:
+    """Read exact source facts for reviewing new or already-linked offers."""
+    try:
+        state = await service.get(context.tenant.id, marketplace, external_id)
+    except ActivationReviewError as error:
+        raise _activation_error(error) from error
+    offer = state.offer
+    return OfferActivationReviewResponse(
+        offer_id=state.offer_id,
+        tenant_id=offer.tenant_id,
+        marketplace=offer.marketplace,
+        external_id=offer.external_id or external_id,
+        title=offer.title,
+        url=offer.url,
+        price=offer.price,
+        currency=offer.currency,
+        canonical_product_id=offer.canonical_product_id,
+        version=state.version,
+        source_fingerprint=state.source_fingerprint,
+        reviewed_at=state.reviewed_at,
+        conditions=ActivationConditionsPayload.model_validate(
+            offer.activation_conditions.to_record()
+        )
+        if offer.activation_conditions
+        else None,
+    )
+
+
+@router.post(
+    "/offers/{marketplace}/{external_id}/activation-conditions",
+    response_model=AdminMutationResponse,
+)
+async def review_offer_activation_conditions(
+    request: Request,
+    marketplace: str,
+    external_id: str,
+    payload: OfferActivationReviewRequest,
+    context: CatalogReviewTenant,
+    idempotency_key: Annotated[str, Depends(require_idempotency_key)],
+    service: Annotated[
+        OfferActivationReviewService, Depends(get_offer_activation_review_service)
+    ],
+) -> AdminMutationResponse:
+    """Save only explicit conditions with optimistic source and audit checks."""
+    try:
+        result = await service.review(
+            ReviewActivationConditionsCommand(
+                tenant_id=context.tenant.id,
+                marketplace=marketplace,
+                external_id=external_id,
+                offer_id=payload.offer_id,
+                expected_version=payload.expected_version,
+                expected_source_fingerprint=payload.expected_source_fingerprint,
+                conditions=payload.conditions.to_domain()
+                if payload.conditions
+                else None,
+                reason=payload.reason,
+            ),
+            _offer_admin_context(request, context, idempotency_key),
+        )
+    except ActivationReviewError as error:
+        raise _activation_error(error) from error
+    return _admin_mutation_response(result)
 
 
 @router.get(

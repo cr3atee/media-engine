@@ -72,6 +72,9 @@ jobs:
       - name: Run full Pytest
         run: .venv/bin/python -m pytest
 
+      - name: Verify activation review form fixtures
+        run: node scripts/verify_activation_review_form.mjs
+
       - name: Verify production deployment wiring
         run: .venv/bin/python scripts/verify_epic21_deployment.py
 
