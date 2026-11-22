@@ -17,6 +17,23 @@ target promotion, and browser acceptance remain as simple as possible.
 Three-, six-, and twelve-month plans are explicitly deferred. They must not
 appear in the first release merely to fill the catalog.
 
+## Product Category And Delivery Method
+
+Confirmed on 2026-11-22: all three launch products are subscriptions. A key is
+a way to receive or activate a subscription, not a replacement for its product
+category. The intended delivery choices are activation on the buyer's existing
+account, delivery of a new account, and an activation key. They are distinct
+purchase conditions and must not be presented as interchangeable offers.
+
+For this bounded first release each product has one explicitly reviewed offer.
+Original source titles and URLs retain the available delivery evidence. There
+is currently no structured delivery-method field or delivery-aware comparator
+guard; this change does not claim otherwise. Unknown conditions must remain
+unknown, not inferred from the service name. Before adding offers with different
+delivery methods to one comparison, implement verified method attributes and
+compatible variant grouping. MediaEngine does not collect buyer account
+passwords or activation keys as part of this catalog.
+
 ## Data Rules
 
 - A canonical product may reach the public catalog only after at least one real
@@ -109,7 +126,54 @@ Verification on 2026-11-21:
   without a code change. Desktop and mobile-dialog screenshots were inspected.
   These are not real catalog decisions or final public three-card acceptance.
 
-The remaining gates are three explicit human review decisions, creation or
-linking of exactly three canonical products, guarded target promotion, and the
-three-card public browser acceptance run. Marketplace sources must be refreshed
-before promotion. This preparation does not mark EPIC 25 released.
+At that point, human review, target promotion and final public acceptance were
+still pending. The subsequent result is recorded below.
+
+### Human review and category correction (2026-11-22)
+
+The user confirmed all three offers in the separate local review database:
+`3 products / 3 active links / 3 confirmed decisions / 0 pending proposals`.
+The reviewed names are `ExitLag 1 month Key`, `Duolingo Super 1 Month Key`, and
+`Spotify Premium Individual [1 Month]`. These names are preserved rather than
+silently replacing the user's choices with the plan's example spelling.
+
+With the user's approval, ExitLag and Duolingo were moved from the `keys`
+category to `subscriptions`. Spotify already had that category. A focused
+operator-only service uses the existing repository scope and immutable admin
+audit; migration `0026_product_category_audit` only extends accepted audit
+types. Each correction requires tenant context, elevated operator input,
+expected category/audit revision, reason and idempotency key. The local-only CLI
+previews by default and requires an exact product-bound approval for apply.
+It does not expose a new HTTP administration route.
+
+The separate category audit revision starts at one; it is not a new version
+field on the canonical product. Original review decisions are never amended.
+An old confirmation request expecting a superseded category can still receive
+the existing state-conflict response; replay the correction using its own key,
+not the earlier create request. Downgrading below `0026` with retained new audit
+rows fails rather than deleting immutable history.
+
+Verification:
+
+- Backed up the local review database before mutation, outside the repository.
+- Applied each of the two corrections twice; both replays returned the same
+  action IDs and exactly two category audits remain.
+- Offer and original decision checksums are unchanged. Existing post-review
+  public API/fresh-engine verification passes `55/55` after correction.
+- The existing manifest service successfully builds three products and three
+  confirmed links, all in the subscription category. The running local public
+  API also exposes three products with one offer each. No target was imported.
+- Focused memory/CLI/PostgreSQL tests pass `15`, covering rollback, tenant
+  isolation, fingerprint/revision conflicts, concurrent commands, replay and
+  fresh-engine persistence. PostgreSQL uses a separate disposable database.
+- Clean Alembic upgrade/current/check, downgrade/upgrade before audit insertion,
+  and offline SQL generation passed. Review current/check also pass at `0026`.
+- Full Pytest: `787 passed, 65 skipped`; the new guarded PostgreSQL test was run
+  separately without skip. MyPy: `562` files including Alembic. Changed-file
+  Ruff/format pass. The existing Starlette/httpx warning remains; an elevated
+  initial focused run also reported a pytest cache permission warning, and the
+  final focused run passed with cache disabled.
+
+The remaining gates are guarded target promotion and final three-card public
+browser acceptance. Refresh marketplace source evidence before promotion.
+Production deployment and delivery-method filtering are not claimed complete.

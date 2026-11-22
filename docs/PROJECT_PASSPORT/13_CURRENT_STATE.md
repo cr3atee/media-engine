@@ -969,3 +969,21 @@ browser passes `79` fixture-only checks on repeat after one CDP timeout;
 deployment checks pass `38/38`. Alembic current/check pass at
 `0025_catalog_promotion_audit`. Three real review decisions, target promotion,
 and final public-catalog acceptance remain pending, not completed.
+
+On 2026-11-22 the user completed the three EPIC 25 review decisions. Read-only
+post-review verification passes `55/55`: three products, three active links and
+three immutable confirmations survive fresh sessions and public comparison.
+The agreed category is subscriptions; key/account activation/new-account
+delivery are separate purchase conditions. Two user-approved local category
+corrections now have separate immutable admin actions at revision
+`0026_product_category_audit`. Source offers, titles and original decision
+checksums are unchanged; exact correction replay creates no duplicate audit.
+The operator-only correction service/CLI reuses existing repository scopes,
+tenant guards and audit storage; no new public administration endpoint or
+structured delivery-method field was introduced. Different delivery methods
+must not be merged without verified variant handling; the first release still
+has just one reviewed offer per product. Focused memory/CLI/PostgreSQL tests
+pass `15`, full Pytest `787` with `65` guarded skips, strict MyPy `562` files,
+and changed-file Ruff/format pass. Alembic lifecycle/current/check/offline SQL
+pass on an isolated test database. Target promotion and final public browser
+acceptance remain outstanding; no production release is claimed.

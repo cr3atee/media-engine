@@ -24,6 +24,7 @@ class AdminActionType(StrEnum):
     RETIRE_OFFER = "retire_offer"
     RESTORE_OFFER = "restore_offer"
     IMPORT_CATALOG_PROMOTION = "import_catalog_promotion"
+    CHANGE_PRODUCT_CATEGORY = "change_product_category"
 
 
 class AdminResourceType(StrEnum):
@@ -33,6 +34,7 @@ class AdminResourceType(StrEnum):
     PUBLICATION = "publication"
     OFFER = "offer"
     CATALOG_PROMOTION = "catalog_promotion"
+    CANONICAL_PRODUCT = "canonical_product"
 
 
 class AdminActorType(StrEnum):

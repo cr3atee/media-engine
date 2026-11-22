@@ -6,6 +6,18 @@ This document records notable Project Passport updates.
 
 ## Unreleased
 
+- Recorded the EPIC 25 human review result (`3 products / 3 confirmed links`)
+  and separated subscription category from delivery method. Corrected the two
+  local key-categorized subscription products using user-approved, transactional
+  and idempotent category amendments, with two new immutable audit rows and no
+  changes to original offers or review decisions. Added the local-only,
+  preview-first operator CLI and revision `0026_product_category_audit`.
+  Focused memory/CLI/PostgreSQL tests pass `15`; post-review verification passes
+  `55/55`; full Pytest `787 passed, 65 skipped`, MyPy `562` files and changed-file
+  Ruff/format pass. Isolated migration lifecycle/offline SQL passes. Structured
+  delivery variants, guarded target promotion and public release are not
+  represented as completed.
+
 - Prepared the three-offer EPIC 25 PostgreSQL review mode and editable canonical
   product names. Tenant-owned source integrations/rules are persisted before
   classified offers, while canonical creation/linking still requires a human
