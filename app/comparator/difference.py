@@ -3,6 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from decimal import Decimal
 
+from app.comparator.activation import activation_comparison_reason
 from app.comparator.models import MarketplaceOffer, ProductComparisonInput
 from app.comparator.selector import BestOfferSelection
 
@@ -39,6 +40,15 @@ class PriceDifferenceService:
                 best_offer=None,
                 differences=(),
                 reason=selection.reason,
+            )
+
+        compatibility_reason = activation_comparison_reason(selection.comparison.offers)
+        if compatibility_reason is not None:
+            return ComparisonDifferenceResult(
+                comparison=selection.comparison,
+                best_offer=None,
+                differences=(),
+                reason=compatibility_reason,
             )
 
         best_currency = best_offer.offer.currency

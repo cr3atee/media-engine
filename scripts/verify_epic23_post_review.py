@@ -353,6 +353,18 @@ def _verify_comparison_truth(
         )
         return
 
+    if comparison["status"] in {
+        "activation_conditions_unknown",
+        "activation_conditions_mismatch",
+    }:
+        verifier.check(
+            name,
+            len(offers) > 1
+            and comparison["best_offer"] is None
+            and comparison.get("differences") == [],
+        )
+        return
+
     best_offer = cast(dict[str, Any] | None, comparison["best_offer"])
     expected_price = min(Decimal(str(offer["price"])) for offer in offers)
     verifier.check(

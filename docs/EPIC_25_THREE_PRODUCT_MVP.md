@@ -33,13 +33,15 @@ account, delivery of a new account, and an activation key. They are distinct
 purchase conditions and must not be presented as interchangeable offers.
 
 For this bounded first release each product has one explicitly reviewed offer.
-Original source titles and URLs retain the available delivery evidence. There
-is currently no structured delivery-method field or delivery-aware comparator
-guard; this change does not claim otherwise. Unknown conditions must remain
-unknown, not inferred from the service name. Before adding offers with different
-delivery methods to one comparison, implement verified method attributes and
-compatible variant grouping. MediaEngine does not collect buyer account
-passwords or activation keys as part of this catalog.
+Original source titles and URLs retain the available delivery evidence. The
+optional structured activation profile and comparator guard are now implemented;
+the existing source rows still have unknown profiles. All regions are in scope,
+but price comparisons require equal explicit region, period, plan, device,
+delivery, account, VPN and activation-window conditions. Missing facts are not
+permissive defaults. Source-evidence collection, review input and a public
+variant picker remain unfinished. MediaEngine does not collect buyer account
+passwords or activation keys as part of this catalog. See
+[activation comparability](EPIC_25_ACTIVATION_COMPARABILITY.md).
 
 ## Data Rules
 

@@ -58,6 +58,11 @@ Fields:
 - `canonical_product_id`: optional explicit link to a same-tenant
   `CanonicalProduct`; when present and resolvable, comparator grouping treats it
   as authoritative instead of re-guessing identity from the title.
+- `activation_conditions`: optional immutable complete profile of region scope
+  and exclusions, device, plan, period, delivery method, required account history,
+  VPN and activation window. Missing profile means unknown, never unrestricted.
+  Equal canonical IDs alone do not authorize cross-condition price comparisons.
+  PostgreSQL stores a versioned JSONB value; legacy rows remain NULL.
 
 `ParsedOffer` is not a database model and does not contain matching logic.
 Explicit positive links are written by `CanonicalOfferLinkService`. The service

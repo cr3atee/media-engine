@@ -3,6 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from decimal import Decimal
 
+from app.comparator.activation import activation_comparison_reason
 from app.comparator.models import MarketplaceOffer, ProductComparisonInput
 
 
@@ -19,7 +20,12 @@ class BestOfferSelection:
 class BestOfferSelector:
     """Selects the cheapest valid offer within a grouped comparison."""
 
-    def select(self, comparison: ProductComparisonInput) -> BestOfferSelection:
+    def select(
+        self,
+        comparison: ProductComparisonInput,
+        *,
+        require_activation_conditions: bool = True,
+    ) -> BestOfferSelection:
         """Return the best offer for a grouped comparison input."""
         valid_offers = [
             item
@@ -48,6 +54,13 @@ class BestOfferSelector:
                 selected_offer=valid_offers[0],
                 reason="only one offer",
             )
+
+        if require_activation_conditions:
+            reason = activation_comparison_reason(comparison.offers)
+            if reason is not None:
+                return BestOfferSelection(
+                    comparison=comparison, selected_offer=None, reason=reason
+                )
 
         selected_offer = min(
             valid_offers,

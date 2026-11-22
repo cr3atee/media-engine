@@ -17,6 +17,7 @@ from sqlalchemy import (
     Uuid,
     text,
 )
+from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.database.base import Base
@@ -126,6 +127,9 @@ class Offer(Base):
     currency: Mapped[str | None] = mapped_column(String(16), nullable=True)
     seller_id: Mapped[str | None] = mapped_column(String(255), nullable=True)
     seller_name: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    activation_conditions: Mapped[dict[str, object] | None] = mapped_column(
+        JSONB(none_as_null=True), nullable=True
+    )
     source_category_id: Mapped[str | None] = mapped_column(
         String(255),
         nullable=True,

@@ -60,6 +60,7 @@ class MemoryOfferRepository(OfferRepository):
                 ):
                     self._offers[index] = replace(
                         stored_offer,
+                        activation_conditions=offer.activation_conditions,
                         title=_incoming_or_stored(offer.title, stored_offer.title),
                         url=_incoming_or_stored(offer.url, stored_offer.url),
                         price=_incoming_or_stored(offer.price, stored_offer.price),

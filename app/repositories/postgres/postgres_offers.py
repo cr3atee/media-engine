@@ -12,6 +12,7 @@ from sqlalchemy.engine import CursorResult
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.sql.elements import ColumnElement
 
+from app.domain.activation_conditions import ActivationConditions
 from app.domain.offer_availability import (
     OfferAvailabilityState,
     OfferAvailabilityStatus,
@@ -234,6 +235,11 @@ class PostgresOfferRepository(OfferRepository):
             currency=offer.currency,
             seller_id=offer.seller_id,
             seller_name=offer.seller_name,
+            activation_conditions=(
+                offer.activation_conditions.to_record()
+                if offer.activation_conditions is not None
+                else None
+            ),
             source_category_id=offer.source_category_id,
             source_category_name=offer.source_category_name,
             catalog_hub_code=offer.catalog_hub_code,
@@ -249,6 +255,7 @@ class PostgresOfferRepository(OfferRepository):
                 index_elements=(Offer.tenant_id, Offer.marketplace, Offer.external_id),
                 index_where=Offer.external_id.is_not(None),
                 set_={
+                    "activation_conditions": excluded.activation_conditions,
                     "title": func.coalesce(excluded.title, Offer.title),
                     "url": func.coalesce(excluded.url, Offer.url),
                     "price": func.coalesce(excluded.price, Offer.price),
@@ -439,6 +446,9 @@ class PostgresOfferRepository(OfferRepository):
             currency=offer.currency,
             seller_id=offer.seller_id,
             seller_name=offer.seller_name,
+            activation_conditions=ActivationConditions.from_record(
+                offer.activation_conditions
+            ),
             source_category_id=offer.source_category_id,
             source_category_name=offer.source_category_name,
             catalog_hub_code=offer.catalog_hub_code,

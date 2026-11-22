@@ -4,6 +4,7 @@ from collections.abc import Sequence
 from uuid import UUID
 
 from app.comparator.models import MarketplaceOffer, ProductComparisonInput
+from app.domain.activation_conditions import ActivationConditions
 from app.matching.confidence import MatchDecision
 from app.matching.service import MatchingService
 from app.models.canonical_product import CanonicalProduct
@@ -22,7 +23,9 @@ class OfferGroupingService:
         candidates: Sequence[CanonicalProduct],
     ) -> list[ProductComparisonInput]:
         """Group offers by canonical product and keep unmatched offers separate."""
-        grouped: dict[UUID, list[MarketplaceOffer]] = {}
+        grouped: dict[
+            tuple[UUID, UUID, ActivationConditions | None], list[MarketplaceOffer]
+        ] = {}
         unmatched: list[ProductComparisonInput] = []
         candidate_index = {
             (candidate.tenant_id, candidate.id): candidate for candidate in candidates
@@ -41,7 +44,14 @@ class OfferGroupingService:
                 if explicit_product is None:
                     unmatched.append(_unmatched_group(offer))
                 else:
-                    grouped.setdefault(explicit_product.id, []).append(offer)
+                    grouped.setdefault(
+                        (
+                            parsed_offer.tenant_id,
+                            explicit_product.id,
+                            parsed_offer.activation_conditions,
+                        ),
+                        [],
+                    ).append(offer)
                 continue
 
             match_result = self._matching_service.match(
@@ -56,14 +66,21 @@ class OfferGroupingService:
                 unmatched.append(_unmatched_group(offer))
                 continue
 
-            grouped.setdefault(canonical_product.id, []).append(offer)
+            grouped.setdefault(
+                (
+                    parsed_offer.tenant_id,
+                    canonical_product.id,
+                    parsed_offer.activation_conditions,
+                ),
+                [],
+            ).append(offer)
 
         result = [
             ProductComparisonInput(
                 canonical_product_id=canonical_product_id,
                 offers=tuple(items),
             )
-            for canonical_product_id, items in grouped.items()
+            for (_, canonical_product_id, _), items in grouped.items()
         ]
         result.extend(unmatched)
         return result

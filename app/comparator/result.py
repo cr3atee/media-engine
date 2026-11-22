@@ -5,19 +5,22 @@ from enum import Enum
 from uuid import UUID
 
 from app.comparator.difference import ComparisonDifferenceResult, OfferDifference
-from app.comparator.models import MarketplaceOffer, ProductComparisonInput
+from app.comparator.models import MarketplaceOffer
+from app.comparator.models import ProductComparisonInput as ProductComparisonInput
 from app.comparator.selector import BestOfferSelection
 from app.models.canonical_product import CanonicalProduct
 
 
-class ComparisonStatus(str, Enum):
-    """Deterministic comparison status values."""
+class ComparisonStatus(str, Enum):  # noqa: UP042
+    """Deterministic values; retain the existing public Enum string behavior."""
 
     COMPLETE = "complete"
     PARTIAL = "partial"
     CURRENCY_MISMATCH = "currency_mismatch"
     NO_VALID_PRICES = "no_valid_prices"
     UNMATCHED = "unmatched"
+    ACTIVATION_UNKNOWN = "activation_conditions_unknown"
+    ACTIVATION_MISMATCH = "activation_conditions_mismatch"
 
 
 @dataclass(slots=True, frozen=True)
@@ -63,6 +66,10 @@ class ComparisonResultBuilder:
             and selection.comparison.canonical_product_id is None
         ):
             return ComparisonStatus.UNMATCHED
+        if difference.reason == "activation conditions unknown":
+            return ComparisonStatus.ACTIVATION_UNKNOWN
+        if difference.reason == "activation conditions mismatch":
+            return ComparisonStatus.ACTIVATION_MISMATCH
         if (
             selection.reason == "currency mismatch"
             or difference.reason == "currency mismatch"

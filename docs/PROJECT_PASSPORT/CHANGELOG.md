@@ -6,6 +6,17 @@ This document records notable Project Passport updates.
 
 ## Unreleased
 
+- Implemented the confirmed all-regions activation-compatibility boundary:
+  immutable explicit condition profiles, nullable JSONB migration `0027`, aligned
+  memory/PostgreSQL updates, condition-scoped grouping and shared guards against
+  cross-condition best-price/difference claims. Added clear public status notices
+  without a styling redesign. Unknown legacy data stays unknown; no automatic
+  links or marketplace-term guesses were added. Full Pytest `866 passed, 65
+  skipped`, MyPy `571`, focused Ruff/format, isolated PostgreSQL `9/9` and existing
+  read-only post-review `55/55` pass. Local data checksums are unchanged. Source
+  mapping, review entry, variant picker and historical-condition tracking remain
+  open; see `EPIC_25_ACTIVATION_COMPARABILITY.md`.
+
 - Corrected FunPay launch-candidate ranking to reuse `BestOfferSelector` for
   minimum price instead of minimum numeric ID. Added regression coverage for
   input order, price ties and cheap blocked offers; documented resale sourcing
