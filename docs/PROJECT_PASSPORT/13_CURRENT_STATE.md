@@ -1018,3 +1018,13 @@ universal runtime method modelling/filtering remains unfinished. Focused tests
 pass `50`, full Pytest `822` with `65` skips, MyPy `564`, and focused Ruff/format
 pass. Post-review PostgreSQL verification remains `55/55`, Alembic current/check
 remain clean at `0026`. See `docs/EPIC_25_FUNPAY_REVIEW.md` for the manual gate.
+
+The FunPay review verifier's ID-based sample selection has now been replaced
+with the existing comparator's minimum-price selector, matching the user's
+resale-sourcing goal. Price ranking never bypasses source blockers or human
+equivalence review. Live inspection found a `208.96 RUB` monthly PC code, but
+its detail restricts region, account history and activation time; it was not
+staged or published as equivalent. No source/public database or human decision
+was changed by this correction. Net resale profit and automatic eligibility
+are not claimed. Focused tests pass `61`, full Pytest `833` with `65` guarded
+skips, strict MyPy `564` files and changed-file Ruff/format pass.

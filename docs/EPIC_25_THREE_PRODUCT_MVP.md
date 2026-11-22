@@ -2,6 +2,13 @@
 
 ## Goal
 
+The product's business purpose is to find lower-priced equivalent digital
+products as potential supply for resale, not merely display a catalog. Discovery
+must prioritize the lowest eligible source price instead of the lowest offer ID.
+Region, duration, device, fulfillment and activation conditions still need to
+match; the cheapest incompatible offer is not a resale opportunity. Asking-price
+differences alone are not net profit or evidence of permission to resell.
+
 Release the smallest useful public catalog: three subscription services and
 exactly three canonical products. Real-source verification, human review,
 target promotion, and browser acceptance remain as simple as possible.
@@ -211,3 +218,16 @@ automatic comparison guard. Focused tests pass `50`, full Pytest `822` with `65`
 guarded skips, MyPy `564` files, and focused Ruff/format pass. PostgreSQL
 post-review verification passes `55/55`; Alembic remains `0026` with no drift.
 See [FunPay evidence and the one manual review action](EPIC_25_FUNPAY_REVIEW.md).
+
+### Price-first source selection (2026-11-22)
+
+The FunPay review verifier now reuses the existing `BestOfferSelector` instead
+of choosing the smallest numeric source ID. Regression checks cover cheaper
+high-ID offers, order independence, deterministic price ties and blocked offers.
+Live verification selected the cheapest screened ExitLag listing at `208.96 RUB`,
+but reading its detail exposed new-account, VPN, region and one-hour-use limits.
+It was not staged, linked or published as equivalent to the reviewed launch
+product. The previous review row and all human decisions remain unchanged.
+This completes the price-ranking correction, not automated resale eligibility
+or margin calculation. Focused tests pass `61`, full Pytest `833` with `65`
+guarded skips, and strict MyPy passes across `564` files.

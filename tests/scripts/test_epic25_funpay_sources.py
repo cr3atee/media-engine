@@ -13,6 +13,7 @@ from scripts.verify_epic25_funpay_sources import (
     LIVE_ENV,
     assess_candidate,
     main,
+    select_review_candidate,
 )
 
 
@@ -141,6 +142,74 @@ def test_unknown_duolingo_plan_and_spotify_fulfillment_fail_closed() -> None:
     assert not assess_candidate(
         LAUNCH_SOURCES[2], _evidence(platform="individual")
     ).ready_for_review
+
+
+def _candidate(external_id: str, price: str) -> FunPayOfferEvidence:
+    """Give an offline fixture its own stable identity and exact Decimal price."""
+    evidence = _evidence()
+    return replace(
+        evidence,
+        offer=replace(
+            evidence.offer,
+            external_id=external_id,
+            url=f"https://funpay.com/lots/offer?id={external_id}",
+            price=Decimal(price),
+        ),
+    )
+
+
+@pytest.mark.parametrize("reverse", [False, True])
+def test_review_selection_uses_price_not_smallest_id(reverse: bool) -> None:
+    expensive = assess_candidate(LAUNCH_SOURCES[0], _candidate("1", "754.58"))
+    cheaper = assess_candidate(LAUNCH_SOURCES[0], _candidate("900", "300.01"))
+    candidates = [expensive, cheaper]
+    if reverse:
+        candidates.reverse()
+
+    selected = select_review_candidate(candidates)
+
+    assert selected is cheaper
+    assert selected.offer.price == Decimal("300.01")
+    assert selected.offer.canonical_product_id is None
+
+
+def test_review_price_tie_reuses_deterministic_selector_order() -> None:
+    first = assess_candidate(LAUNCH_SOURCES[0], _candidate("900", "300"))
+    second = assess_candidate(LAUNCH_SOURCES[0], _candidate("100", "300"))
+
+    assert select_review_candidate([first, second]) is second
+    assert select_review_candidate([second, first]) is second
+
+
+@pytest.mark.parametrize(
+    "evidence",
+    [
+        _candidate("2", "0"),
+        _candidate("2", "NaN"),
+        replace(_candidate("2", "1"), disabled=True),
+        replace(_candidate("2", "1"), available_amount=0),
+        replace(
+            _candidate("2", "1"), parameters=_evidence(platform="mobile").parameters
+        ),
+        replace(
+            _candidate("2", "1"), parameters=_evidence(duration="3 месяца").parameters
+        ),
+        replace(_candidate("2", "1"), parameters=_evidence(method="").parameters),
+    ],
+)
+def test_low_price_never_bypasses_source_blockers(
+    evidence: FunPayOfferEvidence,
+) -> None:
+    valid = assess_candidate(LAUNCH_SOURCES[0], _candidate("3", "500"))
+    blocked = assess_candidate(LAUNCH_SOURCES[0], evidence)
+
+    assert not blocked.ready_for_review
+    assert select_review_candidate([blocked, valid]) is valid
+    assert select_review_candidate([blocked]) is None
+
+
+def test_empty_review_selection_does_not_create_an_offer() -> None:
+    assert select_review_candidate([]) is None
 
 
 def test_live_guard_performs_no_request_when_missing(
