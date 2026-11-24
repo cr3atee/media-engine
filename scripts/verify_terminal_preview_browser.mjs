@@ -7,6 +7,7 @@ import { join } from "node:path";
 const base = process.env.TERMINAL_PREVIEW_URL ?? "http://127.0.0.1:8002";
 const debug = process.env.TERMINAL_CDP_URL ?? "http://127.0.0.1:9224";
 const threeProductAcceptance = process.env.EPIC25_THREE_PRODUCT_ACCEPTANCE === "1";
+const funpayExitLagAcceptance = process.env.EPIC25_FUNPAY_EXITLAG_ACCEPTANCE === "1";
 const priceOnlyTestBase = process.env.EPIC25_PRICE_ONLY_TEST_URL;
 if (priceOnlyTestBase) {
   const url = new URL(priceOnlyTestBase);
@@ -197,7 +198,7 @@ try {
     assert.equal(catalogPayload.items.length, 3, "Launch catalog contains exactly three products");
     assert.equal(catalogPayload.next_cursor, null, "Launch catalog has no hidden extra page");
     assert.deepEqual(catalogPayload.items.map(product => product.catalog_hub_code).sort(), ["duolingo", "exitlag", "spotify"]);
-    assert(catalogPayload.items.every(product => product.offer_count === 1 && product.catalog_section_code === "subscriptions"), "Each launch subscription has one reviewed offer");
+    assert(catalogPayload.items.every(product => product.offer_count >= 1 && product.catalog_section_code === "subscriptions"), "Each launch subscription has at least one reviewed offer");
     checks += 4;
     console.log("PASS bounded three-product API contract");
   }
@@ -489,7 +490,7 @@ try {
       await check(`${hubTitle} subscription section preserves the one-card bound`, `document.querySelectorAll(".product-card").length===1 && document.querySelector(".product-card").dataset.productId===${JSON.stringify(product.id)}`);
       await click(".product-card");
       await until('document.querySelector("#details").getAttribute("aria-busy")==="false"');
-      await check(`${hubTitle} detail preserves the reviewed name and source`, `document.querySelector("#originalName").textContent===${JSON.stringify(product.name)} && document.querySelectorAll(".offer-row").length===1 && document.querySelector(".offer-row a").href===${JSON.stringify(product.best_offer.url)}`);
+      await check(`${hubTitle} detail preserves the reviewed name and sources`, `document.querySelector("#originalName").textContent===${JSON.stringify(product.name)} && document.querySelectorAll(".offer-row").length===${product.offer_count} && [...document.querySelectorAll(".offer-row a")].some(a=>a.href===${JSON.stringify(product.best_offer.url)})`);
       await screenshot(`epic25-${product.catalog_hub_code}`);
     }
     await workingCatalog();
@@ -588,6 +589,43 @@ try {
   await evaluate('document.querySelector(".offer-row").scrollIntoView({block:"start"})');
   await screenshot("20-working-zoom-prices", false);
   await setBrowserZoom(originalZoom);
+  if (funpayExitLagAcceptance) {
+    assert(threeProductAcceptance, "Second-source acceptance requires the bounded launch catalog");
+    const exitlag = catalogPayload.items.find(product => product.catalog_hub_code === "exitlag");
+    assert.equal(exitlag.id, "dc7a6323-d5fc-5675-a2ff-0fe6ab4a70d1");
+    assert.equal(exitlag.offer_count, 2);
+    assert.deepEqual(exitlag.marketplaces, ["funpay", "ggsel"]);
+    assert(catalogPayload.items.filter(product=>product.id!==exitlag.id).every(product=>product.offer_count===1 && product.marketplaces.length===1 && product.marketplaces[0]==="ggsel"));
+    checks++;
+    console.log("PASS approved FunPay source adds an offer, not a fourth product");
+    const response = await fetch(`${base}/api/v1/public/products/${exitlag.id}/comparison`);
+    assert.equal(response.status, 200);
+    const comparison = await response.json();
+    assert.equal(comparison.status, "price_only");
+    assert.deepEqual(comparison.offers.map(offer=>`${offer.marketplace}/${offer.external_id}`).sort(), ["funpay/19847269", "ggsel/5077855"]);
+    assert(comparison.offers.every(offer=>offer.currency==="RUB" && Number(offer.price)>0));
+    const cheapest = [...comparison.offers].sort((a,b)=>Number(a.price)-Number(b.price))[0];
+    assert.equal(comparison.best_offer.external_id, cheapest.external_id);
+    assert.equal(comparison.differences.length, 1);
+    const spread = Number(comparison.differences[0].offer.price)-Number(comparison.best_offer.price);
+    assert(Math.abs(Number(comparison.differences[0].absolute_difference)-spread)<0.000001);
+    checks++;
+    console.log("PASS real approved pair has a minimum and price spread, not invented profit");
+    await size(1440);
+    await workingCatalog("?q=ExitLag");
+    await check("approved ExitLag card displays both marketplace logos and count two", 'document.querySelectorAll(".product-card").length===1 && document.querySelectorAll(".product-card .market-mark").length===2 && document.querySelector(".product-card .offer-count").textContent.trim()==="2"');
+    await click(".product-card");
+    await until('document.querySelector("#details")?.getAttribute("aria-busy")==="false"');
+    await check("real comparison shows both approved source links", '[...document.querySelectorAll(".offer-row a")].some(a=>a.href==="https://funpay.com/lots/offer?id=19847269") && document.querySelectorAll(".offer-row").length===2');
+    await check("real comparison is price-only without blocking unknown terms", 'document.querySelector("#comparisonCard h3")?.textContent==="Минимальная цена в подборке" && document.querySelector("#comparisonCard").textContent.includes("не прибыль")');
+    const displayedSpread = Number(comparison.differences[0].absolute_difference).toLocaleString("ru-RU", {minimumFractionDigits:2,maximumFractionDigits:2}).replace(/\s/g, "");
+    await check("real comparison renders the stored API spread", `document.querySelector('#comparisonCard').textContent.replace(/\\s/g,'').includes(${JSON.stringify(displayedSpread)})`);
+    await evaluate('document.querySelector("#comparisonCard").scrollIntoView({block:"center",behavior:"instant"})');
+    await screenshot("21-approved-funpay-desktop", false);
+    await mobileSize(390, 844);
+    await check("approved two-source comparison fits mobile", 'document.documentElement.scrollWidth<=innerWidth && [...document.querySelectorAll(".offer-row a")].every(a=>a.getBoundingClientRect().right<=innerWidth)');
+    await screenshot("22-approved-funpay-mobile", false);
+  }
   if (priceOnlyTestBase) {
     const fixtureId = "00000000-0000-0000-0000-0000000061ab";
     const response = await fetch(`${priceOnlyTestBase}/api/v1/public/products/${fixtureId}/comparison`);

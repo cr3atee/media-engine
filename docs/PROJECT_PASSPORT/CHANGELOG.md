@@ -6,6 +6,17 @@ This document records notable Project Passport updates.
 
 ## Unreleased
 
+- Published the first real GGSEL/FunPay pair on 2026-11-24 after explicit user
+  approval of FunPay ExitLag `19847269`. Existing proposal-resolution and guarded
+  release services preserved three products, added exactly one link and retained
+  immutable audit with exact fresh-process replay. Both backups were restored
+  into isolated rehearsal databases first. The public `price_only` view shows
+  saved GGSEL `599.00 RUB` and source-checked FunPay `754.58 RUB`, difference
+  `155.58 RUB`. GGSEL's refresh returned 429, not fabricated fresh success.
+  Original-data checksums `6/6`, browser `134/134`, full Pytest `913 passed, 65
+  skipped`, MyPy `577` and Node syntax pass. No business service/schema change.
+  Recorded web-only MVP delivery; customer local-agent/cookie import is deferred.
+
 - Applied the user's 2026-11-24 first-version simplification: public linked-offer
   reads can show minimum prices and Decimal spreads with unknown conditions as
   explicit `price_only` results, without mandatory seller replies or invented

@@ -32,7 +32,9 @@ category. The intended delivery choices are activation on the buyer's existing
 account, delivery of a new account, and an activation key. They are distinct
 purchase conditions and must not be presented as interchangeable offers.
 
-For this bounded first release each product has one explicitly reviewed offer.
+The original local release had one explicitly reviewed offer per product.
+On 2026-11-24 the user approved FunPay `19847269` as a second ExitLag source;
+the current catalog has three products and four offers, without a new product.
 Original source titles and URLs retain the available delivery evidence. The
 optional structured activation profile and comparator guard are now implemented;
 the existing source rows still have unknown profiles. On 2026-11-24 the user
@@ -71,8 +73,8 @@ are unchanged. Strict default comparison and profile-scoped grouping remain
 available; the existing discovery-only opt-out does not silently grant a
 verified difference result.
 
-The scope remains three monthly products. This does not add or publish the
-unresolved FunPay proposal, fabricate alternatives, change existing source
+The scope remains three monthly products. This pricing policy alone does not
+approve or publish unresolved proposals, fabricate alternatives, change source
 prices, or collect account credentials. A single offer keeps its previous
 source-price presentation, with no invented spread.
 
@@ -114,8 +116,23 @@ node scripts/verify_terminal_preview_browser.mjs
 Use a dedicated temporary browser profile. The optional fixture URL is
 loopback-only, rejects working-app ports `8000`/`8001` and verifies fixture
 identity before reads. Screenshots stay in OS temporary storage. No synthetic
-offers, new canonical decisions or condition confirmations enter either real
-local database.
+offers, new canonical decisions or condition confirmations are inserted by
+these fixture checks into either real local database.
+
+## First Real Pair (2026-11-24)
+
+The user separately approved the exact FunPay ExitLag proposal for publication.
+Existing review and release services now expose GGSEL `5077855` (`599.00 RUB`,
+saved quote) and FunPay `19847269` (`754.58 RUB`, freshly source-checked), with
+a `155.58 RUB` price-only spread. Three canonical products and all original
+GGSEL decisions remain intact. GGSEL's refresh attempt returned 429 and is not
+claimed as fresh verification. See
+[first marketplace comparison](EPIC_25_FIRST_MARKETPLACE_COMPARISON.md).
+
+The user also deferred a downloadable/local cookie-import agent and customer
+self-hosting. The first version remains a web catalog/comparison service. Local
+development preview is not a separate consumer application. Do not start new
+desktop/auth-cookie features while completing the bounded web experience.
 
 ## Data Rules
 
