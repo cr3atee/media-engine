@@ -4,6 +4,10 @@ Completed on 2026-11-24 after explicit user approval of the exact FunPay offer.
 This is an operational use of existing services, not a new parser, repository,
 approval bypass or local-agent feature.
 
+**Current catalog:** the separately approved Spotify pair below brings the
+catalog to three products and five offers. The ExitLag-first evidence remains
+historical; the latest acceptance uses both second-source flags.
+
 ## Visible Result
 
 Open the existing product:
@@ -20,9 +24,10 @@ an absolute difference of `155.58 RUB`. The percentage difference is calculated
 against the selected minimum by the existing Decimal service. This is a price
 spread, not resale profit or verified full activation equivalence.
 
-The catalog still has exactly three products. ExitLag has two source logos and
-two offers; Duolingo and Spotify retain one GGSEL offer each. No fourth product,
-new duration, invented seller, condition profile or speculative discount exists.
+At this first publication the catalog had exactly three products. ExitLag had
+two source logos and two offers; Duolingo and Spotify retained one GGSEL offer
+each. No fourth product, new duration, invented seller, condition profile or
+speculative discount exists.
 
 This approved FunPay example is not the cheapest listing on that marketplace.
 The user specifically chose it for the first real comparison rather than adding
@@ -97,6 +102,7 @@ $env:TERMINAL_PREVIEW_URL = 'http://localhost:8000'
 $env:TERMINAL_CDP_URL = 'http://127.0.0.1:9224'
 $env:EPIC25_THREE_PRODUCT_ACCEPTANCE = '1'
 $env:EPIC25_FUNPAY_EXITLAG_ACCEPTANCE = '1'
+$env:EPIC25_FUNPAY_SPOTIFY_ACCEPTANCE = '1'
 node scripts/verify_terminal_preview_browser.mjs
 ```
 
@@ -106,7 +112,7 @@ single-source assumption in one detail-page assertion was updated to use the
 actual API offer count; an initial run correctly failed on that obsolete test
 expectation, not on the application.
 
-Actual results: `134/134` browser checks passed on the real retained catalog,
+First-pair results: `134/134` browser checks passed on the real retained catalog,
 with no runtime/CSP errors and application GETs only. Desktop/catalog/mobile
 screenshots were inspected. Mobile emulation and accessibility-tree checks are
 not a physical-phone or real screen-reader certification. Full Pytest remains
@@ -116,6 +122,75 @@ so no new changed-file Ruff/format result is claimed. PostgreSQL was exercised
 through the restored-backup rehearsal, real API/release, fresh-process replay
 and six checksum checks; these are not represented as a rerun of an unrelated
 full PostgreSQL verifier suite.
+
+## Second Approved Pair: Spotify (2026-11-24)
+
+Open <http://localhost:8000/terminal?product=b7936dd8-1bd9-5073-ab02-59b381dfec9a>.
+
+| Source | Offer | Stored RUB price |
+| --- | --- | ---: |
+| FunPay | `79355854` | 164.33 |
+| GGSEL | `102361507` | 250.00 |
+
+The user explicitly approved the exact FunPay offer at an observed `164.83 RUB`.
+The final source check found a decrease to `164.33 RUB`; that real quote, not
+the older price, was persisted. Public comparison is `price_only`, selecting
+FunPay with a Decimal difference of `85.67 RUB`. GGSEL was not refreshed in
+this operation; its price remains a saved quote. This is not net resale profit,
+verified full equivalence or a guaranteed marketplace-wide minimum.
+
+The public category `1217` and detail both returned HTTP 200. Source parameters
+specify Individual and one month; seller `CatTheSeller` describes activation
+on the customer's account with Egypt region, no active subscription and possible
+VPN use. MediaEngine did not request passwords, login codes or marketplace
+sessions. Full activation profiles remain unknown.
+
+Both local databases were backed up to separate custom dumps named
+`/tmp/epic25-spotify-20261124-7ce93a2f-{source,target}.dump` inside the retained
+PostgreSQL container. Both were restored into disposable rehearsal databases
+before applying the user-approved operation. Rehearsal exercised the existing
+proposal-resolution, target release and public comparison, creating zero products
+and one link. Exact review and release replay passed. The actual source used
+the authenticated reviewer API, with an explicit chat-approval reason; the
+existing release service then published exactly the additional Spotify link.
+
+```text
+Proposal: de6ffaf9-039d-560a-a139-6eee72dd04f0
+Review decision: 0d94e21f-6841-44ed-9600-eddf1e4b749f
+Review key: epic25-funpay-spotify-user-approved-20261124
+Manifest: 485e102615cea2be80a76c8c37920422736c07eaac965ccd141112f15e9a159f
+Promotion action: a1390087-9460-46e4-a68c-b053b924f128
+Release key: epic25-funpay-spotify-release-20261124
+Source: 5 offers / 5 links / 3 products / 5 decisions / 0 pending proposals
+Target: 5 offers / 5 links / 3 products / 0 copied review decisions
+```
+
+A separate fresh process replayed both real commands, returned the same decision
+and promotion action, and verified `no_changes`. All pre-existing row hashes in
+eight source/target table snapshots remain unchanged, including the original
+GGSEL rows, ExitLag pair and earlier audits. Both rehearsal databases were
+removed after verification; original databases, dumps and web servers remain.
+
+Duolingo discovery returned 338 rows with 22 active source-valid monthly Super
+variants. Cheap examples were trial activation or a Family gift link; two
+Individual gift-link details (`80156681` at `90.00`, `79393730` at `99.00 RUB`)
+contradicted their monthly fields by also advertising an annual period.
+Neither was staged or published. Unknown conditions do not justify overlooking
+an actual period contradiction. Duolingo therefore retains its original GGSEL
+offer; no questionnaire or new eligibility feature was added as a release gate.
+
+Latest verification: `141/141` real-catalog browser checks, no runtime/CSP errors,
+application GETs only, inspected desktop/mobile screenshots; full Pytest
+`913 passed, 65 skipped`, strict MyPy `577` files, Node syntax and whitespace
+checks pass. Mobile remains emulation, not physical-device certification.
+The existing Starlette/httpx warning remains. No Python application/test,
+schema, dependency, business service, UI style or condition profile changed.
+Only the existing browser verifier was updated for both approved pairs and
+the already implemented `price_only` heading. An initial browser run exposed
+the obsolete heading expectation, not an application regression. An operator
+attempt also stopped after staging on an incorrect nested-DTO assumption;
+the actual flat API response was checked and the exact staged row resumed
+through the normal API, without reseeding or bypassing approval.
 
 ## Deployment Boundary
 

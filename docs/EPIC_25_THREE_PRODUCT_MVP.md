@@ -34,7 +34,9 @@ purchase conditions and must not be presented as interchangeable offers.
 
 The original local release had one explicitly reviewed offer per product.
 On 2026-11-24 the user approved FunPay `19847269` as a second ExitLag source;
-the current catalog has three products and four offers, without a new product.
+the catalog then had three products and four offers, without a new product.
+The subsequently approved FunPay Spotify `79355854` brings the current total
+to five offers: two ExitLag, two Spotify, one Duolingo. No fourth product exists.
 Original source titles and URLs retain the available delivery evidence. The
 optional structured activation profile and comparator guard are now implemented;
 the existing source rows still have unknown profiles. On 2026-11-24 the user
@@ -128,6 +130,16 @@ a `155.58 RUB` price-only spread. Three canonical products and all original
 GGSEL decisions remain intact. GGSEL's refresh attempt returned 429 and is not
 claimed as fresh verification. See
 [first marketplace comparison](EPIC_25_FIRST_MARKETPLACE_COMPARISON.md).
+
+The same existing services subsequently published user-approved Spotify FunPay
+`79355854` at the final observed `164.33 RUB` (down from the approved `164.83`)
+beside saved GGSEL `102361507` at `250.00 RUB`. The marked difference is
+`85.67 RUB`, not profit. Source/target backup restoration, one-link rehearsal,
+fresh-process review/release replay and eight original-table checksum checks
+passed. Real-catalog browser acceptance is now `141/141`; full Pytest remains
+`913 passed, 65 skipped`, MyPy `577` files. Duolingo remains GGSEL-only: cheap
+new gift-link samples explicitly contradicted the monthly duration. They were
+not staged or approved, and no extra release-gate functionality was introduced.
 
 The user also deferred a downloadable/local cookie-import agent and customer
 self-hosting. The first version remains a web catalog/comparison service. Local

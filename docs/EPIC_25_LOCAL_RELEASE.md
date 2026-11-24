@@ -34,6 +34,13 @@ status and a `155.58 RUB` difference. The catalog has three products and four
 offers, not a fourth product. See `EPIC_25_FIRST_MARKETPLACE_COMPARISON.md` for
 restored-backup rehearsal, audit/replay and the source-rate-limit caveat.
 
+The user then explicitly approved Spotify FunPay `79355854`. Its price decreased
+from `164.83` to `164.33 RUB` before publication; it is now selected beside the
+saved GGSEL `250.00 RUB` quote, with an `85.67 RUB` price-only difference. The
+current catalog has three products and five offers: two each for ExitLag and
+Spotify, one for Duolingo. Restored-backup rehearsal, exact fresh-process replay
+and eight original-table checksum checks passed; browser acceptance is `141/141`.
+
 No longer-duration products, Minecraft launch products, unreviewed canonical
 products, invented discounts or unapproved marketplace offers were added.
 
@@ -153,9 +160,9 @@ curated first version. No new/unlinked offer is thereby approved or promoted.
 
 The first local three-product catalog is available for user acceptance. This
 does not mean the whole long-term MediaEngine roadmap or public launch is done.
-GGSEL covers all three products; FunPay now additionally covers the approved
-ExitLag pair. Playerok remains empty for this assortment. Price differences
-describe the saved curated selection, not net profit or a marketplace-wide
+GGSEL covers all three products; FunPay additionally covers the explicitly
+approved ExitLag and Spotify pairs. Playerok remains empty for this assortment.
+Price differences describe the saved curated selection, not net profit or a marketplace-wide
 minimum. Price history can be empty and is not fabricated. The local launcher
 does not start a scheduled ingestion worker: Refresh rereads persisted data,
 not the marketplaces. Public delivery-method filtering, public asset-use approval,
