@@ -6,6 +6,16 @@ This document records notable Project Passport updates.
 
 ## Unreleased
 
+- Captured actual activation evidence for the three launch subscriptions and
+  six bounded FunPay alternatives on 2026-11-24. A guarded read-only collector
+  reuses existing fetchers, preserves source sections/hashes in temporary local
+  artifacts, and fails visibly on missing/ambiguous pages. No offers, conditions,
+  canonical decisions or application code changed. Documented real eligibility
+  gaps and exact seller questions instead of manufacturing equivalence or resale
+  profit. Live source access `3/3` per marketplace, detail capture `9/9`, focused
+  tests `12`, full Pytest `903 passed, 65 skipped`, strict MyPy `577` and focused
+  Ruff/format pass. See `EPIC_25_ACTIVATION_SOURCE_EVIDENCE.md`.
+
 - Added structured activation-condition review to the existing cabinet and
   tenant API: explicit facts, source/revision guarded condition-only writes,
   atomic append-only audit, exact idempotency replay, confirmation, safe retry

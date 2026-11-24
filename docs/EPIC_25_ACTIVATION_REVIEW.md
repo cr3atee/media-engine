@@ -142,6 +142,13 @@ databases afterward; retain both user-facing databases and their volume.
 
 ## Remaining Boundary
 
+The subsequent [2026-11-24 source audit](EPIC_25_ACTIVATION_SOURCE_EVIDENCE.md)
+captured nine actual descriptions and identified concrete eligibility facts
+that the current value cannot yet encode. In particular, do not discard
+active-subscription/trial/IP-history restrictions or treat gift links as keys
+when filling this form. A free-text reason is not a comparator guard; keep an
+incompletely representable profile unknown.
+
 All real offer profiles remain unknown. This form neither fetches source pages
 nor proves a seller's claims, resale permission, net profit or current stock.
 Saving terms does not confirm a canonical match, publish a proposal or copy it

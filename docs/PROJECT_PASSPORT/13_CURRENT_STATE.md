@@ -4,7 +4,23 @@
 
 This document records the current implementation state of MediaEngine.
 
-## Latest Verified Increment (2026-11-22)
+## Latest Source Audit (2026-11-24)
+
+The existing live verifiers confirm access to all three GGSEL and FunPay launch
+sources. A new read-only research collector captured nine known detail pages
+through the existing fetchers without creating offers, profiles or decisions.
+Actual source evidence identifies account-access Egypt-region Spotify on GGSEL,
+trial/family/gift-link alternatives on FunPay, and restrictive ExitLag account,
+region and code-use terms. None establishes a complete equivalent launch pair.
+Active-subscription/trial eligibility, IP history, subnational restrictions and
+use-VPN versus activation-VPN are concrete current modelling limits, not facts
+to drop into an otherwise comparable profile. Keep such profiles unknown.
+See `docs/EPIC_25_ACTIVATION_SOURCE_EVIDENCE.md` for the exact seller questions.
+Focused tests `12`, full Pytest `903 passed, 65 skipped`, MyPy `577` files and
+changed-file Ruff/format pass. No application/schema/UI/dependency changes or
+new database/browser verification are claimed by this research step.
+
+## Activation Review Increment (2026-11-22)
 
 EPIC 25 now includes structured human activation-condition review in the
 existing cabinet: tenant-authorized reads/writes, complete explicit facts,
