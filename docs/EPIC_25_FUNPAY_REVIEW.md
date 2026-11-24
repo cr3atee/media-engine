@@ -12,6 +12,17 @@ This is not a claim that it is FunPay's cheapest offer or a full equivalence
 review. The older candidate-only state below is historical; see
 `EPIC_25_FIRST_MARKETPLACE_COMPARISON.md` for current acceptance evidence.
 
+**Subsequent approval on the same date:** Spotify `79355854` is also published,
+at a final checked `164.33 RUB` (the approved quote was `164.83`). It is a
+one-month Individual account-activation offer with Egypt region, possible VPN
+and no active subscription, not verified unrestricted equivalence. The public
+price-only difference against saved GGSEL `250.00 RUB` is `85.67 RUB`. Current
+state is three products, five offers/links and five source decisions, with no
+pending proposals. Duolingo remains single-source; two newly sampled Individual
+gift-link descriptions contradict their monthly fields with annual wording.
+They were not staged or published. The detailed current audit/QA is in the
+same comparison report; the original strict screening below is unchanged.
+
 ## Real Sources
 
 The existing `FunPayFetcher` and installed `CategoriesParser` discovered these

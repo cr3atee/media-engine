@@ -463,7 +463,9 @@ images are connected; expanded browser acceptance passes `127` checks.
 Next is user acceptance of `http://localhost:8000/terminal`, not another backend
 EPIC or a larger assortment. The explicitly approved FunPay ExitLag offer now
 provides the first real two-source price comparison, keeping three products.
-Duolingo/Spotify still have GGSEL only; no Playerok coverage is invented.
+The subsequently approved Spotify FunPay offer provides a second real pair,
+keeping three products and five offers. Duolingo still has GGSEL only; no
+Playerok coverage or conflicting-duration Duolingo offer is invented.
 The three-product local boundary is implemented;
 longer-duration plans and additional offers are not added to fill the catalog.
 See `docs/EPIC_25_LOCAL_RELEASE.md` for startup and limits.
