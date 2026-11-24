@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from datetime import UTC, datetime
@@ -11,6 +12,9 @@ from pydantic import SecretStr
 
 from app.config.settings import AdminApiSettings
 from app.main import create_app
+from app.models.canonical_product import CanonicalProduct
+from app.parsers.models import ParsedOffer
+from app.repositories.provider import create_memory_provider
 from app.repositories.public_queries.contracts import (
     PublicCatalogHubQueryRepository,
     PublicCategoryQueryRepository,
@@ -39,6 +43,9 @@ from app.repositories.public_queries.models import (
     PublicProductQuery,
 )
 from app.repositories.public_queries.provider import PublicReadRepositoryProvider
+from app.repositories.public_queries.repository_backed import (
+    create_repository_backed_public_read_scope_factory,
+)
 from app.repositories.queries.models import CursorPosition, PageRequest, ReadPage
 
 NOW = datetime(2026, 9, 14, 12, 0, tzinfo=UTC)
@@ -424,6 +431,48 @@ def test_public_product_detail_offers_and_comparison_are_readable() -> None:
     assert repository.offer_query.product_id == UUID(int=1)
     assert comparison.status_code == 200
     assert comparison.json()["status"] == "complete"
+
+
+def test_public_real_comparator_returns_price_only_for_curated_unknown_terms() -> None:
+    provider = create_memory_provider()
+    product = CanonicalProduct(
+        id=UUID(int=25003),
+        name="Offline fixture subscription 1 month",
+        category="subscriptions",
+        aliases=(),
+    )
+
+    async def seed() -> None:
+        await provider.canonical_products.save(product)
+        for marketplace, price in (("ggsel", "990"), ("funpay", "790")):
+            await provider.offers.save(
+                ParsedOffer(
+                    marketplace=marketplace,
+                    external_id=f"fixture-{marketplace}",
+                    title=product.name,
+                    url="https://example.com/test-only",
+                    price=Decimal(price),
+                    currency="RUB",
+                    canonical_product_id=product.id,
+                )
+            )
+
+    asyncio.run(seed())
+    client = TestClient(
+        create_app(
+            admin_api_settings=AdminApiSettings(api_enabled=False),
+            public_read_repository_scope_factory=(
+                create_repository_backed_public_read_scope_factory(provider)
+            ),
+        )
+    )
+    response = client.get(f"/api/v1/public/products/{product.id}/comparison")
+    assert response.status_code == 200
+    body = response.json()
+    assert body["status"] == "price_only"
+    assert body["best_offer"]["marketplace"] == "funpay"
+    assert Decimal(body["differences"][0]["absolute_difference"]) == Decimal("200")
+    assert len(body["offers"]) == 2
 
 
 def test_public_history_changes_and_categories_are_readable() -> None:

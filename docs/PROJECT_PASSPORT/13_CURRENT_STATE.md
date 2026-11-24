@@ -4,7 +4,24 @@
 
 This document records the current implementation state of MediaEngine.
 
-## Latest Source Audit (2026-11-24)
+## Current MVP Decision (2026-11-24)
+
+The user accepts the selected three products and does not want exhaustive
+activation/seller checks to block the first version. Public linked-product
+reads now use an explicit unknown-condition price-comparison allowance. They
+return a marked `price_only` minimum and Decimal spread rather than asserting
+complete equivalence or net profit. The working UI/preview retain the existing
+styling and show a short notice. Known conflicting profiles and mixed currencies
+still block a common minimum. Default strict comparison, grouping, canonical
+approval and tenant/storage semantics are unchanged. Unknown profiles are not
+filled in, and no unlinked FunPay offer is published. Seller questions from the
+audit below are optional research, not a required next step for the user.
+Full Pytest `913 passed, 65 skipped`, MyPy `577` files, focused Ruff/format,
+PostgreSQL `21/21` and browser `133/133` pass. Extra browser pricing cases use
+an isolated synthetic fixture app, not invented offers in the real catalog.
+No migration, dependency or source-data change was introduced.
+
+## Source Audit Before Scope Simplification (2026-11-24)
 
 The existing live verifiers confirm access to all three GGSEL and FunPay launch
 sources. A new read-only research collector captured nine known detail pages

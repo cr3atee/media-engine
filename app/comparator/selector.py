@@ -15,6 +15,7 @@ class BestOfferSelection:
     selected_offer: MarketplaceOffer | None
     reason: str
     currency_mismatch: bool = False
+    activation_conditions_unverified: bool = False
 
 
 class BestOfferSelector:
@@ -25,8 +26,9 @@ class BestOfferSelector:
         comparison: ProductComparisonInput,
         *,
         require_activation_conditions: bool = True,
+        allow_unknown_activation_conditions: bool = False,
     ) -> BestOfferSelection:
-        """Return the best offer for a grouped comparison input."""
+        """Select strictly by default; allow marked price-only results explicitly."""
         valid_offers = [
             item
             for item in comparison.offers
@@ -48,19 +50,33 @@ class BestOfferSelector:
                 currency_mismatch=True,
             )
 
+        unverified = False
+        if require_activation_conditions and (
+            len(valid_offers) > 1 or allow_unknown_activation_conditions
+        ):
+            reason = activation_comparison_reason(
+                comparison.offers, allow_unknown=allow_unknown_activation_conditions
+            )
+            if reason is not None:
+                return BestOfferSelection(
+                    comparison=comparison, selected_offer=None, reason=reason
+                )
+            unverified = (
+                allow_unknown_activation_conditions
+                and len(comparison.offers) > 1
+                and any(
+                    item.offer.activation_conditions is None
+                    for item in comparison.offers
+                )
+            )
+
         if len(valid_offers) == 1:
             return BestOfferSelection(
                 comparison=comparison,
                 selected_offer=valid_offers[0],
                 reason="only one offer",
+                activation_conditions_unverified=unverified,
             )
-
-        if require_activation_conditions:
-            reason = activation_comparison_reason(comparison.offers)
-            if reason is not None:
-                return BestOfferSelection(
-                    comparison=comparison, selected_offer=None, reason=reason
-                )
 
         selected_offer = min(
             valid_offers,
@@ -70,6 +86,7 @@ class BestOfferSelector:
             comparison=comparison,
             selected_offer=selected_offer,
             reason="lowest price",
+            activation_conditions_unverified=unverified,
         )
 
     def _selection_key(self, item: MarketplaceOffer) -> tuple[Decimal, str, str, str]:

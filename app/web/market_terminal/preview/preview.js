@@ -143,6 +143,7 @@ function productMarkup(product, comparison, params) {
   const art = infoFor(product);
   const backQuery = { ...(params.get("q") ? { q: params.get("q") } : {}), ...(params.get("marketplace") ? { marketplace: params.get("marketplace") } : {}) };
   const mismatch = comparison.status === "currency_mismatch";
+  const priceOnly = comparison.status === "price_only";
   const activationNotice = comparison.status === "activation_conditions_unknown"
     ? "Условия активации ещё не подтверждены. Сравнение цен недоступно."
     : comparison.status === "activation_conditions_mismatch"
@@ -155,7 +156,7 @@ function productMarkup(product, comparison, params) {
     <a class="primary" href="#offers">Все предложения <span aria-hidden="true">↓</span></a>
     <details class="original-name"><summary>Исходное название товара</summary><p>${escapeHtml(product.name)}</p>${artwork[product.id] ? '<p>Краткий заголовок подготовлен для макета. Название в каталоге не изменено.</p>' : ""}</details></div></section>
     <section id="offers" aria-labelledby="offersTitle"><div class="offers-heading"><h2 id="offersTitle">Предложения площадок</h2><span class="subtle">${product.updated_at ? `Обновлено ${escapeHtml(new Date(product.updated_at).toLocaleDateString("ru-RU"))}` : "Время обновления не передано источником"}</span></div>
-    ${mismatch ? '<p class="notice"><span aria-hidden="true">ⓘ</span><span><strong>Цены в разных валютах.</strong> Мы показываем их без пересчёта и не выбираем общее самое дешёвое предложение.</span></p>' : activationNotice ? `<p class="notice neutral">${escapeHtml(activationNotice)}</p>` : comparison.best_offer ? `<p class="notice neutral">Лучшее предложение по результату сравнения: ${escapeHtml(money(comparison.best_offer))} · ${escapeHtml(marketplaceName(comparison.best_offer.marketplace))}</p>` : '<p class="notice neutral">Лучшее предложение пока не определено. Проверьте цену, валюту и условия каждого объявления.</p>'}
+    ${mismatch ? '<p class="notice"><span aria-hidden="true">ⓘ</span><span><strong>Цены в разных валютах.</strong> Мы показываем их без пересчёта и не выбираем общее самое дешёвое предложение.</span></p>' : activationNotice ? `<p class="notice neutral">${escapeHtml(activationNotice)}</p>` : comparison.best_offer ? `<p class="notice neutral">${priceOnly ? "Минимальная цена в подборке" : "Лучшее предложение по результату сравнения"}: ${escapeHtml(money(comparison.best_offer))} · ${escapeHtml(marketplaceName(comparison.best_offer.marketplace))}${priceOnly ? ". Условия активации проверены не полностью. Показана разница цен, не прибыль." : ""}</p>` : '<p class="notice neutral">Лучшее предложение пока не определено. Проверьте цену, валюту и условия каждого объявления.</p>'}
     ${comparison.offers.length ? comparison.offers.map(offerRow).join("") : '<div class="empty"><h2>Предложений пока нет</h2><p>Товар есть в каталоге, но доступные предложения ещё не получены.</p></div>'}
     <p class="detail-note">Покупка проходит на выбранной площадке. Проверьте регион активации, платформу и способ получения перед оплатой.</p></section>`;
 }

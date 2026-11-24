@@ -6,6 +6,15 @@ This document records notable Project Passport updates.
 
 ## Unreleased
 
+- Applied the user's 2026-11-24 first-version simplification: public linked-offer
+  reads can show minimum prices and Decimal spreads with unknown conditions as
+  explicit `price_only` results, without mandatory seller replies or invented
+  profiles. Working/preview UI retain their styling and show a short warning;
+  known profile conflicts, currencies, strict defaults and canonical approval
+  remain protected. No source row, link or price changed. Focused tests `55`,
+  full Pytest `913 passed, 65 skipped`, strict MyPy `577`, PostgreSQL `21/21`,
+  browser `133/133` and focused Ruff/format pass. See the current MVP boundary.
+
 - Captured actual activation evidence for the three launch subscriptions and
   six bounded FunPay alternatives on 2026-11-24. A guarded read-only collector
   reuses existing fetchers, preserves source sections/hashes in temporary local

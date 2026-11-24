@@ -35,15 +35,87 @@ purchase conditions and must not be presented as interchangeable offers.
 For this bounded first release each product has one explicitly reviewed offer.
 Original source titles and URLs retain the available delivery evidence. The
 optional structured activation profile and comparator guard are now implemented;
-the existing source rows still have unknown profiles. All regions are in scope,
-but price comparisons require equal explicit region, period, plan, device,
-delivery, account, VPN and activation-window conditions. Missing facts are not
-permissive defaults. Structured human review input is implemented with audited
+the existing source rows still have unknown profiles. On 2026-11-24 the user
+confirmed that the selected products are sufficient for the first version and
+that exhaustive activation/seller questioning must not block it. The public
+catalog can now rank prices of offers already linked to a product despite
+unknown conditions, returning explicit `price_only` status and a short notice.
+Known conflicting profiles and mixed currencies still block a common minimum.
+Strict equivalence comparison remains the comparator's default for other
+callers. Missing facts stay unknown; no profile is filled with permissive
+defaults. Structured human review input is implemented with audited
 condition-only writes; no real profiles were automatically confirmed.
 Source-evidence collection, condition-aware promotion and a public variant
 picker remain unfinished. MediaEngine does not collect buyer account
 passwords or activation keys as part of this catalog. See
 [activation comparability](EPIC_25_ACTIVATION_COMPARABILITY.md).
+
+## Curated Price Comparison (2026-11-24)
+
+For this first version, seller replies, complete activation profiles and proof
+of resale permission are not mandatory development/release gates. Existing
+human-approved product identities remain the input. New/unlinked alternatives
+are not automatically confirmed because they are cheaper.
+
+The existing selector has an explicit unknown-condition allowance. The public
+read projection uses it for product cards/details and comparison consistently.
+The selected result carries an unverified marker into the existing Decimal
+difference service and returns `price_only`, not `complete` equivalence.
+Both working UI and preview show the minimum price in the curated selection
+and a brief unknown-conditions/price-not-profit notice, with existing styling.
+
+Known complete profiles still cannot contradict one another, even when an
+unknown third offer exists. The difference service checks this independently.
+Currency, tenant, product identity, active-offer and canonical-link boundaries
+are unchanged. Strict default comparison and profile-scoped grouping remain
+available; the existing discovery-only opt-out does not silently grant a
+verified difference result.
+
+The scope remains three monthly products. This does not add or publish the
+unresolved FunPay proposal, fabricate alternatives, change existing source
+prices, or collect account credentials. A single offer keeps its previous
+source-price presentation, with no invented spread.
+
+Verification of this increment:
+
+- Focused comparator/public repository/API tests: `55 passed`. They cover
+  strict defaults, marked unknown-condition results, known conflicts hidden
+  behind an unknown offer, currencies, ties, missing prices and API status.
+- Full Pytest: `913 passed, 65 skipped`; the existing guarded skips and
+  Starlette/httpx deprecation warning remain unchanged. Strict MyPy: `577`
+  files; changed-file Ruff/format and changed JavaScript syntax checks pass.
+- Isolated PostgreSQL `17.10`: `21/21` checks, including the marked public
+  price-only read, preserved strict default, known-region mismatch, fresh
+  sessions, rollback, review audit and concurrency. Clean upgrade to existing
+  `0028` and Alembic check pass; no new migration or schema change is needed.
+- Browser: `133/133` checks. The original three-product acceptance still runs
+  against the real local catalog. Six additional opt-in checks read synthetic
+  fixtures from a separate test database/app; they prove the real API and both
+  working/preview interfaces show a minimum, spread and warning rather than
+  blocking unknown terms. Desktop/mobile screenshots were inspected; these
+  remain device emulation, not physical-phone/screen-reader certification.
+- Early browser harness runs exposed cross-origin navigation timing and a
+  test-helper argument mistake. Those were fixed in the verifier; they were
+  not reported as successful runs or as application bugs.
+
+To reproduce the extra read-only browser checks, migrate a disposable loopback
+`epic25_activation_*` database and run the existing
+`verify_activation_conditions_postgres.py` to seed its synthetic fixtures.
+Start a separate app against that database on port `8002`, then use:
+
+```powershell
+$env:TERMINAL_PREVIEW_URL = 'http://localhost:8000'
+$env:TERMINAL_CDP_URL = 'http://127.0.0.1:9224'
+$env:EPIC25_THREE_PRODUCT_ACCEPTANCE = '1'
+$env:EPIC25_PRICE_ONLY_TEST_URL = 'http://127.0.0.1:8002'
+node scripts/verify_terminal_preview_browser.mjs
+```
+
+Use a dedicated temporary browser profile. The optional fixture URL is
+loopback-only, rejects working-app ports `8000`/`8001` and verifies fixture
+identity before reads. Screenshots stay in OS temporary storage. No synthetic
+offers, new canonical decisions or condition confirmations enter either real
+local database.
 
 ## Data Rules
 

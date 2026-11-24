@@ -7,6 +7,13 @@ import { join } from "node:path";
 const base = process.env.TERMINAL_PREVIEW_URL ?? "http://127.0.0.1:8002";
 const debug = process.env.TERMINAL_CDP_URL ?? "http://127.0.0.1:9224";
 const threeProductAcceptance = process.env.EPIC25_THREE_PRODUCT_ACCEPTANCE === "1";
+const priceOnlyTestBase = process.env.EPIC25_PRICE_ONLY_TEST_URL;
+if (priceOnlyTestBase) {
+  const url = new URL(priceOnlyTestBase);
+  assert.equal(url.protocol, "http:");
+  assert(["127.0.0.1", "localhost"].includes(url.hostname));
+  assert(!["", "80", "8000", "8001"].includes(url.port), "Use an isolated fixture app for price-only acceptance");
+}
 for (const address of [base, debug]) {
   const url = new URL(address);
   assert(["127.0.0.1", "localhost"].includes(url.hostname), "Use loopback test instances only");
@@ -581,6 +588,36 @@ try {
   await evaluate('document.querySelector(".offer-row").scrollIntoView({block:"start"})');
   await screenshot("20-working-zoom-prices", false);
   await setBrowserZoom(originalZoom);
+  if (priceOnlyTestBase) {
+    const fixtureId = "00000000-0000-0000-0000-0000000061ab";
+    const response = await fetch(`${priceOnlyTestBase}/api/v1/public/products/${fixtureId}/comparison`);
+    assert.equal(response.status, 200);
+    const comparison = await response.json();
+    assert(comparison.product.name.startsWith("Offline fixture subscription"), "Never introduce synthetic offers into the working catalog");
+    assert.equal(comparison.status, "price_only");
+    assert.equal(comparison.best_offer.external_id, "activation-fixture-2");
+    assert.equal(Number(comparison.best_offer.price), 501);
+    assert.equal(Number(comparison.differences[0].absolute_difference), 199);
+    checks++;
+    console.log("PASS real fixture API exposes price-only status, minimum and Decimal spread");
+    await size(1440);
+    await send("Page.navigate", { url: `${priceOnlyTestBase}/terminal?product=${fixtureId}` });
+    await until(`location.origin===${JSON.stringify(priceOnlyTestBase)} && document.querySelector('#originalName')?.textContent.startsWith('Offline fixture subscription') && document.querySelector('#details')?.hidden===false && document.querySelector('#details').getAttribute('aria-busy')==='false'`);
+    await check("working price-only result shows a minimum rather than blocked comparison", 'document.querySelector("#comparisonCard h3")?.textContent==="Минимальная цена в подборке"');
+    await check("working price-only notice discloses unverified terms and no profit claim", 'document.querySelector("#comparisonCard").textContent.includes("Условия активации проверены не полностью") && document.querySelector("#comparisonCard").textContent.includes("не прибыль")');
+    await evaluate('document.querySelector("#comparisonCard").scrollIntoView({block:"center",behavior:"instant"})');
+    await screenshot("21-price-only-desktop", false);
+    await mobileSize(390, 844);
+    await check("working mobile price-only result keeps both real fixture source rows", 'document.documentElement.scrollWidth<=innerWidth && document.querySelectorAll(".offer-row").length===2');
+    await screenshot("22-price-only-mobile", false);
+    await size(1440);
+    await send("Page.navigate", { url: `${priceOnlyTestBase}/terminal/preview?screen=product&product=${fixtureId}` });
+    await until(`location.pathname==='/terminal/preview' && document.querySelector('#productTitle')?.textContent.startsWith('Offline fixture subscription') && document.querySelector('main')?.getAttribute('aria-busy')==='false'`);
+    await check("preview price-only result agrees with the working interface", 'document.querySelector("#offers .notice")?.textContent.includes("Минимальная цена в подборке") && document.querySelector("#offers .notice").textContent.includes("не прибыль")');
+    assert(requests.filter(request=>request.url.startsWith(priceOnlyTestBase)).every(request=>request.method==="GET"), "Fixture acceptance is read-only");
+    checks++;
+    console.log("PASS fixture acceptance uses read-only application requests");
+  }
   assert.deepEqual(errors, [], "No runtime or CSP errors");
   checks++;
   assert(requests.filter(request=>request.url.startsWith(base)).every(request=>request.method==="GET"), "Preview must not mutate backend");

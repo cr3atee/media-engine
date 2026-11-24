@@ -912,11 +912,13 @@ function renderComparison(comparison) {
   }
 
   const differences = comparison.differences ?? [];
+  const priceOnly = comparison.status === "price_only";
   elements.comparisonCard.innerHTML = `
     <p class="eyebrow">${escapeHtml(comparisonStatusLabel(comparison.status))}</p>
-    <h3>Лучшее предложение</h3>
+    <h3>${priceOnly ? "Минимальная цена в подборке" : "Лучшее предложение"}</h3>
     <p class="price">${moneyHtml(comparison.best_offer.price, comparison.best_offer.currency)}</p>
     <p>${escapeHtml(comparison.best_offer.marketplace)} / ${escapeHtml(comparison.best_offer.title ?? "")}</p>
+    ${priceOnly ? '<p class="soft-label">Условия активации проверены не полностью. Показана разница цен, не прибыль.</p>' : ""}
     ${
       differences.length
         ? `<div class="comparison-list">
@@ -1255,6 +1257,7 @@ function comparisonStatusLabel(status) {
     unmatched: "Товар не сопоставлен",
     activation_conditions_unknown: "Условия активации не подтверждены",
     activation_conditions_mismatch: "Условия активации различаются",
+    price_only: "Сравнение цен",
   }[status] ?? status;
 }
 
