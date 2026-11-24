@@ -6,6 +6,14 @@ Confirmed by the user on 2026-11-22: include all regions, but compare prices onl
 within the same activation conditions. No implicit Russia-only restriction is
 introduced. A low source price is a sourcing lead, not proof of resale profit.
 
+Updated on 2026-11-24: the user accepts the curated first-version selection
+without exhaustive condition checks. Public linked-product views now opt into
+an explicit `price_only` mode for unknown conditions, with a short notice.
+Known conflicting profiles and mixed currencies still block selection. The
+strict comparator default described below remains intact for other callers;
+the public adapter no longer requires complete profiles to show a price spread.
+No unknown source facts or review decisions are invented by this change.
+
 ## Implemented Boundary
 
 `ParsedOffer.activation_conditions` is optional. `None` means unknown, not

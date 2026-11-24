@@ -4,6 +4,13 @@ Checked on 2026-11-24. Scope: the existing three monthly subscriptions,
 public unauthenticated source observations and a bounded set of alternative
 offers. No canonical decision, profile, price or availability was written.
 
+**Subsequent product decision, 2026-11-24:** the user accepts the curated launch
+products without exhaustive seller checks. The questions below are optional
+research, not a blocker for the first version. Public price comparison can
+proceed with unknown conditions, clearly labelled `price_only`; this does not
+confirm the full equivalence of the source descriptions. See the current
+[MVP boundary](EPIC_25_THREE_PRODUCT_MVP.md#curated-price-comparison-2026-11-24).
+
 ## Outcome
 
 All three GGSEL launch sources and all three FunPay listing categories were
@@ -122,13 +129,16 @@ The following observed restrictions are not fully represented:
 
 Therefore do not enter an approximately complete profile in the existing form
 and place these extra restrictions only in a reason: the comparator does not
-interpret free-text reasons. Keep the profile unknown and block comparison
-until eligibility can be represented without losing source restrictions.
+interpret free-text reasons. Keep the profile unknown rather than claiming
+verified equivalence. The later user-approved price-only public mode can rank
+the curated offers with a notice; strict equivalence still requires complete
+facts without losing source restrictions.
 This report does not extend the model or silently change matching semantics.
 
 ## Precise Seller Questions
 
-Only sellers can resolve the remaining commercial claims. No purchase, account
+These are optional, not mandatory release questions. Only sellers can resolve
+their remaining commercial claims. No purchase, account
 password, session cookie or activation code is needed for these questions.
 
 Ready-to-forward questions in Russian (the public country lists are already
@@ -167,10 +177,9 @@ MediaEngine must not receive buyer passwords, one-time login codes or cookies
 while collecting these answers. A seller's answer is evidence to review, not
 certification that the subscription provider permits resale or region changes.
 
-Do not ask all alternative sellers yet. First establish the exact three launch
-profiles, represent the actual restrictions, then screen cheaper alternatives
-under those same conditions. This avoids another larger assortment or a false
-minimum-price claim.
+Do not expand the first version into an exhaustive seller questionnaire or
+larger assortment. Verified-equivalence work can continue later; the curated
+price-only view does not need to wait for these answers.
 
 ## Reproducible Evidence Capture
 

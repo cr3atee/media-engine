@@ -155,7 +155,9 @@ class RepositoryBackedPublicReadRepository(
 
         context = await self._product_context(product)
         comparison_input = _comparison_input(product.id, context.offers)
-        selection = self._selector.select(comparison_input)
+        selection = self._selector.select(
+            comparison_input, allow_unknown_activation_conditions=True
+        )
         difference = self._difference.compare(selection)
         result = self._result_builder.build(product, selection, difference)
 
@@ -568,7 +570,9 @@ def _best_offer(
     offers: Sequence[ParsedOffer],
     selector: BestOfferSelector,
 ) -> OfferSummaryRead | None:
-    selection = selector.select(_comparison_input(None, offers))
+    selection = selector.select(
+        _comparison_input(None, offers), allow_unknown_activation_conditions=True
+    )
     if selection.selected_offer is None:
         return None
     return _offer_summary(selection.selected_offer.offer)

@@ -45,6 +45,8 @@ async def verify(database_url: str) -> int:
     require_isolated_database(database_url)
     from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 
+    from app.comparator.models import MarketplaceOffer, ProductComparisonInput
+    from app.comparator.selector import BestOfferSelector
     from app.database.repository_scope import create_postgres_repository_scope
     from app.database.session import engine as default_engine
     from app.domain.activation_conditions import (
@@ -219,10 +221,28 @@ async def verify(database_url: str) -> int:
             )
             check(
                 result is not None
-                and result.status == "activation_conditions_unknown"
-                and result.best_offer is None
-                and not result.differences,
-                "unknown conditions block savings",
+                and result.status == "price_only"
+                and result.best_offer is not None
+                and result.best_offer.price == Decimal("500")
+                and len(result.differences) == 1
+                and result.differences[0].absolute_difference == Decimal("200"),
+                "unknown conditions allow explicitly marked public price comparison",
+            )
+            strict = BestOfferSelector().select(
+                ProductComparisonInput(
+                    canonical_product_id=product.id,
+                    offers=(
+                        MarketplaceOffer(offer=first),
+                        MarketplaceOffer(
+                            offer=replace(second, activation_conditions=None)
+                        ),
+                    ),
+                )
+            )
+            check(
+                strict.selected_offer is None
+                and strict.reason == "activation conditions unknown",
+                "strict comparator remains safe by default",
             )
         await _verify_review(scope, database_url, second, terms, check)
         if password := os.getenv("ACTIVATION_REVIEW_TEST_PASSWORD"):

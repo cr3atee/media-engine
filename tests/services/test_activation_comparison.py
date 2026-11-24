@@ -11,7 +11,7 @@ from app.comparator.difference import PriceDifferenceService
 from app.comparator.grouping import OfferGroupingService
 from app.comparator.models import MarketplaceOffer, ProductComparisonInput
 from app.comparator.result import ComparisonResultBuilder, ComparisonStatus
-from app.comparator.selector import BestOfferSelector
+from app.comparator.selector import BestOfferSelection, BestOfferSelector
 from app.domain.activation_conditions import (
     AccountRequirement,
     ActivationConditions,
@@ -163,4 +163,103 @@ async def _assert_public_activation_guard() -> None:
     assert result.best_offer.price == Decimal("200")
     await provider.offers.save(replace(second, activation_conditions=None))
     result = await repository.get_comparison(PRODUCT.id)
-    assert result is not None and result.status == "activation_conditions_unknown"
+    assert result is not None and result.status == "price_only"
+    assert result.best_offer is not None and result.best_offer.price == Decimal("200")
+    assert result.differences[0].absolute_difference == Decimal("500")
+
+
+@pytest.mark.parametrize("first_terms", [None, TERMS])
+def test_explicit_unknown_mode_returns_price_only_not_confirmed_equivalence(
+    first_terms: ActivationConditions | None,
+) -> None:
+    group = comparison(offer("1", "700", first_terms), offer("2", "200", None))
+    selected = BestOfferSelector().select(
+        group, allow_unknown_activation_conditions=True
+    )
+    difference = PriceDifferenceService().compare(selected)
+    result = ComparisonResultBuilder().build(PRODUCT, selected, difference)
+    assert selected.activation_conditions_unverified
+    assert result.status is ComparisonStatus.PRICE_ONLY
+    assert result.best_offer is group.offers[1]
+    assert result.comparison_entries[0].absolute_difference == Decimal("500")
+    assert result.comparison_entries[0].percentage_difference == Decimal("250")
+    assert all(item.offer.activation_conditions is None for item in group.offers[1:])
+
+
+@pytest.mark.parametrize(
+    "conflicting",
+    [
+        replace(TERMS, regions=("BR",)),
+        replace(TERMS, period="P30D"),
+        replace(TERMS, delivery_method=DeliveryMethod.OWN_ACCOUNT),
+        replace(TERMS, plan="family"),
+    ],
+)
+def test_price_only_does_not_mask_known_conflicts_with_an_unknown_offer(
+    conflicting: ActivationConditions,
+) -> None:
+    group = comparison(
+        offer("1", "700", TERMS),
+        offer("2", "200", conflicting),
+        offer("3", "100", None),
+    )
+    selected = BestOfferSelector().select(
+        group, allow_unknown_activation_conditions=True
+    )
+    assert selected.selected_offer is None
+    assert selected.reason == "activation conditions mismatch"
+    # Difference independently checks known conflicts even with an explicit marker.
+    forged = BestOfferSelection(
+        comparison=group,
+        selected_offer=group.offers[2],
+        reason="lowest price",
+        activation_conditions_unverified=True,
+    )
+    difference = PriceDifferenceService().compare(forged)
+    assert difference.best_offer is None and difference.differences == ()
+    assert difference.reason == "activation conditions mismatch"
+
+
+def test_price_only_preserves_currency_guard_and_stable_ties() -> None:
+    first, second = offer("2", "200", None), offer("1", "200", None)
+    group = comparison(first, second)
+    selector = BestOfferSelector()
+    for ordering in ((first, second), (second, first)):
+        selected = selector.select(
+            comparison(*ordering), allow_unknown_activation_conditions=True
+        )
+        assert selected.selected_offer is second
+        assert selected.activation_conditions_unverified
+    foreign_currency = MarketplaceOffer(offer=replace(first.offer, currency="USD"))
+    selected = selector.select(
+        replace(group, offers=(second, foreign_currency)),
+        allow_unknown_activation_conditions=True,
+    )
+    assert selected.currency_mismatch and selected.selected_offer is None
+
+
+def test_price_only_with_one_missing_price_keeps_price_and_unavailable_entry() -> None:
+    first, second = offer("1", "200", None), offer("2", "300", None)
+    second = MarketplaceOffer(offer=replace(second.offer, price=None))
+    selected = BestOfferSelector().select(
+        comparison(first, second), allow_unknown_activation_conditions=True
+    )
+    difference = PriceDifferenceService().compare(selected)
+    result = ComparisonResultBuilder().build(PRODUCT, selected, difference)
+    assert result.best_offer is first and result.status is ComparisonStatus.PRICE_ONLY
+    assert result.comparison_entries[0].reason == "price unavailable"
+
+
+def test_fully_verified_and_single_offer_results_keep_their_previous_status() -> None:
+    for group in (
+        comparison(offer("1", "200", TERMS), offer("2", "300", TERMS)),
+        comparison(offer("1", "200", None)),
+    ):
+        selected = BestOfferSelector().select(
+            group, allow_unknown_activation_conditions=True
+        )
+        result = ComparisonResultBuilder().build(
+            PRODUCT, selected, PriceDifferenceService().compare(selected)
+        )
+        assert not selected.activation_conditions_unverified
+        assert result.status is ComparisonStatus.COMPLETE

@@ -6,6 +6,15 @@ This document captures architecture notes that are important for future reviews.
 
 ## Current Notes
 
+- Keep the 2026-11-24 first-version simplification explicit: public linked-offer
+  reads may return `price_only` for unknown conditions, with an unverified
+  marker propagated from selector through Decimal differences to the public
+  status/UI. Do not turn unknowns into invented complete profiles or change
+  strict defaults/grouping. Even price-only mode rejects conflicting known
+  profiles, including when a third unknown offer is present. Seller replies
+  are optional research, not another required MVP gate. Do not publish an
+  unlinked source candidate under this pricing policy.
+
 - Activation-condition review is distinct from canonical identity review. Reuse
   the shared tenant scope/admin journal, bind a command to the full displayed
   source fingerprint and audit revision, and update only conditions with an

@@ -42,7 +42,10 @@ class PriceDifferenceService:
                 reason=selection.reason,
             )
 
-        compatibility_reason = activation_comparison_reason(selection.comparison.offers)
+        compatibility_reason = activation_comparison_reason(
+            selection.comparison.offers,
+            allow_unknown=selection.activation_conditions_unverified,
+        )
         if compatibility_reason is not None:
             return ComparisonDifferenceResult(
                 comparison=selection.comparison,

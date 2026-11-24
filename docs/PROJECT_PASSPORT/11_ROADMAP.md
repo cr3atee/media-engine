@@ -468,10 +468,13 @@ See `docs/EPIC_25_LOCAL_RELEASE.md` for startup and limits.
 The agreed all-regions boundary now has complete explicit condition profiles,
 compatibility guards and a tenant-authorized human review form with source CAS
 and atomic immutable audit (`0028`). Real profiles remain unknown until actual
-evidence is reviewed. Next within the same three-product scope: collect source
-conditions, review compatible alternatives and complete condition-aware transfer
-before claiming cross-marketplace savings. Public variant filtering and
-historical-condition analytics are not implied by this increment.
+evidence is reviewed. The user simplified the first version on 2026-11-24:
+seller questionnaires and exhaustive profiles are not release gates. Public
+linked-product reads show marked price-only comparisons without waiting for
+these answers; known conflicting conditions and currencies remain protected.
+Next stays within the selected three-product scope, not additional eligibility
+features or a larger assortment. Verified-equivalence research, public variant
+filtering and condition-aware analytics can follow later.
 
 A later public deployment remains separate: provide managed target access,
 verify real backup/monitoring and asset-use conditions, and approve the exact

@@ -3,6 +3,12 @@
 Verified on 2026-11-22. This is the human entry boundary for the existing
 activation-compatibility value, not a new matching engine or automatic approval.
 
+As of the user's 2026-11-24 scope simplification, filling this form and asking
+every seller is optional for the first version. The curated public catalog can
+compare prices with an explicit unverified-conditions notice (`price_only`).
+This form still requires complete explicit facts when a verified profile is
+actually submitted; it is not automatically filled to unblock the catalog.
+
 ## Working Cabinet
 
 Open `http://127.0.0.1:8001/terminal/review` and use **Условия активации**.

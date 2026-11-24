@@ -21,6 +21,7 @@ class ComparisonStatus(str, Enum):  # noqa: UP042
     UNMATCHED = "unmatched"
     ACTIVATION_UNKNOWN = "activation_conditions_unknown"
     ACTIVATION_MISMATCH = "activation_conditions_mismatch"
+    PRICE_ONLY = "price_only"
 
 
 @dataclass(slots=True, frozen=True)
@@ -77,6 +78,8 @@ class ComparisonResultBuilder:
             return ComparisonStatus.CURRENCY_MISMATCH
         if selection.selected_offer is None:
             return ComparisonStatus.NO_VALID_PRICES
+        if selection.activation_conditions_unverified:
+            return ComparisonStatus.PRICE_ONLY
         if any(entry.reason is not None for entry in difference.differences):
             return ComparisonStatus.PARTIAL
         return ComparisonStatus.COMPLETE
