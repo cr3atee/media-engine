@@ -9,6 +9,7 @@ const debug = process.env.TERMINAL_CDP_URL ?? "http://127.0.0.1:9224";
 const threeProductAcceptance = process.env.EPIC25_THREE_PRODUCT_ACCEPTANCE === "1";
 const funpayExitLagAcceptance = process.env.EPIC25_FUNPAY_EXITLAG_ACCEPTANCE === "1";
 const funpaySpotifyAcceptance = process.env.EPIC25_FUNPAY_SPOTIFY_ACCEPTANCE === "1";
+const funpayDuolingoAcceptance = process.env.EPIC25_FUNPAY_DUOLINGO_ACCEPTANCE === "1";
 const priceOnlyTestBase = process.env.EPIC25_PRICE_ONLY_TEST_URL;
 if (priceOnlyTestBase) {
   const url = new URL(priceOnlyTestBase);
@@ -592,11 +593,12 @@ try {
   await evaluate('document.querySelector(".offer-row").scrollIntoView({block:"start"})');
   await screenshot("20-working-zoom-prices", false);
   await setBrowserZoom(originalZoom);
-  if (funpayExitLagAcceptance || funpaySpotifyAcceptance) {
+  if (funpayExitLagAcceptance || funpaySpotifyAcceptance || funpayDuolingoAcceptance) {
     assert(threeProductAcceptance, "Second-source acceptance requires the bounded launch catalog");
     const approvedPairs = [
       { enabled: funpayExitLagAcceptance, hub: "exitlag", title: "ExitLag", id: "dc7a6323-d5fc-5675-a2ff-0fe6ab4a70d1", funpayId: "19847269", ggselId: "5077855", desktop: "21-approved-funpay-desktop", mobile: "22-approved-funpay-mobile" },
       { enabled: funpaySpotifyAcceptance, hub: "spotify", title: "Spotify", id: "b7936dd8-1bd9-5073-ab02-59b381dfec9a", funpayId: "79355854", ggselId: "102361507", desktop: "23-approved-spotify-desktop", mobile: "24-approved-spotify-mobile" },
+      { enabled: funpayDuolingoAcceptance, hub: "duolingo", title: "Duolingo", id: "9c0f59b4-7479-5034-9c21-f7a4e6d86967", funpayId: "82381719", ggselId: "103585387", desktop: "25-approved-duolingo-desktop", mobile: "26-approved-duolingo-mobile" },
     ].filter(pair => pair.enabled);
     assert(catalogPayload.items.every(product => {
       const paired = approvedPairs.some(pair => pair.hub === product.catalog_hub_code);
@@ -630,6 +632,8 @@ try {
       await until('document.querySelector("#details")?.getAttribute("aria-busy")==="false"');
       const sourceUrls = comparison.offers.map(offer => offer.url);
       await check(`${pair.title} comparison shows both approved source links`, `document.querySelectorAll(".offer-row").length===2 && ${JSON.stringify(sourceUrls)}.every(url=>[...document.querySelectorAll(".offer-row a")].some(a=>a.href===url))`);
+      const sourceTitles = comparison.offers.map(offer => offer.title);
+      await check(`${pair.title} keeps each original source title visible`, `${JSON.stringify(sourceTitles)}.every(title=>[...document.querySelectorAll(".offer-row")].some(row=>row.textContent.includes(title)))`);
       await check(`${pair.title} comparison is price-only without blocking unknown terms`, 'document.querySelector("#comparisonCard h3")?.textContent==="Минимальная цена в подборке" && document.querySelector("#comparisonCard").textContent.includes("не прибыль")');
       const displayedSpread = Number(comparison.differences[0].absolute_difference).toLocaleString("ru-RU", {minimumFractionDigits:2,maximumFractionDigits:2}).replace(/\s/g, "");
       await check(`${pair.title} comparison renders the stored API spread`, `document.querySelector('#comparisonCard').textContent.replace(/\\s/g,'').includes(${JSON.stringify(displayedSpread)})`);

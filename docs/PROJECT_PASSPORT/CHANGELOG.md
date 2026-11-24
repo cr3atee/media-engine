@@ -6,6 +6,16 @@ This document records notable Project Passport updates.
 
 ## Unreleased
 
+- Completed three curated GGSEL/FunPay pairs after the separate explicit
+  approval of Duolingo `82381719` at `100 RUB` beside saved GGSEL `50 RUB`.
+  Invitation-link delivery remains visible, not a key-equivalence/profit claim.
+  Existing review/release services preserve three products, add one link and
+  retain all previous rows across eight checksum checks. Both backups restored;
+  rehearsal and exact fresh-process API/release replay pass. Three products/six
+  offers, no pending proposal. Real-catalog browser `151/151`, full Pytest
+  `913 passed, 65 skipped`, MyPy `577`, Node syntax and whitespace checks pass.
+  No application/schema/style/dependency changes; no GGSEL freshness invented.
+
 - Published the separately user-approved Spotify FunPay `79355854` through the
   existing review and guarded release services. Final source price decreased
   from `164.83` to `164.33 RUB`; comparison with saved GGSEL `250.00 RUB` shows
