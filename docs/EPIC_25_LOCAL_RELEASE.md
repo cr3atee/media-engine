@@ -30,16 +30,25 @@ The catalog contains exactly these three reviewed products, all subscriptions:
 On 2026-11-24 the user explicitly approved FunPay ExitLag offer `19847269` as
 a second source for the same existing ExitLag product. It is now published at
 `754.58 RUB`, alongside the saved GGSEL `599.00 RUB` quote, with `price_only`
-status and a `155.58 RUB` difference. The catalog has three products and four
-offers, not a fourth product. See `EPIC_25_FIRST_MARKETPLACE_COMPARISON.md` for
-restored-backup rehearsal, audit/replay and the source-rate-limit caveat.
+status and a `155.58 RUB` difference. At that first-pair release the catalog had
+three products and four offers, not a fourth product. See
+`EPIC_25_FIRST_MARKETPLACE_COMPARISON.md` for restored-backup rehearsal,
+audit/replay and the source-rate-limit caveat.
 
 The user then explicitly approved Spotify FunPay `79355854`. Its price decreased
 from `164.83` to `164.33 RUB` before publication; it is now selected beside the
 saved GGSEL `250.00 RUB` quote, with an `85.67 RUB` price-only difference. The
-current catalog has three products and five offers: two each for ExitLag and
-Spotify, one for Duolingo. Restored-backup rehearsal, exact fresh-process replay
-and eight original-table checksum checks passed; browser acceptance is `141/141`.
+Spotify-step catalog had three products and five offers: two each for ExitLag
+and Spotify, one for Duolingo. Restored-backup rehearsal, exact fresh-process
+replay and eight original-table checksum checks passed; browser acceptance is `141/141`.
+
+The separately approved Duolingo FunPay `82381719` is now published at `100 RUB`
+beside saved GGSEL `50 RUB`, with a `50 RUB` price-only difference. Its original
+title identifies invitation-link delivery, not a key. The current catalog has
+exactly three products and six offers: GGSEL plus FunPay for each service.
+Restored-backup rehearsal, fresh-process API/release replay and eight original
+table checks pass; latest browser acceptance is `151/151`. Contradictory-duration
+alternatives were not published. This is not a new GGSEL refresh or profit claim.
 
 No longer-duration products, Minecraft launch products, unreviewed canonical
 products, invented discounts or unapproved marketplace offers were added.
@@ -161,9 +170,10 @@ curated first version. No new/unlinked offer is thereby approved or promoted.
 The first local three-product catalog is available for user acceptance. This
 does not mean the whole long-term MediaEngine roadmap or public launch is done.
 GGSEL covers all three products; FunPay additionally covers the explicitly
-approved ExitLag and Spotify pairs. Playerok remains empty for this assortment.
-Price differences describe the saved curated selection, not net profit or a marketplace-wide
-minimum. Price history can be empty and is not fabricated. The local launcher
+approved ExitLag, Spotify and Duolingo pairs. Playerok remains empty for this
+assortment. Price differences describe the saved curated selection, not net
+profit or a marketplace-wide minimum. Price history can be empty and is not
+fabricated. The local launcher
 does not start a scheduled ingestion worker: Refresh rereads persisted data,
 not the marketplaces. Public delivery-method filtering, public asset-use approval,
 VDS deployment, production monitoring and live Telegram delivery remain outside

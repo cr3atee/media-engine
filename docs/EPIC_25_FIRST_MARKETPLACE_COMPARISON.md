@@ -4,9 +4,10 @@ Completed on 2026-11-24 after explicit user approval of the exact FunPay offer.
 This is an operational use of existing services, not a new parser, repository,
 approval bypass or local-agent feature.
 
-**Current catalog:** the separately approved Spotify pair below brings the
-catalog to three products and five offers. The ExitLag-first evidence remains
-historical; the latest acceptance uses both second-source flags.
+**Current catalog:** the separately approved Duolingo pair below completes the
+three-product curated selection: six offers, one GGSEL and one FunPay per
+product. Earlier four-/five-offer snapshots remain historical; the latest
+acceptance uses all three second-source flags.
 
 ## Visible Result
 
@@ -103,6 +104,7 @@ $env:TERMINAL_CDP_URL = 'http://127.0.0.1:9224'
 $env:EPIC25_THREE_PRODUCT_ACCEPTANCE = '1'
 $env:EPIC25_FUNPAY_EXITLAG_ACCEPTANCE = '1'
 $env:EPIC25_FUNPAY_SPOTIFY_ACCEPTANCE = '1'
+$env:EPIC25_FUNPAY_DUOLINGO_ACCEPTANCE = '1'
 node scripts/verify_terminal_preview_browser.mjs
 ```
 
@@ -176,10 +178,10 @@ variants. Cheap examples were trial activation or a Family gift link; two
 Individual gift-link details (`80156681` at `90.00`, `79393730` at `99.00 RUB`)
 contradicted their monthly fields by also advertising an annual period.
 Neither was staged or published. Unknown conditions do not justify overlooking
-an actual period contradiction. Duolingo therefore retains its original GGSEL
-offer; no questionnaire or new eligibility feature was added as a release gate.
+an actual period contradiction. At that point Duolingo retained its original
+GGSEL offer; no questionnaire or new eligibility feature was added as a release gate.
 
-Latest verification: `141/141` real-catalog browser checks, no runtime/CSP errors,
+Spotify-step verification: `141/141` real-catalog browser checks, no runtime/CSP errors,
 application GETs only, inspected desktop/mobile screenshots; full Pytest
 `913 passed, 65 skipped`, strict MyPy `577` files, Node syntax and whitespace
 checks pass. Mobile remains emulation, not physical-device certification.
@@ -191,6 +193,68 @@ the obsolete heading expectation, not an application regression. An operator
 attempt also stopped after staging on an incorrect nested-DTO assumption;
 the actual flat API response was checked and the exact staged row resumed
 through the normal API, without reseeding or bypassing approval.
+
+## Third Approved Pair: Duolingo (2026-11-24)
+
+Open <http://localhost:8000/terminal?product=9c0f59b4-7479-5034-9c21-f7a4e6d86967>.
+
+| Source | Offer | Stored RUB price |
+| --- | --- | ---: |
+| GGSEL | `103585387` | 50.00 |
+| FunPay | `82381719` | 100.00 |
+
+The user explicitly approved this exact monthly Super offer from `ximee0` after
+being told that it delivers an invitation link, not an activation key. The source
+lists Individual, one month and no seller account login; these are source
+claims, not independently tested entitlement. The original canonical name and
+both original source titles remain intact. The invitation is not relabelled as
+a key, and no complete activation profile or unconditional equivalence is
+invented. Public comparison is `price_only`, minimum `50.00 RUB`, difference
+`50.00 RUB`. The GGSEL quote is saved, not newly refreshed by this operation.
+
+The bounded category read returned 339 offers and 22 active source-valid monthly
+Super variants, not proof of global marketplace coverage. Two additional cheap
+samples (`82200520`, `82726006`) repeated the contradictory month/year text and
+were excluded. Offer `82381719` consistently described a month and invitation
+delivery. Category and detail returned HTTP 200; a final read before mutation
+matched the approved offer, parameters, seller, price and detail text exactly.
+No account credentials, purchase or seller questionnaire was needed.
+
+Backups `/tmp/epic25-duolingo-20261124-f79d8e2a-{source,target}.dump` in the
+retained PostgreSQL container were both restored into separate rehearsal
+databases. Existing proposal-resolution and guarded release services created
+zero products and one link; review/release replay and public comparison passed.
+The actual authenticated reviewer API then recorded the user's explicit
+invitation-link decision. The existing release preview required exactly one
+additional link, with three existing products and the previous five links reused.
+
+```text
+Proposal: 8d60220b-97c9-5af3-95a5-ee57c8da90d4
+Review decision: 2a792c5b-bd23-4b90-a5c7-8b5753e7384b
+Review key: epic25-funpay-duolingo-user-approved-20261124
+Manifest: c3b6afabe1adacf5ee93162ffc30c3711185252986b2bff577fffd62575b4a17
+Promotion action: 6f9a559c-a45a-4023-8559-4310f1c392c8
+Release key: epic25-funpay-duolingo-release-20261124
+Source: 6 offers / 6 links / 3 products / 6 decisions / 0 pending proposals
+Target: 6 offers / 6 links / 3 products / 0 copied review decisions
+```
+
+Fresh-process review and release replay returned the same immutable IDs and
+`no_changes`. Eight original-table row-hash checks passed, preserving the prior
+five offers, products, decisions and audits. Both rehearsal databases were
+removed after verification; working databases, backups and web servers remain.
+
+Latest acceptance passes `151/151` real-catalog browser checks: all three exact
+pairs, both source URLs and original titles, minimum/spread, logos/counts and
+mobile layout. No runtime/CSP errors; application requests are GET-only.
+Desktop/mobile screenshots were inspected, not a physical-phone certification.
+An initial run timed out while waiting for animations before a screenshot;
+an unchanged repeat passed without disabling that gate or altering the UI.
+Full Pytest: `913 passed, 65 skipped`, with the existing Starlette/httpx warning.
+Strict MyPy: `577` files; Node syntax and whitespace checks pass. No Python
+application/test file changed, so no new changed-file Ruff/format result is
+claimed. Business services, schema, dependencies, styling and profiles remain
+unchanged; only the existing browser verifier and factual documentation changed.
 
 ## Deployment Boundary
 
@@ -204,5 +268,6 @@ reviewer authentication is not marketplace-cookie collection.
 
 The remaining first-version scope stays bounded: retain these three products,
 extend their reviewed source coverage where available, and handle real source
-rate limits honestly. This operation does not complete Playerok access, all
-three multi-marketplace comparisons, unattended polling or public VDS rollout.
+rate limits honestly. All three curated price-only pairs are now present. This
+does not complete Playerok access, verified full-condition equivalence,
+unattended polling or public VDS rollout.

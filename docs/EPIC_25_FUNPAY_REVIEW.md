@@ -3,6 +3,16 @@
 Verified on 2026-11-22. Scope: the existing three-product monthly assortment,
 not marketplace expansion or automatic canonical approval.
 
+**Latest result, 2026-11-24:** all three monthly products now have separately
+user-approved GGSEL/FunPay pairs, with three products and six offers/links.
+Duolingo `82381719` was explicitly approved as invitation-link delivery, not a
+key, at `100 RUB` beside saved GGSEL `50 RUB`. Source detail and parameters
+agree on one month; contradictory alternatives remain excluded. Source has six
+decisions and no pending proposal; no new product or permissive profile was
+created. Latest real-catalog browser acceptance is `151/151`; detailed audit,
+backup restoration and replay evidence are in `EPIC_25_FIRST_MARKETPLACE_COMPARISON.md`.
+The smaller catalog states and strict screening results below are historical.
+
 **Current result, 2026-11-24:** the user explicitly approved existing offer
 `19847269` for the first price-only comparison. Its live public page/listing
 still returned `754.58 RUB`; the existing reviewer API and guarded release
@@ -16,9 +26,9 @@ review. The older candidate-only state below is historical; see
 at a final checked `164.33 RUB` (the approved quote was `164.83`). It is a
 one-month Individual account-activation offer with Egypt region, possible VPN
 and no active subscription, not verified unrestricted equivalence. The public
-price-only difference against saved GGSEL `250.00 RUB` is `85.67 RUB`. Current
-state is three products, five offers/links and five source decisions, with no
-pending proposals. Duolingo remains single-source; two newly sampled Individual
+price-only difference against saved GGSEL `250.00 RUB` is `85.67 RUB`. At that
+step there were three products, five offers/links and five source decisions, with
+no pending proposals. Duolingo was single-source; two newly sampled Individual
 gift-link descriptions contradict their monthly fields with annual wording.
 They were not staged or published. The detailed current audit/QA is in the
 same comparison report; the original strict screening below is unchanged.

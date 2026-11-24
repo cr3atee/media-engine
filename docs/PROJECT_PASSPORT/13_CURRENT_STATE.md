@@ -6,19 +6,23 @@ This document records the current implementation state of MediaEngine.
 
 ## Current MVP Decision (2026-11-24)
 
-The latest explicitly approved addition is Spotify FunPay `79355854`, published
-at `164.33 RUB` after its quote decreased from the approved `164.83 RUB`.
-It is selected beside saved GGSEL `250.00 RUB` with an `85.67 RUB` price-only
-difference. The catalog now has three products and five offers: two each for
-ExitLag/Spotify, one Duolingo. Source is `5 offers / 5 links / 5 decisions /
-0 pending`; target is `5 offers / 5 links / 3 products`. Both backups were
+The latest explicitly approved addition is Duolingo FunPay `82381719` at
+`100 RUB`, delivering an invitation link, not a verified activation key.
+It is published beside saved GGSEL `50 RUB` with a `50 RUB` price-only
+difference. All three selected products now have GGSEL/FunPay pairs: three
+products and six offers. Source is `6 offers / 6 links / 6 decisions /
+0 pending`; target is `6 offers / 6 links / 3 products`. Both backups were
 restored before a zero-product/one-link rehearsal. Real reviewer API and release
 replay pass from a fresh process; eight original-table row-hash checks pass.
-Real-catalog browser acceptance is `141/141`, full Pytest `913 passed, 65
+Real-catalog browser acceptance is `151/151`, full Pytest `913 passed, 65
 skipped`, MyPy `577` files and Node syntax pass. Screenshots were inspected.
-Duolingo gift-link samples with month/year contradictions were not added.
+Duolingo samples with month/year contradictions were not added; the approved
+offer's original invitation-link title remains visible beside the original
+GGSEL key title. Full equivalence and net profit are not claimed. Existing
+Spotify prices remain `164.33/250 RUB`, ExitLag `599/754.58 RUB`; no GGSEL
+refresh, Playerok coverage or automated local polling is claimed by this step.
 No application/schema/style changes were needed. Current details and audit IDs:
-`docs/EPIC_25_FIRST_MARKETPLACE_COMPARISON.md#second-approved-pair-spotify-2026-11-24`.
+`docs/EPIC_25_FIRST_MARKETPLACE_COMPARISON.md#third-approved-pair-duolingo-2026-11-24`.
 
 The first version remains web-only: local-agent/customer self-hosting and
 marketplace-cookie import are deferred. After explicit approval of the exact

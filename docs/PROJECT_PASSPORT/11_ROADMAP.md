@@ -463,9 +463,11 @@ images are connected; expanded browser acceptance passes `127` checks.
 Next is user acceptance of `http://localhost:8000/terminal`, not another backend
 EPIC or a larger assortment. The explicitly approved FunPay ExitLag offer now
 provides the first real two-source price comparison, keeping three products.
-The subsequently approved Spotify FunPay offer provides a second real pair,
-keeping three products and five offers. Duolingo still has GGSEL only; no
-Playerok coverage or conflicting-duration Duolingo offer is invented.
+The subsequently approved Spotify and Duolingo FunPay offers complete three
+curated price-only pairs, keeping three products and six offers. Duolingo's
+invitation link is not relabelled as a key; conflicting-duration alternatives
+remain excluded. No Playerok coverage, complete equivalence or net profit is
+invented. Browser acceptance passes `151/151` on the actual retained catalog.
 The three-product local boundary is implemented;
 longer-duration plans and additional offers are not added to fill the catalog.
 See `docs/EPIC_25_LOCAL_RELEASE.md` for startup and limits.

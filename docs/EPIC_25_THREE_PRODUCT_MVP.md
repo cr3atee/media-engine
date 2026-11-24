@@ -35,8 +35,9 @@ purchase conditions and must not be presented as interchangeable offers.
 The original local release had one explicitly reviewed offer per product.
 On 2026-11-24 the user approved FunPay `19847269` as a second ExitLag source;
 the catalog then had three products and four offers, without a new product.
-The subsequently approved FunPay Spotify `79355854` brings the current total
-to five offers: two ExitLag, two Spotify, one Duolingo. No fourth product exists.
+The subsequently approved FunPay Spotify `79355854` brought the total to five.
+The final separately approved Duolingo `82381719` brings the current total to
+six: one GGSEL and one FunPay offer per product. No fourth product exists.
 Original source titles and URLs retain the available delivery evidence. The
 optional structured activation profile and comparator guard are now implemented;
 the existing source rows still have unknown profiles. On 2026-11-24 the user
@@ -137,9 +138,19 @@ beside saved GGSEL `102361507` at `250.00 RUB`. The marked difference is
 `85.67 RUB`, not profit. Source/target backup restoration, one-link rehearsal,
 fresh-process review/release replay and eight original-table checksum checks
 passed. Real-catalog browser acceptance is now `141/141`; full Pytest remains
-`913 passed, 65 skipped`, MyPy `577` files. Duolingo remains GGSEL-only: cheap
+`913 passed, 65 skipped`, MyPy `577` files. Duolingo was then GGSEL-only: cheap
 new gift-link samples explicitly contradicted the monthly duration. They were
 not staged or approved, and no extra release-gate functionality was introduced.
+
+The user subsequently approved the consistent one-month Duolingo invitation
+offer `82381719` at `100 RUB`, explicitly not a key-equivalence confirmation.
+It is now published beside saved GGSEL `50 RUB` with a `50 RUB` price-only
+spread. Three products/six offers and no pending source proposal remain.
+Both backups restored, zero-product/one-link rehearsal, fresh-process exact
+review/release replay and eight original-table checks pass. All three pairs,
+their original titles and both source links pass `151/151` browser checks;
+full Pytest remains `913 passed, 65 skipped`, MyPy `577` files. Existing business
+services, styling, schema and unknown-condition policy were not changed.
 
 The user also deferred a downloadable/local cookie-import agent and customer
 self-hosting. The first version remains a web catalog/comparison service. Local
