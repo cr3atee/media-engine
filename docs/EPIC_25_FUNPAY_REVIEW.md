@@ -3,6 +3,15 @@
 Verified on 2026-11-22. Scope: the existing three-product monthly assortment,
 not marketplace expansion or automatic canonical approval.
 
+**Current result, 2026-11-24:** the user explicitly approved existing offer
+`19847269` for the first price-only comparison. Its live public page/listing
+still returned `754.58 RUB`; the existing reviewer API and guarded release
+service published it beside GGSEL on the same ExitLag product. There are now
+three products, four links and four source decisions, with no pending proposal.
+This is not a claim that it is FunPay's cheapest offer or a full equivalence
+review. The older candidate-only state below is historical; see
+`EPIC_25_FIRST_MARKETPLACE_COMPARISON.md` for current acceptance evidence.
+
 ## Real Sources
 
 The existing `FunPayFetcher` and installed `CategoriesParser` discovered these

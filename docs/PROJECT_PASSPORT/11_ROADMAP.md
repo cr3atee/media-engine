@@ -461,7 +461,10 @@ fresh-process replay were verified. The three service hubs and original-source
 images are connected; expanded browser acceptance passes `127` checks.
 
 Next is user acceptance of `http://localhost:8000/terminal`, not another backend
-EPIC or a larger assortment. The three-product local boundary is implemented;
+EPIC or a larger assortment. The explicitly approved FunPay ExitLag offer now
+provides the first real two-source price comparison, keeping three products.
+Duolingo/Spotify still have GGSEL only; no Playerok coverage is invented.
+The three-product local boundary is implemented;
 longer-duration plans and additional offers are not added to fill the catalog.
 See `docs/EPIC_25_LOCAL_RELEASE.md` for startup and limits.
 
@@ -475,6 +478,11 @@ these answers; known conflicting conditions and currencies remain protected.
 Next stays within the selected three-product scope, not additional eligibility
 features or a larger assortment. Verified-equivalence research, public variant
 filtering and condition-aware analytics can follow later.
+
+First-version delivery remains web-only. Local-agent/cookie import, desktop
+installation and customer self-hosting were deferred by the user; the local
+development preview is not such a product. Complete the existing public source
+coverage and source-rate-limit handling rather than starting those features.
 
 A later public deployment remains separate: provide managed target access,
 verify real backup/monitoring and asset-use conditions, and approve the exact

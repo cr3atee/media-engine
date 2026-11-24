@@ -6,6 +6,22 @@ This document records the current implementation state of MediaEngine.
 
 ## Current MVP Decision (2026-11-24)
 
+The first version remains web-only: local-agent/customer self-hosting and
+marketplace-cookie import are deferred. After explicit approval of the exact
+FunPay offer, ExitLag now has a real two-source comparison in the published
+local web catalog: GGSEL `5077855` saved at `599.00 RUB` and freshly checked
+FunPay `19847269` at `754.58 RUB`, difference `155.58 RUB`, status `price_only`.
+Three canonical products remain; source review is `4 offers / 4 links /
+4 decisions / 0 pending`, target is `4 offers / 4 links / 3 products`.
+Both backups were restored into isolated rehearsal databases; exact review and
+fresh-process release replay passed, along with six original-data checksum
+checks. Existing business services were reused without code/schema changes.
+GGSEL's live category refresh returned 429, so its price is not claimed newly
+refreshed. Full Pytest still passes `913` with `65` guarded skips; MyPy `577`
+files, Node syntax and real-catalog browser acceptance `134/134` pass. Desktop
+and mobile screenshots were inspected. See
+`docs/EPIC_25_FIRST_MARKETPLACE_COMPARISON.md`.
+
 The user accepts the selected three products and does not want exhaustive
 activation/seller checks to block the first version. Public linked-product
 reads now use an explicit unknown-condition price-comparison allowance. They
@@ -14,12 +30,13 @@ complete equivalence or net profit. The working UI/preview retain the existing
 styling and show a short notice. Known conflicting profiles and mixed currencies
 still block a common minimum. Default strict comparison, grouping, canonical
 approval and tenant/storage semantics are unchanged. Unknown profiles are not
-filled in, and no unlinked FunPay offer is published. Seller questions from the
+filled in, and no unapproved FunPay offer is published. Seller questions from the
 audit below are optional research, not a required next step for the user.
-Full Pytest `913 passed, 65 skipped`, MyPy `577` files, focused Ruff/format,
-PostgreSQL `21/21` and browser `133/133` pass. Extra browser pricing cases use
-an isolated synthetic fixture app, not invented offers in the real catalog.
-No migration, dependency or source-data change was introduced.
+The earlier price-only code increment passed full Pytest `913 passed, 65
+skipped`, MyPy `577` files, focused Ruff/format, PostgreSQL `21/21` and browser
+`133/133`. Those extra browser cases used an isolated synthetic fixture app.
+That code change introduced no migration/dependency/source-data changes; the
+later explicitly approved real data publication is recorded above.
 
 ## Source Audit Before Scope Simplification (2026-11-24)
 

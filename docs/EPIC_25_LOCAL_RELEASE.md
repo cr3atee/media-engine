@@ -27,8 +27,15 @@ The catalog contains exactly these three reviewed products, all subscriptions:
 | Duolingo Super 1 Month Key | `103585387` | `50 RUB` |
 | Spotify Premium Individual [1 Month] | `102361507` | `250 RUB` |
 
+On 2026-11-24 the user explicitly approved FunPay ExitLag offer `19847269` as
+a second source for the same existing ExitLag product. It is now published at
+`754.58 RUB`, alongside the saved GGSEL `599.00 RUB` quote, with `price_only`
+status and a `155.58 RUB` difference. The catalog has three products and four
+offers, not a fourth product. See `EPIC_25_FIRST_MARKETPLACE_COMPARISON.md` for
+restored-backup rehearsal, audit/replay and the source-rate-limit caveat.
+
 No longer-duration products, Minecraft launch products, unreviewed canonical
-products, invented discounts or additional marketplace offers were added.
+products, invented discounts or unapproved marketplace offers were added.
 
 ## Transfer Evidence
 
@@ -146,10 +153,15 @@ curated first version. No new/unlinked offer is thereby approved or promoted.
 
 The first local three-product catalog is available for user acceptance. This
 does not mean the whole long-term MediaEngine roadmap or public launch is done.
-Only GGSEL offers are present for this assortment; Playerok/FunPay filters are
-honestly empty. There is one offer per product, so no cross-seller savings are
-claimed. Price history can be empty and is not fabricated. The local launcher
+GGSEL covers all three products; FunPay now additionally covers the approved
+ExitLag pair. Playerok remains empty for this assortment. Price differences
+describe the saved curated selection, not net profit or a marketplace-wide
+minimum. Price history can be empty and is not fabricated. The local launcher
 does not start a scheduled ingestion worker: Refresh rereads persisted data,
 not the marketplaces. Public delivery-method filtering, public asset-use approval,
 VDS deployment, production monitoring and live Telegram delivery remain outside
 this local acceptance boundary. No external AI or Telegram call was made.
+
+First-version delivery is web-only. A local cookie-import agent, downloadable
+application and customer self-hosting feature were deferred by the user. Local
+development/acceptance URLs above do not imply those features are being built.
