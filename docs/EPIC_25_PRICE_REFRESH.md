@@ -226,11 +226,14 @@ Verification for this follow-up:
   the last product screenshot; the unchanged rerun passed without disabling
   animation checks. That intermittent verifier timing debt remains.
 
-The local `/health/ready` response currently reports `status=not_ready` with
-HTTP 200 even though its database/migration/repository components are
-`ok/head/configured`. The health implementation and settings were not changed
-by this follow-up. Do not treat the working local catalog as proof of production
-readiness; readiness response consistency is a separate operational follow-up.
+At the read-side verification, `/health/ready` reported `status=not_ready` with
+HTTP 200 despite `ok/head/configured` database/migration/repository components.
+That separate readiness correction is now implemented and live-verified:
+intentionally disabled administration no longer blocks the catalog, and actual
+non-readiness returns sanitized HTTP 503. See the readiness section of
+`EPIC_25_LOCAL_RELEASE.md` for the healthy PostgreSQL and unreachable-loopback
+failure checks. This still does not certify marketplace/worker or production
+readiness.
 
 ## Remaining Boundary
 

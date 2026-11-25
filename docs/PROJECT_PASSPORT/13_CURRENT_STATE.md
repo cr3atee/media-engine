@@ -6,6 +6,24 @@ This document records the current implementation state of MediaEngine.
 
 ## Current MVP Operation (2026-11-25)
 
+The readiness follow-up is complete: the local catalog reports `200 / ok` with
+PostgreSQL at head. Intentionally disabled administration is optional; enabled
+administration without a key, unavailable infrastructure, behind migrations and
+missing required repositories remain `503 / not_ready`. Both readiness routes
+declare the sanitized 503 schema and use `no-store`; admin authentication and
+liveness are unchanged. The real healthy and intentionally unreachable-loopback
+cases pass with the existing checker exiting 0/1 respectively. Only the catalog
+API was restarted with its previous configuration/secret; review and worker
+continued running. No database mutations, migrations or new dependencies were
+needed by this fix.
+
+Current quality: focused readiness `16`, full Pytest `987 passed, 65 skipped`,
+MyPy `583`, changed-file Ruff/format, deployment `38/38`, UI renderer `25/25`
+and activation form `29/29` pass. Post-restart browser smoke passes `17` checks
+on the actual three-product/six-offer catalog, with no runtime/CSP errors or
+application mutations. The earlier full browser run below remains historical.
+Details: `docs/EPIC_25_LOCAL_RELEASE.md#readiness-correction-2026-11-25`.
+
 Public offers now expose `price_observed_at` and `source_failed_at` from exact
 tenant-owned quote/source evidence. Working catalog and preview share one
 renderer and existing style tokens: individual observation time, unknown-time
@@ -20,12 +38,13 @@ Five metadata/audit hash collections remain unchanged. The catalog
 server was updated with its existing signing secret/configuration; the review
 server and periodic worker were not restarted.
 
-Latest checks: new Python tests `15`, UI renderer `25/25`, PostgreSQL `65/65`,
+Read-side increment checks: new Python tests `15`, UI renderer `25/25`,
+PostgreSQL `65/65`,
 full Pytest `971 passed, 65 skipped`, MyPy `582`, real browser `160/160`, focused
 Ruff/format and Alembic check pass. Screenshots were inspected; the first browser
 run hit the existing animation timeout, then an unchanged rerun passed. The
-local readiness response's `not_ready`/HTTP 200 inconsistency remains an
-operational follow-up, not a new production-readiness claim.
+local readiness response's earlier `not_ready`/HTTP 200 inconsistency was
+resolved separately as recorded above, not treated as production certification.
 
 ### Initial Refresh Increment
 

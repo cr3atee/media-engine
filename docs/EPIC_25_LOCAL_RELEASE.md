@@ -4,6 +4,45 @@ Initial launch verified on 2026-11-22; bounded price-refresh update verified on
 2026-11-25. The user explicitly selected a local launch, not a VDS or
 public-domain deployment. Dated publication prices below are historical.
 
+## Readiness Correction (2026-11-25)
+
+The local catalog now returns HTTP `200` with `status=ok` from `/health/ready`:
+the database is `ok`, migration is `head`, and repositories are `configured`.
+An explicitly disabled Admin API is optional, not a failed required component.
+An enabled Admin API without its key still blocks readiness. Its public
+component reports its configured/disabled state and whether it is required;
+the protected administrative endpoints remain authenticated.
+
+Actual non-readiness now returns HTTP `503` with the existing sanitized
+`HealthResponse` instead of a misleading HTTP 200. Both public and protected
+readiness routes declare that response in OpenAPI and set
+`Cache-Control: no-store`. Liveness remains independent of database readiness.
+
+Verified against the retained local PostgreSQL catalog on port `55435` at
+`0028_offer_activation_audit`. A separate verification server pointed only to
+an intentionally unreachable loopback database address returned
+`503 / not_ready`, retained `200` liveness, exposed no connection details and
+made the existing health-checker exit 1. The healthy server made it exit 0.
+No production database or actual database shutdown was used for the failure
+case. Both verification servers were closed. The catalog API alone was
+restarted with its exact previous configuration/signing secret; review on 8001
+and the price worker continued running. No reseeding, persistence changes,
+migration, dependency, catalog expansion, AI or Telegram call was introduced.
+
+Current checks: **16 focused readiness tests**, full Pytest **987 passed, 65
+skipped**, strict MyPy **583 files**, Ruff/format **2 Python files**, deployment
+verification **38/38**, shared UI checks **25/25**, activation form **29/29**.
+The existing Starlette/httpx warning remains unchanged. A fresh browser smoke
+passed **17 checks** after restart: three cards, six source rows, individual
+price observations, safe source links, GET-only requests and no runtime/CSP
+errors. This is not a rerun of the earlier 160-check UI suite.
+
+API readiness is not a claim that every marketplace is available, that the
+separate worker is healthy, or that public production deployment is complete.
+This version still compares a curated selection, not the cheapest offers
+across an entire marketplace. Broader cheap-offer discovery remains a functional
+gap; new sellers must not silently replace approved catalog links.
+
 ## Current Price Refresh
 
 `EPIC_25_PRICE_REFRESH.md` records the new opt-in six-offer worker, guards,
@@ -27,7 +66,7 @@ The subsequent read-side increment now exposes each quote's own observation
 time and a newer unresolved source failure. Working/preview rows share the same
 style and renderer; Spotify's saved quote is explicitly labelled, with a
 comparison warning. Product update time alone does not prove both quotes fresh.
-Latest checks: full Pytest `971 passed, 65 skipped`, MyPy `582`, isolated
+Read-side checks: full Pytest `971 passed, 65 skipped`, MyPy `582`, isolated
 PostgreSQL `65/65`, renderer `25/25`, real browser `160/160` and focused
 Ruff/format. No catalog metadata/audit changes or new products were made.
 
