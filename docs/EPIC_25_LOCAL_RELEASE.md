@@ -4,6 +4,30 @@ Initial launch verified on 2026-11-22; bounded price-refresh update verified on
 2026-11-25. The user explicitly selected a local launch, not a VDS or
 public-domain deployment. Dated publication prices below are historical.
 
+## Cheaper Offer Discovery (2026-11-25)
+
+The guarded one-shot discovery now scans the same six category sources using
+existing parsers, shared source screening and the existing price selector.
+It selected ten lower-priced candidates; nine were added unlinked to the
+separate private review queue, while one lacked an exact source-rule mapping.
+No product, link, decision or public source was approved or replaced. Public
+scope stays three products/six offers; private state is now fifteen offers,
+six links, three products, six decisions and nine pending proposals.
+
+The original title matcher routes these candidates to **Create or link**, with
+the expected existing product shown. New-account, family, invitation-link and
+trial offers are not confirmed key equivalents. Source parameters and review
+reasons are retained in the local discovery report. The existing 30-minute
+worker still refreshes only approved identities; discovery is not periodic.
+
+Full Pytest `1028 passed, 66 skipped`, MyPy `588`, focused source/discovery
+tests `90 passed, 1 skipped`, separately unskipped PostgreSQL persistence,
+concurrency/replay/rollback test, Alembic head/check, backup restore, Ruff/format
+and deployment `38/38` pass. Actual review login, nine correct target IDs,
+desktop/mobile cards and session reopening were verified without catalog
+mutations or runtime/CSP errors. Details and captured source prices:
+`EPIC_25_CHEAPER_OFFER_DISCOVERY.md`.
+
 ## Readiness Correction (2026-11-25)
 
 The local catalog now returns HTTP `200` with `status=ok` from `/health/ready`:
@@ -40,8 +64,9 @@ errors. This is not a rerun of the earlier 160-check UI suite.
 API readiness is not a claim that every marketplace is available, that the
 separate worker is healthy, or that public production deployment is complete.
 This version still compares a curated selection, not the cheapest offers
-across an entire marketplace. Broader cheap-offer discovery remains a functional
-gap; new sellers must not silently replace approved catalog links.
+across an entire marketplace. Bounded discovery is now implemented as recorded
+above; human review/promotion and wider coverage remain separate. New sellers
+must not silently replace approved catalog links.
 
 ## Current Price Refresh
 
