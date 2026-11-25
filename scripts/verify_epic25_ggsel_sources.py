@@ -1,10 +1,10 @@
 """Verify real GGSEL evidence for the three-product EPIC 25 assortment."""
 
+# ruff: noqa: E402
 from __future__ import annotations
 
 import asyncio
 import os
-import re
 import sys
 from dataclasses import dataclass
 from pathlib import Path
@@ -19,28 +19,18 @@ from app.parsers.ggsel_extractor import GGSelExtractor  # noqa: E402
 from app.parsers.ggsel_fetcher import GGSelFetcher, GGSelFetchError  # noqa: E402
 from app.parsers.models import ParsedOffer  # noqa: E402
 from app.parsers.normalizers import OfferNormalizer  # noqa: E402
+from app.services.subscription_candidate_rules import (  # noqa: E402
+    LAUNCH_PRODUCTS as LAUNCH_PRODUCTS,
+)
+from app.services.subscription_candidate_rules import (
+    LaunchProductSpec as LaunchProductSpec,
+)
+from app.services.subscription_candidate_rules import (
+    find_exact_month_candidates as find_exact_month_candidates,
+)
 
 LIVE_GUARD = "I_UNDERSTAND_THIS_CONTACTS_GGSEL"
 LIVE_GUARD_ENV = "EPIC25_GGSEL_LIVE_VERIFY"
-
-_DURATION_PATTERN = re.compile(
-    r"(?<!\d)(\d{1,3})\s*(?:[-\N{EN DASH}\N{EM DASH}]\s*)?"
-    r"(months?|days?|years?|weeks?)\b",
-    re.IGNORECASE,
-)
-_WORD_SEPARATOR_PATTERN = re.compile(r"[\W_]+", re.UNICODE)
-
-
-@dataclass(slots=True, frozen=True)
-class LaunchProductSpec:
-    """Describe source evidence required for one launch product."""
-
-    name: str
-    hub_code: str
-    category_url: str
-    required_phrases: tuple[str, ...]
-    section_code: str = "subscriptions"
-    forbidden_phrases: tuple[str, ...] = ()
 
 
 @dataclass(slots=True, frozen=True)
@@ -54,40 +44,8 @@ class VerifiedSource:
     url_status: int
 
 
-LAUNCH_PRODUCTS = (
-    LaunchProductSpec(
-        name="ExitLag - 1 month",
-        hub_code="exitlag",
-        category_url="https://ggsel.net/en/catalog/exitlag",
-        required_phrases=("exitlag",),
-    ),
-    LaunchProductSpec(
-        name="Duolingo Super - 1 month",
-        hub_code="duolingo",
-        category_url="https://ggsel.net/en/catalog/duolingo-keys",
-        required_phrases=("duolingo", "super"),
-    ),
-    LaunchProductSpec(
-        name="Spotify Premium Individual - 1 month",
-        hub_code="spotify",
-        category_url="https://ggsel.net/en/catalog/spotify-premium",
-        required_phrases=("spotify", "premium", "individual"),
-        forbidden_phrases=("duo", "family", "student"),
-    ),
-)
-
-
 class Epic25SourceVerificationError(RuntimeError):
     """Raised when live GGSEL evidence is incomplete or ambiguous."""
-
-
-def find_exact_month_candidates(
-    spec: LaunchProductSpec,
-    offers: tuple[ParsedOffer, ...],
-) -> tuple[ParsedOffer, ...]:
-    """Return deterministic candidates for one exact one-month product."""
-    candidates = [offer for offer in offers if _matches_spec(spec, offer)]
-    return tuple(sorted(candidates, key=_offer_identity_key))
 
 
 def select_candidate(
@@ -209,38 +167,6 @@ async def fetch_verified_launch_sources(
         )
 
     return tuple(results)
-
-
-def _matches_spec(spec: LaunchProductSpec, offer: ParsedOffer) -> bool:
-    if offer.title is None:
-        return False
-    normalized = _normalize_words(offer.title)
-    padded = f" {normalized} "
-    if any(
-        f" {_normalize_words(term)} " not in padded for term in spec.required_phrases
-    ):
-        return False
-    if any(f" {_normalize_words(term)} " in padded for term in spec.forbidden_phrases):
-        return False
-
-    durations = _DURATION_PATTERN.findall(offer.title)
-    if not durations:
-        return False
-    return all(
-        (int(amount) == 1 and unit.casefold().startswith("month"))
-        or (int(amount) == 30 and unit.casefold().startswith("day"))
-        for amount, unit in durations
-    )
-
-
-def _normalize_words(value: str) -> str:
-    return " ".join(_WORD_SEPARATOR_PATTERN.sub(" ", value.casefold()).split())
-
-
-def _offer_identity_key(offer: ParsedOffer) -> tuple[int, str]:
-    external_id = offer.external_id or ""
-    numeric_id = int(external_id) if external_id.isdigit() else sys.maxsize
-    return numeric_id, external_id
 
 
 def _configure_stdout() -> None:

@@ -6,6 +6,22 @@ This document records notable Project Passport updates.
 
 ## Unreleased
 
+- Added guarded, bounded cheaper-offer discovery for the three monthly
+  subscription hubs, reusing parsers, shared existing source rules, matching,
+  selector and human-review queue. Original verifier admission policies stay
+  unchanged. The real six-source scan selected ten cheaper listed prices;
+  nine were staged unlinked in the separate review DB, one skipped for missing
+  mapping. No auto-approval, public replacement, new product, profile or event.
+  Trial/family/new-account/invitation-link conditions remain explicit review
+  caveats. Public three-product/six-offer scope and old private rows preserved;
+  private queue now has nine pending proposals. Backup restore and actual
+  desktop/mobile review with correct targets/session continuity pass. Full
+  Pytest `1028 passed, 66 skipped`, MyPy `588`, focused `90 passed, 1 skipped`,
+  separate unskipped PostgreSQL replay/concurrency/rollback/fresh sessions,
+  Alembic head/check, Ruff/format and deployment `38/38` pass. CI adds a dedicated
+  candidate-intake test DB. Discovery remains a one-shot operation, not a new
+  periodic job. Details: `docs/EPIC_25_CHEAPER_OFFER_DISCOVERY.md`.
+
 - Corrected readiness without weakening administration: explicitly disabled
   Admin API is optional, while required infrastructure/configuration failures
   return HTTP 503 with sanitized `HealthResponse`. Added required/admin

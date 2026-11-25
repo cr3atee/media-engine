@@ -6,6 +6,27 @@ This document records the current implementation state of MediaEngine.
 
 ## Current MVP Operation (2026-11-25)
 
+Bounded cheaper-offer discovery is implemented for the same three monthly
+subscription hubs, using existing parsers, shared source rules and the existing
+selector. The real six-source pass selected ten candidates; nine were saved
+unlinked only in the separate review DB, one was skipped for missing exact
+category mapping. All original private rows and five public metadata/audit hash
+collections are preserved. Public scope remains three products/six linked
+offers. Private state is fifteen offers/six links/three products/six decisions,
+with nine pending proposals and zero unqueued offers. No source was approved
+or promoted; trial/family/new-account/invitation-link candidates are not
+confirmed equivalents. Structured review evidence remains in the local report.
+Discovery is opt-in one-shot, not part of the existing 30-minute refresh worker.
+
+Latest quality: full Pytest `1028 passed, 66 skipped`, MyPy `588`, focused
+source/discovery `90 passed, 1 skipped`, separate unskipped PostgreSQL test for
+fresh sessions/replay/concurrency/rollback, Alembic head/check, restored backup,
+Ruff/format and deployment `38/38` pass. Actual review desktop/mobile login,
+all nine correct nearest-product IDs, safe destinations and session reopening
+pass without catalog mutations or runtime/CSP errors; screenshots inspected.
+See `docs/EPIC_25_CHEAPER_OFFER_DISCOVERY.md`. Older verification counts below
+describe the preceding increments, not the current full-suite total.
+
 The readiness follow-up is complete: the local catalog reports `200 / ok` with
 PostgreSQL at head. Intentionally disabled administration is optional; enabled
 administration without a key, unavailable infrastructure, behind migrations and

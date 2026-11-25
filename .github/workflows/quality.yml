@@ -93,6 +93,7 @@ jobs:
       SOURCE_DATABASE_URL: postgresql+asyncpg://postgres:mediaengine-ci-only@127.0.0.1:5432/epic24_release_source_ci
       TARGET_DATABASE_URL: postgresql+asyncpg://postgres:mediaengine-ci-only@127.0.0.1:5432/epic24_release_target_ci
       ACTIVATION_TEST_DATABASE_URL: postgresql+asyncpg://postgres:mediaengine-ci-only@127.0.0.1:5432/epic25_activation_ci
+      EPIC25_DISCOVERY_TEST_DATABASE_URL: postgresql+asyncpg://postgres:mediaengine-ci-only@127.0.0.1:5432/epic23_catalog_review_epic25_discovery_verify_ci
 
     steps:
       - name: Check out repository
@@ -137,13 +138,16 @@ jobs:
             createdb --username postgres "${TARGET_DATABASE}"
           docker exec mediaengine-ci-postgres \
             createdb --username postgres epic25_activation_ci
+          docker exec mediaengine-ci-postgres \
+            createdb --username postgres epic23_catalog_review_epic25_discovery_verify_ci
 
       - name: Apply and verify migrations
         run: |
           for database_url in \
             "${SOURCE_DATABASE_URL}" \
             "${TARGET_DATABASE_URL}" \
-            "${ACTIVATION_TEST_DATABASE_URL}"; do
+            "${ACTIVATION_TEST_DATABASE_URL}" \
+            "${EPIC25_DISCOVERY_TEST_DATABASE_URL}"; do
             DATABASE_URL="${database_url}" .venv/bin/alembic upgrade head
             DATABASE_URL="${database_url}" .venv/bin/alembic current
             DATABASE_URL="${database_url}" .venv/bin/alembic check
@@ -162,6 +166,11 @@ jobs:
 
       - name: Verify activation condition persistence
         run: .venv/bin/python scripts/verify_activation_conditions_postgres.py
+
+      - name: Verify candidate intake without canonical approval
+        run: >-
+          .venv/bin/python -m pytest
+          tests/services/test_cheaper_offer_discovery.py::test_postgres_intake_fresh_sessions_concurrency_rollback_and_no_approval
 
       - name: Stop isolated PostgreSQL
         if: always()

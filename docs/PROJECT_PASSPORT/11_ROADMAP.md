@@ -507,9 +507,19 @@ required failures return sanitized HTTP 503, and healthy local PostgreSQL
 returns HTTP 200/ok. Focused tests `16`, full Pytest `987 passed, 65 skipped`,
 MyPy `583`, Ruff/format, existing deployment verification and `17` actual
 post-restart browser smoke checks pass. Administration authentication is intact.
-The next functional gap remains cheaper-offer discovery within the same three
-products, without silently publishing unreviewed source replacements. The
-current catalog is not a marketplace-wide minimum. Windows reboot-autostart
+Bounded one-shot cheaper-offer discovery within the same three products is now
+implemented using shared source rules and the existing selector. A real
+six-source pass selected ten candidates; nine entered only the separate private
+review queue, one lacked an exact source mapping. Public scope remains three
+products/six offers; no approval or promotion occurred. Next is deliberate
+review of the different fulfillment/plan/trial terms and explicit promotion of
+any approved seller, not automatic linking or a larger assortment. The
+30-minute worker still refreshes only approved identities, not new candidates.
+Verification: `1028 passed, 66 skipped`, MyPy `588`, focused `90 passed, 1
+skipped`, separately unskipped PostgreSQL concurrency/replay/rollback/fresh
+sessions, backup restore, Alembic head/check, actual cabinet desktop/mobile
+and focused Ruff/format. See `EPIC_25_CHEAPER_OFFER_DISCOVERY.md`.
+The current catalog is not a marketplace-wide minimum. Windows reboot-autostart
 and durable
 cross-restart cooldown are not implemented.
 
