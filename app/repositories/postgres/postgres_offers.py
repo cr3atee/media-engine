@@ -338,6 +338,27 @@ class PostgresOfferRepository(OfferRepository):
             return None
         return self._to_parsed_offer(record)
 
+    async def get_by_identity_for_update(
+        self,
+        tenant_id: UUID,
+        marketplace: str,
+        external_id: str,
+    ) -> ParsedOffer | None:
+        """Serialize source-price merges with concurrent review or retirement."""
+        record = (
+            await self._session.execute(
+                select(Offer)
+                .where(
+                    Offer.tenant_id == tenant_id,
+                    Offer.marketplace == marketplace,
+                    Offer.external_id == external_id,
+                    self._active_offer_predicate(),
+                )
+                .with_for_update(of=Offer)
+            )
+        ).scalar_one_or_none()
+        return self._to_parsed_offer(record) if record is not None else None
+
     async def list_by_marketplace(
         self,
         tenant_id: UUID | str,

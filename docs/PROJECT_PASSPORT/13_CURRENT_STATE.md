@@ -4,7 +4,38 @@
 
 This document records the current implementation state of MediaEngine.
 
-## Current MVP Decision (2026-11-24)
+## Current MVP Operation (2026-11-25)
+
+The exact three-product/six-offer local catalog now has a separately launched
+30-minute price-refresh process using the existing Scheduler, marketplace
+application runner and PostgreSQL repositories. Only the six approved source
+IDs can update; prices/history commit atomically without replacing reviewed
+metadata, links or activation profiles. The source fetch is outside the DB
+transaction; offer-row locks preserve concurrent review/unlink operations.
+There are no new dependencies, migrations, products or AI/Telegram calls.
+
+The first live batch refreshed `6/6`; today's batch refreshed `5/6`. Approved
+FunPay Spotify `79355854` is absent from the current retrieved category listing,
+so its last successful `164.87 RUB` quote is retained, not falsely refreshed.
+GGSEL Spotify is `250`, ExitLag `599/754.58`, Duolingo `50/100 RUB`. The target
+has `3 products / 6 offers / 11 snapshots / 6 source observations`; five
+metadata/audit checksum collections remain unchanged. The original review
+database and untracked `tmp/` were not changed.
+
+Full Pytest `956 passed, 65 skipped`, MyPy `581` files, focused Ruff/format,
+isolated PostgreSQL `59/59`, Alembic `0028` current/check and retained-catalog
+browser `151/151` pass. Desktop/mobile/history screenshots were inspected.
+The existing browser animation wait timed out once; an unchanged rerun passed.
+The new launcher's double-stop issue was fixed with a regression test.
+
+HTTP pacing, no retries, host allowlisting, per-host 403/429 cooldown and
+Retry-After support bound source traffic. Cooldown is process-local; this is
+not reboot-autostart or production deployment. Browser Refresh still rereads
+saved data. Per-offer freshness labels and review of the missing exact Spotify
+source remain open; product update time does not prove every source fresh.
+See `docs/EPIC_25_PRICE_REFRESH.md` for operation and verification evidence.
+
+## MVP Publication Evidence (2026-11-24)
 
 The latest explicitly approved addition is Duolingo FunPay `82381719` at
 `100 RUB`, delivering an invitation link, not a verified activation key.
