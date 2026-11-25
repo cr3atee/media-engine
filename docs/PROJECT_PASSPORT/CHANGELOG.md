@@ -6,6 +6,19 @@ This document records notable Project Passport updates.
 
 ## Unreleased
 
+- Corrected readiness without weakening administration: explicitly disabled
+  Admin API is optional, while required infrastructure/configuration failures
+  return HTTP 503 with sanitized `HealthResponse`. Added required/admin
+  component evidence, protected-route 503 OpenAPI schemas and `no-store`.
+  Healthy retained PostgreSQL at head returns `200 / ok`; a separate server
+  using an unreachable loopback DB returns `503 / not_ready`, keeps liveness
+  200, and makes the existing checker exit 1 rather than 0. Verification servers
+  were closed; catalog API retained its secret/configuration, review and worker
+  were not restarted. Focused tests `16`, full Pytest `987 passed, 65 skipped`,
+  MyPy `583`, Ruff/format, deployment `38/38`, UI renderer `25/25`, activation
+  form `29/29` and actual post-restart browser smoke `17/17` pass. No persistence,
+  migration, dependency, assortment, matching, comparator, AI or Telegram change.
+
 - Added public per-offer price-observation and unresolved source-failure UTC
   timestamps, scoped to the exact saved quote, tenant and source classification.
   Working catalog and preview share timestamp/unknown-state presentation and

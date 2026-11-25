@@ -7,7 +7,7 @@ from typing import Any, Literal, cast
 from alembic.config import Config
 from alembic.runtime.migration import MigrationContext
 from alembic.script import ScriptDirectory
-from fastapi import APIRouter, Depends, Request
+from fastapi import APIRouter, Depends, Request, Response
 from sqlalchemy import text
 
 from app.api.auth import get_admin_settings, require_admin
@@ -44,9 +44,16 @@ async def liveness(request: Request) -> HealthResponse:
     )
 
 
-@router.get("/health/ready", response_model=HealthResponse)
-async def readiness(request: Request) -> HealthResponse:
+@router.get(
+    "/health/ready",
+    response_model=HealthResponse,
+    responses={503: {"model": HealthResponse, "description": "Service is not ready."}},
+)
+async def readiness(request: Request, response: Response) -> HealthResponse:
     """Report sanitized database/application readiness."""
+    configuration = _settings_for(request)
+    admin_api = _admin_status(configuration)
+    response.headers["Cache-Control"] = "no-store"
     probe = getattr(request.app.state, "readiness_probe", None)
     migration_status: Literal["not_checked", "head", "behind", "unavailable"] = (
         "not_checked"
@@ -62,16 +69,20 @@ async def readiness(request: Request) -> HealthResponse:
             if not await result():
                 raise RuntimeError("readiness probe reported unavailable")
     except Exception:
+        response.status_code = 503
         return HealthResponse(
             status="not_ready",
             service="mediaengine",
             database="unavailable",
-            admin_api=_admin_status(_settings_for(request)),
+            admin_api=admin_api,
             migration="unavailable",
             repositories=_repository_status(request),
             scheduler=_scheduler_status(request),
             telegram=_telegram_status(),
             components={
+                "admin_api": HealthComponent(
+                    status=admin_api, required=configuration.api_enabled
+                ),
                 "database": HealthComponent(status="unavailable", required=True),
                 "migration": HealthComponent(status="unavailable", required=True),
                 "repositories": HealthComponent(
@@ -88,17 +99,17 @@ async def readiness(request: Request) -> HealthResponse:
                 ),
             },
         )
-    admin_api = _admin_status(_settings_for(request))
     repository_status = _repository_status(request)
     service_status: Literal["ok", "not_ready"] = (
         "ok"
         if (
             migration_status in {"head", "not_checked"}
-            and admin_api == "configured"
+            and admin_api in {"configured", "disabled"}
             and repository_status == "configured"
         )
         else "not_ready"
     )
+    response.status_code = 200 if service_status == "ok" else 503
     return HealthResponse(
         status=service_status,
         service="mediaengine",
@@ -109,6 +120,9 @@ async def readiness(request: Request) -> HealthResponse:
         scheduler=_scheduler_status(request),
         telegram=_telegram_status(),
         components={
+            "admin_api": HealthComponent(
+                status=admin_api, required=configuration.api_enabled
+            ),
             "database": HealthComponent(status="ok", required=True),
             "migration": HealthComponent(
                 status=migration_status,
@@ -140,11 +154,12 @@ async def admin_health(request: Request) -> HealthResponse:
 @router.get(
     "/api/v1/admin/readiness",
     response_model=HealthResponse,
+    responses={503: {"model": HealthResponse, "description": "Service is not ready."}},
     dependencies=[Depends(require_admin)],
 )
-async def admin_readiness(request: Request) -> HealthResponse:
+async def admin_readiness(request: Request, response: Response) -> HealthResponse:
     """Return authenticated administration readiness information."""
-    return await readiness(request)
+    return await readiness(request, response)
 
 
 def _settings_for(request: Request) -> AdminApiSettings:

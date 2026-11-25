@@ -502,9 +502,15 @@ MyPy `582`, PostgreSQL `65/65`, renderer `25/25`, real browser `160/160`, focuse
 Ruff/format and Alembic check pass. See `docs/EPIC_25_PRICE_REFRESH.md`.
 The formerly missing Spotify FunPay ID later recovered automatically at
 `161.46 RUB`; its public failure timestamp cleared without a substitute seller.
-Next: resolve the existing readiness-response inconsistency, staying inside
-the same three-product scope. Windows
-reboot-autostart and durable
+The readiness follow-up is complete: disabled administration is optional,
+required failures return sanitized HTTP 503, and healthy local PostgreSQL
+returns HTTP 200/ok. Focused tests `16`, full Pytest `987 passed, 65 skipped`,
+MyPy `583`, Ruff/format, existing deployment verification and `17` actual
+post-restart browser smoke checks pass. Administration authentication is intact.
+The next functional gap remains cheaper-offer discovery within the same three
+products, without silently publishing unreviewed source replacements. The
+current catalog is not a marketplace-wide minimum. Windows reboot-autostart
+and durable
 cross-restart cooldown are not implemented.
 
 A later public deployment remains separate: provide managed target access,
