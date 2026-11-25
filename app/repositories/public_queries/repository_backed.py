@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from collections.abc import AsyncIterator, Sequence
 from contextlib import asynccontextmanager
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from datetime import UTC, datetime
 from decimal import Decimal
 from typing import cast
@@ -64,6 +64,7 @@ _CURSOR_FALLBACK_TIMESTAMP = datetime.min.replace(tzinfo=UTC)
 class _ProductContext:
     product: CanonicalProduct
     offers: tuple[ParsedOffer, ...]
+    offer_summaries: tuple[OfferSummaryRead, ...]
     best_offer: OfferSummaryRead | None
     updated_at: datetime | None
     classification: _ResolvedCatalogClassification | None
@@ -141,7 +142,13 @@ class RepositoryBackedPublicReadRepository(
         offers = await self._offers(query.tenant_id)
         filtered = [offer for offer in offers if _offer_matches(offer, query)]
         ordered = _sort_offers(filtered, page)
-        return _read_page([_offer_summary(offer) for offer in ordered], page)
+        return _read_page(
+            [
+                await self._observed_offer_summary(offer)
+                for offer in ordered[: page.limit]
+            ],
+            page,
+        )
 
     async def get_comparison(
         self,
@@ -160,18 +167,25 @@ class RepositoryBackedPublicReadRepository(
         )
         difference = self._difference.compare(selection)
         result = self._result_builder.build(product, selection, difference)
+        summaries = {
+            (offer.marketplace, offer.external_id): offer
+            for offer in context.offer_summaries
+        }
+
+        def summary(offer: ParsedOffer) -> OfferSummaryRead:
+            return summaries[(offer.marketplace, offer.external_id)]
 
         return ProductComparisonRead(
             product=_product_detail(context),
-            offers=tuple(_offer_summary(item.offer) for item in result.grouped_offers),
+            offers=tuple(summary(item.offer) for item in result.grouped_offers),
             best_offer=(
-                _offer_summary(result.best_offer.offer)
+                summary(result.best_offer.offer)
                 if result.best_offer is not None
                 else None
             ),
             differences=tuple(
                 PriceDifferenceRead(
-                    offer=_offer_summary(entry.offer.offer),
+                    offer=summary(entry.offer.offer),
                     absolute_difference=entry.absolute_difference,
                     percentage_difference=entry.percentage_difference,
                     reason=entry.reason,
@@ -395,32 +409,95 @@ class RepositoryBackedPublicReadRepository(
             for offer in await self._provider.offers.list_by_tenant(product.tenant_id)
             if offer.canonical_product_id == product.id
         )
+        summaries = tuple(
+            [await self._observed_offer_summary(offer) for offer in offers]
+        )
+        best_offer = _best_offer(offers, self._selector)
         return _ProductContext(
             product=product,
             offers=offers,
-            best_offer=_best_offer(offers, self._selector),
-            updated_at=await self._updated_at(offers),
+            offer_summaries=summaries,
+            best_offer=next(
+                (
+                    offer
+                    for offer in summaries
+                    if best_offer is not None
+                    and (offer.marketplace, offer.external_id)
+                    == (best_offer.marketplace, best_offer.external_id)
+                ),
+                None,
+            ),
+            updated_at=max(
+                (
+                    offer.price_observed_at
+                    for offer in summaries
+                    if offer.price_observed_at is not None
+                ),
+                default=None,
+            ),
             classification=_resolve_catalog_classification(offers),
         )
 
-    async def _updated_at(
-        self,
-        offers: Sequence[ParsedOffer],
-    ) -> datetime | None:
-        latest: datetime | None = None
-        for offer in offers:
-            if offer.external_id is None:
-                continue
+    async def _observed_offer_summary(self, offer: ParsedOffer) -> OfferSummaryRead:
+        """Expose evidence for this saved quote, never the product's newest source."""
+        observed_at = None
+        if offer.external_id is not None:
             snapshot = await self._provider.price_history.get_last(
                 offer.tenant_id,
                 offer.marketplace,
                 offer.external_id,
             )
-            if snapshot is not None and (
-                latest is None or snapshot.collected_at > latest
+            if (
+                snapshot is not None
+                and snapshot.price == offer.price
+                and snapshot.currency == offer.currency
             ):
-                latest = snapshot.collected_at
-        return latest
+                observed_at = snapshot.collected_at
+        return replace(
+            _offer_summary(offer),
+            price_observed_at=observed_at,
+            source_failed_at=await self._source_failed_at(offer, observed_at),
+        )
+
+    async def _source_failed_at(
+        self, offer: ParsedOffer, observed_at: datetime | None
+    ) -> datetime | None:
+        """Report only a newer unresolved failure of the exact tenant source."""
+        if offer.catalog_source_rule_id is None:
+            return None
+        rules = await self._provider.catalog_source_rules.list_by_tenant(
+            offer.tenant_id
+        )
+        rule = next(
+            (
+                rule
+                for rule in rules
+                if rule.id == offer.catalog_source_rule_id
+                and rule.marketplace == offer.marketplace
+                and rule.source_category_id == offer.source_category_id
+                and rule.hub_code == offer.catalog_hub_code
+                and rule.section_code == offer.catalog_section_code
+            ),
+            None,
+        )
+        if rule is None:
+            return None
+        integration = (
+            await self._provider.marketplace_integrations.get_by_tenant_and_id(
+                offer.tenant_id, rule.integration_id
+            )
+        )
+        if integration is None or integration.marketplace != offer.marketplace:
+            return None
+        failed_at = integration.last_failed_run_at
+        if failed_at is None or (
+            integration.last_successful_run_at is not None
+            and failed_at <= integration.last_successful_run_at
+        ):
+            return None
+        if observed_at is not None and failed_at <= observed_at:
+            return None
+        return failed_at
 
     async def _product_name(self, event: PriceDropMarketEvent) -> str | None:
         if event.payload.title is not None:

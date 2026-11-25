@@ -6,6 +6,19 @@ This document records notable Project Passport updates.
 
 ## Unreleased
 
+- Added public per-offer price-observation and unresolved source-failure UTC
+  timestamps, scoped to the exact saved quote, tenant and source classification.
+  Working catalog and preview share timestamp/unknown-state presentation and
+  saved-price/partial-comparison warnings using the existing design. Internal
+  diagnostics remain private; prices, selection, links and persistence semantics
+  are unchanged. The local API was restarted with its existing configuration
+  and signing secret; independent review/worker processes were left running.
+  Five metadata/audit checksum collections match. New Python tests `15`, shared
+  renderer `25/25` (also in CI), PostgreSQL `65/65`, full Pytest `971 passed, 65
+  skipped`, MyPy `582`, browser `160/160`, focused Ruff/format, JS syntax and
+  Alembic check pass. Existing animation-wait flakiness and local readiness
+  `not_ready`/HTTP 200 inconsistency are documented, not claimed fixed.
+
 - Added bounded local price refresh for the six explicitly approved GGSEL/FunPay
   offers through existing runtime/Scheduler/pipeline components. Scoped runner
   merges update only price under an active-offer row lock; reviewed links,

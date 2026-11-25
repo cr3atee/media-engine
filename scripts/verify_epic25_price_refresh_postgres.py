@@ -386,7 +386,7 @@ async def verify(url: str) -> int:
                 len(await load_refresh_targets(fresh_scope)) == 6,
             )
             public = create_postgres_public_read_repository_scope(fresh_factory)
-            async with public() as public_repos:
+            async with public() as public_repos, fresh_scope() as repositories:
                 for product_id in set(APPROVED_OFFERS.values()):
                     comparison = await public_repos.comparisons.get_comparison(
                         product_id, TENANT_ID
@@ -398,6 +398,20 @@ async def verify(url: str) -> int:
                         and comparison.product is not None
                         and comparison.product.updated_at is not None,
                     )
+                    assert comparison is not None
+                    for public_offer in comparison.offers:
+                        assert public_offer.external_id is not None
+                        observed = await repositories.price_history.get_last(
+                            TENANT_ID,
+                            public_offer.marketplace,
+                            public_offer.external_id,
+                        )
+                        check(
+                            "public quote has its exact source observation",
+                            observed is not None
+                            and public_offer.price_observed_at == observed.collected_at
+                            and public_offer.source_failed_at is None,
+                        )
             async with fresh_engine.connect() as conn:
                 for table, previous in immutable_before.items():
                     rows = {

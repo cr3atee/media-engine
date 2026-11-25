@@ -161,6 +161,67 @@ the original review database and `tmp/` were not modified.
   run timed out waiting for a mobile animation; the unchanged rerun passed.
   This intermittent browser timing issue was not hidden by disabling the gate.
 
+## Public Per-Offer Evidence (2026-11-25)
+
+The public offer projection/API now exposes two nullable UTC timestamps:
+
+- `price_observed_at`: the latest snapshot for this exact tenant, marketplace
+  and external ID, only when its price and currency match the saved quote.
+- `source_failed_at`: a later unresolved failure of the exact source identified
+  by the offer's tenant-owned classification rule. A later/equal successful
+  source run or a newer quote observation suppresses an old failure.
+
+Missing/mismatched history stays unknown; a product's latest successful source
+cannot supply a different offer's timestamp. Missing, foreign or mismatched
+source rules do not borrow another integration's failure. Internal error text,
+integration IDs, credentials and tenant IDs are not added to the public DTO.
+These are read projections over existing repositories, not new persistence or
+polling semantics. Comparison selection, prices and source links are unchanged.
+
+Working catalog and preview share one presentation helper and the existing
+style tokens. Each source row shows its observation date with an explicit
+browser-local timezone and machine-readable UTC `<time>`. An unresolved failure
+adds a short saved-price warning; the comparison also warns when some source
+prices did not refresh. No green/live freshness promise or invented age is
+displayed. Legacy payloads without evidence show unknown time safely.
+
+The local API was updated without reseeding or changing its signing secret;
+the previous configuration was retained in memory, not committed. A staging
+read verified all six timestamps before the catalog server on port 8000 was
+restarted. The independent 8001 review server and 30-minute worker continued
+running. Actual catalog API verification reports three products, six timestamped
+offers and one source failure for the retained Spotify FunPay quote. All five
+metadata/audit hash collections still match; periodic real history may advance.
+
+Verification for this follow-up:
+
+- New offline Python tests: **15 passed**, covering current-quote evidence,
+  source recovery, missing/mismatched history, marketplace/tenant isolation,
+  API redaction and timezone validation. One existing exact API fixture was
+  updated for the two new nullable response fields.
+- Shared UI renderer: **25 offline checks passed**, now included in CI; invalid,
+  naive and injection-like date values cannot invent a timestamp or markup.
+- Extended restored-copy PostgreSQL verifier: **65 checks passed**, including
+  exact per-offer timestamps after fresh-engine reads, existing rollback,
+  concurrent review/unlink and Scheduler checks. Synthetic test prices remain
+  isolated from the public catalog.
+- Full Pytest: **971 passed, 65 skipped**, with the unchanged Starlette/httpx
+  deprecation warning. Strict MyPy: **582 files passed**.
+- Changed-file Ruff and format: **7 Python files passed**; JavaScript syntax
+  checks, deployment verifier **38/38**, and Alembic schema check pass.
+- Real retained-catalog browser: **160 checks passed**, including each pair's
+  individual timestamps, truthful failure warning, comparison notice and mobile
+  bounds. No runtime/CSP errors; all application requests GET. Desktop/mobile
+  Spotify screenshots were inspected. The initial animation wait timed out at
+  the last product screenshot; the unchanged rerun passed without disabling
+  animation checks. That intermittent verifier timing debt remains.
+
+The local `/health/ready` response currently reports `status=not_ready` with
+HTTP 200 even though its database/migration/repository components are
+`ok/head/configured`. The health implementation and settings were not changed
+by this follow-up. Do not treat the working local catalog as proof of production
+readiness; readiness response consistency is a separate operational follow-up.
+
 ## Remaining Boundary
 
 This is periodic refresh of a curated selection, not marketplace-wide cheapest
@@ -172,9 +233,8 @@ not verified equivalence or resale profit.
 
 The browser's Refresh action rereads persisted data; it does not launch a
 marketplace fetch. The background process updates that data separately. Product
-`updated_at` reflects the latest successful product observation, not freshness
-of every source. Per-offer freshness/failure labels are not exposed in the
-current public offer DTO/UI; operators must use polling records/history for the
-retained Spotify quote. That public freshness distinction and review of the
-missing exact source are the next practical improvements, not a reason to
-silently substitute an unapproved offer or label all six prices fresh.
+`updated_at` is an aggregate, not proof that every source refreshed. Per-offer
+evidence is now visible as described above, but it is not a promise of present
+availability or full activation equivalence. Review of the missing exact source
+remains open; do not silently substitute an unapproved offer or label all six
+prices fresh.

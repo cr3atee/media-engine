@@ -168,6 +168,15 @@ class PublicOfferSummary(ApiModel):
     currency: str | None
     seller_id: str | None = None
     seller_name: str | None = None
+    price_observed_at: datetime | None = None
+    source_failed_at: datetime | None = None
+
+    _normalize_price_observed_at = field_validator("price_observed_at")(
+        _optional_utc_datetime
+    )
+    _normalize_source_failed_at = field_validator("source_failed_at")(
+        _optional_utc_datetime
+    )
 
 
 class PublicProductCard(ApiModel):

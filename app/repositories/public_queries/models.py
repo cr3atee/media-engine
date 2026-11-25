@@ -82,6 +82,8 @@ class OfferSummaryRead:
     seller_id: str | None = None
     seller_name: str | None = None
     canonical_product_id: UUID | None = None
+    price_observed_at: datetime | None = None
+    source_failed_at: datetime | None = None
 
 
 @dataclass(slots=True, frozen=True)

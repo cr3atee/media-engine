@@ -495,9 +495,14 @@ The first live batch passed `6/6`; the latest passed `5/6`, retaining the old
 Spotify FunPay quote because that exact ID was absent. No source substitution
 was authorized. Full Pytest `956 passed, 65 skipped`, MyPy `581`, isolated
 PostgreSQL `59/59`, Alembic current/check, Ruff/format and real-catalog browser
-`151/151` pass. See `docs/EPIC_25_PRICE_REFRESH.md`. Next: expose per-offer
-freshness/failure honestly and resolve the missing approved source, staying
-inside the same three-product scope. Windows reboot-autostart and durable
+`151/151` pass. The subsequent read-side increment now exposes per-offer quote
+observation and unresolved source-failure timestamps in the API and shared
+working/preview UI. Current verification: full Pytest `971 passed, 65 skipped`,
+MyPy `582`, PostgreSQL `65/65`, renderer `25/25`, real browser `160/160`, focused
+Ruff/format and Alembic check pass. See `docs/EPIC_25_PRICE_REFRESH.md`.
+Next: resolve the missing approved source and the existing readiness-response
+inconsistency, staying inside the same three-product scope. Windows
+reboot-autostart and durable
 cross-restart cooldown are not implemented.
 
 A later public deployment remains separate: provide managed target access,
