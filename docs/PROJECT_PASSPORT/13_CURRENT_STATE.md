@@ -6,6 +6,31 @@ This document records the current implementation state of MediaEngine.
 
 ## Current MVP Operation (2026-11-25)
 
+Public offers now expose `price_observed_at` and `source_failed_at` from exact
+tenant-owned quote/source evidence. Working catalog and preview share one
+renderer and existing style tokens: individual observation time, unknown-time
+fallback, saved-price warning and partial-comparison warning. A newer observation
+or successful source run suppresses old failures. No raw diagnostics or private
+source IDs are exposed; pricing/matching/persistence behavior is unchanged.
+The actual API first verified six timestamped quotes and one Spotify FunPay
+failure. A subsequent periodic execution recovered the same approved
+`79355854` at `161.46 RUB` (`2026-11-25T09:02:49.870579Z`) with no public failure
+timestamp, confirming automatic recovery without replacing the seller.
+Five metadata/audit hash collections remain unchanged. The catalog
+server was updated with its existing signing secret/configuration; the review
+server and periodic worker were not restarted.
+
+Latest checks: new Python tests `15`, UI renderer `25/25`, PostgreSQL `65/65`,
+full Pytest `971 passed, 65 skipped`, MyPy `582`, real browser `160/160`, focused
+Ruff/format and Alembic check pass. Screenshots were inspected; the first browser
+run hit the existing animation timeout, then an unchanged rerun passed. The
+local readiness response's `not_ready`/HTTP 200 inconsistency remains an
+operational follow-up, not a new production-readiness claim.
+
+### Initial Refresh Increment
+
+These initial-batch counts/prices precede the later periodic recovery above.
+
 The exact three-product/six-offer local catalog now has a separately launched
 30-minute price-refresh process using the existing Scheduler, marketplace
 application runner and PostgreSQL repositories. Only the six approved source
@@ -31,8 +56,9 @@ The new launcher's double-stop issue was fixed with a regression test.
 HTTP pacing, no retries, host allowlisting, per-host 403/429 cooldown and
 Retry-After support bound source traffic. Cooldown is process-local; this is
 not reboot-autostart or production deployment. Browser Refresh still rereads
-saved data. Per-offer freshness labels and review of the missing exact Spotify
-source remain open; product update time does not prove every source fresh.
+saved data. Per-offer evidence is now visible; the previously missing Spotify
+source recovered under its original ID. Product update time does not prove
+every source fresh.
 See `docs/EPIC_25_PRICE_REFRESH.md` for operation and verification evidence.
 
 ## MVP Publication Evidence (2026-11-24)

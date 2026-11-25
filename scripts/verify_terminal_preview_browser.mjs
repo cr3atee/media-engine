@@ -634,6 +634,18 @@ try {
       await check(`${pair.title} comparison shows both approved source links`, `document.querySelectorAll(".offer-row").length===2 && ${JSON.stringify(sourceUrls)}.every(url=>[...document.querySelectorAll(".offer-row a")].some(a=>a.href===url))`);
       const sourceTitles = comparison.offers.map(offer => offer.title);
       await check(`${pair.title} keeps each original source title visible`, `${JSON.stringify(sourceTitles)}.every(title=>[...document.querySelectorAll(".offer-row")].some(row=>row.textContent.includes(title)))`);
+      await check(`${pair.title} offers show their own observation and failure evidence`, `(() => {
+        const expected = ${JSON.stringify(comparison.offers)};
+        return expected.every(offer => {
+          const row = [...document.querySelectorAll('.offer-row')].find(row => row.querySelector('a')?.href === offer.url);
+          const evidence = row?.querySelector('.offer-freshness');
+          const state = offer.source_failed_at ? 'failed' : offer.price_observed_at ? 'observed' : 'unknown';
+          return evidence?.dataset.refreshState === state &&
+            (!offer.price_observed_at || [...evidence.querySelectorAll('time')].some(time => Date.parse(time.dateTime) === Date.parse(offer.price_observed_at))) &&
+            (!offer.source_failed_at || evidence.textContent.includes('Показана сохранённая цена'));
+        });
+      })()`);
+      await check(`${pair.title} comparison warns only about actual source failures`, `Boolean(document.querySelector('#comparisonCard .comparison-refresh-warning')) === ${comparison.offers.some(offer=>offer.source_failed_at != null)}`);
       await check(`${pair.title} comparison is price-only without blocking unknown terms`, 'document.querySelector("#comparisonCard h3")?.textContent==="Минимальная цена в подборке" && document.querySelector("#comparisonCard").textContent.includes("не прибыль")');
       const displayedSpread = Number(comparison.differences[0].absolute_difference).toLocaleString("ru-RU", {minimumFractionDigits:2,maximumFractionDigits:2}).replace(/\s/g, "");
       await check(`${pair.title} comparison renders the stored API spread`, `document.querySelector('#comparisonCard').textContent.replace(/\\s/g,'').includes(${JSON.stringify(displayedSpread)})`);
@@ -641,6 +653,7 @@ try {
       await screenshot(pair.desktop, false);
       await mobileSize(390, 844);
       await check(`approved ${pair.title} two-source comparison fits mobile`, 'document.documentElement.scrollWidth<=innerWidth && [...document.querySelectorAll(".offer-row a")].every(a=>a.getBoundingClientRect().right<=innerWidth)');
+      await check(`${pair.title} mobile freshness text stays inside source rows`, '[...document.querySelectorAll(".offer-freshness")].every(evidence=>evidence.getBoundingClientRect().right<=innerWidth && evidence.getBoundingClientRect().left>=0)');
       await screenshot(pair.mobile, false);
     }
   }

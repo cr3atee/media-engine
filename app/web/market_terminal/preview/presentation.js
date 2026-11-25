@@ -28,6 +28,40 @@ export function escapeHtml(value) {
   return String(value ?? "").replace(/[&<>"']/g, (char) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[char]);
 }
 
+function offerRefreshEvidence(offer) {
+  const timestamp = (value) => {
+    if (typeof value !== "string" || !/(Z|[+-]\d{2}:\d{2})$/i.test(value)) return null;
+    const date = new Date(value);
+    return Number.isFinite(date.getTime()) ? date : null;
+  };
+  const observed = timestamp(offer.price_observed_at);
+  const failure = timestamp(offer.source_failed_at);
+  return { observed, failure: failure && (!observed || failure > observed) ? failure : null };
+}
+
+function evidenceTime(date) {
+  const label = new Intl.DateTimeFormat("ru-RU", {
+    day: "numeric", month: "short", year: "numeric",
+    hour: "2-digit", minute: "2-digit", timeZoneName: "short",
+  }).format(date);
+  return `<time datetime="${date.toISOString()}">${escapeHtml(label)}</time>`;
+}
+
+export function offerFreshness(offer) {
+  const { observed, failure } = offerRefreshEvidence(offer);
+  const state = failure ? "failed" : observed ? "observed" : "unknown";
+  return `<div class="offer-freshness" data-refresh-state="${state}">
+    <p>${observed ? `Цена проверена ${evidenceTime(observed)}` : "Время проверки цены неизвестно"}</p>
+    ${failure ? `<p class="offer-refresh-warning">Источник не обновился ${evidenceTime(failure)}. Показана сохранённая цена.</p>` : ""}
+  </div>`;
+}
+
+export function comparisonFreshness(comparison) {
+  return (comparison.offers ?? []).some(offer => offerRefreshEvidence(offer).failure)
+    ? '<p class="comparison-refresh-warning">Часть цен не обновилась. Сравнение использует сохранённые цены.</p>'
+    : "";
+}
+
 export function brandMark(marketplace) {
   const known = Object.hasOwn(brands, marketplace);
   const name = known ? brands[marketplace] : marketplace;

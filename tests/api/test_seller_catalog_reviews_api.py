@@ -414,6 +414,8 @@ def test_product_proposal_confirmation_is_atomic_audited_and_idempotent() -> Non
                 "currency": "RUB",
                 "seller_id": None,
                 "seller_name": None,
+                "price_observed_at": None,
+                "source_failed_at": None,
             },
             "offer_count": 1,
             "marketplace_count": 1,

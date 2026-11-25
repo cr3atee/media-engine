@@ -3,9 +3,11 @@ import {
   brandMark,
   catalogHubInfo,
   catalogSectionName,
+  comparisonFreshness,
   handleImageError,
   infoFor,
   offerFootprint,
+  offerFreshness,
   productImage,
   money as offerMoney,
 } from "/terminal/preview/presentation.js";
@@ -886,7 +888,7 @@ function renderOffers(offers) {
       (offer) => `
         <article class="offer-row">
           <div class="offer-market">${brandMark(offer.marketplace)}${escapeHtml(brands[offer.marketplace] ?? offer.marketplace)}</div>
-          <div class="offer-description"><p class="offer-name">${escapeHtml(offer.title ?? "Предложение без названия")}</p><p class="offer-seller">${escapeHtml(offer.seller_name ?? "Продавец не указан")}</p></div>
+          <div class="offer-description"><p class="offer-name">${escapeHtml(offer.title ?? "Предложение без названия")}</p><p class="offer-seller">${escapeHtml(offer.seller_name ?? "Продавец не указан")}</p>${offerFreshness(offer)}</div>
           <span class="offer-price">${moneyHtml(offer.price, offer.currency)}</span>
           ${escapeAttribute(offer.url ?? "") !== "#" ? `<a class="secondary" href="${escapeAttribute(offer.url)}" target="_blank" rel="noopener noreferrer">На площадку <span aria-hidden="true">↗</span></a>` : '<span class="subtle">Ссылка недоступна</span>'}
         </article>
@@ -915,6 +917,7 @@ function renderComparison(comparison) {
   const priceOnly = comparison.status === "price_only";
   elements.comparisonCard.innerHTML = `
     <p class="eyebrow">${escapeHtml(comparisonStatusLabel(comparison.status))}</p>
+    ${comparisonFreshness(comparison)}
     <h3>${priceOnly ? "Минимальная цена в подборке" : "Лучшее предложение"}</h3>
     <p class="price">${moneyHtml(comparison.best_offer.price, comparison.best_offer.currency)}</p>
     <p>${escapeHtml(comparison.best_offer.marketplace)} / ${escapeHtml(comparison.best_offer.title ?? "")}</p>

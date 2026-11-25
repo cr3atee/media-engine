@@ -38,6 +38,8 @@ def public_offer_summary(offer: OfferSummaryRead) -> PublicOfferSummary:
         currency=offer.currency,
         seller_id=offer.seller_id,
         seller_name=offer.seller_name,
+        price_observed_at=offer.price_observed_at,
+        source_failed_at=offer.source_failed_at,
     )
 
 

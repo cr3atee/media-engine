@@ -1,5 +1,5 @@
 /** Read-only design preview. Role switches and review actions never grant access or write data. */
-import { artwork, brands, brandMark, escapeHtml, handleImageError, infoFor, offerFootprint, productImage, money } from "./presentation.js";
+import { artwork, brands, brandMark, comparisonFreshness, escapeHtml, handleImageError, infoFor, offerFootprint, offerFreshness, productImage, money } from "./presentation.js";
 const root = "/terminal/preview";
 const api = "/api/v1/public";
 const main = document.querySelector("#main");
@@ -133,7 +133,7 @@ function catalogMarkup(products, params, nextCursor) {
 function offerRow(offer) {
   const source = safeSource(offer.url);
   return `<article class="offer-row"><div class="offer-market">${brandMark(offer.marketplace)}${escapeHtml(marketplaceName(offer.marketplace))}</div>
-    <div class="offer-description"><p class="offer-name">${escapeHtml(offer.title ?? "Название не указано")}</p><p class="offer-seller">Продавец: ${escapeHtml(offer.seller_name ?? "не указан")}</p></div>
+    <div class="offer-description"><p class="offer-name">${escapeHtml(offer.title ?? "Название не указано")}</p><p class="offer-seller">Продавец: ${escapeHtml(offer.seller_name ?? "не указан")}</p>${offerFreshness(offer)}</div>
     <span class="offer-price">${escapeHtml(money(offer))}</span>
     ${source ? `<a class="secondary" href="${escapeHtml(source)}" target="_blank" rel="noopener noreferrer">На площадку <span aria-hidden="true">↗</span></a>` : '<span class="subtle">Ссылка недоступна</span>'}
   </article>`;
@@ -155,7 +155,8 @@ function productMarkup(product, comparison, params) {
     ${offerFootprint(product)}
     <a class="primary" href="#offers">Все предложения <span aria-hidden="true">↓</span></a>
     <details class="original-name"><summary>Исходное название товара</summary><p>${escapeHtml(product.name)}</p>${artwork[product.id] ? '<p>Краткий заголовок подготовлен для макета. Название в каталоге не изменено.</p>' : ""}</details></div></section>
-    <section id="offers" aria-labelledby="offersTitle"><div class="offers-heading"><h2 id="offersTitle">Предложения площадок</h2><span class="subtle">${product.updated_at ? `Обновлено ${escapeHtml(new Date(product.updated_at).toLocaleDateString("ru-RU"))}` : "Время обновления не передано источником"}</span></div>
+    <section id="offers" aria-labelledby="offersTitle"><div class="offers-heading"><h2 id="offersTitle">Предложения площадок</h2></div>
+    ${comparisonFreshness(comparison)}
     ${mismatch ? '<p class="notice"><span aria-hidden="true">ⓘ</span><span><strong>Цены в разных валютах.</strong> Мы показываем их без пересчёта и не выбираем общее самое дешёвое предложение.</span></p>' : activationNotice ? `<p class="notice neutral">${escapeHtml(activationNotice)}</p>` : comparison.best_offer ? `<p class="notice neutral">${priceOnly ? "Минимальная цена в подборке" : "Лучшее предложение по результату сравнения"}: ${escapeHtml(money(comparison.best_offer))} · ${escapeHtml(marketplaceName(comparison.best_offer.marketplace))}${priceOnly ? ". Условия активации проверены не полностью. Показана разница цен, не прибыль." : ""}</p>` : '<p class="notice neutral">Лучшее предложение пока не определено. Проверьте цену, валюту и условия каждого объявления.</p>'}
     ${comparison.offers.length ? comparison.offers.map(offerRow).join("") : '<div class="empty"><h2>Предложений пока нет</h2><p>Товар есть в каталоге, но доступные предложения ещё не получены.</p></div>'}
     <p class="detail-note">Покупка проходит на выбранной площадке. Проверьте регион активации, платформу и способ получения перед оплатой.</p></section>`;

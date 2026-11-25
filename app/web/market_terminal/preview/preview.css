@@ -192,6 +192,10 @@ main { min-height: 62vh; padding-top: 24px; outline: none; }
 .offer-market .market-mark { width: 34px; height: 34px; }
 .offer-name { font-size: 14px; overflow-wrap: anywhere; }
 .offer-seller { font-size: 12px; color: var(--muted); margin-top: 6px; }
+.offer-freshness { margin-top: 8px; font-size: 12px; line-height: 1.5; color: var(--muted); overflow-wrap: anywhere; }
+.offer-freshness p + p { margin-top: 4px; }
+.offer-refresh-warning, .comparison-refresh-warning { color: var(--warning); }
+.comparison-refresh-warning { font-size: 13px; line-height: 1.5; margin: 12px 0; }
 .offer-price { font-size: 21px; font-weight: 600; font-variant-numeric: tabular-nums; white-space: nowrap; }
 .offer-row .secondary { white-space: nowrap; }
 .detail-note { margin-top: 22px; font-size: 13px; color: var(--muted); }

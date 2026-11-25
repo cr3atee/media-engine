@@ -75,6 +75,9 @@ jobs:
       - name: Verify activation review form fixtures
         run: node scripts/verify_activation_review_form.mjs
 
+      - name: Verify offer freshness presentation
+        run: node scripts/verify_offer_freshness_ui.mjs
+
       - name: Verify production deployment wiring
         run: .venv/bin/python scripts/verify_epic21_deployment.py
 

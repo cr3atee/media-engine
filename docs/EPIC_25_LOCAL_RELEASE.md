@@ -10,17 +10,26 @@ public-domain deployment. Dated publication prices below are historical.
 operation and full verification. A separate local process now schedules the
 existing pipelines every 30 minutes without expanding the catalog. The first
 live batch refreshed six of six offers; the 2026-11-25 batch refreshed five.
-FunPay Spotify `79355854` was absent from the retrieved listing: its previous
-`164.87 RUB` quote remains saved, not claimed fresh. Other current quotes are
+FunPay Spotify `79355854` was absent from that retrieved listing, so its previous
+`164.87 RUB` quote was retained rather than claimed fresh. Other observed quotes were
 ExitLag `599/754.58`, Duolingo `50/100` and GGSEL Spotify `250 RUB`.
-There are eleven real snapshots, still exactly three products and six offers.
+After those two batches there were eleven real snapshots, still exactly three
+products and six offers. A later 2026-11-25 periodic execution recovered the
+same Spotify FunPay ID at `161.46 RUB`, observed at `09:02:49 UTC`, and cleared
+its public source-failure timestamp. No substitute offer was added; real
+history continues accumulating.
 
 Five immutable/metadata hash collections remain unchanged. Full Pytest is
 `956 passed, 65 skipped`, MyPy `581` files, isolated PostgreSQL `59/59` and
 real-catalog browser `151/151`; focused Ruff/format pass. This is local periodic
 operation, not Windows reboot-autostart or a public production deployment.
-Public per-offer freshness labels remain missing; product update time alone
-does not prove both source quotes fresh.
+The subsequent read-side increment now exposes each quote's own observation
+time and a newer unresolved source failure. Working/preview rows share the same
+style and renderer; Spotify's saved quote is explicitly labelled, with a
+comparison warning. Product update time alone does not prove both quotes fresh.
+Latest checks: full Pytest `971 passed, 65 skipped`, MyPy `582`, isolated
+PostgreSQL `65/65`, renderer `25/25`, real browser `160/160` and focused
+Ruff/format. No catalog metadata/audit changes or new products were made.
 
 ## Running Version
 
@@ -195,7 +204,7 @@ profit or a marketplace-wide minimum. Price history now contains real
 observations from the bounded refresh; old history was not fabricated. The web
 launcher itself does not start ingestion: the separately launched price-refresh
 process does. Refresh in the browser rereads persisted data, not marketplaces.
-Public delivery-method filtering, per-source freshness presentation,
+Public delivery-method filtering,
 public asset-use approval,
 VDS deployment, production monitoring and live Telegram delivery remain outside
 this local acceptance boundary. No external AI or Telegram call was made.
