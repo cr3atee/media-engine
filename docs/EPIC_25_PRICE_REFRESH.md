@@ -190,8 +190,18 @@ the previous configuration was retained in memory, not committed. A staging
 read verified all six timestamps before the catalog server on port 8000 was
 restarted. The independent 8001 review server and 30-minute worker continued
 running. Actual catalog API verification reports three products, six timestamped
-offers and one source failure for the retained Spotify FunPay quote. All five
+offers and one source failure for the retained Spotify FunPay quote at that
+initial check. All five
 metadata/audit hash collections still match; periodic real history may advance.
+
+A later periodic execution on the same day recovered the exact approved
+FunPay Spotify `79355854`, without a substitute seller or new canonical link.
+The actual public API then returned `161.46 RUB`, observed at
+`2026-11-25T09:02:49.870579Z` (20:02:49 Asia/Vladivostok), and
+`source_failed_at=null`. The saved `164.87 RUB` quote was therefore superseded
+by real source evidence, not a manual price change. This verifies recovery of
+the public failure projection on the retained catalog as well as the earlier
+real failed-source warning. Source availability can still change again.
 
 Verification for this follow-up:
 
@@ -235,6 +245,7 @@ The browser's Refresh action rereads persisted data; it does not launch a
 marketplace fetch. The background process updates that data separately. Product
 `updated_at` is an aggregate, not proof that every source refreshed. Per-offer
 evidence is now visible as described above, but it is not a promise of present
-availability or full activation equivalence. Review of the missing exact source
-remains open; do not silently substitute an unapproved offer or label all six
-prices fresh.
+availability or full activation equivalence. The previously missing Spotify
+source recovered under its original ID; do not silently substitute an
+unapproved offer if it disappears again or infer all-source freshness from an
+aggregate product timestamp.

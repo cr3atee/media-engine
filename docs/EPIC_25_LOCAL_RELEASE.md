@@ -10,10 +10,14 @@ public-domain deployment. Dated publication prices below are historical.
 operation and full verification. A separate local process now schedules the
 existing pipelines every 30 minutes without expanding the catalog. The first
 live batch refreshed six of six offers; the 2026-11-25 batch refreshed five.
-FunPay Spotify `79355854` was absent from the retrieved listing: its previous
-`164.87 RUB` quote remains saved, not claimed fresh. Other current quotes are
+FunPay Spotify `79355854` was absent from that retrieved listing, so its previous
+`164.87 RUB` quote was retained rather than claimed fresh. Other observed quotes were
 ExitLag `599/754.58`, Duolingo `50/100` and GGSEL Spotify `250 RUB`.
-There are eleven real snapshots, still exactly three products and six offers.
+After those two batches there were eleven real snapshots, still exactly three
+products and six offers. A later 2026-11-25 periodic execution recovered the
+same Spotify FunPay ID at `161.46 RUB`, observed at `09:02:49 UTC`, and cleared
+its public source-failure timestamp. No substitute offer was added; real
+history continues accumulating.
 
 Five immutable/metadata hash collections remain unchanged. Full Pytest is
 `956 passed, 65 skipped`, MyPy `581` files, isolated PostgreSQL `59/59` and

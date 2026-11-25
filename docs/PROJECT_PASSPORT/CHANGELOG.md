@@ -18,6 +18,9 @@ This document records notable Project Passport updates.
   skipped`, MyPy `582`, browser `160/160`, focused Ruff/format, JS syntax and
   Alembic check pass. Existing animation-wait flakiness and local readiness
   `not_ready`/HTTP 200 inconsistency are documented, not claimed fixed.
+  A later actual periodic execution recovered the original Spotify FunPay
+  `79355854` at `161.46 RUB` and cleared its public failure timestamp, without
+  replacing the offer or manually setting a price.
 
 - Added bounded local price refresh for the six explicitly approved GGSEL/FunPay
   offers through existing runtime/Scheduler/pipeline components. Scoped runner

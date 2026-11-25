@@ -500,8 +500,10 @@ observation and unresolved source-failure timestamps in the API and shared
 working/preview UI. Current verification: full Pytest `971 passed, 65 skipped`,
 MyPy `582`, PostgreSQL `65/65`, renderer `25/25`, real browser `160/160`, focused
 Ruff/format and Alembic check pass. See `docs/EPIC_25_PRICE_REFRESH.md`.
-Next: resolve the missing approved source and the existing readiness-response
-inconsistency, staying inside the same three-product scope. Windows
+The formerly missing Spotify FunPay ID later recovered automatically at
+`161.46 RUB`; its public failure timestamp cleared without a substitute seller.
+Next: resolve the existing readiness-response inconsistency, staying inside
+the same three-product scope. Windows
 reboot-autostart and durable
 cross-restart cooldown are not implemented.
 
