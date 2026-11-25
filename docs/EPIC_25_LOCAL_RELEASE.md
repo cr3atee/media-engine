@@ -1,7 +1,26 @@
 # EPIC 25 - Local First Version
 
-Verified on 2026-11-22. The user explicitly selected a local launch, not a VDS
-or public-domain deployment.
+Initial launch verified on 2026-11-22; bounded price-refresh update verified on
+2026-11-25. The user explicitly selected a local launch, not a VDS or
+public-domain deployment. Dated publication prices below are historical.
+
+## Current Price Refresh
+
+`EPIC_25_PRICE_REFRESH.md` records the new opt-in six-offer worker, guards,
+operation and full verification. A separate local process now schedules the
+existing pipelines every 30 minutes without expanding the catalog. The first
+live batch refreshed six of six offers; the 2026-11-25 batch refreshed five.
+FunPay Spotify `79355854` was absent from the retrieved listing: its previous
+`164.87 RUB` quote remains saved, not claimed fresh. Other current quotes are
+ExitLag `599/754.58`, Duolingo `50/100` and GGSEL Spotify `250 RUB`.
+There are eleven real snapshots, still exactly three products and six offers.
+
+Five immutable/metadata hash collections remain unchanged. Full Pytest is
+`956 passed, 65 skipped`, MyPy `581` files, isolated PostgreSQL `59/59` and
+real-catalog browser `151/151`; focused Ruff/format pass. This is local periodic
+operation, not Windows reboot-autostart or a public production deployment.
+Public per-offer freshness labels remain missing; product update time alone
+does not prove both source quotes fresh.
 
 ## Running Version
 
@@ -172,10 +191,12 @@ does not mean the whole long-term MediaEngine roadmap or public launch is done.
 GGSEL covers all three products; FunPay additionally covers the explicitly
 approved ExitLag, Spotify and Duolingo pairs. Playerok remains empty for this
 assortment. Price differences describe the saved curated selection, not net
-profit or a marketplace-wide minimum. Price history can be empty and is not
-fabricated. The local launcher
-does not start a scheduled ingestion worker: Refresh rereads persisted data,
-not the marketplaces. Public delivery-method filtering, public asset-use approval,
+profit or a marketplace-wide minimum. Price history now contains real
+observations from the bounded refresh; old history was not fabricated. The web
+launcher itself does not start ingestion: the separately launched price-refresh
+process does. Refresh in the browser rereads persisted data, not marketplaces.
+Public delivery-method filtering, per-source freshness presentation,
+public asset-use approval,
 VDS deployment, production monitoring and live Telegram delivery remain outside
 this local acceptance boundary. No external AI or Telegram call was made.
 

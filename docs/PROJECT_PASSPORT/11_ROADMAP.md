@@ -485,11 +485,23 @@ filtering and condition-aware analytics can follow later.
 
 First-version delivery remains web-only. Local-agent/cookie import, desktop
 installation and customer self-hosting were deferred by the user; the local
-development preview is not such a product. Complete the existing public source
-coverage and source-rate-limit handling rather than starting those features.
+development preview is not such a product. The 2026-11-25 increment connects a
+separate local 30-minute Scheduler worker to only the six approved identities.
+Price-only merges preserve links/conditions, use offer-row locks and persist
+real history through the existing pipeline. HTTP pacing and 403/429 cooldown
+respect public-source failures without extra retries or new offers.
+
+The first live batch passed `6/6`; the latest passed `5/6`, retaining the old
+Spotify FunPay quote because that exact ID was absent. No source substitution
+was authorized. Full Pytest `956 passed, 65 skipped`, MyPy `581`, isolated
+PostgreSQL `59/59`, Alembic current/check, Ruff/format and real-catalog browser
+`151/151` pass. See `docs/EPIC_25_PRICE_REFRESH.md`. Next: expose per-offer
+freshness/failure honestly and resolve the missing approved source, staying
+inside the same three-product scope. Windows reboot-autostart and durable
+cross-restart cooldown are not implemented.
 
 A later public deployment remains separate: provide managed target access,
 verify real backup/monitoring and asset-use conditions, and approve the exact
-target-bound release. Local scheduled ingestion and delivery-method filtering
-are not claimed complete. Do not invent links/prices, bulk-confirm `NO_MATCH`
+target-bound release. Delivery-method filtering and unattended production
+polling are not claimed complete. Do not invent links/prices, bulk-confirm `NO_MATCH`
 offers, lower matching thresholds, copy secrets or add deferred durations.

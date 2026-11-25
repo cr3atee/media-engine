@@ -6,6 +6,21 @@ This document records notable Project Passport updates.
 
 ## Unreleased
 
+- Added bounded local price refresh for the six explicitly approved GGSEL/FunPay
+  offers through existing runtime/Scheduler/pipeline components. Scoped runner
+  merges update only price under an active-offer row lock; reviewed links,
+  conditions and metadata remain intact. Added source allowlisting, HTTP pacing,
+  no retries and per-process 403/429 cooldown with Retry-After. The separate
+  hidden local worker schedules every 30 minutes; no reboot-autostart is claimed.
+  Live batches: `6/6` on 2026-11-24, `5/6` on 2026-11-25. Missing Spotify FunPay
+  `79355854` retains its old quote, not a fabricated fresh price. Five metadata
+  checksum collections match; three products/six offers/eleven real snapshots.
+  Full Pytest `956 passed, 65 skipped`, focused tests `43`, PostgreSQL `59/59`,
+  MyPy `581`, changed-file Ruff/format, Alembic current/check and real browser
+  `151/151` pass. Fixed new-launcher duplicate stop and added its regression
+  test. No migration/dependency/UI redesign, AI/Telegram call or assortment
+  expansion. Public per-source freshness remains a documented limitation.
+
 - Completed three curated GGSEL/FunPay pairs after the separate explicit
   approval of Duolingo `82381719` at `100 RUB` beside saved GGSEL `50 RUB`.
   Invitation-link delivery remains visible, not a key-equivalence/profit claim.

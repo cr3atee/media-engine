@@ -275,6 +275,15 @@ class MemoryOfferRepository(OfferRepository):
                 return offer
         return None
 
+    async def get_by_identity_for_update(
+        self,
+        tenant_id: UUID,
+        marketplace: str,
+        external_id: str,
+    ) -> ParsedOffer | None:
+        """Read within the caller's single-process memory repository scope."""
+        return await self.get_by_identity(tenant_id, marketplace, external_id)
+
     async def list_by_marketplace(
         self,
         tenant_id: UUID | str,

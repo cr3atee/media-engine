@@ -80,6 +80,7 @@ class MarketplaceIntegrationExecutionService:
         runner_factories: Mapping[str, MarketplaceIntegrationRunnerFactory],
         clock: Callable[[], datetime] | None = None,
         polling_run_id_factory: PollingRunIdFactory = uuid4,
+        integration_ids: frozenset[UUID] | None = None,
     ) -> None:
         """Initialize the service with repositories and marketplace factories."""
         self._repository_scope_factory = repository_scope_factory
@@ -89,6 +90,7 @@ class MarketplaceIntegrationExecutionService:
         }
         self._clock = clock or _utc_now
         self._polling_run_id_factory = polling_run_id_factory
+        self._integration_ids = integration_ids
 
     async def run_enabled_integrations(self) -> MarketplaceIntegrationExecutionBatch:
         """Run enabled active integrations whose owning tenants are active."""
@@ -214,6 +216,11 @@ class MarketplaceIntegrationExecutionService:
             integrations = await repositories.marketplace_integrations.list_enabled()
             selected: list[MarketplaceIntegration] = []
             for integration in integrations:
+                if (
+                    self._integration_ids is not None
+                    and integration.id not in self._integration_ids
+                ):
+                    continue
                 tenant = await repositories.tenants.get_by_id(integration.tenant_id)
                 if tenant is not None and tenant.is_active:
                     selected.append(integration)

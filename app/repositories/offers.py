@@ -127,6 +127,15 @@ class OfferRepository(BaseRepository):
     ) -> Sequence[ParsedOffer]:
         """Return parsed offers for one tenant and marketplace."""
 
+    async def get_by_identity_for_update(
+        self,
+        tenant_id: UUID,
+        marketplace: str,
+        external_id: str,
+    ) -> ParsedOffer | None:
+        """Lock an active row until scope exit before merging a price observation."""
+        raise NotImplementedError("Transactional offer locking is required.")
+
     @abstractmethod
     async def list_by_integration(
         self,
