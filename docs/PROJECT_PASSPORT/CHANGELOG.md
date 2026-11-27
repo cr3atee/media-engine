@@ -6,6 +6,23 @@ This document records notable Project Passport updates.
 
 ## Unreleased
 
+- Rechecked the nine cheaper-offer candidates on 2026-11-27 using existing
+  fetchers, description extraction and two category ingestion paths. Six detail
+  pages captured, three actual HTTP 404s; fresh ExitLag/Duolingo quotes are
+  `539/30 RUB`, not saved discovery `449/10`. Recorded trial/family/restricted
+  key/variant caveats and two candidates for explicit user approval, without
+  inventing consent, approving links, updating prices or changing availability.
+  Public scope stays three products/six offers; private proposals stay nine.
+  Documented the necessary approved-refresh-scope check before adding sellers.
+  Existing focused regressions `102 passed, 1 guarded PostgreSQL skip` pass;
+  application code, schema and dependencies are unchanged.
+  Recovered a subsequent Docker/API interruption using the retained volume and
+  existing application; no reseeding or account/password reset. The lost public
+  process-only signing key was replaced once and stored with Windows DPAPI
+  outside Git; public access sessions may need refresh/relogin. Original
+  six-offer worker resumed with a deferred first run and new local stop file.
+  Readiness, three public cards and post-recovery repository preservation pass.
+
 - Added guarded, bounded cheaper-offer discovery for the three monthly
   subscription hubs, reusing parsers, shared existing source rules, matching,
   selector and human-review queue. Original verifier admission policies stay

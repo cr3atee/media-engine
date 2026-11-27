@@ -4,6 +4,27 @@ Initial launch verified on 2026-11-22; bounded price-refresh update verified on
 2026-11-25. The user explicitly selected a local launch, not a VDS or
 public-domain deployment. Dated publication prices below are historical.
 
+## Candidate Source Recheck (2026-11-27)
+
+Read-only recheck of the nine private candidates found six description pages
+and three HTTP 404 responses. Fresh category reads now quote GGSEL ExitLag
+`103758568` at `539 RUB` and FunPay Duolingo `82141660` at `30 RUB`, not their
+old `449/10 RUB` discovery prices. Other candidates include a trial, a family
+plan, a heavily restricted key or unresolved variants. No candidate or public
+offer was updated/approved/retired/promoted. The existing six-offer refresh
+worker remains unchanged; extending it is required if more sellers are approved.
+Both local servers are ready; catalog is still three products/six linked offers.
+Details and source links: `EPIC_25_CHEAPER_OFFER_DISCOVERY.md#candidate-recheck-2026-11-27`.
+
+Docker and API processes became unavailable during that follow-up. The existing
+container/volume and both sites were restarted without reseeding or migrating.
+The public signing key, lost with its old process, was replaced with a random
+local key stored under Windows DPAPI; public sessions may need refresh/relogin.
+Accounts/passwords and reviewed catalog data were not reset. The existing
+six-offer worker resumed with deferred first execution, interval 1800 seconds
+and a new stop path under `%LOCALAPPDATA%\MediaEngine\local-runtime`.
+Post-recovery readiness, three real public cards and baseline preservation pass.
+
 ## Cheaper Offer Discovery (2026-11-25)
 
 The guarded one-shot discovery now scans the same six category sources using
@@ -238,11 +259,17 @@ docker start mediaengine-epic25-manual-review
 $env:DATABASE_URL = '<existing local catalog asyncpg URL>'
 $env:ADMIN_API_ENABLED = 'false'
 $env:ADMIN_API_DOCS_ENABLED = 'false'
-$env:AUTH_ACCESS_TOKEN_SECRET = '<same local catalog secret>'
+$sealed = Join-Path $env:LOCALAPPDATA 'MediaEngine\local-runtime\catalog-auth-secret.dpapi'
+$secure = ConvertTo-SecureString ([IO.File]::ReadAllText($sealed))
+$credential = [PSCredential]::new('local-runtime', $secure)
+$env:AUTH_ACCESS_TOKEN_SECRET = $credential.GetNetworkCredential().Password
 .\.venv\Scripts\python.exe -m uvicorn app.main:app --host 127.0.0.1 --port 8000
 ```
 
-Connection credentials and backups are deliberately not committed to Git.
+The encrypted local key was created during the 2026-11-27 process recovery; reuse
+it on the same Windows user/machine rather than replacing it on every restart.
+Do not print/copy its decrypted value into Git or logs. Connection credentials,
+the encrypted local secret and backups are deliberately not committed to Git.
 
 ## Boundary
 

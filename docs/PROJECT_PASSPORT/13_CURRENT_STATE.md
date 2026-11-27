@@ -4,7 +4,36 @@
 
 This document records the current implementation state of MediaEngine.
 
-## Current MVP Operation (2026-11-25)
+## Current MVP Operation (2026-11-27)
+
+The read-only candidate follow-up confirms three public products/six linked
+offers and nine unchanged private pending proposals. Six of nine exact source
+pages expose descriptions; three FunPay URLs return HTTP 404. Existing category
+parsers now quote ExitLag GGSEL `103758568` at `539 RUB` and Duolingo FunPay
+`82141660` at `30 RUB`; old discovery prices must not be presented as current.
+Trial/family/restricted-key or unresolved-variant candidates are not proposed
+as ordinary equivalents. An explicit question for adding the two shortlisted
+sellers was sent; no approval is assumed and no decision, price, link or
+availability state was changed. The current refresh launcher remains bounded
+to its original six identities and must be kept consistent with any later
+approved publication. Existing evidence/source/discovery regressions pass
+`102 passed, 1 guarded PostgreSQL skip`; application code is unchanged.
+Both retained local APIs return HTTP 200 readiness. Evidence and source links:
+`docs/EPIC_25_CHEAPER_OFFER_DISCOVERY.md#candidate-recheck-2026-11-27`.
+
+An independent runtime interruption during postflight was recovered: existing
+PostgreSQL volume/container and both API processes restarted, without reseeding
+or migration. The public signing key was lost with its previous process and is
+now regenerated once and retained in Windows-user DPAPI storage outside Git;
+existing public access tokens may need refresh/relogin, not a password reset.
+Review uses its previous local-runner signing configuration. The six-offer
+worker passed scope preflight and resumed at 1800 seconds with deferred first
+execution. Readiness, three real public cards and post-recovery source/link/
+product/decision/queue checks pass. The first postflight connection-refused
+attempt is not presented as a passed check. Runtime logs, encrypted key and new
+worker stop file are under `%LOCALAPPDATA%\MediaEngine\local-runtime`.
+
+### Implementation Verification (2026-11-25)
 
 Bounded cheaper-offer discovery is implemented for the same three monthly
 subscription hubs, using existing parsers, shared source rules and the existing
