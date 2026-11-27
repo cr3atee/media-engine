@@ -1,8 +1,95 @@
 # EPIC 25 - Cheaper Offer Discovery
 
-Verified on 2026-11-25. This increment finds lower listed prices for the same
+Implemented on 2026-11-25; candidate detail/quote recheck on 2026-11-27 below.
+This increment finds lower listed prices for the same
 three monthly subscription hubs. It does not approve equivalence, calculate
 resale profit, publish new sources or expand the public assortment.
+
+## Candidate Recheck (2026-11-27)
+
+The original discovery prices below are historical, not current quotes.
+Repository reads confirm the retained public catalog still has three products,
+six offers and six links. The private review database still has fifteen offers,
+six links, three products, six decisions and nine pending offers. Both local
+servers report HTTP 200 readiness. No candidate was approved, retired, updated
+or promoted by this read-only follow-up.
+
+Nine exact candidate detail pages were requested once through the existing
+fetchers and `collect_epic25_activation_evidence.extract_sections`. Anonymous
+GETs only, two-second minimum request pacing, no retries; host access denial
+would stop further requests to that host. No 403/429 occurred. Six pages yielded
+the expected description sections; three returned HTTP 404. Captured descriptions
+are seller claims, not a purchase test or guaranteed service delivery.
+
+The existing category ingestion path separately read GGSEL ExitLag and FunPay
+Duolingo. Only exact known candidate IDs were inspected; this was not a new
+discovery/intake run or a persisted price refresh. Detail evidence was captured
+at approximately `13:13 UTC`, and category quotes at `13:14 UTC`
+(`23:13` / `23:14 Asia/Vladivostok`).
+
+| Candidate | Detail result / source conditions | Fresh category quote RUB | Recommendation |
+| --- | --- | ---: | --- |
+| [ExitLag GGSEL 103758568](https://ggsel.net/en/catalog/product/exitlag-1-mesiac-kliuc-podpiski-rossiia-ru-kod-aktivacii-avto-24-7-103758568) | HTTP 200; seller describes a month key for RU-region accounts, self-activation and renewals; Russian IP/account-region and continuous-video warranty requirements | 539.00, previously 449.00 | Candidate for explicit price-only publication, not worldwide equivalence |
+| [ExitLag GGSEL 103545290](https://ggsel.net/en/catalog/product/exitlag-kliuc-na-1-mesiac-globalno-avtovydaca-24-7-103545290) | HTTP 200; description offers several country/device variants, not one unrestricted Global key | Not found among 104 returned category offers; old 455.00 is not refreshed | Hold; variant and current quote are unresolved, not proven permanently unavailable |
+| [ExitLag FunPay 82792757](https://funpay.com/lots/offer?id=82792757) | HTTP 200; seller requires a new account, VPN, a one-hour activation window and excludes multiple countries including Russia; the description also contains conflicting instructions | Not rechecked; old 208.96 is historical | Do not propose as an ordinary unrestricted key |
+| [ExitLag FunPay 71761660](https://funpay.com/lots/offer?id=71761660) | HTTP 404 | Not rechecked; old 214.00 is historical | Do not publish from stale evidence |
+| [ExitLag FunPay 83182691](https://funpay.com/lots/offer?id=83182691) | HTTP 404 | Not rechecked; old 199.00 is historical | Do not publish from stale evidence |
+| [Duolingo FunPay 82141660](https://funpay.com/lots/offer?id=82141660) | HTTP 200; structured fields say Individual / one month; seller describes invitation-link access on the buyer's account, not a key | 30.00, previously 10.00 | Candidate for explicit price-only publication; plan/delivery equivalence is not certified |
+| [Duolingo FunPay 82765333](https://funpay.com/lots/offer?id=82765333) | HTTP 200; account login required to activate a trial; eligibility depends on account history | 18.25 | Exclude from the proposed ordinary-month shortlist; no repository rejection submitted |
+| [Duolingo FunPay 81387965](https://funpay.com/lots/offer?id=81387965) | HTTP 200; structured plan is Family, delivery is a gift link; seller disclaims warranty | 28.51 | Keep separate from an Individual comparison; no repository rejection submitted |
+| [Spotify FunPay 79021009](https://funpay.com/lots/offer?id=79021009) | HTTP 404 | Not rechecked; old 157.95 is historical | Do not publish from stale evidence |
+
+At recheck start, saved public minima were ExitLag `599 RUB`, Duolingo `50 RUB`
+and Spotify `164 RUB`. These are persisted curated prices, not a simultaneous
+fresh recheck of all six approved offers. The shortlisted source quotes imply
+listed-price gaps of `60 RUB` and `20 RUB` against those saved references, not
+resale profit or confirmed activation equivalence. Revalidate before any release.
+
+An explicit question was presented for adding GGSEL `103758568` at `539 RUB`
+and FunPay `82141660` at `30 RUB` to their existing canonical products, keeping
+the old sellers. No affirmative answer is assumed. Publication must also update
+the exact approved-refresh scope and corresponding acceptance checks: the
+current launcher intentionally permits only the original six identities. Do not
+add public links and leave their worker scope inconsistent.
+
+Local artifacts retain repository baselines, response/section digests, source
+descriptions and fresh category quotes outside Git. Existing collector and
+source/discovery regression tests pass: **102 passed, 1 guarded PostgreSQL
+skip**. No Python, UI, migration, dependency, authentication or database behavior
+changed. The full-suite/MyPy/PostgreSQL results below belong to the preceding
+implementation verification, not a new rerun of every integration.
+
+### Local Runtime Recovery
+
+During postflight, Docker Desktop and both API processes stopped responding.
+The first control read failed with connection refused; this was not recorded
+as a successful database check. Docker Desktop was reopened and the existing
+PostgreSQL container/volume started without recreating, reseeding or migrating
+either database. A startup-time Docker 500 response resolved after waiting for
+the daemon to become ready.
+
+Both APIs were relaunched from existing `app.main:app` on loopback ports 8000
+and 8001. The review signing key reuses its existing local-runner configuration.
+The public process-only signing key was no longer available: a fresh random
+local key is now retained encrypted with Windows DPAPI at
+`%LOCALAPPDATA%\MediaEngine\local-runtime\catalog-auth-secret.dpapi`, outside
+Git and bound to the Windows user/machine. Existing public access tokens may
+require refresh/relogin. No password or account was reset. This is local
+operational key recovery, not a production secret-management implementation.
+
+The original six-offer worker passed its read-only scope preflight and was
+restarted with a 1800-second interval and deferred first run. Its new stop file
+is `%LOCALAPPDATA%\MediaEngine\local-runtime\price-refresh.stop`; API/worker
+logs are in the same directory. No immediate marketplace refresh or new-source
+approval was performed by recovery; reboot-autostart is still not implemented.
+
+After recovery, both readiness URLs return HTTP 200 and the public API exposes
+three cards/two offers each. Fresh repository sessions verify the original
+public source fields (excluding independently refreshed prices), all private
+offer records, products, link counts, decision counts and nine pending proposals
+against the pre-read baseline. The initially failed postflight was rerun and
+passed. Candidate prices in the private queue remain historical until a later
+explicit release operation refreshes its chosen source observations.
 
 ## Implemented Boundary
 
